@@ -1,0 +1,2203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Jindal Steel Angul — SMS & Mills Simulator (M3)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800;9..40,900&display=swap" rel="stylesheet">
+<style>
+/* ─── MATERIAL 3 & GLASSMORPHISM DESIGN SYSTEM ─── */
+:root {
+  /* Light Theme M3 Palette */
+  --md-sys-color-primary: #006493;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #cbe6ff;
+  --md-sys-color-on-primary-container: #001e30;
+  
+  --md-sys-color-secondary: #0ea5e9;
+  --md-sys-color-tertiary: #8b5cf6;
+  
+  /* Backgrounds & Surfaces */
+  --bg-color: #f0f4f8;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg-solid: rgba(255, 255, 255, 0.95);
+  --glass-bg-hover: rgba(255, 255, 255, 0.9);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.8);
+  --glass-border-heavy: 1px solid rgba(255, 255, 255, 1);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  --glass-blur: blur(24px);
+
+  /* Text & Lines */
+  --tx: #1a1c1e; 
+  --tm: #44474e; 
+  --br: rgba(0,0,0,0.06);
+  --input-bg: rgba(0,0,0,0.04);
+  --input-hover: rgba(0,0,0,0.08);
+  --stripe-bg: rgba(0,0,0,0.02);
+  --stripe-hover: rgba(0,0,0,0.05);
+
+  /* Status Colors */
+  --sg: #16a34a; --sl: #dcfce7;
+  --mo: #ea580c; --ml: #ffedd5;
+  --rd: #dc2626; --rl: #fee2e2;
+  --pu: #7c3aed; --pl: #f3e8ff;
+  --sb: #0ea5e9; --ic: #e0f2fe;
+  --gd: #ca8a04; --gl: #fef3c7;
+  
+  /* M3 Border Radii */
+  --radius-xs: 6px;
+  --radius-s: 12px;
+  --radius-m: 16px;
+  --radius-l: 24px;
+  --radius-xl: 32px;
+  --radius-pill: 100px;
+}
+
+[data-theme="dark"] {
+  --md-sys-color-primary: #8dcdff;
+  --md-sys-color-on-primary: #00344f;
+  --md-sys-color-primary-container: #004b70;
+  --md-sys-color-on-primary-container: #cbe6ff;
+  
+  --md-sys-color-secondary: #38bdf8;
+  --md-sys-color-tertiary: #a78bfa;
+
+  --bg-color: #0f172a;
+  --glass-bg: rgba(30, 41, 59, 0.65);
+  --glass-bg-solid: rgba(30, 41, 59, 0.95);
+  --glass-bg-hover: rgba(30, 41, 59, 0.85);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  --glass-border-heavy: 1px solid rgba(255, 255, 255, 0.15);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+
+  --tx: #f8fafc; 
+  --tm: #94a3b8; 
+  --br: rgba(255,255,255,0.1);
+  --input-bg: rgba(255,255,255,0.05);
+  --input-hover: rgba(255,255,255,0.1);
+  --stripe-bg: rgba(255,255,255,0.015);
+  --stripe-hover: rgba(255,255,255,0.04);
+
+  --sl: rgba(22, 163, 74, 0.2);
+  --ml: rgba(234, 88, 12, 0.2);
+  --rl: rgba(220, 38, 38, 0.2);
+  --pl: rgba(124, 58, 237, 0.2);
+  --ic: rgba(14, 165, 233, 0.2);
+  --gl: rgba(202, 138, 4, 0.2);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body, html { 
+  font-family: 'DM Sans', system-ui, sans-serif; 
+  color: var(--tx); 
+  min-height: 100vh; 
+  line-height: 1.5; 
+  -webkit-font-smoothing: antialiased; 
+  background-color: var(--bg-color);
+  background-image: 
+    radial-gradient(at 0% 0%, var(--ic) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, var(--ml) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, var(--pl) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, var(--sl) 0px, transparent 50%);
+  background-attachment: fixed;
+  transition: background-color 0.3s, color 0.3s;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* ─── SCROLLBARS ─── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(150,150,150,0.3); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(150,150,150,0.6); }
+
+div.google-visualization-tooltip { border: none !important; box-shadow: none !important; background: transparent !important; }
+
+/* ─── STICKY HEADER ─── */
+.sticky-wrapper { position: sticky; top: 12px; z-index: 100; padding: 0 24px; max-width: 1600px; margin: 0 auto; width: 100%; box-sizing: border-box;}
+.site-header { 
+    background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    padding: 16px 32px; border-radius: var(--radius-m); border: var(--glass-border); box-shadow: var(--glass-shadow);
+    display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; transition: all 0.3s ease;
+}
+.brand { display: flex; align-items: center; gap: 16px; }
+
+.brand-icon-wrapper {
+    height: 46px; background: #ffffff; padding: 6px 20px; border-radius: 24px; display: grid; place-items: center; box-shadow: 0 4px 16px rgba(0,0,0,0.1); flex-shrink: 0; margin-right: 8px;
+}
+.brand-logo { height: 28px; width: auto; display: block; }
+
+.brand-text h1 { font-size: 17px; font-weight: 800; color: var(--md-sys-color-primary); letter-spacing: -0.2px; margin-bottom: 0px; transition: color 0.3s ease;}
+.brand-text p { font-size: 11px; color: var(--tm); letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; margin-top:-2px;}
+
+.hbadges { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.hb { padding: 8px 16px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 800; letter-spacing: 0.3px; border: var(--glass-border); background: var(--input-bg); box-shadow: 0 2px 4px rgba(0,0,0,0.02); white-space: nowrap; }
+.hb-b { color: var(--md-sys-color-secondary); }
+.hb-a { color: var(--mo); }
+
+.h-actions { display: flex; gap: 12px; align-items: center; }
+.btn-header { height: 40px; padding: 0 20px; border-radius: 20px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; background: var(--input-bg); color: var(--tx); border: var(--glass-border); outline: none; }
+.btn-header:hover { background: var(--input-hover); transform: scale(1.02); }
+.theme-toggle { 
+    height: 40px; width: 40px; padding: 0; justify-content: center; border-radius: 20px; 
+    font-size: 14px; display: inline-flex; align-items: center; cursor: pointer; 
+    transition: all 0.2s; background: var(--input-bg); color: var(--tx); 
+    border: var(--glass-border); outline: none; 
+}
+.theme-toggle:hover { background: var(--input-hover); transform: scale(1.02); }
+
+/* ─── APP SHELL & LAYOUT ─── */
+.app-shell { max-width: 1600px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; width: 100%; overflow-x: hidden; box-sizing: border-box; }
+
+.kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; margin-bottom: 4px; }
+.kpi { 
+    background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border-radius: var(--radius-l); padding: 18px 20px; border: var(--glass-border); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; box-shadow: var(--glass-shadow); transition: transform 0.2s, background 0.3s; cursor: pointer; border-top: 4px solid var(--tm);
+}
+.kpi:hover { transform: translateY(-3px); background: var(--glass-bg-hover); box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
+.kpi-tot { border-top-color: var(--tx); }
+.kpi-s1 { border-top-color: var(--md-sys-color-secondary); } 
+.kpi-s2 { border-top-color: var(--mo); }
+.kpi-sl { border-top-color: var(--sg); } 
+.kpi-bl { border-top-color: var(--pu); }
+.kpi-eb { border-top-color: var(--gd); }
+
+.kpi-label { font-size: 11px; font-weight: 800; color: var(--tm); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; transition: color 0.3s;}
+.kpi-value { font-size: 22px; font-weight: 900; color: var(--tx); letter-spacing: -0.5px; transition: color 0.3s;}
+.kpi-sub { font-size: 10px; color: var(--tm); margin-top: 4px; font-weight: 700; line-height: 1.2; transition: color 0.3s;}
+
+/* Side-by-Side Layout Grid */
+.main-layout { display: flex; gap: 24px; align-items: flex-start; width: 100%; box-sizing: border-box;}
+.content-area { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; max-width: 100%; overflow-x: hidden; }
+
+/* LEFT SIDEBAR CONTROLS */
+.controls-sidebar { 
+    width: 380px; 
+    flex-shrink: 0; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 16px; 
+    padding-bottom: 20px;
+}
+#panel-bottom-controls { display: flex; flex-direction: column; gap: 12px; width: 100%; box-sizing: border-box; }
+
+/* ─── PANELS & BUTTONS ─── */
+.panel { 
+    display: flex; flex-direction: column; 
+    background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border-radius: var(--radius-l); border: var(--glass-border); box-shadow: var(--glass-shadow); 
+    transition: background 0.3s, border-color 0.3s; flex-shrink: 0; overflow: hidden; max-width: 100%;
+}
+.ph { flex-shrink: 0; padding: 14px 18px; border-bottom: 1px solid var(--br); display: flex; align-items: center; gap: 10px; background: var(--input-bg); }
+.pi { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; flex-shrink: 0; background: var(--glass-bg-solid); box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
+.pi-b { color: var(--sb); } .pi-g { color: var(--sg); } 
+.pi-a { color: var(--mo); } .pi-p { color: var(--pu); }
+.ph h2 { font-size: 13px; font-weight: 800; color: var(--md-sys-color-primary); text-transform: uppercase; letter-spacing: 0.5px; margin: 0; transition: color 0.3s;}
+.pb { flex-grow: 1; padding: 18px; flex-shrink: 0;}
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 20px; border: none; border-radius: var(--radius-pill); font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s cubic-bezier(0.2, 0, 0, 1); outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.btn:hover { transform: translateY(-1px) scale(1.02); box-shadow: 0 4px 8px rgba(0,0,0,0.15); filter: brightness(1.05); }
+.btn:active { transform: translateY(0) scale(0.98); box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+.btn-sm { padding: 6px 14px; font-size: 11px; }
+.btn-primary { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); width: 100%; font-size: 14px; padding: 12px; }
+.btn-green { background: var(--sg); color: white; }
+.btn-orange { background: var(--mo); color: white; }
+.btn-gold { background: var(--gd); color: white; }
+.btn-pu { background: var(--pu); color: white; width:100%; margin-top:8px;}
+
+/* ─── INPUTS ─── */
+.f3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.rg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+label { display: block; font-size: 10px; font-weight: 800; color: var(--tm); margin-bottom: 6px; text-transform: uppercase; letter-spacing:0.5px; transition: color 0.3s;}
+
+input[type=number], select { 
+    width: 100%; padding: 8px 12px; border: none; border-bottom: 2px solid var(--tm); 
+    border-radius: var(--radius-xs) var(--radius-xs) 0 0; font-size: 14px; font-weight: 700; color: var(--tx); 
+    background: var(--input-bg); transition: all 0.2s ease; font-family: inherit; flex-shrink: 0; outline: none; min-width: 0; box-sizing: border-box;
+}
+input[type=number]:hover, select:hover { background: var(--input-hover); border-bottom-color: var(--md-sys-color-primary); }
+input[type=number]:focus, select:focus { background: var(--input-hover); border-bottom: 2px solid var(--md-sys-color-primary); }
+select option { background-color: var(--bg-color); color: var(--tx); }
+
+.sms-in { font-size: 18px !important; font-weight: 900 !important; background: var(--gl) !important; border-bottom-color: var(--gd) !important; }
+.sms-in:focus { background: var(--gl) !important; border-bottom-color: var(--mo) !important; filter: brightness(0.95); }
+.pm-in { width: 60px !important; padding: 6px 8px !important; text-align: right !important; font-size:12px !important; }
+.cmg-in { padding: 6px 8px !important; font-size: 12px !important; text-align: right; min-width: 0; }
+
+/* ─── SMS BLOCKS ─── */
+.sms-blk { border-radius: var(--radius-m); padding: 16px; margin-bottom: 16px; flex-shrink: 0; }
+.sms-blk-title { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.plan-cmp { font-size: 11px; color: var(--tm); margin-top: 8px; font-weight: 700; }
+.vp { font-weight: 800; } .vp.ov { color: var(--sg); } .vp.un { color: var(--rd); }
+
+/* ─── MICRO GRID FOR CAPACITY TABLE (Sidebar Fit) ─── */
+.cap-micro-grid-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 12px; box-sizing: border-box; }
+.cap-micro-grid { min-width: 480px; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr 0.8fr; gap: 8px; align-items: center; }
+.cmg-hdr { font-size: 9px; font-weight: 800; color: var(--tm); text-transform: uppercase; border-bottom: 1px solid var(--br); padding-bottom: 4px; text-align: right; }
+.cmg-hdr:first-child { text-align: left; }
+.cmg-lbl { font-size: 11px; font-weight: 700; color: var(--tx); white-space: nowrap; display: flex; align-items: center; gap:4px; }
+.cap-micro-grid-wrap::-webkit-scrollbar { height: 6px; }
+.cap-micro-grid-wrap::-webkit-scrollbar-track { background: var(--input-bg); border-radius: 10px; }
+.cap-micro-grid-wrap::-webkit-scrollbar-thumb { background: rgba(150,150,150,0.4); border-radius: 10px; }
+
+/* ─── COLLAPSIBLES (Individual M3 Cards) ─── */
+.coll-panel { width: 100%; box-sizing: border-box; border-radius: var(--radius-m); overflow: hidden; background: var(--glass-bg); border: var(--glass-border); box-shadow: var(--glass-shadow); flex-shrink: 0; }
+.coll-h { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 16px 18px; user-select: none; background: var(--glass-bg-solid); transition: background 0.2s;}
+.coll-h:hover { background: var(--input-hover); }
+.coll-h span { font-size: 12px; font-weight: 800; color: var(--md-sys-color-primary); text-transform: uppercase; letter-spacing: 0.5px; }
+.chev { font-size: 10px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); } .chev.op { transform: rotate(180deg); }
+.coll-b { display: none; padding: 16px 18px; animation: slideDown 0.3s ease; border-top: 1px solid var(--br); background: var(--glass-bg); max-height: 400px; overflow-y: auto; overflow-x: hidden; box-sizing: border-box;} 
+.coll-b.op { display: block; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+.coll-b::-webkit-scrollbar { width: 4px; }
+.coll-b::-webkit-scrollbar-track { background: transparent; }
+.coll-b::-webkit-scrollbar-thumb { background: rgba(150,150,150,0.3); border-radius: 4px; }
+.coll-b::-webkit-scrollbar-thumb:hover { background: rgba(150,150,150,0.6); }
+
+/* ─── TABS & CONTENT ─── */
+.tabs-hdr { display: flex; gap: 8px; border-bottom: 1px solid var(--br); padding: 12px 24px; background: var(--input-bg); overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-l) var(--radius-l) 0 0; }
+.tabs-hdr::-webkit-scrollbar { display: none; }
+.tab-btn { padding: 10px 20px; font-size: 13px; font-weight: 700; border: none; background: transparent; border-radius: var(--radius-pill); cursor: pointer; color: var(--tm); transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
+.tab-btn:hover { background: var(--input-hover); color: var(--tx); }
+.tab-btn.act { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+.tc { display: none; padding: 24px; width: 100%; box-sizing: border-box; overflow-x: hidden;} .tc.act { display: block; animation: fadeIn 0.3s ease; }
+
+/* ─── TABLES ─── */
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-m); border: var(--glass-border); background: var(--input-bg); width: 100%; max-width: 100%; }
+.sc-tbl { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: auto; }
+.sc-tbl th { padding: 14px 16px; text-align: right; font-size: 11px; font-weight: 800; color: var(--tm); text-transform: uppercase; border-bottom: 1px solid var(--br); white-space: nowrap; }
+.sc-tbl th:first-child { text-align: left; white-space: normal; }
+.sc-tbl td { padding: 12px 16px; border-bottom: 1px solid var(--br); text-align: right; color: var(--tx); white-space: nowrap; }
+.sc-tbl td:first-child { text-align: left; font-weight: 700; white-space: normal; }
+.sc-tbl tr.even-row td { background: var(--stripe-bg); }
+
+/* Clickable Rows for Drilldown */
+.expand-row { cursor: pointer; transition: background-color 0.2s ease; }
+.expand-row:hover td { background: var(--stripe-hover) !important; }
+
+/* Material Reconciliation Headers */
+.sc-tbl .sec-h td { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; text-align: left; padding: 10px 16px; border: none; }
+.sc-tbl .recon-h td { background: transparent; color: var(--tm); border-bottom: 2px solid var(--tm); padding-top: 24px; }
+
+.db { display: inline-block; padding: 4px 8px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 800; }
+.db-up { background: var(--sl); color: var(--sg); } .db-dn { background: var(--rl); color: var(--rd); }
+.expand-btn { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: var(--md-sys-color-primary); font-weight: bold; transition: transform 0.2s; font-size: 12px; border-radius: 50%; flex-shrink:0;}
+
+/* ─── FLOW TABLE (M3 Design) ─── */
+.flow-tbl-wrap { margin-top: 16px; background: var(--glass-bg-solid); border-radius: var(--radius-m); box-shadow: var(--glass-shadow); border: var(--glass-border); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.flow-tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 700px; }
+.flow-tbl th { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 800; text-transform: uppercase; white-space: nowrap; border-bottom: none; letter-spacing: 0.5px;}
+.flow-tbl td { padding: 14px 16px; border-bottom: 1px solid var(--br); font-weight: 500; color: var(--tx); white-space: nowrap;}
+.flow-tbl tr.even-row td { background: var(--stripe-bg); }
+.flow-tbl tr:hover td { background: var(--stripe-hover); }
+.flow-tbl .subtotal td { background: var(--sl); font-weight: 800; color: var(--sg); text-transform: uppercase; font-size: 11px; padding: 12px 16px; border-radius: 6px; }
+
+/* ─── COMPONENTS ─── */
+.alert { border-radius: var(--radius-m); padding: 12px 16px; font-size: 13px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; background: var(--sl); color: var(--sg); box-shadow: var(--glass-shadow); border: 1px solid rgba(22, 163, 74, 0.2);}
+.sec-lbl { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.8px; color: var(--md-sys-color-primary); margin-bottom: 12px; margin-top: 20px; }
+.sec-lbl:first-child { margin-top: 0; }
+
+.tot-eb-card {
+    margin-top: 16px; padding: 20px; background: var(--sl); border-radius: var(--radius-m); 
+    border: 1px solid rgba(22,163,74,0.3); display: flex; justify-content: space-between; 
+    align-items: center; box-shadow: var(--glass-shadow);
+}
+.tot-eb-lbl { font-size: 14px; font-weight: 800; color: var(--sg); }
+.tot-eb-val { font-size: 24px; font-weight: 900; color: var(--sg); }
+
+.eb-row { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; width: 100%; box-sizing: border-box;}
+.eb-row .ml { font-size: 12px; font-weight: 700; width: 90px; flex-shrink: 0; color: var(--tx); white-space: normal; line-height: 1.2; }
+.eb-row .bw { flex: 1; min-width: 30px; height: 16px; background: var(--input-bg); border-radius: var(--radius-pill); overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+.eb-row .br2 { height: 100%; border-radius: var(--radius-pill); transition: width 0.6s cubic-bezier(0.2, 0, 0, 1); }
+.eb-row .vl { font-size: 12px; font-weight: 900; width: 80px; text-align: right; color: var(--tx); flex-shrink: 0;}
+
+/* ─── FLOWCHART & SVG ─── */
+.flow-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; background: var(--input-bg); padding: 12px; border-radius: var(--radius-m); border: var(--glass-border); }
+.flow-view-btn { padding: 8px 16px; border-radius: var(--radius-pill); border: var(--glass-border); background: var(--glass-bg-solid); font-size: 12px; font-weight: 700; cursor: pointer; color: var(--tm); transition: all 0.2s; }
+.flow-view-btn:hover { filter: brightness(0.95); color: var(--tx); }
+.flow-view-btn.act { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: var(--md-sys-color-primary); box-shadow: 0 4px 8px rgba(0,100,147,0.2); }
+.flow-legend { display: flex; gap: 14px; margin-left: auto; flex-wrap: wrap; }
+.leg-item { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; color: var(--tm); }
+.leg-dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
+
+.flow-scroll-wrapper { width: 100%; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; border-radius: var(--radius-l); border: var(--glass-border); background: var(--input-bg); box-shadow: inset 0 2px 8px rgba(0,0,0,0.02); display: block; max-width: 100vw;}
+.flow-wrap-container { position: relative; margin: 0 auto; padding: 40px 20px 50px; min-width: 900px; display: flex; flex-direction: column; gap: 80px; align-items: center; }
+
+.fn { border-radius: var(--radius-m); padding: 14px 18px; cursor: pointer; transition: all 0.2s cubic-bezier(0.2, 0, 0, 1); border: 2px solid transparent; min-width: 120px; text-align: center; position: relative; z-index: 2; background: var(--glass-bg-solid); box-shadow: 0 4px 12px rgba(0,0,0,0.15); backdrop-filter: blur(5px);}
+.fn:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 8px 16px rgba(0,0,0,0.2); border-color: rgba(0,0,0,0.1); }
+.fn.fn-selected { box-shadow: 0 0 0 4px var(--bg-color), 0 0 0 7px var(--md-sys-color-primary) !important; transform: translateY(-2px); }
+
+.fn-name { font-size: 12px; font-weight: 800; white-space: nowrap; margin-bottom: 4px; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; color: inherit;}
+.fn-val { font-size: 18px; font-weight: 900; letter-spacing: -0.5px; color: inherit;}
+.fn-sub { font-size: 10px; opacity: 0.8; white-space: nowrap; margin-top: 4px; font-weight: 600; color: inherit;}
+
+/* Node Accents */
+.fn-furnace { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: rgba(255,255,255,0.1); }
+.fn-caster { background: var(--md-sys-color-primary-container); border-color: rgba(255,255,255,0.1); color: var(--md-sys-color-on-primary-container); }
+.fn-slab { background: #fef08a; border-color: rgba(255,255,255,0.1); color: #713f12; }
+.fn-billet { background: #e9d5ff; border-color: rgba(255,255,255,0.1); color: #4c1d95; }
+.fn-pm { background: #ffedd5; border-color: rgba(255,255,255,0.1); color: #9a3412; }
+.fn-hsm { background: var(--md-sys-color-secondary); color: #ffffff; border-color: rgba(255,255,255,0.1);}
+.fn-bm { background: #dcfce7; border-color: rgba(255,255,255,0.1); color: #14532d; }
+.fn-crm { background: #fefce8; border-color: rgba(255,255,255,0.1); color: #854d0e; }
+.fn-wrm { background: #faf5ff; border-color: rgba(255,255,255,0.1); color: #581c87; }
+.fn-bmp { background: #fffbeb; border-color: rgba(255,255,255,0.1); color: #78350f; }
+
+/* ─── PRODUCT MIX ─── */
+.pm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; min-width: 0; }
+.pm-card { background: var(--input-bg); border-radius: var(--radius-m); padding: 18px; margin-bottom: 16px; border: var(--glass-border); width: 100%; max-width: 100%; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.02);}
+.pm-blended { font-size: 12px; font-weight: 800; padding: 6px 12px; border-radius: var(--radius-pill); background: var(--glass-bg-solid); color: var(--sg); border: 1px solid var(--sl); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.pm-tbl { width: 100%; border-collapse: collapse; font-size: 12px; background: var(--glass-bg-solid); border-radius: var(--radius-s); min-width: 450px; overflow: hidden;}
+.pm-tbl th { font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--tm); padding: 10px; border-bottom: 1px solid var(--br); text-align: right; background: var(--input-bg); white-space: nowrap;}
+.pm-tbl th:first-child { text-align: left; }
+.pm-tbl td { padding: 8px 10px; border-bottom: 1px solid var(--br); text-align: right; white-space: nowrap;}
+.pm-tbl td:first-child { text-align: left; font-weight: 700; }
+.pm-tbl tr:nth-child(even) td { background: var(--stripe-bg); }
+.pm-tbl .pm-total td { background: var(--input-hover); font-weight: 900; color: var(--tx); padding: 12px 10px;}
+.pm-ebt-pos { color: var(--sg); font-weight: 800; } .pm-ebt-neg { color: var(--rd); font-weight: 800; } .pm-ebt-zer { color: var(--tm); }
+.pm-in { width: 60px !important; padding: 4px 6px !important; text-align: right !important; font-size:12px !important; border-radius: var(--radius-xs) !important; background: var(--input-bg) !important; color: var(--tx);}
+
+/* ─── M3 BOTTOM SHEET DRAWER ─── */
+.drawer-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 9998; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);}
+.drawer-overlay.open { opacity: 1; pointer-events: all; }
+.detail-drawer { position: fixed; bottom: 0; left: 0; right: 0; max-height: 85vh; background: var(--glass-bg-solid); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-radius: var(--radius-xl) var(--radius-xl) 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.3); transform: translateY(105%); transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1); z-index: 9999; display: flex; flex-direction: column; border-top: var(--glass-border-heavy);}
+.detail-drawer.open { transform: translateY(0); }
+.drawer-handle { width: 48px; height: 5px; background: var(--tm); opacity: 0.3; border-radius: var(--radius-pill); margin: 16px auto 8px; flex-shrink: 0; }
+.drawer-header { display: flex; align-items: center; gap: 12px; padding: 8px 24px 16px; border-bottom: 1px solid var(--br); flex-shrink: 0; }
+.drawer-title { font-size: 18px; font-weight: 800; color: var(--tx); letter-spacing: -0.3px; }
+.drawer-close { margin-left: auto; cursor: pointer; font-size: 18px; color: var(--tm); background: var(--input-bg); border: none; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.drawer-close:hover { background: var(--input-hover); color: var(--tx); }
+
+/* ─── RESPONSIVE BREAKPOINTS ─── */
+.ov-grid { display:grid; grid-template-columns: 1fr 1fr; gap:24px; width: 100%; min-width: 0; box-sizing: border-box; }
+.ov-grid > div, .pm-grid > div { min-width: 0; max-width: 100%; }
+
+@media(max-width:1200px){ 
+  .main-layout { flex-direction: column; }
+  .controls-sidebar { width: 100%; position: static; max-height: none; flex-direction: row; flex-wrap: wrap; padding-right: 0;}
+  .controls-sidebar > .panel, .controls-sidebar > .coll-panel { flex: 1 1 calc(50% - 16px); min-width: 300px; }
+  .kpi-row { grid-template-columns: repeat(3, 1fr); } 
+  .pm-grid { grid-template-columns: 1fr; }
+  .ov-grid { grid-template-columns: 1fr; } 
+  #panel-bottom-controls { flex-direction: row; flex-wrap: wrap; }
+  .btn-pu { flex: 1 1 100%; }
+}
+
+@media(max-width:768px){ 
+  /* structural overrides to force controls to bottom */
+  .main-layout { display: contents; }
+  .controls-sidebar { display: contents; }
+  .app-shell { display: flex; flex-direction: column; padding: 16px 12px; }
+  #panel-plan { order: 1; }
+  #panel-sms { order: 2; }
+  #main-content { order: 3; width: 100%; box-sizing: border-box; margin-bottom: 24px; padding: 0;}
+  #panel-bottom-controls { order: 4; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; }
+
+  .sticky-wrapper { padding: 0 12px; top: 8px;}
+  .site-header { flex-direction: column; align-items: stretch; border-radius: 16px; padding: 16px; gap: 16px;}
+  .brand { justify-content: center; width: 100%; margin-bottom: 4px; }
+  .hbadges { justify-content: stretch; gap: 8px; width: 100%; }
+  .hb { display: none !important; }
+  .h-actions { display: flex; width: 100%; gap: 8px; }
+  .btn-header { flex: 1; border-radius: 8px; justify-content: center; height: 40px; font-size: 13px; }
+  .theme-toggle { border-radius: 8px !important; font-size: 15px; width: auto; flex: 1;}
+  .theme-toggle::after { content: ' Theme'; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 13px; margin-left: 6px; }
+
+  .controls-sidebar > .panel, .coll-panel { flex: 1 1 100%; min-width: unset; width: 100%; box-sizing: border-box; }
+  .kpi-row { grid-template-columns: 1fr 1fr; order: 0;} 
+  .ov-grid > div, .pm-grid > div { overflow: hidden; width: 100%; }
+  .f3, .rg { grid-template-columns: 1fr; }
+  .tabs-hdr { display: grid; grid-template-columns: 1fr 1fr; padding: 12px; gap: 8px; }
+  .tab-btn { font-size: 12px; padding: 10px 12px; text-align: center; white-space: normal; line-height: 1.2;}
+  
+  .flow-toolbar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .flow-view-btn { width: 100%; padding: 8px 4px; font-size: 10px; white-space: normal; }
+  .flow-legend { grid-column: span 3; justify-content: center; }
+
+  .eb-row .ml { width: 75px; font-size: 11px; white-space: normal; line-height: 1.2;}
+  .eb-row .vl { width: 50px; font-size: 11px; }
+  .pm-card { padding: 12px; }
+  
+  .btn-pu { padding: 16px; font-size: 14px; width: 100%; flex: none; box-sizing: border-box; }
+}
+
+@media(max-width:480px){
+  .kpi-row { grid-template-columns: 1fr 1fr; }
+  .tot-eb-card { flex-direction: column; align-items: flex-start; gap: 4px; padding: 16px; }
+  .tot-eb-lbl { font-size: 12px; }
+  .tot-eb-val { font-size: 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="sticky-wrapper">
+  <header class="site-header">
+    <div class="header-inner" style="display:contents">
+      <div class="brand">
+        <div class="brand-icon-wrapper">
+            <svg class="brand-logo" viewBox="0 0 250 70" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#4caf50" />
+                  <stop offset="100%" stop-color="#2e7d32" />
+                </linearGradient>
+                <linearGradient id="orangeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#ff9800" />
+                  <stop offset="100%" stop-color="#e65100" />
+                </linearGradient>
+              </defs>
+              <text x="0" y="48" font-family="'DM Sans', Arial, sans-serif" font-weight="900" font-style="italic" font-size="44" fill="#555" letter-spacing="-1">JINDAL</text>
+              <text x="145" y="68" font-family="'DM Sans', Arial, sans-serif" font-weight="800" font-style="italic" font-size="24" fill="#000" letter-spacing="0.5">STEEL</text>
+              <path d="M158,15 L180,10 L168,30 L145,35 Z" fill="url(#orangeGrad)"/>
+              <path d="M160,30 Q190,32 245,5 Q200,45 140,58 Z" fill="url(#greenGrad)"/>
+            </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Jindal Steel Angul Simulator</h1>
+          <p>Meltshop · Forecast · Optimizer</p>
+        </div>
+      </div>
+      <div class="hbadges">
+        <div class="hb hb-b">SMS1 (EAF+BOF1) → SC1 + BC1 + CC1 + TC1 (Bypass)</div>
+        <div class="hb hb-a">SMS2 (BOF2+BOF3) → TC1 → HSM</div>
+        <div class="h-actions">
+          <button class="btn-header" onclick="window.resetSimulator()" title="Reset to Original Default Values">
+            🔄 Reset
+          </button>
+          <button class="theme-toggle" onclick="window.toggleTheme()" title="Toggle Dark Mode" id="themeBtn">🌙</button>
+        </div>
+      </div>
+    </div>
+  </header>
+</div>
+
+<div class="app-shell">
+  
+  <div class="kpi-row">
+    <div class="kpi kpi-tot" onclick="window.showDrawer('kpi-tot')">
+      <div class="kpi-label">Total SMS Steel</div><div class="kpi-value" id="k_tot_sms">—</div><div class="kpi-sub">SMS1 + SMS2</div>
+    </div>
+    <div class="kpi kpi-s1" onclick="window.showDrawer('kpi-s1')">
+      <div class="kpi-label">SMS1 Input</div><div class="kpi-value" id="k_s1">4,21,200</div><div class="kpi-sub">EAF + BOF1</div>
+    </div>
+    <div class="kpi kpi-s2" onclick="window.showDrawer('kpi-s2')">
+      <div class="kpi-label">SMS2 Input</div><div class="kpi-value" id="k_s2">3,27,840</div><div class="kpi-sub">BOF2 + BOF3 → TC1</div>
+    </div>
+    <div class="kpi kpi-sl" onclick="window.showDrawer('kpi-sl')">
+      <div class="kpi-label">Total Slabs</div><div class="kpi-value" id="k_sl">—</div><div class="kpi-sub">SC1 + TC1 output</div>
+    </div>
+    <div class="kpi kpi-bl" onclick="window.showDrawer('kpi-bl')">
+      <div class="kpi-label">Total Billets</div><div class="kpi-value" id="k_bl">—</div><div class="kpi-sub">BC1 + CC1 output</div>
+    </div>
+    <div class="kpi kpi-eb" onclick="window.showDrawer('kpi-eb')">
+      <div class="kpi-label">Total EBITDA</div><div class="kpi-value" id="k_eb">—</div><div class="kpi-sub">Overall (₹ Cr)</div>
+    </div>
+  </div>
+
+  <div class="main-layout">
+    
+    <div class="controls-sidebar">
+      
+      <div class="panel" id="panel-plan">
+        <div class="ph"><div class="pi pi-b">📅</div><h2>Plan & Export</h2></div>
+        <div class="pb" style="padding: 16px;">
+          <div class="f3" style="margin-bottom:16px; gap: 8px;">
+            <div class="fg">
+              <label>Month</label>
+              <select id="planMonthSel" onchange="window.onMonthChange()">
+                <option value="1">Jan</option><option value="2">Feb</option>
+                <option value="3">Mar</option><option value="4">Apr</option>
+                <option value="5">May</option><option value="6">Jun</option>
+                <option value="7" selected>Jul</option><option value="8">Aug</option>
+                <option value="9">Sep</option><option value="10">Oct</option>
+                <option value="11">Nov</option><option value="12">Dec</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>Year</label>
+              <input type="number" id="planYear" value="2026" min="2024" max="2030" onchange="window.onMonthChange()" onkeydown="if(event.key==='Enter') this.blur();">
+            </div>
+            <div class="fg">
+              <label>Days</label>
+              <input type="number" id="planDays" value="31" readonly style="background:var(--input-hover); cursor:not-allowed; border-bottom-color:transparent;" title="Days automatically calculated">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="window.exportXLSX()">📊 Generate Monthly Plan XLSX</button>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-sms">
+        <div class="ph"><div class="pi pi-a">⚙️</div><h2>SMS Allocation</h2></div>
+        <div class="pb" style="padding: 16px;"> 
+          <div class="sms-blk" style="background:var(--ic); border:1px solid rgba(14,165,233,0.3);">
+            <div class="sms-blk-title" style="color:var(--md-sys-color-primary);">🔵 SMS 1 — EAF + BOF1</div>
+            <label>SMS1 Total Steel (tonnes)</label>
+            <input type="number" class="sms-in" id="sms1" value="421200" onchange="window.maximizeAllocations()" onkeydown="if(event.key==='Enter') this.blur();">
+            <div class="plan-cmp">July Plan: 421,200t &nbsp;|&nbsp; <span id="sms1Dlt" class="vp ov">0 (0%)</span></div>
+            
+            <div style="margin-top:12px;padding:12px;background:var(--glass-bg-solid);border-radius:var(--radius-s);border:1px solid rgba(22,163,74,0.3);">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+                <div>
+                  <div style="color:var(--sg);font-size:10px;font-weight:800;text-transform:uppercase;margin-bottom:2px">⇄ SMS1 → TC1 (Direct)</div>
+                  <div id="s1tc1_suggest" style="font-weight:800;color:var(--sg);font-size:10px;">Suggested: — t/d</div>
+                </div>
+                <button class="btn btn-sm btn-green" onclick="window.applyAutoTransfer()">⚡ Apply Optimal</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <input type="number" id="sms1_to_tc1" min="0" max="15000" step="1" value="0" style="width:80px; border-bottom-color:var(--sg); color:var(--sg); text-align:right; background:var(--sl);" onchange="window.recalc()" onkeydown="if(event.key==='Enter') this.blur();">
+                  <span style="font-size:11px;font-weight:800;color:var(--sg)">t/d</span>
+                </div>
+                <span id="s1tc1_max" style="font-size:10px;color:var(--tm);font-weight:700">Max: — t/d</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="sms-blk" style="background:var(--ml); border:1px solid rgba(234,88,12,0.3);">
+            <div class="sms-blk-title" style="color:var(--mo);">🟠 SMS 2 — BOF2 + BOF3</div>
+            <label>SMS2 Total Steel (tonnes)</label>
+            <input type="number" class="sms-in" id="sms2" value="327840" onchange="window.maximizeAllocations()" onkeydown="if(event.key==='Enter') this.blur();">
+            <div class="plan-cmp">July Plan: 327,840t &nbsp;|&nbsp; <span id="sms2Dlt" class="vp ov">0 (0%)</span></div>
+            
+            <div style="margin-top:12px;padding:12px;background:var(--glass-bg-solid);border-radius:var(--radius-s);border:1px dashed rgba(234,88,12,0.4);">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+                <div>
+                  <div style="color:var(--mo);font-size:10px;font-weight:800;text-transform:uppercase;margin-bottom:2px">⇄ SMS2 → SMS1 Overflow</div>
+                  <div id="sms2_of_suggest" style="font-weight:800;color:var(--mo);font-size:10px;">Suggested: — t/d</div>
+                </div>
+                <button class="btn btn-sm btn-orange" onclick="window.applyAutoTransferSMS2()">⚡ Apply Optimal</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <input type="number" id="sms2_of" min="0" max="2000" step="1" value="0" style="width:80px; border-bottom-color:var(--mo); color:var(--mo); text-align:right; background:rgba(234,88,12,0.1);" onchange="window.recalc()" onkeydown="if(event.key==='Enter') this.blur();">
+                  <span style="font-size:11px;font-weight:800;color:var(--mo)">t/d</span>
+                </div>
+                <span id="sms2_of_max" style="font-size:10px;color:var(--tm);font-weight:700">Max: 2k t/d</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div id="panel-bottom-controls">
+          <div class="coll-panel">
+            <div class="coll-h" onclick="window.tog('castAdv')">
+              <span>⚙ Caster Allocation Ratios</span><span class="chev" id="castAdvChev">▼</span>
+            </div>
+            <div class="coll-b" id="castAdv">
+              <p style="font-size:9px;font-weight:800;color:var(--tm);text-transform:uppercase;margin-bottom:8px">SMS2 → TC1</p>
+              <div class="fg"><label>Utilisation % (Locked)</label>
+                <input type="number" id="sms2_tc1" value="100" step="0.1" readonly style="background:var(--input-hover); cursor:not-allowed; border-bottom-color:transparent; color:var(--tm);"></div>
+              <p style="font-size:9px;font-weight:800;color:var(--tm);text-transform:uppercase;margin:16px 0 8px">SMS1 → Casters</p>
+              <div class="rg" style="gap:10px; margin-bottom:12px;">
+                <div><label>→ SC1 %</label><input type="number" id="sms1_sc1" value="29.3" step="0.5" onchange="window.recalc()"></div>
+                <div><label>→ BC1 %</label><input type="number" id="sms1_bc1" value="34.6" step="0.5" onchange="window.recalc()"></div>
+                <div><label>→ CC1 %</label><input type="number" id="sms1_cc1" value="16.4" step="0.5" onchange="window.recalc()"></div>
+              </div>
+              <p style="font-size:9px;font-weight:800;color:var(--tm);text-transform:uppercase;margin:16px 0 8px">Billet Routing</p>
+              <div class="rg" style="gap:10px;">
+                <div><label>BC1→Bar %</label><input type="number" id="bc1_bar" value="86.0" step="0.5" onchange="window.recalc()"></div>
+                <div><label>BC1→Pat.BM %</label><input type="number" id="bc1_bm" value="14.0" step="0.5" onchange="window.recalc()"></div>
+                <div><label>CC1→Pat.WRM %</label><input type="number" id="cc1_wrm" value="36.1" step="0.5" onchange="window.recalc()"></div>
+                <div><label>CC1→Pat.BM %</label><input type="number" id="cc1_bm" value="63.9" step="0.5" onchange="window.recalc()"></div>
+              </div>
+            </div>
+          </div>
+    
+          <div class="coll-panel">
+            <div class="coll-h" onclick="window.tog('ebitdaSet')">
+              <span>₹ EBITDA Rates (₹/t)</span><span class="chev" id="ebitdaSetChev">▼</span>
+            </div>
+            <div class="coll-b" id="ebitdaSet">
+              <div class="rg" style="gap:12px;">
+                <div><label>Plate Mill</label><input type="number" id="e_pm" value="20260" onchange="window.maximizeAllocations()"></div>
+                <div><label>HSM (HRC)</label><input type="number" id="e_hs" value="10323" onchange="window.maximizeAllocations()"></div>
+                <div><label>Bar Mill</label><input type="number" id="e_bm" value="9461" onchange="window.maximizeAllocations()"></div>
+                <div><label>CRM (CRC)</label><input type="number" id="e_cr" value="15430" onchange="window.maximizeAllocations()"></div>
+                <div><label>WRM Patratu</label><input type="number" id="e_wr" value="12987" onchange="window.maximizeAllocations()"></div>
+                <div><label>BM Patratu</label><input type="number" id="e_bp" value="3726" onchange="window.maximizeAllocations()"></div>
+              </div>
+            </div>
+          </div>
+    
+          <div class="coll-panel">
+            <div class="coll-h" onclick="window.tog('capSet')">
+              <span>⚡ Capacity & Yield</span><span class="chev" id="capSetChev">▼</span>
+            </div>
+            <div class="coll-b" id="capSet" style="padding: 16px 12px;">
+               <div class="cap-micro-grid-wrap">
+                 <div class="cap-micro-grid">
+                    <div class="cmg-hdr">Mill</div><div class="cmg-hdr">Min</div><div class="cmg-hdr">Mean</div><div class="cmg-hdr">Max</div><div class="cmg-hdr">Yld%</div>
+                    
+                    <div class="cmg-lbl">Plate</div>
+                    <input type="number" id="c_pm_mn" value="99200" class="cmg-in" onchange="window.updateMean('pm')">
+                    <input type="number" id="c_pm_me" value="113832" class="cmg-in" style="color:var(--md-sys-color-primary)" onchange="window.maximizeAllocations()">
+                    <input type="number" id="c_pm_mx" value="124000" class="cmg-in" onchange="window.updateMean('pm')">
+                    <input type="number" id="y_pm" value="92.3" step="0.1" class="cmg-in" onchange="window.maximizeAllocations()">
+      
+                    <div class="cmg-lbl">HSM</div>
+                    <input type="number" id="c_hs_mn" value="341000" class="cmg-in" onchange="window.updateMean('hs')">
+                    <input type="number" id="c_hs_me" value="400985" class="cmg-in" style="color:var(--md-sys-color-primary)" onchange="window.maximizeAllocations()">
+                    <input type="number" id="c_hs_mx" value="403000" class="cmg-in" onchange="window.updateMean('hs')">
+                    <input type="number" id="y_hsm" value="98.0" step="0.1" class="cmg-in" onchange="window.maximizeAllocations()">
+      
+                    <div class="cmg-lbl">Bar</div>
+                    <input type="number" id="c_bm_mn" value="62000" class="cmg-in" onchange="window.updateMean('bm')">
+                    <input type="number" id="c_bm_me" value="122419" class="cmg-in" style="color:var(--md-sys-color-primary)" onchange="window.maximizeAllocations()">
+                    <input type="number" id="c_bm_mx" value="152799" class="cmg-in" onchange="window.updateMean('bm')">
+                    <input type="number" id="y_bm" value="97.8" step="0.1" class="cmg-in" onchange="window.maximizeAllocations()">
+      
+                    <div class="cmg-lbl">CRM</div>
+                    <input type="number" id="c_cr_mn" value="93000" class="cmg-in" onchange="window.updateMean('cr')">
+                    <input type="number" id="c_cr_me" value="100006" class="cmg-in" style="color:var(--md-sys-color-primary)" onchange="window.maximizeAllocations()">
+                    <input type="number" id="c_cr_mx" value="108500" class="cmg-in" onchange="window.updateMean('cr')">
+                    <input type="number" id="y_crm" value="98.0" step="0.1" class="cmg-in" onchange="window.maximizeAllocations()">
+      
+                    <div class="cmg-lbl">WRM Pat</div>
+                    <input type="number" id="c_wr_mn" value="31000" class="cmg-in" onchange="window.updateMean('wr')">
+                    <input type="number" id="c_wr_me" value="45012" class="cmg-in" style="color:var(--md-sys-color-primary)" onchange="window.maximizeAllocations()">
+                    <input type="number" id="c_wr_mx" value="46996" class="cmg-in" onchange="window.updateMean('wr')">
+                    <input type="number" id="y_wrm" value="95.5" step="0.1" class="cmg-in" onchange="window.maximizeAllocations()">
+      
+                    <div class="cmg-lbl">BM Pat</div>
+                    <input type="number" id="c_bp_mn" value="62496" class="cmg-in" onchange="window.updateMean('bp')">
+                    <input type="number" id="c_bp_me" value="62496" class="cmg-in" style="color:var(--md-sys-color-primary)" onchange="window.maximizeAllocations()">
+                    <input type="number" id="c_bp_mx" value="68200" class="cmg-in" onchange="window.updateMean('bp')">
+                    <input type="number" id="y_bmp" value="96.5" step="0.1" class="cmg-in" onchange="window.maximizeAllocations()">
+                 </div>
+               </div>
+            </div>
+          </div>
+
+          <button class="btn btn-pu" onclick="window.maximizeAllocations()" style="margin-bottom:0; width:100%; box-sizing:border-box;">
+            ⚡ Auto-Maximize Ratios
+          </button>
+      </div>
+
+    </div>
+
+    <div class="content-area" id="main-content">
+      <div class="panel">
+        <div class="tabs-hdr">
+          <button class="tab-btn act" onclick="window.stab(this,'t-ov')">📊 Overview</button>
+          <button class="tab-btn" onclick="window.stab(this,'t-fl')">🔀 Allocation Flow</button>
+          <button class="tab-btn" onclick="window.stab(this,'t-eb')">₹ EBITDA Rank</button>
+          <button class="tab-btn" onclick="window.stab(this,'t-pm')">📦 Product Mix Optimizer</button>
+        </div>
+
+        <div id="t-ov" class="tc act">
+          <div id="alertBox"></div>
+          
+          <div id="casterVisualBox" style="margin-bottom:24px; background:var(--input-bg); border:var(--glass-border); border-radius:var(--radius-m); padding:20px;"></div>
+
+          <div class="ov-grid">
+            <div>
+              <p class="sec-lbl">Forecast vs Plan (Mean Scenario)</p>
+              <div class="table-responsive">
+                <table class="sc-tbl"><thead><tr><th>Mill</th><th>Plan (t)</th><th>Forecast (t)</th><th>Δ vs Plan</th></tr></thead>
+                <tbody id="ovTbl"></tbody></table>
+              </div>
+            </div>
+            <div>
+              <p class="sec-lbl">Constraint Check (Mean)</p>
+              <div id="constCards"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="t-fl" class="tc">
+          <div class="flow-toolbar">
+            <button class="flow-view-btn act" onclick="window.setFlowView('flow',this)">🔀 Flow View</button>
+            <button class="flow-view-btn" onclick="window.setFlowView('table',this)">📋 Table View</button>
+            <button class="flow-view-btn" onclick="window.setFlowView('sankey',this)">📊 Sankey View</button>
+            <div class="flow-legend">
+              <div class="leg-item"><div class="leg-dot" style="background:var(--md-sys-color-primary)"></div>Furnace</div>
+              <div class="leg-item"><div class="leg-dot" style="background:var(--md-sys-color-primary-container)"></div>Caster</div>
+              <div class="leg-item"><div class="leg-dot" style="background:#fef08a"></div>Slab/Mill</div>
+              <div class="leg-item"><div class="leg-dot" style="background:#e9d5ff"></div>Billet/Mill</div>
+            </div>
+            <span style="font-size:11px;color:var(--tm);margin-left:auto;font-weight:700;white-space:nowrap;">Click any node for details ▼</span>
+          </div>
+          <div id="flowCanvas"></div>
+        </div>
+
+        <div id="t-eb" class="tc">
+          <div class="ov-grid">
+            <div>
+              <p class="sec-lbl">EBITDA by Mill — Mean Scenario (₹ Crores)</p>
+              <div id="ebBars" style="padding:20px; background:var(--input-bg); border-radius:var(--radius-m); border:var(--glass-border);"></div>
+              <div class="tot-eb-card">
+                <span class="tot-eb-lbl">Total EBITDA (Mean)</span>
+                <span class="tot-eb-val" id="totEb">—</span>
+              </div>
+            </div>
+            <div>
+              <p class="sec-lbl">Marginal Rank (₹/t of liquid steel)</p>
+              <div id="margRank" style="padding:20px; background:var(--input-bg); border-radius:var(--radius-m); border:var(--glass-border);"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="t-pm" class="tc">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:20px; background:var(--input-bg); padding:20px; border-radius:var(--radius-m); border:var(--glass-border)">
+            <p style="font-size:13px;color:var(--tx);flex:1;min-width:250px; line-height:1.6; font-weight:500;">
+              Product grade breakdown. Volumes scale with actual mill output. EBITDA ₹/t rates are blended from these grades. 
+              <br><span style="color:var(--tm); display:inline-block; margin-top:6px;"><b>Auto-Maximize</b> optimizes the mix by mathematically shifting % to higher-margin grades (dynamically capped at 200% of base plan to preserve operational realism).</span>
+            </p>
+            <button class="btn btn-gold" onclick="window.maximizeProductMixEbitda()" style="white-space:nowrap;">
+              💰 Auto-Maximize EBITDA
+            </button>
+          </div>
+          <div id="prodMixContent" class="pm-grid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   JINDAL STEEL ANGUL — SMS & MILLS FLOW SIMULATOR
+   Core Logic: EBITDA/t pool allocation, product mix, Excel export
+══════════════════════════════════════════════════════════════════ */
+
+google.charts.load('current', {'packages':['sankey']});
+
+/* ─── Globals & Constants ───────────────────────────────────────── */
+let autoOpt  = true;
+let mixData  = {};
+let calcState = {};
+let _daysRef = 31;
+let selectedNode = null; 
+let currentFlowView = 'flow'; 
+
+/* ─── Theme & Reset Logic ─── */
+window.toggleTheme = function() {
+    const root = document.documentElement;
+    const isDark = root.getAttribute('data-theme') === 'dark';
+    root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    document.getElementById('themeBtn').textContent = isDark ? '🌙' : '☀️';
+    localStorage.setItem('theme', isDark ? 'light' : 'dark');
+    if (currentFlowView === 'sankey') renderSankey();
+}
+
+// Init Theme
+if (localStorage.getItem('theme') === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.getElementById('themeBtn').textContent = '☀️';
+}
+
+window.resetSimulator = function() {
+    // Reset inputs
+    document.querySelectorAll('input[type=number]').forEach(el => {
+        if (el.id !== 'planDays' && el.defaultValue !== undefined && el.defaultValue !== '') {
+            el.value = el.defaultValue;
+        }
+    });
+    const sel = document.getElementById('planMonthSel');
+    for(let i=0; i<sel.options.length; i++) {
+        if(sel.options[i].defaultSelected) {
+            sel.selectedIndex = i; break;
+        }
+    }
+    
+    const m = parseInt($('planMonthSel').value) || 7;
+    const y = parseInt($('planYear').value) || 2026;
+    $('planDays').value = daysInMonth(m, y);
+    
+    mixData = {};
+    initMixData(daysInMonth(m,y));
+    window.recalc(); // standard recalc without auto-maximize
+}
+
+const PLAN = {
+  '7-2026':{sms1:421200,sms2:327840,pm:113840,hsm:401000,bm:122416,crm:100000,wrm:45016,bmp:62500},
+  '8-2026':{sms1:452160,sms2:340800,pm:113840,hsm:434000,bm:122416,crm:60000,wrm:37200,bmp:52300},
+  '9-2026':{sms1:443040,sms2:323040,pm:110080,hsm:434000,bm:119900,crm:60000,wrm:37200,bmp:52300},
+};
+const MONTHS=['','January','February','March','April','May','June','July','August',
+               'September','October','November','December'];
+
+const PROD_MIX = {
+  pm: {
+    name: '🏭 Plate Mill', plan: 113840, groups: [
+      {
+        name: 'Domestic', clr: '#006493', prods: [
+          { l: 'Q Grade', v: 7000, e: 31034, clr: '#16a34a' },
+          { l: 'Q&T', v: 9500, e: 28034, clr: '#22c55e' },
+          { l: 'FN', v: 9000, e: 23534, clr: '#f97316' },
+          { l: 'VAG', v: 30500, e: 22196, clr: '#ea580c' },
+          { l: 'Base Grade', v: 29000, e: 18934, clr: '#94a3b8' } 
+        ]
+      }
+    ]
+  },
+  bar: {
+    name: '🔩 Bar Mill', plan: 122416, groups: [
+      {
+        name: 'TMT Domestic', clr: '#16a34a', prods: [
+          { l: 'TMT 8mm', v: 35000, e: 9461, clr: '#15803d' },
+          { l: 'TMT 10mm', v: 40000, e: 9461, clr: '#16a34a' },
+          { l: 'TMT >10mm', v: 47416, e: 9461, clr: '#22c55e' } 
+        ]
+      }
+    ]
+  },
+  hsm: {
+    name: '🌀 HSM', plan: 393366, groups: [
+      {
+        name: 'VAG Domestic', clr: '#0ea5e9', prods: [
+          { l: '<1.4mm VAG', v: 1000, e: 16370, clr: '#0284c7' },
+          { l: '1.6-1.8mm', v: 19000, e: 15199, clr: '#0ea5e9' },
+          { l: '1.8-2mm', v: 26000, e: 14700, clr: '#38bdf8' },
+          { l: 'VAG Special', v: 43000, e: 14556, clr: '#7dd3fc' },
+          { l: 'Chequered', v: 17000, e: 14400, clr: '#bae6fd' }
+        ]
+      },
+      {
+        name: 'High Volume Base', clr: '#64748b', prods: [
+          { l: '>2mm VAG', v: 196619, e: 12414, clr: '#94a3b8' } 
+        ]
+      }
+    ]
+  },
+  crm: {
+    name: '🪟 CRM', plan: 85837, groups: [
+      {
+        name: 'Products', clr: '#ca8a04', prods: [
+          { l: 'Deck Sheet', v: 300, e: 8322, clr: '#7c3aed' },
+          { l: 'GL', v: 10557, e: 6413, clr: '#16a34a' },
+          { l: 'PPGL Sheet', v: 10755, e: 5947, clr: '#15803d' },
+          { l: 'HRSPO Dom', v: 27000, e: 2220, clr: '#ca8a04' },
+          { l: 'HRPO', v: 8000, e: 2220, clr: '#ea580c' },
+          { l: 'CRFH', v: 24000, e: 2194, clr: '#eab308' },
+          { l: 'Purlin', v: 800, e: 626, clr: '#6d28d9' },
+          { l: 'CRFH Allied', v: 5000, e: -1090, clr: '#ef4444' } 
+        ]
+      }
+    ]
+  },
+  wrm: {
+    name: '⭕ WRM Patratu', plan: 30920, groups: [
+      {
+        name: 'Products', clr: '#7c3aed', prods: [
+          { l: 'Wire Rod VAG', v: 15344, e: 14566, clr: '#7c3aed' },
+          { l: 'Wire Rod Non-VAG', v: 15576, e: 11431, clr: '#a855f7' } 
+        ]
+      }
+    ]
+  },
+  bmp: {
+    name: '🔨 BM Patratu', plan: 65000, groups: [
+      {
+        name: 'TMT Products', clr: '#ca8a04', prods: [
+          { l: 'TMT 8mm', v: 15000, e: 3726, clr: '#ef4444' },
+          { l: 'TMT 10mm', v: 25000, e: 3726, clr: '#f97316' },
+          { l: 'TMT >10mm', v: 25000, e: 3726, clr: '#ca8a04' } 
+        ]
+      }
+    ]
+  }
+};
+
+const $ = id => document.getElementById(id);
+const n = id => { const el=$(id); return el ? (parseFloat(el.value)||0) : 0; };
+const fmt = (v,d=0) => isNaN(v) ? '0' : Math.round(v).toLocaleString('en-IN',{maximumFractionDigits:d});
+const fmtCr = v => (v/10000000).toFixed(2);
+const daysInMonth = (m,y) => new Date(y,m,0).getDate();
+
+/* Toggle Drilldown rows with animated arrow */
+window.toggleDrill = function(id) {
+    const el = document.getElementById(id);
+    const btn = document.getElementById('btn-' + id);
+    if (el) {
+        if (el.style.display === 'none' || el.style.display === '') {
+            el.style.display = 'table-row';
+            if(btn) btn.style.transform = 'rotate(90deg)';
+        } else {
+            el.style.display = 'none';
+            if(btn) btn.style.transform = 'rotate(0deg)';
+        }
+    }
+};
+
+/* Get Mill Breakdown for Table Drilldowns */
+function getMillDrilldown(key, totalVol) {
+    const mix = mixData[key];
+    const millDef = PROD_MIX[key];
+    if(!mix || !millDef || totalVol <= 0) return '';
+    let html = '<div style="padding: 12px; background: transparent; border-left: 3px solid var(--md-sys-color-primary);"><table style="width:100%; border-collapse: collapse; font-size:12px;"><tbody>';
+    millDef.groups.forEach(g => {
+        g.prods.forEach(p => {
+            const pct = mix.pcts[p.l] || 0;
+            if(pct > 0) {
+                const vol = (totalVol * pct) / 100;
+                html += `<tr>
+                    <td style="padding:6px 8px; text-align:left; border:none; background:transparent; white-space:normal;"><span style="color:${p.clr}; margin-right:8px; font-size:14px;">●</span>${p.l} <span style="color:var(--tm); font-size:11px;">(${pct.toFixed(1)}%)</span></td>
+                    <td style="padding:6px 8px; text-align:right; font-weight:800; border:none; background:transparent; color:var(--tx);">${fmt(Math.round(vol))} t</td>
+                </tr>`;
+            }
+        });
+    });
+    html += '</tbody></table></div>';
+    return html;
+}
+
+/* Get Drawer M3 Mill Breakdown */
+function getMillMixM3(key, totalVol) {
+    const mix = mixData[key];
+    const millDef = PROD_MIX[key];
+    if(!mix || !millDef || totalVol <= 0) return '';
+    let html = `<div style="margin-top:20px;"><div style="font-size:11px; font-weight:800; color:var(--tm); text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Product Mix Breakdown</div>`;
+    html += `<div style="background:var(--input-bg); border-radius:var(--radius-m); padding:16px; border:var(--glass-border);">`;
+    millDef.groups.forEach(g => {
+        g.prods.forEach(p => {
+            const pct = mix.pcts[p.l] || 0;
+            if(pct > 0) {
+                const vol = (totalVol * pct) / 100;
+                html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--br);">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${p.clr};"></span>
+                        <span style="font-size:13px; font-weight:700; color:var(--tx);">${p.l}</span>
+                        <span style="font-size:11px; font-weight:600; color:var(--tm);">(${pct.toFixed(1)}%)</span>
+                    </div>
+                    <div style="font-size:14px; font-weight:900; color:var(--tx);">${fmt(Math.round(vol))} t</div>
+                </div>`;
+            }
+        });
+    });
+    html += '</div></div>';
+    return html;
+}
+
+window.updateMean = function(key) {
+  const min = parseFloat($('c_' + key + '_mn').value) || 0;
+  const max = parseFloat($('c_' + key + '_mx').value) || 0;
+  $('c_' + key + '_me').value = Math.round((min + max) / 2);
+  window.maximizeAllocations();
+}
+
+/* ─── Excel Export Logic ────────────────────────────────────────────────────────── */
+window.exportXLSX = function() {
+    if (!calcState || !calcState.sc) {
+        alert("Please ensure calculations are complete before exporting.");
+        return;
+    }
+    
+    const wb = XLSX.utils.book_new();
+    const {m, y, days, sms1_raw, sms2_raw, s1tc1_t, s2s1_t, tc1, sc1, bc1, cc1, sc} = calcState;
+    const ma = sc.me; 
+    
+    // Sheet 1: Flow Overview
+    const overviewData = [
+        ["Jindal Steel Angul - Production Plan Overview"],
+        ["Period", `${MONTHS[m]} ${y}`],
+        ["Days", days],
+        [],
+        ["1. LIQUID STEEL GENERATION (Tonnes/Month)", "", "Daily Avg (t/d)"],
+        ["SMS 1 (EAF+BOF1)", Math.round(sms1_raw), Math.round(sms1_raw/days)],
+        ["SMS 2 (BOF2+3)", Math.round(sms2_raw), Math.round(sms2_raw/days)],
+        ["Total Liquid Steel", Math.round(sms1_raw+sms2_raw), Math.round((sms1_raw+sms2_raw)/days)],
+        [],
+        ["2. CASTER ALLOCATION & ROUTING (Tonnes/Month)", "", "Daily Avg (t/d)"],
+        ["SMS 1 -> BC1 (Billet)", Math.round(bc1), Math.round(bc1/days)],
+        ["SMS 1 -> CC1 (Combi)", Math.round(cc1), Math.round(cc1/days)],
+        ["SMS 1 -> SC1 (Slab)", Math.round(sc1), Math.round(sc1/days)],
+        ["SMS 1 -> TC1 (Direct Bypass)", Math.round(s1tc1_t), Math.round(s1tc1_t/days)],
+        ["SMS 2 -> TC1 (Twin Slab)", Math.round(sms2_raw - s2s1_t), Math.round((sms2_raw - s2s1_t)/days)],
+        ["SMS 2 -> SMS1 (Overflow)", Math.round(s2s1_t), Math.round(s2s1_t/days)],
+        [],
+        ["3. MILL FEEDS & PRODUCTION (Tonnes/Month)", "Feed (t)", "Prod Forecast (t)", "Yield %", "EBITDA (₹ Cr)"],
+        ["Plate Mill (from SC1)", Math.round(ma.alloc.pm), Math.round(ma.pPM), n('y_pm'), (ma.epm/10000000).toFixed(2)],
+        ["HSM (from TC1)", Math.round(ma.alloc.hs), Math.round(ma.pHS), n('y_hsm'), (ma.ehs/10000000).toFixed(2)],
+        ["Bar Mill (from BC1)", Math.round(ma.alloc.bm), Math.round(ma.pBM), n('y_bm'), (ma.ebm/10000000).toFixed(2)],
+        ["WRM Patratu (from CC1)", Math.round(ma.alloc.wr), Math.round(ma.pWR), n('y_wrm'), (ma.ewr/10000000).toFixed(2)],
+        ["BM Patratu (from BC1+CC1)", Math.round(ma.alloc.bp), Math.round(ma.pBP), n('y_bmp'), (ma.ebp/10000000).toFixed(2)],
+        ["CRM (from HSM Feed)", Math.round(ma.crmIn), Math.round(ma.pCR), n('y_crm'), (ma.ecr/10000000).toFixed(2)]
+    ];
+    const wsOverview = XLSX.utils.aoa_to_sheet(overviewData);
+    XLSX.utils.book_append_sheet(wb, wsOverview, "Allocation Flow");
+
+    // Sheet 2: Daily Plan
+    const dailyData = [];
+    const headers = ["Date", "SMS1 (t)", "SMS2 (t)", "BC1 Caster (t)", "CC1 Caster (t)", "SC1 Caster (t)", "TC1 Caster (t)", "Plate Mill (t)", "HSM (t)", "Bar Mill (t)", "WRM Patratu (t)", "BM Patratu (t)", "CRM (t)"];
+    dailyData.push(headers);
+    
+    const r_s1 = sms1_raw/days;
+    const r_s2 = sms2_raw/days;
+    const r_bc1 = bc1/days;
+    const r_cc1 = cc1/days;
+    const r_sc1 = sc1/days;
+    const r_tc1 = (tc1 + s1tc1_t)/days;
+    const r_pm = ma.pPM/days;
+    const r_hs = ma.pHS/days;
+    const r_bm = ma.pBM/days;
+    const r_wr = ma.pWR/days;
+    const r_bp = ma.pBP/days;
+    const r_cr = ma.pCR/days;
+
+    for(let d=1; d<=days; d++) {
+        let dateStr = `${d}-${MONTHS[m].substring(0,3)}-${y}`;
+        dailyData.push([
+            dateStr,
+            Math.round(r_s1), Math.round(r_s2),
+            Math.round(r_bc1), Math.round(r_cc1), Math.round(r_sc1), Math.round(r_tc1),
+            Math.round(r_pm), Math.round(r_hs), Math.round(r_bm), Math.round(r_wr), Math.round(r_bp), Math.round(r_cr)
+        ]);
+    }
+    
+    dailyData.push([]);
+    dailyData.push([
+        "TOTAL",
+        Math.round(sms1_raw), Math.round(sms2_raw),
+        Math.round(bc1), Math.round(cc1), Math.round(sc1), Math.round(tc1 + s1tc1_t),
+        Math.round(ma.pPM), Math.round(ma.pHS), Math.round(ma.pBM), Math.round(ma.pWR), Math.round(ma.pBP), Math.round(ma.pCR)
+    ]);
+
+    const wsDaily = XLSX.utils.aoa_to_sheet(dailyData);
+    XLSX.utils.book_append_sheet(wb, wsDaily, "Daily Plan");
+
+    XLSX.writeFile(wb, `Jindal_Steel_Production_Plan_${MONTHS[m]}_${y}.xlsx`);
+}
+
+/* ─── Mix Data & Optimization ───────────────────────────────────────────────────── */
+function initMixData(days) {
+  if (!days || days <= 0) days = 31;
+  _daysRef = days;
+  Object.keys(PROD_MIX).forEach(key => {
+    if (mixData[key]) { mixData[key].totalCapTpd = mixData[key].totalCapTpd || Math.round(PROD_MIX[key].plan/days); return; }
+    const mill  = PROD_MIX[key];
+    let totalV = 0;
+    mill.groups.forEach(g => g.prods.forEach(p => { if(p.v>0) totalV+=p.v; }));
+    const pcts = {};
+    mill.groups.forEach(g => g.prods.forEach(p => {
+      if (p.v > 0) pcts[p.l] = totalV > 0 ? Math.round(p.v/totalV*1000)/10 : 0;
+    }));
+    mixData[key] = { totalCapTpd: Math.round(mill.plan/days)||1, pcts };
+  });
+  syncBlendedEbitda();
+}
+
+function getMixBlended(key) {
+  const d = mixData[key]; if(!d) return 0;
+  const mill = PROD_MIX[key]; let t=0, e=0;
+  mill.groups.forEach(g => g.prods.forEach(p => {
+    const pct = d.pcts[p.l]||0; if(pct>0){t+=pct; e+=pct*(p.e||0);}
+  }));
+  return t>0 ? e/t : 0;
+}
+
+function syncBlendedEbitda() {
+    if(Object.keys(mixData).length > 0) {
+        if(getMixBlended('pm')>0) $('e_pm').value = Math.round(getMixBlended('pm'));
+        if(getMixBlended('hsm')>0) $('e_hs').value = Math.round(getMixBlended('hsm'));
+        if(getMixBlended('bar')>0) $('e_bm').value = Math.round(getMixBlended('bar'));
+        if(getMixBlended('crm')>0) $('e_cr').value = Math.round(getMixBlended('crm'));
+        if(getMixBlended('wrm')>0) $('e_wr').value = Math.round(getMixBlended('wrm'));
+        if(getMixBlended('bmp')>0) $('e_bp').value = Math.round(getMixBlended('bmp'));
+    }
+}
+
+window.maximizeProductMixEbitda = function() {
+  Object.keys(PROD_MIX).forEach(key => {
+    const mill = PROD_MIX[key];
+    if (!mixData[key]) return;
+    
+    let totalV = 0;
+    let prods = [];
+    mill.groups.forEach(g => {
+      g.prods.forEach(p => {
+        if (p.v > 0) {
+          totalV += p.v;
+          prods.push({ l: p.l, e: p.e, basePct: 0 });
+        }
+      });
+    });
+    
+    prods.forEach(p => {
+       const origP = mill.groups.flatMap(g=>g.prods).find(x=>x.l===p.l);
+       p.basePct = (origP.v / totalV) * 100;
+    });
+    
+    prods.sort((a,b) => b.e - a.e);
+    
+    let rem = 100;
+    prods.forEach(p => {
+       const maxAllowed = Math.min(100, p.basePct * 2.0);
+       const allocate = Math.min(rem, maxAllowed);
+       mixData[key].pcts[p.l] = allocate;
+       rem -= allocate;
+    });
+    
+    if (rem > 0 && prods.length > 0) {
+        mixData[key].pcts[prods[0].l] += rem;
+    }
+  });
+  
+  syncBlendedEbitda();
+  window.maximizeAllocations();
+}
+
+/* ─── NEW: Auto-Maximize All Caster & Mill Allocations ─── */
+window.maximizeAllocations = function() {
+    const days = n('planDays') || 31;
+    const e_pm = n('e_pm'), e_hs = n('e_hs'), e_bm = n('e_bm'), e_wr = n('e_wr'), e_bp = n('e_bp');
+    const y_pm = n('y_pm')/100, y_hsm = n('y_hsm')/100, y_bm = n('y_bm')/100, y_wrm = n('y_wrm')/100, y_bmp = n('y_bmp')/100;
+    const cap_pm = n('c_pm_me'), cap_hs = n('c_hs_me'), cap_bm = n('c_bm_me'), cap_wr = n('c_wr_me'), cap_bp = n('c_bp_me');
+
+    let margins = [
+        { id: 'pm', margin: e_pm/y_pm, req: cap_pm/y_pm },
+        { id: 'hs', margin: e_hs/y_hsm, req: cap_hs/y_hsm },
+        { id: 'bm', margin: e_bm/y_bm, req: cap_bm/y_bm },
+        { id: 'wr', margin: e_wr/y_wrm, req: cap_wr/y_wrm },
+        { id: 'bp', margin: e_bp/y_bmp, req: cap_bp/y_bmp }
+    ];
+
+    margins.sort((a,b) => b.margin - a.margin);
+
+    let sms2_raw = n('sms2');
+    $('sms2_of').value = 0; 
+    let tc1_out = sms2_raw;
+    
+    let hs_idx = margins.findIndex(m => m.id === 'hs');
+    margins[hs_idx].req = Math.max(0, margins[hs_idx].req - tc1_out);
+
+    let sms1_avail = n('sms1');
+    let allocs = { pm: 0, hs: 0, bm: 0, wr: 0, bp: 0 };
+    
+    for(let m of margins) {
+        let take = Math.min(sms1_avail, m.req);
+        allocs[m.id] = take;
+        sms1_avail -= take;
+    }
+    
+    if(sms1_avail > 0) { allocs[margins[0].id] += sms1_avail; }
+
+    let sc1 = allocs.pm;
+    let cc1 = allocs.wr;
+    let s1tc1_t = allocs.hs; 
+    let bc1 = allocs.bm + allocs.bp;
+    
+    let sum = sc1 + cc1 + bc1;
+    if(sum === 0) sum = 1;
+
+    $('sms1_sc1').value = (sc1 / sum * 100).toFixed(1);
+    $('sms1_bc1').value = (bc1 / sum * 100).toFixed(1);
+    $('sms1_cc1').value = (cc1 / sum * 100).toFixed(1);
+    
+    if (bc1 > 0) {
+        $('bc1_bar').value = (allocs.bm / bc1 * 100).toFixed(1);
+        $('bc1_bm').value = (allocs.bp / bc1 * 100).toFixed(1);
+    }
+    if (cc1 > 0) {
+        $('cc1_wrm').value = 100; 
+        $('cc1_bm').value = 0; 
+    }
+    
+    $('sms1_to_tc1').value = Math.round(s1tc1_t / days);
+    window.recalc();
+}
+
+/* ─── Core Pool Allocator ─────────────── */
+function allocatePools(sc1, tc1, bc1, cc1, s1tc1_t, scenario, days) {
+  const sfx = scenario; 
+  const caps = { pm: n('c_pm_'+sfx), hs: n('c_hs_'+sfx), bm: n('c_bm_'+sfx), cr: n('c_cr_'+sfx), wr: n('c_wr_'+sfx), bp: n('c_bp_'+sfx) };
+  const ypm=n('y_pm')/100, yhsm=n('y_hsm')/100, ybm=n('y_bm')/100, ycrm=n('y_crm')/100, ywrm=n('y_wrm')/100, ybmp=n('y_bmp')/100;
+
+  let allocPM = Math.min(sc1, caps.pm / ypm); // SC1 is strict to PM now
+  let allocHS = Math.min(tc1 + s1tc1_t, caps.hs / yhsm); // HSM fed by TC1 (SMS2 + SMS1 direct)
+
+  let b_sum = n('bc1_bar') + n('bc1_bm');
+  let feedBM = bc1 * (b_sum ? n('bc1_bar')/b_sum : 0);
+  let c_sum = n('cc1_wrm') + n('cc1_bm');
+  let feedWR = cc1 * (c_sum ? n('cc1_wrm')/c_sum : 0);
+  let feedBP = (bc1 * (b_sum ? n('bc1_bm')/b_sum : 0)) + (cc1 * (c_sum ? n('cc1_bm')/c_sum : 0));
+
+  let allocBM = Math.min(feedBM, caps.bm / ybm);
+  let allocWR = Math.min(feedWR, caps.wr / ywrm);
+  let allocBP = Math.min(feedBP, caps.bp / ybmp);
+
+  const pPM = allocPM * ypm, pHS = allocHS * yhsm, pBM = allocBM * ybm, pWR = allocWR * ywrm, pBP = allocBP * ybmp;
+  const bHS=n('e_hs');
+  const bCR=n('e_cr');
+
+  let crmIn = Math.min(pHS, caps.cr / (ycrm || 1)); 
+  const pCR = crmIn * ycrm;
+  const hsmSales = Math.max(0, pHS - crmIn);
+
+  const bPM=n('e_pm');
+  const bBM=n('e_bm');
+  const bWR=n('e_wr');
+  const bBP=n('e_bp');
+
+  return {
+    alloc: { pm: allocPM, hs: allocHS, bm: allocBM, wr: allocWR, bp: allocBP },
+    caps, crmIn, pPM, pHS, hsmSales, pBM, pCR, pWR, pBP,
+    tot: pPM + pHS + pBM + pWR + pBP + pCR,
+    matLimPM: allocPM*ypm < caps.pm, matLimHS: allocHS*yhsm < caps.hs,
+    matLimBM: allocBM*ybm < caps.bm, matLimCR: crmIn * ycrm < caps.cr,
+    matLimWR: allocWR*ywrm < caps.wr, matLimBP: allocBP*ybmp < caps.bp,
+    epm: pPM*bPM, ehs: pHS*bHS, ecr: pCR*bCR, ebm: pBM*bBM, ewr: pWR*bWR, ebp: pBP*bBP,
+    totE: (pPM*bPM)+(pHS*bHS)+(pCR*bCR)+(pBM*bBM)+(pWR*bWR)+(pBP*bBP)
+  };
+}
+
+window.onMonthChange = function(){
+  const m=parseInt($('planMonthSel').value), y=parseInt($('planYear').value)||2026;
+  const days = daysInMonth(m,y);
+  $('planDays').value = days;
+  const key=`${m}-${y}`;
+  if(PLAN[key]){$('sms1').value=PLAN[key].sms1; $('sms2').value=PLAN[key].sms2;}
+  window.maximizeAllocations();
+}
+
+/* ─── Auto-transfer optimizer ────────────────────────────────────── */
+function computeOptSMS1toTC1() {
+  const days = n('planDays') || 31;
+  const capHS = n('c_hs_me');
+  const yhsm = n('y_hsm') / 100;
+  
+  const hsmReqLS = capHS / yhsm;
+  const sms2ToHSM = n('sms2'); // Assuming 100% fixed from previous fix
+  
+  const sms1Avail = n('sms1');
+  const hsmGapLS = hsmReqLS - sms2ToHSM; // SC1 no longer provides overflow to HSM
+  
+  if (hsmGapLS <= 0) return 0;
+
+  const hsmEbt = n('e_hs') * yhsm; 
+  const bmEbt = n('e_bm') * (n('y_bm') / 100); 
+  if (hsmEbt <= bmEbt) return 0;
+
+  const transfer = Math.min(hsmGapLS, sms1Avail);
+  return Math.round(transfer / days);
+}
+
+window.applyAutoTransfer = function(){
+  const tpd = computeOptSMS1toTC1();
+  const inp = $('sms1_to_tc1');
+  if(inp){ 
+    inp.value = Math.round(tpd); 
+    window.recalc(); 
+  }
+}
+
+function computeOptSMS2toSMS1() {
+  const days = n('planDays') || 31;
+  const capHS = n('c_hs_me');
+  const yhsm = n('y_hsm') / 100;
+  const hsmReqLS = capHS / yhsm;
+  
+  const sms2ToHSM = n('sms2');
+  const surplus = sms2ToHSM - hsmReqLS;
+  
+  if (surplus <= 0) return 0;
+  return Math.min(2000, Math.round(surplus / days));
+}
+
+window.applyAutoTransferSMS2 = function(){
+  const tpd = computeOptSMS2toSMS1();
+  const inp = $('sms2_of');
+  if(inp){ 
+    inp.value = Math.round(tpd); 
+    window.recalc(); 
+  }
+}
+
+/* ─── Main recalc ────────────────────────────────────────────────── */
+window.recalc = function(){
+  const m=parseInt($('planMonthSel').value)||7;
+  const y=parseInt($('planYear').value)||2026;
+  const days=n('planDays')||31;
+  _daysRef=days;
+  
+  if(Object.keys(mixData).length===0) initMixData(days);
+
+  const plan=PLAN[`${m}-${y}`]||PLAN['7-2026'];
+  const sms1_raw=n('sms1'), sms2_raw=n('sms2');
+
+  const s1tc1_tpd=n('sms1_to_tc1');
+  const s2s1_tpd=n('sms2_of');
+  const s1tc1_t =Math.min(s1tc1_tpd,sms1_raw/days)*days;
+  const s2s1_t  =Math.min(s2s1_tpd,sms2_raw/days)*days;
+
+  const eff_sms2=Math.max(0, sms2_raw - s2s1_t);
+  const eff_sms1=Math.max(0, sms1_raw - s1tc1_t + s2s1_t);
+
+  const tc1 = eff_sms2; // Enforced 100% yield
+  
+  const sum_s1_cast = n('sms1_sc1') + n('sms1_bc1') + n('sms1_cc1');
+  const r_sc1 = sum_s1_cast ? n('sms1_sc1')/sum_s1_cast : 0;
+  const r_bc1 = sum_s1_cast ? n('sms1_bc1')/sum_s1_cast : 0;
+  const r_cc1 = sum_s1_cast ? n('sms1_cc1')/sum_s1_cast : 0;
+  
+  const sc1 = eff_sms1 * r_sc1;
+  const bc1 = eff_sms1 * r_bc1;
+  const cc1 = eff_sms1 * r_cc1;
+
+  const totalSlab = sc1 + tc1 + s1tc1_t;
+  const totalBillet = bc1 + cc1;
+
+  const sc={mn:allocatePools(sc1,tc1,bc1,cc1,s1tc1_t,'mn',days),
+            me:allocatePools(sc1,tc1,bc1,cc1,s1tc1_t,'me',days),
+            mx:allocatePools(sc1,tc1,bc1,cc1,s1tc1_t,'mx',days)};
+  const ma=sc.me;
+
+  calcState={m,y,days,sms1_raw,sms2_raw, sms1:sms1_raw, sms2:sms2_raw, plan,eff_sms1,eff_sms2,
+    s1tc1_t,s2s1_t,s1tc1_tpd,s2s1_tpd,tc1,sc1,bc1,cc1,totalSlab,totalBillet,
+    matPM: ma.alloc.pm, matHSM: ma.alloc.hs, matBM: ma.alloc.bm, matWRM: ma.alloc.wr, matBMP: ma.alloc.bp,
+    maxPM: ma.caps.pm, maxHSM: ma.caps.hs, maxBM: ma.caps.bm, maxWRM: ma.caps.wr, maxBMP: ma.caps.bp,
+    ypm: n('y_pm')/100, yhsm: n('y_hsm')/100, ybm: n('y_bm')/100, ywrm: n('y_wrm')/100, ybmp: n('y_bmp')/100,
+    ycrm: n('y_crm')/100, sc, autoOpt};
+
+  /* ── Update UI ── */
+  $('k_tot_sms').textContent=fmt(sms1_raw + sms2_raw);
+  $('k_s1').textContent=fmt(sms1_raw)+(s1tc1_t>0?` (-${fmt(Math.round(s1tc1_t))}→TC1)`:'');
+  $('k_s2').textContent=fmt(sms2_raw)+(s2s1_t>0?` (-${fmt(Math.round(s2s1_t))}→SC1)`:'');
+  $('k_sl').textContent=fmt(Math.round(totalSlab));
+  $('k_bl').textContent=fmt(Math.round(totalBillet));
+  $('k_eb').textContent=`₹${fmtCr(ma.totE)}`;
+
+  const dlt=(v,p)=>{const d=v-p,pc=p>0?(d/p*100).toFixed(1):0,s=d>=0?'+':'',cl=d>=0?'ov':'un';
+    return `<span class="vp ${cl}">${s}${fmt(d)} (${s}${pc}%)</span>`;};
+  $('sms1Dlt').outerHTML=dlt(sms1_raw,plan.sms1).replace('span','span id="sms1Dlt"');
+  $('sms2Dlt').outerHTML=dlt(sms2_raw,plan.sms2).replace('span','span id="sms2Dlt"');
+
+  const optTpd=computeOptSMS1toTC1();
+  const sugEl=$('s1tc1_suggest');
+  if(sugEl){sugEl.textContent=optTpd>0?`Suggested: ${fmt(optTpd)} t/d`:'No transfer needed'; sugEl.style.color=optTpd>0?'var(--sg)':'var(--tm)';}
+  const mx=$('s1tc1_max');
+  if(mx){mx.textContent='Max: '+fmt(Math.round(sms1_raw/days))+' t/d';}
+
+  const optTpd2 = computeOptSMS2toSMS1();
+  const sugEl2 = $('sms2_of_suggest');
+  if(sugEl2){sugEl2.textContent = optTpd2 > 0 ? `Suggested: ${fmt(optTpd2)} t/d` : 'No transfer needed'; sugEl2.style.color = optTpd2 > 0 ? 'var(--mo)' : 'var(--tm)';}
+
+  let yLoss = (sms1_raw + sms2_raw) - (ma.pPM + ma.pHS + ma.pBM + ma.pWR + ma.pBP);
+  $('alertBox').innerHTML=`<div class="alert">✅ Outputs balanced correctly. Total Yield / Unallocated Loss: ${fmt(Math.round(yLoss))} MT</div>`;
+
+  // Render Overview Tables
+  const semisMills=[
+    {l:'🏭 Plate Mill',p:plan.pm,v:ma.pPM, k:'pm'},
+    {l:'🌀 HSM (Total Hot Rolled)',p:plan.hsm,v:ma.pHS, k:'hsm'}, 
+    {l:'🔩 Bar Mill',p:plan.bm,v:ma.pBM, k:'bar'},
+    {l:'⭕ WRM Patratu',p:plan.wrm,v:ma.pWR, k:'wrm'},
+    {l:'🔨 BM Patratu',p:plan.bmp,v:ma.pBP, k:'bmp'},
+  ];
+  const dsMills=[
+    {l:'🪟 CRM (CRC)',p:plan.crm,v:ma.pCR, k:'crm'}
+  ];
+
+  let oh=''; 
+  oh+=`<tr class="sec-h"><td colspan="4" style="border-radius: 6px 6px 0 0;">Semis Loaded</td></tr>`;
+  
+  semisMills.forEach((mm, i) => {
+    const d = mm.v - mm.p, s = d >= 0 ? '+' : '', cl = d >= 0 ? 'db-up' : 'db-dn';
+    const drillId = `drill-semi-${i}`;
+    const drillHtml = getMillDrilldown(mm.k, mm.v);
+    
+    oh += `<tr class="expand-row ${i%2===0?'even-row':''}" onclick="window.toggleDrill('${drillId}')" title="Click to view product mix">
+      <td style="text-align:left; padding-left:16px;">
+         <div style="display:flex; align-items:center; gap:8px;">${mm.l}</div>
+      </td>
+      <td>${fmt(mm.p)}</td>
+      <td style="font-weight:800; color:var(--tx);">${fmt(Math.round(mm.v))}</td>
+      <td><span class="db ${cl}">${s}${fmt(Math.round(d))}</span></td>
+    </tr>`;
+    
+    if (drillHtml) {
+        oh += `<tr id="${drillId}" style="display:none; background:var(--input-bg);">
+          <td colspan="4" style="padding: 0;">${drillHtml}</td>
+        </tr>`;
+    }
+  });
+  
+  // Calculate Subtotals for Semis
+  let st_p_semis = semisMills.reduce((a,mm)=>a+mm.p,0);
+  let st_v_semis = semisMills.reduce((a,mm)=>a+mm.v,0);
+  let st_d_semis = st_v_semis - st_p_semis;
+  oh+=`<tr style="background:var(--input-hover);font-weight:900;color:var(--tx); border-bottom: 1px solid var(--br);"><td style="text-align:left; padding-left:16px;">SUBTOTAL (SEMIS)</td><td>${fmt(Math.round(st_p_semis))}</td><td style="color:var(--md-sys-color-primary)">${fmt(Math.round(st_v_semis))}</td><td><span class="db ${st_d_semis>=0?'db-up':'db-dn'}">${st_d_semis>=0?'+':''}${fmt(Math.round(st_d_semis))}</span></td></tr>`;
+
+  // --- MATERIAL RECONCILIATION BLOCK ---
+  const total_sms = sms1_raw + sms2_raw;
+  const total_allocated = ma.alloc.pm + ma.alloc.hs + ma.alloc.bm + ma.alloc.wr + ma.alloc.bp;
+  const unallocated = total_sms - total_allocated;
+  const yield_loss = total_allocated - st_v_semis;
+
+  oh+=`<tr class="recon-h"><td colspan="4" style="background:transparent; color:inherit;">Material Reconciliation</td></tr>`;
+  oh+=`<tr class="even-row"><td style="text-align:left; padding-left:16px;">📥 Total Liquid Steel Input (SMS1 + SMS2)</td><td>-</td><td style="font-weight:800">${fmt(Math.round(total_sms))}</td><td>-</td></tr>`;
+  oh+=`<tr><td style="text-align:left; padding-left:16px; color:var(--rd)">🧱 [-] Unallocated (Bottlenecked at Mills)</td><td>-</td><td style="color:var(--rd);font-weight:800">-${fmt(Math.round(unallocated))}</td><td>-</td></tr>`;
+  oh+=`<tr class="even-row"><td style="text-align:left; padding-left:16px; color:var(--mo)">🔥 [-] Metallurgical Yield Loss (Rolling)</td><td>-</td><td style="color:var(--mo);font-weight:800">-${fmt(Math.round(yield_loss))}</td><td>-</td></tr>`;
+  oh+=`<tr style="background:var(--input-hover);font-weight:900;color:var(--tx); border-bottom: 1px solid var(--br);"><td style="text-align:left; padding-left:16px;">FINAL SEMIS FORECAST (=)</td><td>-</td><td style="color:var(--md-sys-color-primary)">${fmt(Math.round(st_v_semis))}</td><td>-</td></tr>`;
+
+  oh+=`<tr class="sec-h"><td colspan="4" style="margin-top: 24px;">Downstream Processing</td></tr>`;
+  dsMills.forEach((mm, i) => {
+    const d = mm.v - mm.p, s = d >= 0 ? '+' : '', cl = d >= 0 ? 'db-up' : 'db-dn';
+    const drillId = `drill-ds-${i}`;
+    const drillHtml = getMillDrilldown(mm.k, mm.v);
+    
+    oh += `<tr class="expand-row ${i%2===0?'even-row':''}" onclick="window.toggleDrill('${drillId}')" title="Click to view product mix">
+      <td style="text-align:left; padding-left:16px;">
+         <div style="display:flex; align-items:center; gap:8px;">${mm.l}</div>
+      </td>
+      <td>${fmt(mm.p)}</td>
+      <td style="font-weight:800; color:var(--tx);">${fmt(Math.round(mm.v))}</td>
+      <td><span class="db ${cl}">${s}${fmt(Math.round(d))}</span></td>
+    </tr>`;
+    
+    if (drillHtml) {
+        oh += `<tr id="${drillId}" style="display:none; background:var(--input-bg);">
+          <td colspan="4" style="padding: 0;">${drillHtml}</td>
+        </tr>`;
+    }
+  });
+
+  // Calculate Subtotals for Downstream
+  let st_p_ds = dsMills.reduce((a,mm)=>a+mm.p,0);
+  let st_v_ds = dsMills.reduce((a,mm)=>a+mm.v,0);
+  let st_d_ds = st_v_ds - st_p_ds;
+  oh+=`<tr style="background:var(--input-hover);font-weight:900;color:var(--tx); border-bottom: 1px solid var(--br);"><td style="text-align:left; padding-left:16px;">SUBTOTAL (DOWNSTREAM)</td><td>${fmt(Math.round(st_p_ds))}</td><td style="color:var(--mo)">${fmt(Math.round(st_v_ds))}</td><td><span class="db ${st_d_ds>=0?'db-up':'db-dn'}">${st_d_ds>=0?'+':''}${fmt(Math.round(st_d_ds))}</span></td></tr>`;
+
+  const tp=st_p_semis + st_p_ds;
+  const tv=st_v_semis + st_v_ds;
+  const td=tv-tp;
+  oh+=`<tr style="background:var(--input-bg);font-weight:900;border-top:2px solid var(--br)"><td style="text-align:left; padding-left:16px;">TOTAL GROSS SALES (FINISHED)</td><td>${fmt(Math.round(tp))}</td><td style="font-size:15px;color:var(--md-sys-color-primary)">${fmt(Math.round(tv))}</td><td><span class="db ${td>=0?'db-up':'db-dn'}">${td>=0?'+':''}${fmt(Math.round(td))}</span></td></tr>`;
+  $('ovTbl').innerHTML=oh;
+
+  const s1_sum = eff_sms1 > 0 ? (eff_sms1 + s1tc1_t) : 1;
+  const s2_sum = eff_sms2 > 0 ? eff_sms2 : 1;
+  $('casterVisualBox').innerHTML = `
+    <p class="sec-lbl" style="margin-top:0; margin-bottom:12px;">📊 Allocation Share Tracking (% wise Visualization)</p>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+      <div>
+        <label style="color:var(--md-sys-color-primary); font-size:11px; font-weight:800">SMS 1 Allocation Ratios</label>
+        <div style="font-size:12px; margin-bottom:8px; color:var(--tx); font-weight:600">SC1 (Slab): <b style="color:var(--md-sys-color-secondary)">${(sc1/s1_sum*100).toFixed(1)}%</b> | BC1: <b style="color:var(--md-sys-color-tertiary)">${(bc1/s1_sum*100).toFixed(1)}%</b> | CC1: <b style="color:var(--mo)">${(cc1/s1_sum*100).toFixed(1)}%</b> | TC1 (Dir): <b style="color:var(--sg)">${(s1tc1_t/s1_sum*100).toFixed(1)}%</b></div>
+        <div style="height:12px; background:var(--input-bg); border-radius:var(--radius-pill); overflow:hidden; display:flex; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
+          <div style="width:${(sc1/s1_sum*100)}%; background:var(--md-sys-color-secondary)"></div>
+          <div style="width:${(bc1/s1_sum*100)}%; background:var(--md-sys-color-tertiary)"></div>
+          <div style="width:${(cc1/s1_sum*100)}%; background:var(--mo)"></div>
+          <div style="width:${(s1tc1_t/s1_sum*100)}%; background:var(--sg)"></div>
+        </div>
+      </div>
+      <div>
+        <label style="color:var(--mo); font-size:11px; font-weight:800">SMS 2 Allocation Ratios</label>
+        <div style="font-size:12px; margin-bottom:8px; color:var(--tx); font-weight:600">TC1 (Twin Slab): <b style="color:var(--sg)">${(tc1/s2_sum*100).toFixed(1)}%</b> | Overflow to SMS1: <b style="color:var(--gd)">${(s2s1_t/sms2_raw*100).toFixed(1)}%</b></div>
+        <div style="height:12px; background:var(--input-bg); border-radius:var(--radius-pill); overflow:hidden; display:flex; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
+          <div style="width:${(tc1/s2_sum*100)}%; background:var(--sg)"></div>
+          <div style="width:${(s2s1_t/sms2_raw*100)}%; background:var(--gd)"></div>
+        </div>
+      </div>
+    </div>`;
+
+  const ci=[{l:'Plate Mill',mat:ma.alloc.pm*(n('y_pm')/100),cap:ma.caps.pm,lim:ma.matLimPM},
+    {l:'HSM',mat:ma.alloc.hs*(n('y_hsm')/100),cap:ma.caps.hs,lim:ma.matLimHS},
+    {l:'Bar Mill',mat:ma.alloc.bm*(n('y_bm')/100),cap:ma.caps.bm,lim:ma.matLimBM},
+    {l:'CRM',mat:ma.crmIn*(n('y_crm')/100),cap:ma.caps.cr,lim:ma.matLimCR},
+    {l:'WRM Patratu',mat:ma.alloc.wr*(n('y_wrm')/100),cap:ma.caps.wr,lim:ma.matLimWR},
+    {l:'BM Patratu',mat:ma.alloc.bp*(n('y_bmp')/100),cap:ma.caps.bp,lim:ma.matLimBP}];
+  
+  let cch=''; ci.forEach(c2=>{
+    const pct=Math.min(100,c2.mat/c2.cap*100).toFixed(0);
+    const ty=c2.lim?'🧱 Material-ltd':'🏭 Capacity-ltd',col=c2.lim?'var(--sg)':'var(--md-sys-color-primary)';
+    
+    cch+=`<div style="background:var(--input-bg);border-radius:var(--radius-m);border:var(--glass-border);padding:14px 18px;margin-bottom:12px;box-shadow:var(--glass-shadow)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:14px;font-weight:800;color:var(--tx)">${c2.l}</span>
+        <span style="font-size:11px;font-weight:800;color:${col}">${ty}</span>
+      </div>
+      <div style="margin-bottom:4px">
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:8px; font-weight:700;">
+          <span style="color:var(--tm)">Allocated: <span style="color:${c2.lim?'var(--sg)':'var(--rd)'}">${fmt(Math.round(c2.mat))} t</span></span>
+          <span style="color:var(--tm)">Max: ${fmt(Math.round(c2.cap))} t</span>
+        </div>
+        <div style="height:10px; background:var(--input-hover); border-radius:var(--radius-pill); overflow:hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05)">
+           <div style="width:${pct}%; height:100%; background:${c2.lim ? 'var(--sg)' : 'var(--rd)'}; transition:width 0.4s ease; border-radius:var(--radius-pill);"></div>
+        </div>
+      </div>
+    </div>`;
+  });
+  $('constCards').innerHTML=cch;
+
+  const eR=[
+    {l:'Plate Mill',rate:ma.alloc.pm>0?ma.epm/ma.alloc.pm:0,c:'#ea580c'},
+    {l:'HSM',rate:ma.alloc.hs>0?ma.ehs/ma.alloc.hs:0,c:'#0ea5e9'},
+    {l:'Bar Mill',rate:ma.alloc.bm>0?ma.ebm/ma.alloc.bm:0,c:'#16a34a'},
+    {l:'CRM',rate:ma.crmIn>0?ma.ecr/ma.crmIn:0,c:'#ca8a04'},
+    {l:'WRM Patratu',rate:ma.alloc.wr>0?ma.ewr/ma.alloc.wr:0,c:'#7c3aed'},
+    {l:'BM Patratu',rate:ma.alloc.bp>0?ma.ebp/ma.alloc.bp:0,c:'#ca8a04'},
+  ].sort((a,b)=>b.rate-a.rate);
+  const maxR=eR[0]?.rate||1;
+  const safeMaxR = maxR > 0 ? maxR : 1;
+  $('margRank').innerHTML=eR.map((e,i)=>`<div class="eb-row"><div class="ml">${i+1}. ${e.l}</div><div class="bw"><div class="br2" style="width:${(e.rate/safeMaxR*100).toFixed(0)}%;background:${e.c}; min-width: 20px;"></div></div><div class="vl">₹${fmt(Math.round(e.rate))}/t</div></div>`).join('');
+
+  const eI=[{l:'Plate Mill',v:ma.epm,c:'#ea580c'},{l:'HSM',v:ma.ehs,c:'#0ea5e9'},
+    {l:'Bar Mill',v:ma.ebm,c:'#16a34a'},{l:'CRM',v:ma.ecr,c:'#ca8a04'},
+    {l:'WRM Pat',v:ma.ewr,c:'#7c3aed'},{l:'BM Pat',v:ma.ebp,c:'#ca8a04'}];
+  const maxE=Math.max(...eI.map(e=>e.v));
+  const safeMaxE = maxE > 0 ? maxE : 1;
+  $('ebBars').innerHTML=eI.map(e=>`<div class="eb-row"><div class="ml">${e.l}</div><div class="bw"><div class="br2" style="width:${(e.v/safeMaxE*100).toFixed(0)}%;background:${e.c}; min-width: 20px;"></div></div><div class="vl">₹${fmtCr(e.v)} Cr</div></div>`).join('');
+  $('totEb').textContent=`₹${fmtCr(ma.totE)} Cr`;
+
+  window.renderProdMix({pm:ma.pPM,bar:ma.pBM,hsm:ma.pHS,crm:ma.pCR,wrm:ma.pWR,bmp:ma.pBP});
+  window.renderFlow();
+}
+
+/* ─── Product Mix Tab ────────────────────────────────────────────── */
+window.renderProdMix = function(ap) {
+  var el = document.getElementById('prodMixContent');
+  if (!el) return;
+  try {
+  var days = (_daysRef && _daysRef > 0) ? _daysRef : 31;
+  if (Object.keys(mixData).length === 0) initMixData(days);
+  var actual = ap || {};
+  var keys = ['pm','bar','hsm','crm','wrm','bmp'];
+  var html = '';
+
+  for (var ki = 0; ki < keys.length; ki++) {
+    var key = keys[ki];
+    var mill = PROD_MIX[key];
+    if (!mill) continue;
+    if (!mixData[key]) initMixData(days);
+    var d = mixData[key];
+    if (!d) continue;
+
+    var blnd = getMixBlended(key);
+    var ap2  = (actual[key] != null && !isNaN(actual[key])) ? actual[key] : mill.plan;
+
+    var allP = [];
+    mill.groups.forEach(function(g) {
+      g.prods.forEach(function(p) { if (p.v > 0) allP.push({l:p.l,e:p.e||0,clr:p.clr,grp:g.name,gClr:g.clr}); });
+    });
+
+    var totalPct = 0;
+    allP.forEach(function(p) { totalPct += (d.pcts[p.l] || 0); });
+    var pctOk = Math.abs(totalPct - 100) < 1.5;
+
+    var bar = '<div style="height:16px;border-radius:8px;overflow:hidden;display:flex;gap:1px;margin-bottom:16px;background:var(--input-bg);box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);">';
+    allP.forEach(function(p) {
+      var pct = d.pcts[p.l] || 0;
+      if (pct > 0) bar += '<div style="height:100%;width:'+pct.toFixed(1)+'%;background:'+p.clr+'" title="'+p.l+': '+pct.toFixed(1)+'%"></div>';
+    });
+    bar += '</div>';
+
+    var capMap = {pm: 'c_pm_me', hsm: 'c_hs_me', bar: 'c_bm_me', crm: 'c_cr_me', wrm: 'c_wr_me', bmp: 'c_bp_me'};
+    var currentMonthlyCap = parseFloat(document.getElementById(capMap[key]).value) || 0;
+    var d_totalCapTpd = Math.round(currentMonthlyCap / days);
+
+    html += '<div class="pm-card">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:16px">';
+    html += '<span style="font-size:15px;font-weight:900;color:var(--md-sys-color-primary)">' + mill.name + '</span>';
+    html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
+    html += '<label style="font-size:11px;color:var(--tm);margin:0">Total cap:</label>';
+    html += '<input type="number" value="' + d_totalCapTpd + '" min="0" step="50" class="pm-in" ';
+    html += 'onchange="window.pmCapChange(\''+key+'\',this.value)" onkeydown="if(event.key===\'Enter\') this.blur();">';
+    html += '<span style="font-size:12px;color:var(--tm);font-weight:700">t/d</span>';
+    html += '<span class="pm-blended">blended ₹' + fmt(Math.round(blnd)) + '/t</span>';
+    html += '<span style="font-size:12px;font-weight:800;padding:4px 10px;border-radius:var(--radius-pill);background:' + (pctOk?'rgba(22, 163, 74, 0.1)':'rgba(220, 38, 38, 0.1)') + ';color:' + (pctOk?'var(--sg)':'var(--rd)') + '">';
+    html += 'Σ=' + totalPct.toFixed(0) + '%' + (pctOk?' ✓':' ⚠') + '</span>';
+    html += '</div></div>';
+    html += bar;
+
+    html += '<div style="overflow-x:auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-s); max-width: 100%; border: var(--glass-border);">';
+    html += '<table class="pm-tbl"><thead><tr>';
+    html += '<th>Product</th><th>EBITDA ₹/t</th><th>Mix% ✎</th>';
+    html += '<th>Forecast(t)</th><th>EBITDA(₹Cr)</th></tr></thead><tbody>';
+
+    var lastGrp = '';
+    for (var pi = 0; pi < allP.length; pi++) {
+      var p = allP[pi];
+      var isLast = (pi === allP.length - 1);
+      if (p.grp !== lastGrp) {
+        lastGrp = p.grp;
+        html += '<tr><td colspan="5" style="background:var(--input-bg);color:'+p.gClr+';font-size:11px;font-weight:800;padding:8px 12px;border-left:4px solid '+p.gClr+'">'+p.grp+'</td></tr>';
+      }
+      var pct = d.pcts[p.l] || 0;
+      var fcst = ap2 * pct / 100;
+      var abse = Math.abs(p.e);
+      var ebtCr = (fcst * abse / 10000000).toFixed(2);
+      var eCls = p.e === 0 ? 'pm-ebt-zer' : (p.e < 0 ? 'pm-ebt-neg' : 'pm-ebt-pos');
+      html += '<tr>';
+      html += '<td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:'+p.clr+';margin-right:8px; vertical-align:middle; margin-top:-2px;"></span>'+p.l+'</td>';
+      html += '<td class="'+eCls+'">'+(p.e<0?'('+fmt(abse)+')':fmt(abse))+'</td>';
+      if (isLast) {
+        html += '<td><input type="number" value="'+pct.toFixed(1)+'" readonly class="pm-in" ';
+        html += 'style="border:1px dashed var(--br);background:var(--input-bg);color:var(--tm);box-shadow:none"><small style="color:var(--tm); margin-left:4px">auto</small></td>';
+      } else {
+        html += '<td><input type="number" value="'+pct.toFixed(1)+'" min="0" max="100" step="1" class="pm-in" ';
+        html += 'data-k="'+key+'" data-i="'+pi+'" ';
+        html += 'onchange="window.pmPctChange(this)" onkeydown="if(event.key===\'Enter\') this.blur();"></td>';
+      }
+      html += '<td style="font-weight:800; color:var(--tx)">'+fmt(Math.round(fcst))+'</td>';
+      html += '<td class="'+eCls+'">'+(p.e<0?'('+ebtCr+')':ebtCr)+'</td></tr>';
+    }
+
+    html += '<tr class="pm-total"><td>TOTAL</td>';
+    html += '<td>₹'+fmt(Math.round(blnd))+'/t</td>';
+    html += '<td style="'+(pctOk?'':'color:var(--rd);')+'">'+totalPct.toFixed(0)+'%</td>';
+    html += '<td>'+fmt(Math.round(ap2))+'</td>';
+    html += '<td>₹'+(ap2*blnd/10000000).toFixed(2)+' Cr</td></tr>';
+    html += '</tbody></table></div></div>';
+  }
+
+    el.innerHTML = html || '<p style="padding:20px;color:var(--tm)">Loading product mix data...</p>';
+  } catch(err) {
+    el.innerHTML = '<div style="padding:20px;color:red;font-family:monospace;font-size:12px"><b>renderProdMix error:</b><br>' + err.message + '</div>';
+  }
+}
+
+window.pmCapChange = function(key, val) {
+  var tpd = Math.max(0, parseFloat(val)||0);
+  var days = _daysRef && _daysRef > 0 ? _daysRef : 31;
+  var monthlyCap = tpd * days;
+  
+  var capMap = {pm: 'c_pm_me', hsm: 'c_hs_me', bar: 'c_bm_me', crm: 'c_cr_me', wrm: 'c_wr_me', bmp: 'c_bp_me'};
+  var inputId = capMap[key];
+  if (inputId && document.getElementById(inputId)) {
+      document.getElementById(inputId).value = Math.round(monthlyCap);
+  }
+  
+  if (mixData[key]) mixData[key].totalCapTpd = tpd;
+  window.recalc();
+}
+
+window.pmPctChange = function(input) {
+  var key = input.getAttribute('data-k');
+  var idx = parseInt(input.getAttribute('data-i'));
+  if (!key || isNaN(idx)) return;
+  var mill = PROD_MIX[key]; if (!mill) return;
+  var allP = [];
+  mill.groups.forEach(function(g){ g.prods.forEach(function(p){ if(p.v>0) allP.push(p.l); }); });
+  if (idx >= allP.length) return;
+  if (!mixData[key]) return;
+  
+  mixData[key].pcts[allP[idx]] = Math.max(0, parseFloat(input.value)||0);
+  if (allP.length > 1) {
+    var lastLbl = allP[allP.length-1];
+    var sum = 0;
+    allP.slice(0,-1).forEach(function(l){ sum += (mixData[key].pcts[l]||0); });
+    mixData[key].pcts[lastLbl] = Math.max(0, parseFloat((100-sum).toFixed(1)));
+  }
+  
+  syncBlendedEbitda();
+  window.recalc();
+}
+
+/* ─── UI helpers ─────────────────────────────────────────────────── */
+window.tog = function(id){const el=$(id),ch=$(id+'Chev');el.classList.toggle('op');ch.classList.toggle('op');}
+window.stab = function(btn,id){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('act'));
+  document.querySelectorAll('.tc').forEach(c=>c.classList.remove('act'));
+  btn.classList.add('act'); $(id).classList.add('act');
+  if(id==='t-fl') window.renderFlow();
+  if(id==='t-pm'){
+    var pmAp={};
+    if(calcState&&calcState.sc&&calcState.sc.me){var ma=calcState.sc.me;pmAp={pm:ma.pPM,bar:ma.pBM,hsm:ma.pHS,crm:ma.pCR,wrm:ma.pWR,bmp:ma.pBP};}
+    window.renderProdMix(pmAp);
+  }
+}
+window.setFlowView = function(v,btn){
+  currentFlowView = v;
+  if (v !== 'flow') selectedNode = null;
+  document.querySelectorAll('.flow-view-btn').forEach(b=>b.classList.remove('act'));
+  btn.classList.add('act');
+  window.renderFlow();
+}
+
+window.showDrawer = function(id) {
+  try {
+      selectedNode = id;
+      const overlay = document.getElementById('drawerOverlay');
+      const drawer = document.getElementById('detailDrawer');
+      const title = document.getElementById('drawerTitle');
+      const body = document.getElementById('drawerBody');
+      
+      if(!calcState || !calcState.sc) return;
+      const ma = calcState.sc.me;
+      const {days, sms1_raw, sms2_raw, plan, ypm, yhsm, ybm, ycrm, ywrm, ybmp} = calcState;
+      
+      let t = '';
+      let v = 0;
+      let desc = '';
+      let planV = null;
+      let maxCap = null;
+      let y = null;
+      let ebtRate = null;
+      let ebtTotal = null;
+      let lim = null;
+      let isCurrency = false;
+      
+      switch(id) {
+        // Top KPI Cards
+        case 'kpi-tot': t='Total SMS Steel'; v=sms1_raw+sms2_raw; desc='Combined liquid steel generation from SMS 1 and SMS 2.'; break;
+        case 'kpi-s1': t='SMS 1 Input'; v=sms1_raw; planV=plan.sms1; desc='Total liquid steel generated from EAF and BOF1.'; break;
+        case 'kpi-s2': t='SMS 2 Input'; v=sms2_raw; planV=plan.sms2; desc='Total liquid steel generated from BOF2 and BOF3.'; break;
+        case 'kpi-sl': t='Total Slabs Cast'; v=calcState.totalSlab; desc='Combined slab production ready for flat rolling from SC1 and TC1 casters.'; break;
+        case 'kpi-bl': t='Total Billets Cast'; v=calcState.totalBillet; desc='Combined billet production ready for long rolling from BC1 and CC1 casters.'; break;
+        case 'kpi-eb': t='Total Estimated EBITDA'; v=ma.totE; isCurrency=true; desc='Combined predicted EBITDA from all downstream processing mills based on dynamically optimized product mix.'; break;
+        
+        // Flow Nodes
+        case 'nd-sms1': t='SMS 1 (EAF+BOF1)'; v=sms1_raw; planV=plan.sms1; desc='Feeds SC1, BC1, CC1 casters and TC1 bypass.'; break;
+        case 'nd-sms2': t='SMS 2 (BOF2+3)'; v=sms2_raw; planV=plan.sms2; desc='Generates full SMS 2 Input for Twin Caster.'; break;
+        case 'nd-sc1': t='SC1 Slab Caster'; v=calcState.sc1; desc=`Casts slabs strictly routed to the Plate Mill.`; break;
+        case 'nd-bc1': t='BC1 Billet Caster'; v=calcState.bc1; desc=`Casts billets routed to Bar Mill and BM Patratu.`; break;
+        case 'nd-cc1': t='CC1 Combi Caster'; v=calcState.cc1; desc=`Casts billets routed to WRM Patratu and BM Patratu.`; break;
+        case 'nd-tc1': t='TC1 Twin Caster'; v=calcState.tc1 + calcState.s1tc1_t; desc=`Twin casting feeding exclusively into Hot Strip Mill (HSM). Receives SMS2 feed and optional SMS1 bypass.`; break;
+        case 'nd-pm': t='🏭 Plate Mill'; v=ma.pPM; planV=plan.pm; maxCap=ma.caps.pm; y=ypm; ebtRate=ma.pPM>0?ma.epm/ma.pPM:0; ebtTotal=ma.epm; lim=ma.matLimPM; desc='Final Rolled Plates Production. Feeds from SC1 Slabs.'; break;
+        case 'nd-hsm': t='🌀 HSM Mill'; v=ma.pHS; planV=plan.hsm; maxCap=ma.caps.hs; y=yhsm; ebtRate=ma.pHS>0?ma.ehs/ma.pHS:0; ebtTotal=ma.ehs; lim=ma.matLimHS; desc=`Total Hot Rolled Production.<br>• Downstream feed to CRM: <b style="color:var(--tx)">${fmt(Math.round(ma.crmIn))} t</b>`; break;
+        case 'nd-bm': t='🔩 Bar Mill'; v=ma.pBM; planV=plan.bm; maxCap=ma.caps.bm; y=ybm; ebtRate=ma.pBM>0?ma.ebm/ma.pBM:0; ebtTotal=ma.ebm; lim=ma.matLimBM; desc='Final TMT Bar Production. Feeds from BC1 Billets.'; break;
+        case 'nd-crm': t='🪟 CRM Mill'; v=ma.pCR; planV=plan.crm; maxCap=ma.caps.cr; y=ycrm; ebtRate=getMixBlended('crm'); ebtTotal=ma.ecr; lim=ma.matLimCR; desc='Downstream Cold Rolled operations. Fed exclusively from HSM internal production pool.'; break;
+        case 'nd-wrm': t='⭕ WRM Patratu'; v=ma.pWR; planV=plan.wrm; maxCap=ma.caps.wr; y=ywrm; ebtRate=ma.pWR>0?ma.ewr/ma.pWR:0; ebtTotal=ma.ewr; lim=ma.matLimWR; desc='Final Wire Rod Production. Feeds from CC1 Billets.'; break;
+        case 'nd-bmp': t='🔨 BM Patratu'; v=ma.pBP; planV=plan.bmp; maxCap=ma.caps.bp; y=ybmp; ebtRate=ma.pBP>0?ma.ebp/ma.pBP:0; ebtTotal=ma.ebp; lim=ma.matLimBP; desc='Final Patratu TMT Bar Production. Feeds from BC1 and CC1 Billets.'; break;
+      }
+    
+      if(id === 'nd-hsm') {
+         title.textContent = '🌀 Hot Strip Mill (HSM)';
+         let pmDetail = getMillMixM3('hsm', ma.pHS);
+         body.innerHTML = `<div style="padding:20px; font-size:14px; color:var(--tx); max-height: 65vh; overflow-y: auto;">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px">
+                <div style="background:var(--glass-bg); border:var(--glass-border); padding:16px; border-radius:var(--radius-m); box-shadow:var(--glass-shadow)">
+                   <div style="font-size:11px; font-weight:800; color:var(--tm); text-transform:uppercase; margin-bottom:6px;">Total Processed</div>
+                   <div style="font-size:22px; font-weight:900; color:var(--tx)">${fmt(Math.round(ma.pHS))} t</div>
+                </div>
+                <div style="background:var(--glass-bg); border:var(--glass-border); padding:16px; border-radius:var(--radius-m); box-shadow:var(--glass-shadow)">
+                   <div style="font-size:11px; font-weight:800; color:var(--tm); text-transform:uppercase; margin-bottom:6px;">Commercial HRC Sales</div>
+                   <div style="font-size:22px; font-weight:900; color:var(--sg)">${fmt(Math.round(ma.hsmSales))} t</div>
+                </div>
+                <div style="background:var(--glass-bg); border:var(--glass-border); padding:16px; border-radius:var(--radius-m); box-shadow:var(--glass-shadow)">
+                   <div style="font-size:11px; font-weight:800; color:var(--tm); text-transform:uppercase; margin-bottom:6px;">Routed to CRM feed</div>
+                   <div style="font-size:22px; font-weight:900; color:var(--mo)">${fmt(Math.round(ma.crmIn))} t</div>
+                </div>
+                <div style="background:var(--glass-bg); border:var(--glass-border); padding:16px; border-radius:var(--radius-m); box-shadow:var(--glass-shadow)">
+                   <div style="font-size:11px; font-weight:800; color:var(--tm); text-transform:uppercase; margin-bottom:6px;">Direct HRC EBITDA</div>
+                   <div style="font-size:22px; font-weight:900; color:var(--gd)">₹${fmt(Math.round(getMixBlended('hsm')||n('e_hs')))}/t</div>
+                </div>
+              </div>
+              <div style="margin-top:16px; font-size:13px; font-weight:500; color:var(--md-sys-color-primary); background:var(--md-sys-color-primary-container); padding:16px; border-radius:var(--radius-m); border:1px solid rgba(0,0,0,0.05); line-height: 1.6;">
+                  <b style="font-weight:800">ℹ️ Note:</b> Output is dynamically optimized based on financial yield comparison against value-added cold rolling conversion.
+              </div>
+              ${pmDetail}
+         </div>`;
+         if(overlay) overlay.classList.add('open');
+         if(drawer) drawer.classList.add('open');
+         return;
+      }
+    
+      if(t) {
+         title.textContent = t;
+         
+         let utilHtml = '';
+         if (maxCap !== null && maxCap !== undefined) {
+             const utilPct = Math.min(100, (v / maxCap) * 100).toFixed(1);
+             const utilClr = lim ? 'var(--sg)' : 'var(--rd)';
+             utilHtml = `
+              <div style="margin-top:20px; margin-bottom:8px; padding: 18px; background: var(--input-bg); border-radius: var(--radius-m); border: var(--glass-border);">
+                 <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:10px; font-weight:800; color:var(--tm); text-transform:uppercase">
+                   <span>Capacity Utilization</span>
+                   <span style="color:${utilClr}">${utilPct}% (${fmt(Math.round(v))} / ${fmt(Math.round(maxCap))} t)</span>
+                 </div>
+                 <div style="height:12px; background:var(--br); border-radius:var(--radius-pill); overflow:hidden; box-shadow:inset 0 1px 3px rgba(0,0,0,0.1)">
+                    <div style="width:${utilPct}%; height:100%; background:${utilClr}; border-radius:var(--radius-pill)"></div>
+                 </div>
+              </div>`;
+         }
+    
+         let metricsGrid = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px">`;
+         const addMetric = (lbl, val, color='var(--tx)') => {
+             metricsGrid += `<div style="background:var(--glass-bg); border:var(--glass-border); padding:16px; border-radius:var(--radius-m); box-shadow:var(--glass-shadow)">
+                 <div style="font-size:11px; font-weight:800; color:var(--tm); text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px">${lbl}</div>
+                 <div style="font-size:22px; font-weight:900; color:${color}">${val}</div>
+             </div>`;
+         };
+    
+         if(isCurrency) {
+             addMetric('Total (Cr)', `₹${fmtCr(v)} Cr`, 'var(--sg)');
+         } else {
+             addMetric('Vol (Month)', `${fmt(Math.round(v))} t`);
+             addMetric('Daily Avg', `${fmt(Math.round(v/days))} t/d`);
+         }
+         
+         if (planV !== null && planV !== undefined) {
+             const diff = v - planV;
+             const pct = planV > 0 ? (diff/planV*100).toFixed(1) : 0;
+             const clr = diff >= 0 ? 'var(--sg)' : 'var(--rd)';
+             const sgn = diff >= 0 ? '+' : '';
+             addMetric('Vs Plan', `<span style="color:${clr}; font-size:18px">${sgn}${fmt(Math.round(diff))} t (${sgn}${pct}%)</span>`);
+         }
+    
+         if (y !== null && y !== undefined) addMetric('Yield Factor', `${(y*100).toFixed(1)}%`, 'var(--md-sys-color-primary)');
+         
+         if (ebtRate !== null && ebtRate !== undefined) addMetric('Blended EBITDA', `₹${fmt(Math.round(ebtRate))}/t`, 'var(--gd)');
+         if (ebtTotal !== null && ebtTotal !== undefined) addMetric('Total EBT (Cr)', `₹${fmtCr(ebtTotal)} Cr`, 'var(--gd)');
+    
+         if (lim !== null && lim !== undefined) {
+             addMetric('Bottleneck Status', lim ? '🧱 Material Limited' : '🏭 Capacity Limited', lim ? 'var(--sg)' : 'var(--rd)');
+         }
+    
+         metricsGrid += `</div>`;
+         
+         let pmDetailHtml = '';
+         const millsMap = {'nd-pm':'pm', 'nd-bm':'bar', 'nd-crm':'crm', 'nd-wrm':'wrm', 'nd-bmp':'bmp'};
+         if (millsMap[id]) {
+             pmDetailHtml = getMillMixM3(millsMap[id], v);
+         }
+    
+         body.innerHTML = `<div style="padding:20px; font-size:14px; color:var(--tx); max-height: 65vh; overflow-y: auto;">
+                ${metricsGrid}
+                ${utilHtml}
+                ${pmDetailHtml}
+                <div style="margin-top:20px; font-size:13px; font-weight:500; color:var(--md-sys-color-primary); background:var(--md-sys-color-primary-container); padding:16px; border-radius:var(--radius-m); border:1px solid rgba(0,0,0,0.05); line-height: 1.6;">
+                    <b style="font-weight:800">ℹ️ Info:</b> ${desc}
+                </div>
+              </div>`;
+      } else {
+         title.textContent = "Details";
+         body.innerHTML = `<div style="padding:40px 20px; color:var(--tm); text-align:center; font-weight:500; font-size:14px;">Select a specific furnace, caster, or mill node from the flowchart to view operational details.</div>`;
+      }
+    
+      if(overlay) overlay.classList.add('open');
+      if(drawer) drawer.classList.add('open');
+      
+  } catch (e) {
+      console.error("Error opening drawer:", e);
+  }
+}
+
+window.hideDrawer = function() {
+  selectedNode = null;
+  const overlay = document.getElementById('drawerOverlay');
+  const drawer = document.getElementById('detailDrawer');
+  if(overlay) overlay.classList.remove('open');
+  if(drawer) drawer.classList.remove('open');
+  if (currentFlowView === 'flow') requestAnimationFrame(()=>requestAnimationFrame(window.drawFlowLines));
+}
+
+/* ─── Flow & Sankey Generators ─────────────────────────────────────────────────── */
+function renderFlowTable() {
+  const {sms1_raw, sms2_raw, s1tc1_t, s2s1_t, tc1, sc1, bc1, cc1, sc, days} = calcState;
+  const ma = sc.me;
+  let html = `<div class="flow-tbl-wrap">
+    <table class="flow-tbl">
+      <thead><tr><th>Source</th><th>Destination</th><th>Material Flow</th><th>Volume (t/month)</th><th>Daily Avg (t/day)</th></tr></thead>
+      <tbody>
+        <tr class="even-row"><td>SMS1</td><td>BC1 (Billet Caster)</td><td>Liquid Steel</td><td>${fmt(bc1)}</td><td>${fmt(bc1/days)}</td></tr>
+        <tr><td>SMS1</td><td>CC1 (Combi Caster)</td><td>Liquid Steel</td><td>${fmt(cc1)}</td><td>${fmt(cc1/days)}</td></tr>
+        <tr class="even-row"><td>SMS1</td><td>SC1 (Slab Caster)</td><td>Liquid Steel</td><td>${fmt(sc1)}</td><td>${fmt(sc1/days)}</td></tr>
+        ${s1tc1_t>0 ? `<tr><td>SMS1</td><td>TC1 (Twin Caster)</td><td style="color:var(--sg);font-weight:800">Direct Feed Bypass</td><td style="color:var(--sg);font-weight:800">${fmt(s1tc1_t)}</td><td style="color:var(--sg);font-weight:800">${fmt(s1tc1_t/days)}</td></tr>` : ''}
+        <tr class="even-row"><td>SMS2</td><td>TC1 (Twin Caster 1)</td><td>Liquid Steel</td><td>${fmt(sms2_raw - s2s1_t)}</td><td>${fmt((sms2_raw - s2s1_t)/days)}</td></tr>
+        ${s2s1_t>0 ? `<tr><td>SMS2</td><td>SMS1 Casters</td><td style="color:var(--mo);font-weight:800">Overflow Transfer</td><td style="color:var(--mo);font-weight:800">${fmt(s2s1_t)}</td><td style="color:var(--mo);font-weight:800">${fmt(s2s1_t/days)}</td></tr>` : ''}
+        <tr class="subtotal"><td colspan="5">Mill Feeds (Post-Yield)</td></tr>
+        <tr class="even-row"><td>BC1 + CC1 (Billet)</td><td>Bar Mill</td><td>Billet</td><td>${fmt(ma.alloc.bm)}</td><td>${fmt(ma.alloc.bm/days)}</td></tr>
+        <tr><td>BC1 + CC1 (Billet)</td><td>WRM Patratu</td><td>Billet</td><td>${fmt(ma.alloc.wr)}</td><td>${fmt(ma.alloc.wr/days)}</td></tr>
+        <tr class="even-row"><td>BC1 + CC1 (Billet)</td><td>BM Patratu</td><td>Billet</td><td>${fmt(ma.alloc.bp)}</td><td>${fmt(ma.alloc.bp/days)}</td></tr>
+        <tr><td>SC1 (Slab)</td><td>Plate Mill</td><td>Slab</td><td>${fmt(ma.alloc.pm)}</td><td>${fmt(ma.alloc.pm/days)}</td></tr>
+        <tr class="even-row"><td>TC1 (Slab)</td><td>HSM</td><td>Slab</td><td>${fmt(ma.alloc.hs)}</td><td>${fmt(ma.alloc.hs/days)}</td></tr>
+        <tr style="background: rgba(124, 58, 237, 0.1); color: var(--pu);"><td>HSM Production</td><td>CRM Mill</td><td style="font-weight:800">Downstream HRC Feed</td><td style="font-weight:800">${fmt(ma.crmIn)}</td><td style="font-weight:800">${fmt(ma.crmIn/days)}</td></tr>
+      </tbody>
+    </table>
+  </div>`;
+  $('flowCanvas').innerHTML = html;
+}
+
+window.createTooltip = function(from, to, weight) {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const bg = isDark ? '#1e293b' : '#ffffff';
+    const tx = isDark ? '#f8fafc' : '#1a1c1e';
+    const br = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+    return `
+    <div style="background:${bg}; padding:12px; border-radius:12px; border:1px solid ${br}; box-shadow:0 4px 16px rgba(0,0,0,0.1); font-family:'DM Sans',sans-serif; color:${tx}; min-width:180px;">
+        <div style="font-size:11px; font-weight:800; color:#8b5cf6; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.5px;">Material Flow</div>
+        <div style="font-size:13px; margin-bottom:8px;"><b>${from}</b> ➔ <b>${to}</b></div>
+        <div style="font-size:18px; font-weight:900; color:#0ea5e9;">${fmt(Math.round(weight))} t</div>
+    </div>`;
+}
+
+window.renderSankey = function() {
+  const ma = calcState.sc.me;
+  const data = new google.visualization.DataTable();
+  data.addColumn('string', 'From');
+  data.addColumn('string', 'To');
+  data.addColumn('number', 'Weight');
+  data.addColumn({type: 'string', role: 'tooltip', p: {html: true}});
+
+  function addSankeyRow(f, t, w) {
+      if(w > 0) data.addRow([f, t, w, window.createTooltip(f, t, w)]);
+  }
+
+  addSankeyRow('SMS 2', 'TC1 (Twin)', calcState.tc1);
+  if(calcState.s2s1_t > 0) addSankeyRow('SMS 2', 'SC1 (Slab)', calcState.s2s1_t);
+  
+  if(calcState.s1tc1_t > 0) addSankeyRow('SMS 1', 'TC1 (Twin)', calcState.s1tc1_t);
+  addSankeyRow('SMS 1', 'SC1 (Slab)', calcState.sc1);
+  addSankeyRow('SMS 1', 'CC1 (Combi)', calcState.cc1);
+  addSankeyRow('SMS 1', 'BC1 (Billet)', calcState.bc1);
+
+  const pm_alloc = Math.min(calcState.sc1, ma.caps.pm / calcState.ypm);
+  
+  addSankeyRow('TC1 (Twin)', 'HSM Feed', calcState.tc1 + calcState.s1tc1_t);
+  if(pm_alloc > 0) addSankeyRow('SC1 (Slab)', 'Plate Mill Feed', pm_alloc);
+  if((calcState.sc1 - pm_alloc) > 0) addSankeyRow('SC1 (Slab)', 'Unallocated SC1', calcState.sc1 - pm_alloc);
+  
+  const b_sum = n('bc1_bar') + n('bc1_bm');
+  const r_b_bar = b_sum ? n('bc1_bar')/b_sum : 0;
+  const r_b_bm  = b_sum ? n('bc1_bm')/b_sum : 0;
+  
+  const c_sum = n('cc1_wrm') + n('cc1_bm');
+  const r_c_wr = c_sum ? n('cc1_wrm')/c_sum : 0;
+  const r_c_bm = c_sum ? n('cc1_bm')/c_sum : 0;
+
+  const bc1_bm = calcState.bc1 * r_b_bar;
+  const bc1_bmp = calcState.bc1 * r_b_bm;
+  const cc1_wrm = calcState.cc1 * r_c_wr;
+  const cc1_bmp = calcState.cc1 * r_c_bm;
+
+  if(cc1_wrm > 0) addSankeyRow('CC1 (Combi)', 'WRM Patratu Feed', cc1_wrm);
+  if(cc1_bmp > 0) addSankeyRow('CC1 (Combi)', 'BM Patratu Feed', cc1_bmp);
+  if(bc1_bmp > 0) addSankeyRow('BC1 (Billet)', 'BM Patratu Feed', bc1_bmp);
+  if(bc1_bm > 0) addSankeyRow('BC1 (Billet)', 'Bar Mill Feed', bc1_bm);
+
+  if(pm_alloc > 0) {
+      addSankeyRow('Plate Mill Feed', 'Plate Sales', ma.pPM);
+      addSankeyRow('Plate Mill Feed', 'PM Yield Loss ', pm_alloc - ma.pPM);
+  }
+  if(bc1_bm > 0) {
+      addSankeyRow('Bar Mill Feed', 'Bar Sales', ma.pBM);
+      addSankeyRow('Bar Mill Feed', 'BM Yield Loss ', bc1_bm - ma.pBM);
+  }
+  if(cc1_wrm > 0) {
+      addSankeyRow('WRM Patratu Feed', 'WRM Sales', ma.pWR);
+      addSankeyRow('WRM Patratu Feed', 'WRM Yield Loss', cc1_wrm - ma.pWR);
+  }
+  if((bc1_bmp + cc1_bmp) > 0) {
+      addSankeyRow('BM Patratu Feed', 'BMP Sales', ma.pBP);
+      addSankeyRow('BM Patratu Feed', 'BMP Yield Loss', (bc1_bmp + cc1_bmp) - ma.pBP);
+  }
+
+  const hsm_total = ma.pHS;
+  addSankeyRow('HSM Feed', 'Total HSM Output', hsm_total);
+  addSankeyRow('HSM Feed', 'HSM Yield Loss', (calcState.tc1 + calcState.s1tc1_t) - hsm_total);
+
+  const crmIn = ma.crmIn;
+  const crmOut = ma.pCR;
+  const hsmSales = ma.hsmSales;
+  
+  if(hsmSales > 0) addSankeyRow('Total HSM Output', 'HRC Sales', hsmSales);
+  if(crmIn > 0) {
+     addSankeyRow('Total HSM Output', 'CRM Feed', crmIn);
+     addSankeyRow('CRM Feed', 'CRC Sales', crmOut);
+     addSankeyRow('CRM Feed', 'CRM Yield Loss', crmIn - crmOut);
+  }
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const labelColor = isDark ? '#e2e8f0' : '#1e293b';
+
+  const options = {
+    height: 650,
+    tooltip: { isHtml: true },
+    sankey: {
+      node: { 
+        label: { fontSize: 13, bold: true, color: labelColor, fontName: 'DM Sans' }, 
+        nodePadding: 24, 
+        colors: ['#0ea5e9', '#ea580c', '#16a34a', '#7c3aed', '#eab308', '#ec4899', '#14b8a6', '#ef4444', '#8b5cf6', '#06b6d4', '#f59e0b'] 
+      },
+      link: { colorMode: 'gradient', fillOpacity: 0.85 }
+    }
+  };
+
+  const chart = new google.visualization.Sankey(document.getElementById('sankey_chart'));
+  chart.draw(data, options);
+}
+
+window.drawFlowLines = function() {
+  const svg = document.getElementById('flowSvg');
+  if(!svg) return;
+  svg.innerHTML = '';
+  const wrap = document.querySelector('.flow-wrap-container');
+  if(!wrap) return;
+  const wrapRect = wrap.getBoundingClientRect();
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const textBg = isDark ? 'var(--bg-color)' : 'rgba(255,255,255,0.9)';
+
+  const connect = (id1, id2, color, weight, labelText, dash) => {
+      const el1 = document.getElementById(id1);
+      const el2 = document.getElementById(id2);
+      if(!el1 || !el2) return;
+      const r1 = el1.getBoundingClientRect();
+      const r2 = el2.getBoundingClientRect();
+
+      const x1 = (r1.left + r1.right)/2 - wrapRect.left;
+      const y1 = r1.bottom - wrapRect.top;
+      const x2 = (r2.left + r2.right)/2 - wrapRect.left;
+      const y2 = r2.top - wrapRect.top;
+
+      const ctrlY1 = y1 + Math.abs(y2 - y1)/2.5;
+      const ctrlY2 = y2 - Math.abs(y2 - y1)/2.5;
+      const d = `M ${x1} ${y1} C ${x1} ${ctrlY1}, ${x2} ${ctrlY2}, ${x2} ${y2}`;
+
+      let path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", d);
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", color);
+      path.setAttribute("stroke-width", weight);
+      path.setAttribute("opacity", "0.6");
+      if(dash) path.setAttribute("stroke-dasharray", dash);
+      svg.appendChild(path);
+
+      if (labelText) {
+          let textLen = labelText.length * 7;
+          let bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          bg.setAttribute("x", (x1+x2)/2 - textLen/2 - 8);
+          bg.setAttribute("y", (y1+y2)/2 - 14);
+          bg.setAttribute("width", textLen + 16);
+          bg.setAttribute("height", "26");
+          bg.setAttribute("fill", textBg);
+          bg.setAttribute("rx", "13");
+          bg.setAttribute("stroke", color);
+          bg.setAttribute("stroke-width", "1.5");
+          svg.appendChild(bg);
+
+          let text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          text.setAttribute("x", (x1+x2)/2);
+          text.setAttribute("y", (y1+y2)/2);
+          text.setAttribute("fill", color);
+          text.setAttribute("font-size", "11");
+          text.setAttribute("font-family", "DM Sans, sans-serif");
+          text.setAttribute("font-weight", "800");
+          text.setAttribute("text-anchor", "middle");
+          text.setAttribute("dy", "4");
+          text.textContent = labelText;
+          svg.appendChild(text);
+      }
+  };
+
+  const ma = calcState.sc.me;
+  const pm_alloc = Math.min(calcState.sc1, ma.caps.pm / calcState.ypm);
+  
+  const b_sum = n('bc1_bar') + n('bc1_bm');
+  const r_b_bar = b_sum ? n('bc1_bar')/b_sum : 0;
+  const r_b_bm  = b_sum ? n('bc1_bm')/b_sum : 0;
+  
+  const c_sum = n('cc1_wrm') + n('cc1_bm');
+  const r_c_wr = c_sum ? n('cc1_wrm')/c_sum : 0;
+  const r_c_bm = c_sum ? n('cc1_bm')/c_sum : 0;
+
+  const bc1_bm = calcState.bc1 * r_b_bar;
+  const bc1_bmp = calcState.bc1 * r_b_bm;
+  const cc1_wrm = calcState.cc1 * r_c_wr;
+  const cc1_bmp = calcState.cc1 * r_c_bm;
+
+  // SMS to Casters & Direct TC1
+  connect('nd-sms1', 'nd-bc1', '#0ea5e9', 3, fmt(calcState.bc1));
+  connect('nd-sms1', 'nd-cc1', '#0ea5e9', 3, fmt(calcState.cc1));
+  connect('nd-sms1', 'nd-sc1', '#0ea5e9', 3, fmt(calcState.sc1));
+  if(calcState.s1tc1_t > 0) connect('nd-sms1', 'nd-tc1', '#16a34a', 2.5, 'Direct Feed ' + fmt(calcState.s1tc1_t), '5 3');
+  
+  connect('nd-sms2', 'nd-tc1', '#0ea5e9', 3, fmt(calcState.sms2_raw - calcState.s2s1_t));
+  if(calcState.s2s1_t > 0) connect('nd-sms2', 'nd-sc1', '#ea580c', 2.5, 'Overflow ' + fmt(calcState.s2s1_t), '5 3');
+
+  // Casters to Mills
+  connect('nd-bc1', 'nd-bm', '#16a34a', 3, fmt(bc1_bm));
+  connect('nd-bc1', 'nd-bmp', '#ca8a04', 2, fmt(bc1_bmp), '5 4');
+  connect('nd-cc1', 'nd-wrm', '#7c3aed', 3, fmt(cc1_wrm));
+  connect('nd-cc1', 'nd-bmp', '#ca8a04', 3, fmt(cc1_bmp));
+  connect('nd-sc1', 'nd-pm', '#ea580c', 3, fmt(pm_alloc));
+  connect('nd-tc1', 'nd-hsm', '#0ea5e9', 3, fmt(calcState.tc1 + calcState.s1tc1_t));
+
+  // Downstream
+  connect('nd-hsm', 'nd-crm', '#ca8a04', 3, fmt(ma.crmIn));
+}
+
+let resizeTimer;
+window.addEventListener('resize', () => { 
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if(currentFlowView==='flow') requestAnimationFrame(window.drawFlowLines); 
+    if(currentFlowView==='sankey') window.renderSankey();
+  }, 200);
+});
+
+window.renderFlow = function() {
+  if (currentFlowView === 'table') {
+     renderFlowTable();
+     return;
+  }
+  
+  if (currentFlowView === 'sankey') {
+     $('flowCanvas').innerHTML = '<div style="width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--radius-m); border:var(--glass-border); box-shadow:var(--glass-shadow); background:var(--input-bg); backdrop-filter:blur(10px);"><div id="sankey_chart" style="min-width:800px; height:650px; padding:20px;"></div></div>';
+     if(typeof google !== 'undefined' && google.visualization && google.visualization.Sankey) {
+         window.renderSankey();
+     } else {
+         google.charts.setOnLoadCallback(window.renderSankey);
+     }
+     return;
+  }
+  
+  if (!calcState.sc) return;
+  const ma = calcState.sc.me;
+  const {sms1_raw, sms2_raw, sc1, bc1, cc1, tc1} = calcState;
+  const selCls = id => selectedNode === id ? 'fn-selected' : '';
+  
+  let html = `
+    <div class="flow-scroll-wrapper">
+      <div class="flow-wrap-container">
+        <svg id="flowSvg" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0;"></svg>
+        
+        <div style="z-index:1; position:relative; display:flex; width:100%; justify-content: space-around;">
+           <div id="nd-sms1" class="fn fn-furnace ${selCls('nd-sms1')}" onclick="window.showDrawer('nd-sms1')"><div class="fn-name">SMS 1 (EAF+BOF1)</div><div class="fn-val">${fmt(sms1_raw)}</div></div>
+           <div id="nd-sms2" class="fn fn-furnace ${selCls('nd-sms2')}" onclick="window.showDrawer('nd-sms2')"><div class="fn-name">SMS 2 (BOF2+3)</div><div class="fn-val">${fmt(sms2_raw)}</div></div>
+        </div>
+
+        <div style="z-index:1; position:relative; display:flex; width:100%; justify-content: space-around; flex-wrap:wrap; gap:12px;">
+           <div id="nd-bc1" class="fn fn-caster ${selCls('nd-bc1')}" onclick="window.showDrawer('nd-bc1')"><div class="fn-name">BC1 Billet</div><div class="fn-val">${fmt(bc1)}</div></div>
+           <div id="nd-cc1" class="fn fn-caster ${selCls('nd-cc1')}" onclick="window.showDrawer('nd-cc1')"><div class="fn-name">CC1 Combi</div><div class="fn-val">${fmt(cc1)}</div></div>
+           <div id="nd-sc1" class="fn fn-caster ${selCls('nd-sc1')}" onclick="window.showDrawer('nd-sc1')"><div class="fn-name">SC1 Slab</div><div class="fn-val">${fmt(sc1)}</div></div>
+           <div id="nd-tc1" class="fn fn-caster ${selCls('nd-tc1')}" onclick="window.showDrawer('nd-tc1')"><div class="fn-name">TC1 Twin</div><div class="fn-val">${fmt(tc1 + calcState.s1tc1_t)}</div></div>
+        </div>
+
+        <div style="z-index:1; position:relative; height:40px;"></div>
+
+        <div style="z-index:1; position:relative; display:flex; width:100%; justify-content: space-around; flex-wrap:wrap; gap:12px;">
+           <div id="nd-bm" class="fn fn-bm ${selCls('nd-bm')}" onclick="window.showDrawer('nd-bm')"><div class="fn-name">Bar Mill</div><div class="fn-val">${fmt(ma.pBM)}</div></div>
+           <div id="nd-wrm" class="fn fn-wrm ${selCls('nd-wrm')}" onclick="window.showDrawer('nd-wrm')"><div class="fn-name">WRM Patratu</div><div class="fn-val">${fmt(ma.pWR)}</div></div>
+           <div id="nd-bmp" class="fn fn-bmp ${selCls('nd-bmp')}" onclick="window.showDrawer('nd-bmp')"><div class="fn-name">BM Patratu</div><div class="fn-val">${fmt(ma.pBP)}</div></div>
+           <div id="nd-pm" class="fn fn-pm ${selCls('nd-pm')}" onclick="window.showDrawer('nd-pm')"><div class="fn-name">Plate Mill</div><div class="fn-val">${fmt(ma.pPM)}</div></div>
+           <div id="nd-hsm" class="fn fn-hsm ${selCls('nd-hsm')}" onclick="window.showDrawer('nd-hsm')"><div class="fn-name">HSM (Total)</div><div class="fn-val">${fmt(ma.pHS)}</div></div>
+        </div>
+
+        <div style="z-index:1; width:100%; display:flex; justify-content: flex-end; padding-right: 8%; position:relative; margin-top: 40px;">
+           <div id="nd-crm" class="fn fn-crm ${selCls('nd-crm')}" onclick="window.showDrawer('nd-crm')"><div class="fn-name">CRM</div><div class="fn-val">${fmt(ma.pCR)}</div><div class="fn-sub">Fed from HSM</div></div>
+        </div>
+      </div>
+    </div>
+  `;
+  $('flowCanvas').innerHTML = html;
+  
+  requestAnimationFrame(() => requestAnimationFrame(window.drawFlowLines));
+}
+
+/* ─── Init ─── */
+initMixData(31);
+window.maximizeAllocations(); // Explicitly optimize on initial load
+try{var _ma=calcState&&calcState.sc?calcState.sc.me:null;if(_ma)window.renderProdMix({pm:_ma.pPM,bar:_ma.pBM,hsm:_ma.pHS,crm:_ma.pCR,wrm:_ma.pWR,bmp:_ma.pBP});}catch(e){}
+
+</script>
+
+<div class="drawer-overlay" id="drawerOverlay" onclick="window.hideDrawer()"></div>
+<div class="detail-drawer" id="detailDrawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-header">
+    <span class="drawer-title" id="drawerTitle">Details</span>
+    <button class="drawer-close" onclick="window.hideDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+
+</body>
+</html>
