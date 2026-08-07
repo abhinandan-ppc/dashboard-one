@@ -263,6 +263,7 @@ const DARK_C={
     North:  {bg:'rgba(60,120,210,.1)',  bgMd:'rgba(60,120,210,.16)',bgHi:'rgba(60,120,210,.22)', bdr:'rgba(60,120,210,.35)',txt:'#6ba8d8',dot:'#5ba3d9',glow:'#5ba3d9'},
     South:  {bg:'rgba(200,100,50,.1)',  bgMd:'rgba(200,100,50,.16)',bgHi:'rgba(200,100,50,.22)', bdr:'rgba(200,100,50,.35)',txt:'#c88050',dot:'#d4793c',glow:'#d4793c'},
     Export: {bg:'rgba(130,100,210,.1)', bgMd:'rgba(130,100,210,.16)',bgHi:'rgba(130,100,210,.22)',bdr:'rgba(130,100,210,.35)',txt:'#9b87d4',dot:'#9b87d4',glow:'#9b87d4'},
+    Actual: {bg:'rgba(45,160,150,.1)',  bgMd:'rgba(45,160,150,.16)',bgHi:'rgba(45,160,150,.22)', bdr:'rgba(45,160,150,.35)', txt:'#3fb6a8',dot:'#3fb6a8',glow:'#3fb6a8'},
     Unknown:{bg:'rgba(80,90,110,.1)',   bgMd:'rgba(80,90,110,.16)', bgHi:'rgba(80,90,110,.22)',  bdr:'rgba(80,90,110,.35)', txt:'#7888a0',dot:'#6b7280',glow:'#6b7280'},
   },isDark:true
 };
@@ -283,6 +284,7 @@ const LIGHT_C={
     North:  {bg:'rgba(29,78,216,.09)',  bgMd:'rgba(29,78,216,.15)', bgHi:'rgba(29,78,216,.22)',  bdr:'#1d4ed8',txt:'#1e3a8a',dot:'#1d4ed8',glow:'#1d4ed8'},
     South:  {bg:'rgba(194,65,12,.09)',  bgMd:'rgba(194,65,12,.15)', bgHi:'rgba(194,65,12,.22)',  bdr:'#c2410c',txt:'#7c2d12',dot:'#c2410c',glow:'#c2410c'},
     Export: {bg:'rgba(109,40,217,.09)', bgMd:'rgba(109,40,217,.15)',bgHi:'rgba(109,40,217,.22)', bdr:'#6d28d9',txt:'#4c1d95',dot:'#6d28d9',glow:'#6d28d9'},
+    Actual: {bg:'rgba(13,148,136,.09)', bgMd:'rgba(13,148,136,.15)',bgHi:'rgba(13,148,136,.22)', bdr:'#0d9488',txt:'#115e59',dot:'#0d9488',glow:'#0d9488'},
     Road:   {bg:'rgba(107,114,128,.09)',bgMd:'rgba(107,114,128,.15)',bgHi:'rgba(107,114,128,.22)',bdr:'#6b7280',txt:'#374151',dot:'#6b7280',glow:'#6b7280'},
     Unknown:{bg:'rgba(107,114,128,.09)',bgMd:'rgba(107,114,128,.15)',bgHi:'rgba(107,114,128,.22)',bdr:'#6b7280',txt:'#374151',dot:'#6b7280',glow:'#6b7280'},
   },isDark:false
@@ -891,6 +893,52 @@ function buildPivot(rows,selR,excHold){
   });
 }
 
+/* ═══════════════════ ACTUAL RAKE PLAN (Column C "Mode" — already in execution) ═══════════════════
+   Unlike buildPivot()/packRakes() (which group by our computed _Siding prediction),
+   this groups by the actual EBTP Column C value (_ModeC) — the siding a load has
+   actually already been assigned to on the ground. Flat, no region nesting. */
+/* Column C carries "RAKE-<SIDING>" for loads already assigned to a rake, "ROAD" for
+   road-dispatched loads, or "HOLD-..."/other for not-yet-actual — only the first two
+   represent an actual, already-in-execution plan. Returns the siding code, or null. */
+function actualSidingOf(modeC){
+  const raw=String(modeC||'').trim().toUpperCase();
+  if(!raw)return null;
+  if(raw==='ROAD')return'ROAD';
+  if(/^RAKE[-\s]+/.test(raw)){
+    const sid=raw.replace(/^RAKE[-\s]+/,'').trim();
+    return sid||null;
+  }
+  return null;
+}
+function buildActualPlan(rows){
+  const m={};
+  for(const r of rows){
+    const sid=actualSidingOf(r._ModeC);
+    if(!sid)continue;
+    if(!m[sid])m[sid]={siding:sid,qty:0,bal:0,fg:0,wip:0,btr:0,slab:0,btc:0,issued:0,btp:0,rakeCost:0,truckCost:0,totalCost:0,n:0,items:[]};
+    const g=m[sid];
+    const q=n2(parseFloat(r['Bal to PGI']));
+    g.qty   +=n2(parseFloat(r['Order Qty_Live']));
+    g.bal   +=q;
+    const fgV=n2(parseFloat(r['FG UR Stock']));
+    g.fg    +=fgV;
+    g.wip   +=Math.max(0,n2(parseFloat(r['Plate Stock']))-fgV);
+    g.btr   +=n2(parseFloat(r['BTR']));
+    g.slab  +=n2(r._TotalSlab||0);
+    g.btc   +=n2(parseFloat(r['BTC']));
+    g.issued+=n2(parseFloat(r['ISSUED']));
+    g.btp   +=n2(parseFloat(r['BTP']));
+    {const _fc=freightCost(r,sid);if(_fc){g.rakeCost+=_fc.rake;g.truckCost+=_fc.truck;g.totalCost+=_fc.total;}}
+    g.n++;
+    if(q>0)g.items.push({ord:r,q});
+  }
+  return Object.values(m).sort((a,b)=>{
+    const aRoad=a.siding.toUpperCase()==='ROAD',bRoad=b.siding.toUpperCase()==='ROAD';
+    if(aRoad!==bRoad)return aRoad?1:-1; // Road always sorts last
+    return b.bal-a.bal;
+  });
+}
+
 function payStatus(ord){
   const p=String(ord['Payment Status']||'').trim();
   const fi=String(ord['FI Rel Sta']||'').toLowerCase();
@@ -1365,17 +1413,18 @@ const SIDING_ALIASES={
 };
 /* Resolve any siding code (aliased or not, with/without " (Long)" suffix) to its SIDING_COORDS hub, or null */
 function resolveHub(sid){
-  const base=String(sid||'').replace(/\s*\(Long\)/,'').trim();
+  const base=String(sid||'').replace(/\s*\(Long\)/i,'').trim().toUpperCase();
   return SIDING_COORDS[SIDING_ALIASES[base]||base]||null;
 }
-function freightCost(ord){
+function freightCost(ord,sidingOverride){
   // Normalize siding code:
   //  1. Strip " (Long)" suffix — CITY_MAP appends it for LONG wagon cities
   //     but FREIGHT_RATES stores base code only (uses isODC flag instead)
   //  2. Apply aliases for siding codes that differ from freight file codes
-  let rawSid=String(ord._Siding||'').trim();
-  const isLongSuffix=rawSid.endsWith(' (Long)');
-  if(isLongSuffix)rawSid=rawSid.slice(0,-7).trim(); // strip " (Long)"
+  let rawSid=String(sidingOverride!=null?sidingOverride:(ord._Siding||'')).trim();
+  const isLongSuffix=/\s*\(Long\)$/i.test(rawSid);
+  if(isLongSuffix)rawSid=rawSid.replace(/\s*\(Long\)$/i,'').trim(); // strip " (Long)"
+  rawSid=rawSid.toUpperCase();
   const sid=SIDING_ALIASES[rawSid]||rawSid;
   const fr=FREIGHT_RATES[sid];
   if(!fr)return null;
@@ -1677,6 +1726,122 @@ function MultiSel({all,sel,onChange,placeholder='All',accent,searchable=false}){
   </div>;
 }
 
+/* ═══════════════════ ACTUAL RAKE PLAN ═══════════════════
+   Same look as the Order Release Summary table, but flat — grouped only
+   by the actual EBTP siding (Column C "Mode", already in execution),
+   with no region nesting. Each row also gets its own Map view. */
+function ActualRakePlan({data,onDrill,onMap,activeSiding}){
+  const grand=useMemo(()=>data.reduce((a,r)=>({qty:a.qty+r.qty,bal:a.bal+r.bal,fg:a.fg+(r.fg||0),wip:a.wip+(r.wip||0),btr:a.btr+(r.btr||0),slab:a.slab+(r.slab||0),btc:a.btc+(r.btc||0),issued:a.issued+(r.issued||0),btp:a.btp+(r.btp||0),rakeCost:a.rakeCost+(r.rakeCost||0),truckCost:a.truckCost+(r.truckCost||0),totalCost:a.totalCost+(r.totalCost||0),n:a.n+r.n}),{qty:0,bal:0,fg:0,wip:0,btr:0,slab:0,btc:0,issued:0,btp:0,rakeCost:0,truckCost:0,totalCost:0,n:0}),[data]);
+  const maxBal=useMemo(()=>Math.max(...data.map(r=>r.bal),1),[data]);
+  const rc=C.region.Actual||C.region.Unknown;
+
+  if(!data.length)return(
+    <div style={{...card,marginBottom:14,padding:'48px 24px',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12}}>
+      <div style={{fontSize:44,opacity:.4}}>🚉</div>
+      <div style={{fontFamily:F.h,fontSize:17,color:'var(--dim)',letterSpacing:'.03em',textTransform:'uppercase'}}>No actual plan found (Column C "Mode" is blank for all orders)</div>
+    </div>
+  );
+
+  return<div style={{...card,marginBottom:14,boxShadow:'var(--shadow-sm)',display:'flex',flexDirection:'column',animation:'fadeUp .3s ease-out',overflow:'hidden'}}>
+    <div style={{padding:'14px 18px',borderBottom:'1px solid var(--bdr)',
+      background:`linear-gradient(135deg,var(--s2),var(--s1))`,
+      borderRadius:'var(--radius-lg) var(--radius-lg) 0 0',
+      display:'flex',alignItems:'center',flexWrap:'wrap',gap:10}}>
+      <div>
+        <div style={{fontFamily:F.h,fontSize:17,fontWeight:800,color:'var(--text)',letterSpacing:'.04em',textTransform:'uppercase'}}>
+          Actual Rake Plan
+        </div>
+        <div style={{fontSize:11,color:'var(--dim)',marginTop:3}}>
+          {grand.n.toLocaleString()} orders · {data.length} sidings already in execution (EBTP Mode) · click row → drill-down
+        </div>
+      </div>
+      <div style={{flex:1}}/>
+    </div>
+    <div style={{overflowX:'auto',width:'100%'}}>
+      <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed',minWidth:1100}}>
+        <colgroup>
+          {/* Matches PivotTable's Region(8)+Siding(14)=22, data cols identical, trailing icon(7) — keeps both tables' columns pixel-aligned */}
+          <col style={{width:'22%'}}/>
+          <col style={{width:'9%'}}/><col style={{width:'9%'}}/>
+          <col style={{width:'8%'}}/><col style={{width:'8%'}}/>
+          <col style={{width:'8%'}}/><col style={{width:'8%'}}/>
+          <col style={{width:'7%'}}/><col style={{width:'7%'}}/>
+          <col style={{width:'7%'}}/>
+          <col style={{width:'7%'}}/>
+        </colgroup>
+        <thead>
+          <tr>
+            <th style={th0}>Siding</th>
+            <th style={{...th0,textAlign:'right'}}>Ord Qty</th>
+            <th style={{...th0,textAlign:'right'}}>Bal PGI</th>
+            <th style={{...th0,textAlign:'right'}}>FG UR</th>
+            <th style={{...th0,textAlign:'right'}}>WIP</th>
+            <th style={{...th0,textAlign:'right'}}>BTR</th>
+            <th style={{...th0,textAlign:'right'}}>Slab</th>
+            <th style={{...th0,textAlign:'right'}}>BTC</th>
+            <th style={{...th0,textAlign:'right'}}>Issued</th>
+            <th style={{...th0,textAlign:'right'}}>BTP</th>
+            <th style={{...th0,textAlign:'center'}}>🗺️</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map(r=>{
+            const act=activeSiding===r.siding;
+            const pct=Math.min(100,(r.bal/maxBal)*75+8);
+            const dc={...tn0,fontSize:13,fontWeight:400,color:'var(--dim)',borderBottom:'1px solid var(--bdr)'};
+            return<tr key={r.siding} onClick={()=>onDrill(r.siding)}
+              style={{cursor:'pointer',background:act?rc.bgHi:'transparent',
+                transition:'background .1s',borderLeft:act?'3px solid '+rc.bdr:'3px solid transparent'}}
+              onMouseEnter={e=>e.currentTarget.style.background=rc.bg}
+              onMouseLeave={e=>e.currentTarget.style.background=act?rc.bgHi:'transparent'}>
+              <td style={{...td0,fontSize:13,paddingLeft:12}}><STag code={r.siding}/></td>
+              <td style={{...dc,fontWeight:600,color:'var(--text)'}}>{fmt(r.qty)}</td>
+              <td style={{...tn0,fontSize:13,fontWeight:600,borderBottom:'1px solid var(--bdr)'}}>
+                <div style={{display:'flex',alignItems:'center',gap:6,justifyContent:'flex-end'}}>
+                  <div style={{width:24,height:3,borderRadius:2,background:'var(--s3)',flexShrink:0,overflow:'hidden'}}>
+                    <div style={{height:'100%',width:pct+'%',background:'linear-gradient(90deg,'+C.sky+','+C.amber+')',borderRadius:2}}/>
+                  </div>
+                  <span style={{color:r.bal<0?C.rose:'var(--text)'}}>{fmt(r.bal)}</span>
+                </div>
+              </td>
+              <td style={{...dc,color:C.green}}>{fmt(r.fg)}</td>
+              <td style={{...dc,color:'#f97316'}}>{fmt(r.wip||0)}</td>
+              <td style={{...dc,color:C.violet}}>{fmt(r.btr)}</td>
+              <td style={{...dc,color:'#facc15'}}>{fmt(r.slab||0)}</td>
+              <td style={{...dc,color:'#22d3ee'}}>{fmt(r.btc||0)}</td>
+              <td style={{...dc,color:'#94a3b8'}}>{fmt(r.issued||0)}</td>
+              <td style={{...dc,color:'#fb923c'}}>{fmt(r.btp||0)}</td>
+              <td style={{...td0,textAlign:'center',padding:'6px 4px'}}>
+                <button onClick={e=>{e.stopPropagation();onMap(r.siding);}} disabled={!r.items.length}
+                  title={r.items.length?'View '+r.siding+' on map':'No mapped orders'} style={{padding:'3px 8px',fontSize:12,
+                  cursor:r.items.length?'pointer':'not-allowed',opacity:r.items.length?1:.35,
+                  background:rc.bg,border:'1px solid '+rc.bdr,
+                  borderRadius:'var(--radius-xs)',color:rc.txt,transition:'all .15s'}}
+                  onMouseEnter={e=>r.items.length&&(e.currentTarget.style.background=rc.bgMd)}
+                  onMouseLeave={e=>e.currentTarget.style.background=rc.bg}>🗺️</button>
+              </td>
+            </tr>;
+          })}
+          {/* Grand Total row */}
+          <tr style={{background:'rgba(255,255,255,.05)',borderTop:'2px solid var(--bdrHi)'}}>
+            <td style={{...td0,fontSize:13,fontWeight:800,color:C.amber,
+              letterSpacing:'.06em',textTransform:'uppercase',borderBottom:'none'}}>◈ Grand Total</td>
+            {[
+              [grand.qty,C.amber,800],[grand.bal,C.amber,800],
+              [grand.fg,C.green,700],[grand.wip,'#f97316',700],
+              [grand.btr,C.violet,700],[grand.slab,'#facc15',700],
+              [grand.btc,'#22d3ee',700],[grand.issued,'#94a3b8',700],[grand.btp,'#fb923c',700],
+            ].map(([v,clr,fw],i)=>(
+              <td key={i} style={{...tn0,fontSize:13,fontWeight:fw,color:clr,borderBottom:'none'}}>{fmt(v)}</td>
+            ))}
+            <td/>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>;
+}
+
 /* ═══════════════════ PIVOT TABLE ═══════════════════ */
 function PivotTable({data,onDrill,onRegionExport,activeCell,remarksLbl}){
   const[col,setCol]=useState(null); // null = all collapsed on first render
@@ -1731,15 +1896,14 @@ function PivotTable({data,onDrill,onRegionExport,activeCell,remarksLbl}){
     <div style={{overflowX:'auto',width:'100%'}}>
       <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed',minWidth:1100}}>
         <colgroup>
-          {/* Region(6) Siding(9) OrdQty(8) Bal(8) FG(7) WIP(7) BTR(7) Slab(7) BTC(7) Issued(6) BTP(6) TotalRs(8) #(3) ↓(3) = 92; remaining 8% split into cols */}
-          <col style={{width:'7%'}}/><col style={{width:'9%'}}/>
+          {/* Region(8)+Siding(14)=22, data cols, trailing icon(7) = 100 — kept identical to ActualRakePlan's colgroup so columns stay pixel-aligned between the two stacked tables */}
+          <col style={{width:'8%'}}/><col style={{width:'14%'}}/>
+          <col style={{width:'9%'}}/><col style={{width:'9%'}}/>
+          <col style={{width:'8%'}}/><col style={{width:'8%'}}/>
           <col style={{width:'8%'}}/><col style={{width:'8%'}}/>
           <col style={{width:'7%'}}/><col style={{width:'7%'}}/>
-          <col style={{width:'7%'}}/><col style={{width:'7%'}}/>
-          <col style={{width:'7%'}}/><col style={{width:'6%'}}/>
-          <col style={{width:'6%'}}/>
-          <col style={{width:'9%'}}/>
-          <col style={{width:'3%'}}/><col style={{width:'3%'}}/>
+          <col style={{width:'7%'}}/>
+          <col style={{width:'7%'}}/>
         </colgroup>
         <thead>
           <tr>
@@ -1754,8 +1918,6 @@ function PivotTable({data,onDrill,onRegionExport,activeCell,remarksLbl}){
             <th style={{...th0,textAlign:'right'}}>BTC</th>
             <th style={{...th0,textAlign:'right'}}>Issued</th>
             <th style={{...th0,textAlign:'right'}}>BTP</th>
-            <th style={{...th0,textAlign:'right',color:C.amber}}>Total ₹</th>
-            <th style={{...th0,textAlign:'center'}}>#</th>
             <th style={{...th0,textAlign:'center'}}>↓</th>
           </tr>
         </thead>
@@ -1792,8 +1954,6 @@ function PivotTable({data,onDrill,onRegionExport,activeCell,remarksLbl}){
                 <td onClick={()=>togCol(reg)} style={{...rh,color:'#22d3ee'}}>{fmt(sub.btc)}</td>
                 <td onClick={()=>togCol(reg)} style={{...rh,color:'#94a3b8'}}>{fmt(sub.issued)}</td>
                 <td onClick={()=>togCol(reg)} style={{...rh,color:'#fb923c'}}>{fmt(sub.btp)}</td>
-                <td onClick={()=>togCol(reg)} style={{...rh,color:C.amber,fontSize:12,fontWeight:800}}>{sub.totalCost>0?'₹'+(sub.totalCost/1e5).toFixed(1)+'L':'—'}</td>
-                <td onClick={()=>togCol(reg)} style={{...td0,fontSize:13,textAlign:'center',color:rc.txt,fontWeight:600}}>{sub.n}</td>
                 <td style={{...td0,textAlign:'center',padding:'6px 4px'}}>
                   <button onClick={e=>{e.stopPropagation();onRegionExport(reg,grp[reg]);}}
                     title={'Export '+reg} style={{padding:'3px 7px',fontSize:10,fontFamily:F.h,
@@ -1832,8 +1992,6 @@ function PivotTable({data,onDrill,onRegionExport,activeCell,remarksLbl}){
                   <td style={{...dc,color:'#22d3ee'}}>{fmt(r.btc||0)}</td>
                   <td style={{...dc,color:'#94a3b8'}}>{fmt(r.issued||0)}</td>
                   <td style={{...dc,color:'#fb923c'}}>{fmt(r.btp||0)}</td>
-                  <td style={{...dc,color:C.amber,fontSize:12,fontWeight:600}}>{r.totalCost>0?'₹'+(r.totalCost/1e5).toFixed(1)+'L':'—'}</td>
-                  <td style={{...td0,fontSize:13,textAlign:'center',color:'var(--mute)',fontFamily:F.m}}>{r.n}</td>
                   <td/>
                 </tr>;
               }):[])
@@ -1851,8 +2009,6 @@ function PivotTable({data,onDrill,onRegionExport,activeCell,remarksLbl}){
             ].map(([v,clr,fw],i)=>(
               <td key={i} style={{...tn0,fontSize:13,fontWeight:fw,color:clr,borderBottom:'none'}}>{fmt(v)}</td>
             ))}
-            <td style={{...tn0,fontSize:13,fontWeight:800,color:C.amber,borderBottom:'none'}}>{grand.totalCost>0?'₹'+(grand.totalCost/1e5).toFixed(1)+'L':'—'}</td>
-            <td style={{...td0,fontSize:13,textAlign:'center',fontFamily:F.m,fontWeight:700,color:C.amber,borderBottom:'none'}}>{grand.n}</td>
             <td/>
           </tr>
         </tbody>
@@ -2370,6 +2526,10 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
             +'<span style="color:#f59e0b;font-weight:700">Total: '+_cr(_tot.x)+'</span>'
             +'</div></div>'
           :'';
+        // The hub marker sits on top of any city marker at the same location (e.g. the
+        // siding town is itself a delivery destination) — without its own click handler
+        // it silently swallows that click. Fall through to that city's drill-down too.
+        const hubCity=cities.find(ct=>haversine(hub.lat,hub.lng,ct.lat,ct.lng)<2);
         L.marker([hub.lat,hub.lng],{icon,zIndexOffset:20}).addTo(map)
           .bindTooltip(
             '<div style="font-family:Inter,system-ui,sans-serif;line-height:1.6">'
@@ -2377,8 +2537,18 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
             +'<div style="font-size:12px;color:'+rc.txt+'">Rake Siding: <b>'+baseCode+'</b></div>'
             +'<div style="font-size:12px;color:#9da8bb">Hub · '+rakePlan.rakes.length+' rake'+(rakePlan.rakes.length!==1?'s':'')+'</div>'
             +_costHtml
+            +(hubCity?'<div style="font-size:10px;color:#64748b;margin-top:4px">Click to view '+hubCity.name+' orders</div>':'')
             +'</div>',
-            {direction:'top',permanent:false,offset:[0,-18]});
+            {direction:'top',permanent:false,offset:[0,-18]})
+          .on('click',()=>{
+            if(!hubCity)return;
+            const cn=hubCity.name.toUpperCase().trim();
+            const cityRows=items.filter(({ord})=>{
+              const c=String(ord['Ship To Party City']||'').toUpperCase().trim();
+              return c===cn||c.includes(cn)||cn.includes(c);
+            }).map(x=>x.ord);
+            if(cityRows.length>0)setCityDrill({cityName:hubCity.name,rows:cityRows});
+          });
       }
     }
 
@@ -4270,6 +4440,8 @@ function App(){
   const[excDummy,setExcDummy] =useState(true);
   const[selCust,setSelCust]   =useState(new Set());
   const[drill,setDrill]       =useState(null);
+  const[actDrill,setActDrill] =useState(null); // siding string, Actual Rake Plan drill-down
+  const[actMap,setActMap]     =useState(null); // siding string, Actual Rake Plan map view
   const[ovMap,setOvMap]       =useState(false);
   const[sideOpen,setSideOpen] =useState(false);
   const fileRef=useRef();
@@ -4398,6 +4570,17 @@ function App(){
     if(excHold)s=s.filter(r=>!String(r['MODE']||'').toUpperCase().startsWith('HOLD'));
     return s;
   },[drill,filtered,selRem,excHold]);
+
+  // ── Actual Rake Plan — grouped by EBTP Column C "Mode" (already in execution), not our computed _Siding ──
+  const actualPlanData=useMemo(()=>buildActualPlan(pivSrc),[pivSrc]);
+  const actDrillRows=useMemo(()=>actDrill?pivSrc.filter(r=>actualSidingOf(r._ModeC)===actDrill):[],[actDrill,pivSrc]);
+  const actMapPlan=useMemo(()=>{
+    if(!actMap)return null;
+    const g=actualPlanData.find(r=>r.siding===actMap);
+    if(!g)return null;
+    return{siding:g.siding,region:'Actual',
+      rakes:[{items:g.items,totalBal:g.bal,totalQty:g.qty,totalFG:g.fg,totalWIP:g.wip,totalBTR:g.btr}]};
+  },[actMap,actualPlanData]);
 
   const togR=r=>setSelR(p=>{const n=new Set(p);n.has(r)?n.delete(r):n.add(r);return n;});
   const togS=s=>setSelS(p=>{const n=new Set(p);n.has(s)?n.delete(s):n.add(s);return n;});
@@ -4667,6 +4850,12 @@ function App(){
 
       {/* Main content */}
       <div style={{flex:1,display:'flex',flexDirection:'column',minWidth:0,gap:0}}>
+        <ActualRakePlan
+          data={actualPlanData}
+          activeSiding={actDrill}
+          onDrill={sid=>setActDrill(d=>d===sid?null:sid)}
+          onMap={sid=>setActMap(sid)}
+        />
         <PivotTable
           data={pivotData} remarksLbl={remLbl}
           activeCell={drill}
@@ -4676,6 +4865,17 @@ function App(){
         <RakePredictor rows={pivSrc}/>
       </div>
     </div>
+
+    {/* Actual Rake Plan — Drill Panel & Map */}
+    {actDrill&&<DrillPanel
+      rows={actDrillRows}
+      info={{region:'Actual',siding:actDrill,remarksLabel:remLbl}}
+      onClose={()=>setActDrill(null)}
+      mob={mob}
+    />}
+    {actMapPlan&&ReactDOM.createPortal(
+      <RakeMapModal rakePlan={actMapPlan} rakeIdx={null} onClose={()=>setActMap(null)}/>,document.body
+    )}
 
     {/* Drill Panel */}
     {drill&&<DrillPanel
