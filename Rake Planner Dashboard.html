@@ -411,7 +411,7 @@ const CITY_MAP={
   'HYDERABAD':['Telangana','South','BNHT'],'KADAPA':['Andhra Pradesh','South','SGWF'],
   'KADAPPA':['Andhra Pradesh','South','SGWF'],'KADAPA (CUDDAPAH)':['Andhra Pradesh','South','SGWF'],
   'KANCHIPURAM':['Tamil Nadu','South','CJ'],'KOPPAL':['Karnataka','South','BNHT'],
-  'MANCHERIAL':['Telangana','South','KAV'],'MANGAMPETA':['Andhra Pradesh','South','BNHT'],
+  'MANCHERIAL':['Telangana','South','SNF'],'MANGAMPETA':['Andhra Pradesh','South','BNHT'],
   'MASINAGUDI':['Tamil Nadu','South','SGWF'],'MEDAK':['Telangana','South','BNHT'],
   'NALGONDA':['Telangana','South','BNHT'],'NELLORE':['Andhra Pradesh','South','CJ'],
   'ORAGADAM':['Tamil Nadu','South','CJ'],'PASHAMYLARAM':['Telangana','South','BNHT'],
@@ -667,12 +667,16 @@ function mlLookupCoords(cityRaw){
   }
   if(bestS>=.7)return CITY_COORDS[bestK];
 
-  // 4. Match against SIDING_SERVICE city lists (fuzzy)
+  // 4. Match against SIDING_SERVICE city lists (fuzzy) — look up the matched
+  //    city directly in CITY_COORDS. Must NOT recurse into mlLookupCoords here:
+  //    a city that is itself missing from CITY_COORDS but listed in its own
+  //    siding's service area (e.g. COIMBATORE under TRICHY) fuzzy-matches itself
+  //    with score 1 every time, which previously caused infinite recursion
+  //    (RangeError: Maximum call stack size exceeded) and crashed the whole app.
   for(const[,info]of Object.entries(SIDING_SERVICE)){
     for(const c of info.cities){
-      if(fuzzyScore(city,c)>=.8){
-        const coords=mlLookupCoords(c);
-        if(coords)return coords;
+      if(c!==city&&fuzzyScore(city,c)>=.8&&CITY_COORDS[c]){
+        return CITY_COORDS[c];
       }
     }
   }
@@ -725,7 +729,7 @@ function sidingFallbackCoords(cityRaw){
   const city=String(cityRaw||'').toUpperCase().trim();
   for(const[sid,info]of Object.entries(SIDING_SERVICE)){
     if(info.cities.some(c=>city.includes(c)||c.includes(city.slice(0,5)))){
-      const sc=SIDING_COORDS[sid];
+      const sc=resolveHub(sid);
       if(sc)return[sc.lat,sc.lng];
     }
   }
@@ -1359,6 +1363,11 @@ const SIDING_ALIASES={
   'JSPP':'GFCJ',            // Jamshedpur hub = Jharsuguda (East corridor)
   'RXL':'DKAE',             // Raxaul, Bihar = East corridor
 };
+/* Resolve any siding code (aliased or not, with/without " (Long)" suffix) to its SIDING_COORDS hub, or null */
+function resolveHub(sid){
+  const base=String(sid||'').replace(/\s*\(Long\)/,'').trim();
+  return SIDING_COORDS[SIDING_ALIASES[base]||base]||null;
+}
 function freightCost(ord){
   // Normalize siding code:
   //  1. Strip " (Long)" suffix — CITY_MAP appends it for LONG wagon cities
@@ -1865,7 +1874,7 @@ function OverviewMapModal({rows,onClose}){
   const data=useMemo(()=>packRakes(rows),[rows]);
 
   // Computed from selected siding — same as RakeMapModal's cities useMemo
-  const selHub=selSid?SIDING_COORDS[selSid]:null;
+  const selHub=selSid?resolveHub(selSid):null;
   const selPlan=useMemo(()=>selSid?(data[selSid]||data[selSid+' (Long)']||null):null,[selSid,data]);
   const hubLat=selHub?selHub.lat:ANGUL.lat;
   const hubLng=selHub?selHub.lng:ANGUL.lng;
@@ -2008,8 +2017,11 @@ function OverviewMapModal({rows,onClose}){
       }catch(e){console.warn('OverviewMap city marker error:',ct.name,e.message);}
     });
 
-    // ── All siding hub markers ──
-    Object.entries(SIDING_COORDS).forEach(([sid,hub])=>{
+    // ── All siding hub markers (one per siding actually present in the data,
+    //     resolved through SIDING_ALIASES so codes like TRICHY still find their hub) ──
+    Object.keys(data).forEach(sid=>{
+      const hub=resolveHub(sid);
+      if(!hub)return; // no known hub coordinates for this siding — skip, don't crash
       const plan=data[sid]||data[sid+' (Long)']||null;
       const rakes=plan?plan.rakes.length:0;
       if(rakes===0)return; // only show sidings with orders
@@ -2067,7 +2079,7 @@ function OverviewMapModal({rows,onClose}){
           <span style={{fontSize:18}}>Map</span>
           <div>
             <div style={{fontFamily:F.h,fontSize:15,fontWeight:800,color:'var(--text)',letterSpacing:'.05em',textTransform:'uppercase'}}>
-              {selSid?`${selHub.name} (${selSid}) · ${selPlan?.rakes.length||0} Rakes`:'Overview · All Sidings'}
+              {selSid?`${selHub?.name||selSid} (${selSid}) · ${selPlan?.rakes.length||0} Rakes`:'Overview · All Sidings'}
             </div>
             <div style={{fontSize:11,color:'var(--dim)',marginTop:2}}>
               <span style={{color:C.amber}}>Angul PlateMill</span>
@@ -2176,7 +2188,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
   const rk=rakeIdx!=null?rakePlan.rakes[rakeIdx]:null;
   const rc=C.region[rakePlan.region]||C.region.Unknown;
   const baseCode=rakePlan.siding.replace(/\s*\(Long\)/,'').trim();
-  const hub=SIDING_COORDS[baseCode]||null;
+  const hub=resolveHub(baseCode);
   const items=rk?rk.items:rakePlan.rakes.flatMap(r=>r.items);
 
   // Unique cities with direction, FG status, distance
@@ -2185,7 +2197,9 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
     const c=String(ord['Ship To Party City']||'').trim().toUpperCase();
     const raw=CITY_COORDS[c];const coords=raw||mlLookupCoords(c)||null;
     if(!coords)continue;
-    if(!cityMap[c])cityMap[c]={name:String(ord['Ship To Party City']||c),lat:coords[0],lng:coords[1],bal:0,n:0,fgOk:true,ords:[]};
+    const la=parseFloat(coords[0]),lo=parseFloat(coords[1]);
+    if(isNaN(la)||isNaN(lo)||la<6||la>37||lo<68||lo>98)continue; // guard against bad/out-of-India coords crashing Leaflet
+    if(!cityMap[c])cityMap[c]={name:String(ord['Ship To Party City']||c),lat:la,lng:lo,bal:0,n:0,fgOk:true,ords:[]};
     cityMap[c].bal+=q;cityMap[c].n++;
     if(n2(parseFloat(ord['FG UR Stock']))<q)cityMap[c].fgOk=false;
     cityMap[c].ords.push(ord);
@@ -2272,7 +2286,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
     });
 
     // ── City markers ──
-    cities.forEach(ct=>{
+    cities.forEach(ct=>{try{
       const fwd=ct.direction==='forward';
       const incl=ct.included;
       const clr=!incl?'#64748b':fwd?(ct.fgOk?'#48a872':'#d96868'):(ct.fgOk?C.amber:'#f97316');
@@ -2331,6 +2345,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
             if(cityRows.length>0)setCityDrill({cityName:ct.name,rows:cityRows});
           });
       }
+    }catch(e){console.warn('RakeMap city marker error:',ct.name,e.message);}
     });
 
     // ── Hub marker ──
@@ -2635,7 +2650,7 @@ function forwardDistance(srcLat,srcLng,unloadLat,unloadLng,ptLat,ptLng){
 function TransportPlan({sidingData,onClose}){
   const rc=C.region[sidingData.region]||C.region.Unknown;
   const sid=sidingData.siding;
-  const sidCoords=SIDING_COORDS[sid];
+  const sidCoords=resolveHub(sid);
 
   const[srcLat,setSrcLat]=useState(ANGUL.lat);
   const[srcLng,setSrcLng]=useState(ANGUL.lng);
