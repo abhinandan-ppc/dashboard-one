@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>SMS Heat Planner &middot; Jindal Steel Angul</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800;9..40,900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --md-sys-color-primary: #006493;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #cbe6ff;
+  --md-sys-color-on-primary-container: #001e30;
+  --bg-color: #f0f4f8;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.8);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  --glass-blur: blur(24px);
+  --tx: #1a1c1e;
+  --tm: #44474e;
+  --br: rgba(0,0,0,0.06);
+  --input-bg: rgba(0,0,0,0.04);
+  --input-hover: rgba(0,0,0,0.08);
+  --radius-m: 16px;
+  --radius-pill: 100px;
+}
+[data-theme="dark"] {
+  --md-sys-color-primary: #8dcdff;
+  --md-sys-color-on-primary: #00344f;
+  --md-sys-color-primary-container: #004b70;
+  --md-sys-color-on-primary-container: #cbe6ff;
+  --bg-color: #0f172a;
+  --glass-bg: rgba(30, 41, 59, 0.65);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  --tx: #f8fafc;
+  --tm: #94a3b8;
+  --br: rgba(255,255,255,0.1);
+  --input-bg: rgba(255,255,255,0.05);
+  --input-hover: rgba(255,255,255,0.1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  color: var(--tx);
+  background-color: var(--bg-color);
+  transition: background-color 0.3s, color 0.3s;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+button { font: inherit; cursor: pointer; border: none; outline: none; }
+
+.top-wrapper { flex-shrink: 0; padding: 12px 24px; }
+.top-bar {
+  background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  padding: 12px 20px; border-radius: var(--radius-m); border: var(--glass-border); box-shadow: var(--glass-shadow);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+.top-l { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.top-l .eyebrow { font-size: 11px; color: var(--tm); letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; }
+.top-l h1 { font-size: 16px; font-weight: 800; color: var(--md-sys-color-primary); letter-spacing: -0.2px; margin: 0; white-space: nowrap; }
+
+.view-tabs { display: flex; gap: 6px; background: var(--input-bg); padding: 4px; border-radius: var(--radius-pill); border: var(--glass-border); }
+.view-tabs button {
+  padding: 9px 20px; font-size: 13px; font-weight: 700; border-radius: var(--radius-pill);
+  background: transparent; color: var(--tm); transition: all 0.2s; white-space: nowrap;
+}
+.view-tabs button:hover { color: var(--tx); background: var(--input-hover); }
+.view-tabs button.on { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+
+.frame-stage { flex: 1; min-height: 0; position: relative; padding: 0 24px 24px; }
+.frame-box {
+  position: absolute; inset: 0 24px 24px;
+  border-radius: var(--radius-m); overflow: hidden; border: var(--glass-border); box-shadow: var(--glass-shadow);
+  display: none; background: var(--bg-color);
+}
+.frame-box.on { display: block; }
+.frame-box iframe { width: 100%; height: 100%; border: none; display: block; background: var(--bg-color); }
+
+@media (max-width: 768px) {
+  .top-wrapper { padding: 8px 12px; }
+  .top-bar { flex-direction: column; align-items: stretch; padding: 12px; gap: 12px; }
+  .top-l { justify-content: center; }
+  .view-tabs { justify-content: stretch; }
+  .view-tabs button { flex: 1; }
+  .frame-stage { padding: 0 12px 12px; }
+  .frame-box { inset: 0 12px 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="top-wrapper">
+  <div class="top-bar">
+    <div class="top-l">
+      <div>
+        <div class="eyebrow">Jindal Steel Angul &middot; Steel Melting Shop</div>
+        <h1>SMS Heat Planner</h1>
+      </div>
+    </div>
+    <nav class="view-tabs" id="viewTabs">
+      <button data-view="daily" class="on" type="button">📆 Daily Planner</button>
+      <button data-view="monthly" type="button">🗓️ Monthly Planner</button>
+    </nav>
+  </div>
+</div>
+
+<div class="frame-stage">
+  <div class="frame-box on" id="box-daily">
+    <iframe id="frame-daily" src="SMS Heat Planner Daily.html" title="SMS Heat Planner Daily" loading="eager"></iframe>
+  </div>
+  <div class="frame-box" id="box-monthly">
+    <iframe id="frame-monthly" title="SMS Heat Planner Monthly" data-src="SMS Heat Planner Monthly.html"></iframe>
+  </div>
+</div>
+
+<script>
+"use strict";
+var tabs = document.getElementById('viewTabs');
+var boxes = { daily: document.getElementById('box-daily'), monthly: document.getElementById('box-monthly') };
+var monthlyFrame = document.getElementById('frame-monthly');
+var monthlyLoaded = false;
+
+tabs.addEventListener('click', function(e){
+  var btn = e.target.closest('button[data-view]');
+  if(!btn) return;
+  var view = btn.getAttribute('data-view');
+
+  Array.prototype.forEach.call(tabs.querySelectorAll('button'), function(b){ b.classList.toggle('on', b === btn); });
+  Object.keys(boxes).forEach(function(k){ boxes[k].classList.toggle('on', k === view); });
+
+  if(view === 'monthly' && !monthlyLoaded){
+    monthlyLoaded = true;
+    monthlyFrame.src = monthlyFrame.getAttribute('data-src');
+  }
+});
+</script>
+
+</body>
+</html>
