@@ -442,7 +442,6 @@ div.google-visualization-tooltip {
       </div>
     </div>
     <div class="hdr-r">
-      <button class="hdr-btn" id="themeToggle" type="button">☀️ Light Mode</button>
       <button class="hdr-btn" id="resetBtn" type="button">🔄 Reset</button>
     </div>
   </header>
@@ -1705,16 +1704,16 @@ el("tabBar").addEventListener("click", e=>{
   }
 });
 
-// Update theme toggle to match monthly planner style
-el("themeToggle").addEventListener("click", ()=>{
-  const root = document.documentElement;
-  const isDark = root.getAttribute('data-theme') === 'dark';
-  root.setAttribute('data-theme', isDark ? 'light' : 'dark');
-  el("themeToggle").innerText = isDark ? "🌙 Dark Mode" : "☀️ Light Mode";
-
+// Theme is controlled by the parent shell (SMS Heat Planner.html) via postMessage
+function applyTheme(mode){
+  document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
   var st = el("tab-sankey");
   if(st && st.classList.contains("on") && currentResult) drawSankey(currentResult);
+}
+window.addEventListener("message", (e)=>{
+  if(e.data && e.data.type === "set-theme") applyTheme(e.data.theme);
 });
+if(window.parent !== window) window.parent.postMessage({type:"theme-ready"}, "*");
 
 el("resetBtn").addEventListener("click", ()=>{ 
     S=smsClone(SMS_DEF); 

@@ -72,6 +72,14 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 .view-tabs button:hover { color: var(--tx); background: var(--input-hover); }
 .view-tabs button.on { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 
+.hdr-r { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.theme-toggle {
+  height: 40px; width: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 20px; font-size: 16px; background: var(--input-bg); color: var(--tx); border: var(--glass-border);
+  transition: all 0.2s;
+}
+.theme-toggle:hover { background: var(--input-hover); transform: scale(1.05); }
+
 .frame-stage { flex: 1; min-height: 0; position: relative; padding: 0 24px 24px; }
 .frame-box {
   position: absolute; inset: 0 24px 24px;
@@ -106,6 +114,9 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
       <button data-view="daily" class="on" type="button">📆 Daily Planner</button>
       <button data-view="monthly" type="button">🗓️ Monthly Planner</button>
     </nav>
+    <div class="hdr-r">
+      <button class="theme-toggle" id="themeToggle" type="button" title="Toggle Dark Mode">🌙</button>
+    </div>
   </div>
 </div>
 
@@ -122,6 +133,7 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 "use strict";
 var tabs = document.getElementById('viewTabs');
 var boxes = { daily: document.getElementById('box-daily'), monthly: document.getElementById('box-monthly') };
+var dailyFrame = document.getElementById('frame-daily');
 var monthlyFrame = document.getElementById('frame-monthly');
 var monthlyLoaded = false;
 
@@ -138,6 +150,40 @@ tabs.addEventListener('click', function(e){
     monthlyFrame.src = monthlyFrame.getAttribute('data-src');
   }
 });
+
+// ─── Theme: single source of truth, pushed into both iframes ───
+var themeBtn = document.getElementById('themeToggle');
+var root = document.documentElement;
+
+function sendTheme(frame, theme){
+  if(frame && frame.contentWindow) frame.contentWindow.postMessage({type: 'set-theme', theme: theme}, '*');
+}
+function broadcastTheme(){
+  var theme = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  themeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+  sendTheme(dailyFrame, theme);
+  sendTheme(monthlyFrame, theme);
+}
+function setTheme(theme){
+  root.setAttribute('data-theme', theme);
+  localStorage.setItem('smsPlannerTheme', theme);
+  broadcastTheme();
+}
+
+themeBtn.addEventListener('click', function(){
+  setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+});
+
+// A child page announces "theme-ready" once its own message listener is wired up
+window.addEventListener('message', function(e){
+  if(e.data && e.data.type === 'theme-ready'){
+    var theme = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    if(e.source === (dailyFrame && dailyFrame.contentWindow)) sendTheme(dailyFrame, theme);
+    if(e.source === (monthlyFrame && monthlyFrame.contentWindow)) sendTheme(monthlyFrame, theme);
+  }
+});
+
+setTheme(localStorage.getItem('smsPlannerTheme') || 'dark');
 </script>
 
 </body>

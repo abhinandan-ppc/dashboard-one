@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -143,14 +143,6 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
 .h-actions { display: flex; gap: 12px; align-items: center; }
 .btn-header { height: 40px; padding: 0 20px; border-radius: 20px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; background: var(--input-bg); color: var(--tx); border: var(--glass-border); outline: none; }
 .btn-header:hover { background: var(--input-hover); transform: scale(1.02); }
-.theme-toggle { 
-    height: 40px; width: 40px; padding: 0; justify-content: center; border-radius: 20px; 
-    font-size: 14px; display: inline-flex; align-items: center; cursor: pointer; 
-    transition: all 0.2s; background: var(--input-bg); color: var(--tx); 
-    border: var(--glass-border); outline: none; 
-}
-.theme-toggle:hover { background: var(--input-hover); transform: scale(1.02); }
-
 /* ─── APP SHELL & LAYOUT ─── */
 .app-shell { max-width: 1600px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; width: 100%; overflow-x: hidden; box-sizing: border-box; }
 
@@ -406,8 +398,6 @@ select option { background-color: var(--bg-color); color: var(--tx); }
   .hb { display: none !important; }
   .h-actions { display: flex; width: 100%; gap: 8px; }
   .btn-header { flex: 1; border-radius: 8px; justify-content: center; height: 40px; font-size: 13px; }
-  .theme-toggle { border-radius: 8px !important; font-size: 15px; width: auto; flex: 1;}
-  .theme-toggle::after { content: ' Theme'; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 13px; margin-left: 6px; }
 
   .controls-sidebar > .panel, .coll-panel { flex: 1 1 100%; min-width: unset; width: 100%; box-sizing: border-box; }
   .kpi-row { grid-template-columns: 1fr 1fr; order: 0;} 
@@ -471,7 +461,6 @@ select option { background-color: var(--bg-color); color: var(--tx); }
           <button class="btn-header" onclick="window.resetSimulator()" title="Reset to Original Default Values">
             🔄 Reset
           </button>
-          <button class="theme-toggle" onclick="window.toggleTheme()" title="Toggle Dark Mode" id="themeBtn">🌙</button>
         </div>
       </div>
     </div>
@@ -779,21 +768,15 @@ let _daysRef = 31;
 let selectedNode = null; 
 let currentFlowView = 'flow'; 
 
-/* ─── Theme & Reset Logic ─── */
-window.toggleTheme = function() {
-    const root = document.documentElement;
-    const isDark = root.getAttribute('data-theme') === 'dark';
-    root.setAttribute('data-theme', isDark ? 'light' : 'dark');
-    document.getElementById('themeBtn').textContent = isDark ? '🌙' : '☀️';
-    localStorage.setItem('theme', isDark ? 'light' : 'dark');
+/* ─── Theme Logic (controlled by the parent shell via postMessage) ─── */
+function applyTheme(mode) {
+    document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
     if (currentFlowView === 'sankey') renderSankey();
 }
-
-// Init Theme
-if (localStorage.getItem('theme') === 'dark') {
-    document.documentElement.setAttribute('data-theme', 'dark');
-    document.getElementById('themeBtn').textContent = '☀️';
-}
+window.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "set-theme") applyTheme(e.data.theme);
+});
+if (window.parent !== window) window.parent.postMessage({type: "theme-ready"}, "*");
 
 window.resetSimulator = function() {
     // Reset inputs
