@@ -1035,7 +1035,7 @@ function addOrd(rk,ord,q){
 function packRakes(rows){
   const by={};
   for(const r of rows){
-    if(r._Siding==='ROAD'||!r._Siding)continue;
+    if(r._Siding==='ROAD'||r._Region==='Road'||!r._Siding)continue;
     const q=n2(parseFloat(r['Bal to PGI']));
     if(q<=0)continue;
     if(!by[r._Siding])by[r._Siding]={region:r._Region,orders:[]};
