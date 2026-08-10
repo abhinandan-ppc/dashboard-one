@@ -427,45 +427,6 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 </head>
 <body>
 
-<div class="sticky-wrapper">
-  <header class="site-header">
-    <div class="header-inner" style="display:contents">
-      <div class="brand">
-        <div class="brand-icon-wrapper">
-            <svg class="brand-logo" viewBox="0 0 250 70" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stop-color="#4caf50" />
-                  <stop offset="100%" stop-color="#2e7d32" />
-                </linearGradient>
-                <linearGradient id="orangeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stop-color="#ff9800" />
-                  <stop offset="100%" stop-color="#e65100" />
-                </linearGradient>
-              </defs>
-              <text x="0" y="48" font-family="'DM Sans', Arial, sans-serif" font-weight="900" font-style="italic" font-size="44" fill="#555" letter-spacing="-1">JINDAL</text>
-              <text x="145" y="68" font-family="'DM Sans', Arial, sans-serif" font-weight="800" font-style="italic" font-size="24" fill="#000" letter-spacing="0.5">STEEL</text>
-              <path d="M158,15 L180,10 L168,30 L145,35 Z" fill="url(#orangeGrad)"/>
-              <path d="M160,30 Q190,32 245,5 Q200,45 140,58 Z" fill="url(#greenGrad)"/>
-            </svg>
-        </div>
-        <div class="brand-text">
-          <h1>Jindal Steel Angul Simulator</h1>
-          <p>Meltshop · Forecast · Optimizer</p>
-        </div>
-      </div>
-      <div class="hbadges">
-        <div class="hb hb-b">SMS1 (EAF+BOF1) → SC1 + BC1 + CC1 + TC1 (Bypass)</div>
-        <div class="hb hb-a">SMS2 (BOF2+BOF3) → TC1 → HSM</div>
-        <div class="h-actions">
-          <button class="btn-header" onclick="window.resetSimulator()" title="Reset to Original Default Values">
-            🔄 Reset
-          </button>
-        </div>
-      </div>
-    </div>
-  </header>
-</div>
 
 <div class="app-shell">
   
@@ -775,6 +736,7 @@ function applyTheme(mode) {
 }
 window.addEventListener("message", (e) => {
     if (e.data && e.data.type === "set-theme") applyTheme(e.data.theme);
+    if (e.data && e.data.type === "reset") window.resetSimulator();
 });
 if (window.parent !== window) window.parent.postMessage({type: "theme-ready"}, "*");
 

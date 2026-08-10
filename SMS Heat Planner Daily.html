@@ -433,19 +433,6 @@ div.google-visualization-tooltip {
 </head>
 <body>
 
-<div class="hdr-wrapper">
-  <header class="hdr">
-    <div class="hdr-l">
-      <div>
-        <div class="eyebrow">JINDAL STEEL ANGUL &middot; STEEL MELTING SHOP</div>
-        <h1>SMS Heat Planning Optimizer</h1>
-      </div>
-    </div>
-    <div class="hdr-r">
-      <button class="hdr-btn" id="resetBtn" type="button">🔄 Reset</button>
-    </div>
-  </header>
-</div>
 
 <div class="alert-banner" id="alertBanner"><div class="alert-box" id="alertBoxContent"></div></div>
 <div class="kpi-strip" id="kpis"></div>
@@ -1710,22 +1697,23 @@ function applyTheme(mode){
   var st = el("tab-sankey");
   if(st && st.classList.contains("on") && currentResult) drawSankey(currentResult);
 }
-window.addEventListener("message", (e)=>{
-  if(e.data && e.data.type === "set-theme") applyTheme(e.data.theme);
-});
-if(window.parent !== window) window.parent.postMessage({type:"theme-ready"}, "*");
-
-el("resetBtn").addEventListener("click", ()=>{ 
-    S=smsClone(SMS_DEF); 
+function doReset(){
+    S=smsClone(SMS_DEF);
     syncInputs();
-    
+
     // Reset view constraints
-    nodeState = {}; panX=0; panY=0; currentZoom=0.70; updateFlowZoom(); 
+    nodeState = {}; panX=0; panY=0; currentZoom=0.70; updateFlowZoom();
     var pill = el('zoomControlsPill');
     pill.style.top = '16px'; pill.style.right = '16px'; pill.style.left = 'auto';
 
-    renderOutputs(smsOptimize(S)); 
+    renderOutputs(smsOptimize(S));
+}
+
+window.addEventListener("message", (e)=>{
+  if(e.data && e.data.type === "set-theme") applyTheme(e.data.theme);
+  if(e.data && e.data.type === "reset") doReset();
 });
+if(window.parent !== window) window.parent.postMessage({type:"theme-ready"}, "*");
 
 // Insights Toggle
 el("insightsToggle").addEventListener("click", ()=>{
