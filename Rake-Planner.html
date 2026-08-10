@@ -3517,7 +3517,7 @@ function RakePredictor({rows}){
               const isActive=rkDrill?.sid===siding&&rkDrill?.idx===realIdx;
               return<div key={realIdx} style={{marginBottom:8,
                 background:isActive?'var(--s3)':readyForDispatch?'rgba(34,197,94,.06)':'rgba(0,0,0,.18)',
-                border:`1px solid ${isActive?C.amber:readyForDispatch?C.green+'50':rc.bdr+'30'}`,
+                border:`1px solid ${isActive?C.amber:readyForDispatch?C._green+'50':rc.bdr+'30'}`,
                 borderRadius:'var(--radius-sm)',overflow:'hidden',transition:'all .15s',
                 opacity:dim?.45:1,
                 filter:dim?'saturate(.35)':'none'}}>
@@ -3535,11 +3535,11 @@ function RakePredictor({rows}){
                   {(()=>{
                     const t=rk.items.reduce((a,{ord})=>{const p=rkPriority(ord);a[p]=(a[p]||0)+1;return a;},{});
                     const pills=[
-                      t[0]&&{l:`FG W/ Pay ×${t[0]}`,c:C.green},
-                      t[2]&&{l:`FG W/O Pay ×${t[2]}`,c:C.amber},
-                      t[1]&&{l:`WIP W/ Pay ×${t[1]}`,c:C.sky},
+                      t[0]&&{l:`FG W/ Pay ×${t[0]}`,c:C._green},
+                      t[2]&&{l:`FG W/O Pay ×${t[2]}`,c:C._amber},
+                      t[1]&&{l:`WIP W/ Pay ×${t[1]}`,c:C._sky},
                       t[3]&&{l:`WIP W/O Pay ×${t[3]}`,c:'#f97316'},
-                      (t[4]||t[5])&&{l:`No Stock ×${(t[4]||0)+(t[5]||0)}`,c:C.rose},
+                      (t[4]||t[5])&&{l:`No Stock ×${(t[4]||0)+(t[5]||0)}`,c:C._rose},
                     ].filter(Boolean);
                     return pills.map((p,i)=>(
                       <span key={i} style={{fontSize:9,padding:'3px 9px',borderRadius:'var(--radius-pill)',
