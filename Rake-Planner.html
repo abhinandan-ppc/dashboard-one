@@ -3503,6 +3503,7 @@ function RakePredictor({rows}){
               const pct=Math.min(100,(rk.totalBal/RAKE_CAP)*100);
               const isFull=rk.totalBal>=RAKE_CAP*.9;
               const cl=isFull?C.green:pct>60?C.amber:C.sky;
+              const clHex=isFull?C._green:pct>60?C._amber:C._sky;
               const fgOk=rk.totalFG>=rk.totalBal&&rk.totalBal>0;
               const fgPct=rk.totalBal>0?Math.min(100,(rk.totalFG/rk.totalBal)*100):0;
               const wipTot=rk.totalWIP||0;
@@ -3570,7 +3571,7 @@ function RakePredictor({rows}){
                   </div>
                   <div style={{height:4,borderRadius:3,background:'rgba(0,0,0,.35)',overflow:'hidden',marginBottom:5}}>
                     <div style={{height:'100%',width:`${Math.round(pct)}%`,borderRadius:3,
-                      background:`linear-gradient(90deg,${cl}88,${cl})`,
+                      background:`linear-gradient(90deg,${clHex}88,${clHex})`,
                       transition:'width .9s cubic-bezier(.4,0,.2,1)'}}/>
                   </div>
                   <div style={{display:'flex',justifyContent:'space-between',marginBottom:2}}>
