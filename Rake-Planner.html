@@ -3496,7 +3496,7 @@ function RakePredictor({rows}){
 
           {/* Per-rake rows — only show rakes ≥50% capacity in predictor */}
           <div style={{padding:'0 12px 10px'}}>
-            {[
+            {(()=>{let runningBal=totalBal;return[
               ...rakes.map((rk,realIdx)=>({rk,realIdx,dim:false})).filter(({rk})=>rk.totalBal>=RAKE_CAP*RAKE_MIN_SHOW),
               ...rakes.map((rk,realIdx)=>({rk,realIdx,dim:true})).filter(({rk})=>rk.totalBal<RAKE_CAP*RAKE_MIN_SHOW&&rk.totalBal>0),
             ].map(({rk,realIdx,dim},i)=>{
@@ -3505,6 +3505,11 @@ function RakePredictor({rows}){
               const cl=isFull?C.green:pct>60?C.amber:C.sky;
               const fgOk=rk.totalFG>=rk.totalBal&&rk.totalBal>0;
               const fgPct=rk.totalBal>0?Math.min(100,(rk.totalFG/rk.totalBal)*100):0;
+              const wipTot=rk.totalWIP||0;
+              const fromRolling=Math.max(0,rk.totalBal-rk.totalFG-wipTot);
+              const rollingPct=rk.totalBal>0?Math.min(100,(fromRolling/rk.totalBal)*100):0;
+              const balBefore=runningBal;
+              runningBal-=rk.totalBal;
               const readyForDispatch=fgOk&&isFull;
               const pays=rk.items.map(({ord})=>payStatus(ord));
               const hasNone=pays.some(p=>p==='none'),hasPart=pays.some(p=>p==='partial');
@@ -3529,16 +3534,16 @@ function RakePredictor({rows}){
                   {(()=>{
                     const t=rk.items.reduce((a,{ord})=>{const p=rkPriority(ord);a[p]=(a[p]||0)+1;return a;},{});
                     const pills=[
-                      t[0]&&{l:`FG+Pay ×${t[0]}`,c:C.green},
-                      t[1]&&{l:`WIP+Pay ×${t[1]}`,c:'#34d399'},
-                      t[2]&&{l:`FG ×${t[2]}`,c:C.amber},
-                      t[3]&&{l:`WIP ×${t[3]}`,c:'#f97316'},
-                      (t[4]||t[5])&&{l:`No stock ×${(t[4]||0)+(t[5]||0)}`,c:C.rose},
+                      t[0]&&{l:`FG W/ Pay ×${t[0]}`,c:C.green},
+                      t[2]&&{l:`FG W/O Pay ×${t[2]}`,c:C.amber},
+                      t[1]&&{l:`WIP W/ Pay ×${t[1]}`,c:C.sky},
+                      t[3]&&{l:`WIP W/O Pay ×${t[3]}`,c:'#f97316'},
+                      (t[4]||t[5])&&{l:`No Stock ×${(t[4]||0)+(t[5]||0)}`,c:C.rose},
                     ].filter(Boolean);
                     return pills.map((p,i)=>(
-                      <span key={i} style={{fontSize:9,padding:'1px 6px',borderRadius:'var(--radius-pill)',
-                        background:`${p.c}18`,border:`1px solid ${p.c}40`,
-                        color:p.c,fontFamily:F.h,fontWeight:700,letterSpacing:'.03em',whiteSpace:'nowrap'}}>
+                      <span key={i} style={{fontSize:9,padding:'3px 9px',borderRadius:'var(--radius-pill)',
+                        background:`${p.c}28`,border:`1px solid ${p.c}50`,
+                        color:p.c,fontFamily:F.h,fontWeight:700,letterSpacing:'.03em',whiteSpace:'nowrap',display:'inline-block'}}>
                         {p.l}
                       </span>
                     ));
@@ -3555,7 +3560,7 @@ function RakePredictor({rows}){
                     border:`1px solid ${hasNone?C._rose:C._amber}50`}}>{hasNone?'⚠ NO PAY':'~ PART PAY'}</span>}
                   <span style={{flex:1}}/>
                   <span style={{fontFamily:F.m,fontSize:10,color:cl,fontWeight:600}}>
-                    {fmt(rk.totalBal)}{isFull?' ✓':''} / {fmt(rk.totalQty)} MT
+                    {fmt(rk.totalBal)}{isFull?' ✓':''} / {fmt(balBefore)} MT
                   </span>
                 </div>
                 <div style={{padding:'5px 10px 3px'}}>
@@ -3564,12 +3569,12 @@ function RakePredictor({rows}){
                     <span style={{fontFamily:F.m,fontSize:11,color:cl,fontWeight:700}}>{pct.toFixed(0)}% of rake capacity</span>
                   </div>
                   <div style={{height:4,borderRadius:3,background:'rgba(0,0,0,.35)',overflow:'hidden',marginBottom:5}}>
-                    <div style={{height:'100%',width:`${pct}%`,borderRadius:3,
+                    <div style={{height:'100%',width:`${Math.round(pct)}%`,borderRadius:3,
                       background:`linear-gradient(90deg,${cl}88,${cl})`,
                       transition:'width .9s cubic-bezier(.4,0,.2,1)'}}/>
                   </div>
                   <div style={{display:'flex',justifyContent:'space-between',marginBottom:2}}>
-                    <span style={{fontSize:11.5,color:rc.txt,fontWeight:600}}>FG Available</span>
+                    <span style={{fontSize:11.5,color:rc.txt,fontWeight:600}}>FG Stock</span>
                     <span style={{fontFamily:F.m,fontSize:11,color:fgOk?C.green:C.rose,fontWeight:700}}>{fmt(rk.totalFG)} MT</span>
                   </div>
                   <div style={{height:4,borderRadius:3,background:'rgba(0,0,0,.35)',overflow:'hidden',marginBottom:5}}>
@@ -3577,17 +3582,15 @@ function RakePredictor({rows}){
                       background:`linear-gradient(90deg,${fgOk?C._green:C._rose}77,${fgOk?C._green:C._rose})`,
                       transition:'width .9s cubic-bezier(.4,0,.2,1)'}}/>
                   </div>
-                  {(()=>{
-                    const wipTot=rk.totalWIP||0;
-                    const fgWipOk=(rk.totalFG+wipTot)>=rk.totalBal&&rk.totalBal>0;
+                  {wipTot>0&&(()=>{
                     const wipPct=rk.totalBal>0?Math.min(100,((rk.totalFG+wipTot)/rk.totalBal)*100):0;
-                    const wipCol=wipTot>0?'#f97316':C.mute;
-                    return wipTot>0?<>
+                    const wipCol='#f97316';
+                    return<>
                       <div style={{display:'flex',justifyContent:'space-between',marginBottom:2}}>
-                        <span style={{fontSize:11.5,color:rc.txt,fontWeight:600}}>WIP (Plate−FG)</span>
+                        <span style={{fontSize:11.5,color:rc.txt,fontWeight:600}}>WIP Stock</span>
                         <span style={{fontFamily:F.m,fontSize:11,color:wipCol,fontWeight:700}}>+{fmt(wipTot)} MT</span>
                       </div>
-                      <div style={{height:4,borderRadius:3,background:'rgba(0,0,0,.35)',overflow:'hidden',position:'relative'}}>
+                      <div style={{height:4,borderRadius:3,background:'rgba(0,0,0,.35)',overflow:'hidden',position:'relative',marginBottom:5}}>
                         <div style={{height:'100%',width:`${fgPct}%`,borderRadius:3,
                           background:`linear-gradient(90deg,${fgOk?C._green:C._rose}55,${fgOk?C._green:C._rose}88)`,
                           position:'absolute',left:0,top:0}}/>
@@ -3595,11 +3598,17 @@ function RakePredictor({rows}){
                           background:`linear-gradient(90deg,#ea580c55,#f97316aa)`,
                           position:'absolute',left:0,top:0,transition:'width .9s cubic-bezier(.4,0,.2,1)'}}/>
                       </div>
-                      <div style={{fontSize:10,color:rc.txt,opacity:.5,marginTop:2,fontFamily:F.m}}>
-                        FG+WIP = {fmt(rk.totalFG+wipTot)} MT {fgWipOk?'✓ covers Bal':'— still short by '+fmt(rk.totalBal-rk.totalFG-wipTot)+' MT'}
-                      </div>
-                    </>:null;
+                    </>;
                   })()}
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:2}}>
+                    <span style={{fontSize:11.5,color:rc.txt,fontWeight:600}}>From Rolling</span>
+                    <span style={{fontFamily:F.m,fontSize:11,color:fromRolling>0?C.rose:C.green,fontWeight:700}}>{fmt(fromRolling)} MT</span>
+                  </div>
+                  <div style={{height:4,borderRadius:3,background:'rgba(0,0,0,.35)',overflow:'hidden'}}>
+                    <div style={{height:'100%',width:`${rollingPct}%`,borderRadius:3,
+                      background:`linear-gradient(90deg,${C._rose}77,${C._rose})`,
+                      transition:'width .9s cubic-bezier(.4,0,.2,1)'}}/>
+                  </div>
                 </div>
                 <button onClick={()=>setRkDrill(p=>p?.sid===siding&&p?.idx===realIdx?null:{sid:siding,idx:realIdx})}
                   style={{width:'100%',padding:'5px',background:isActive?`${C._amber}18`:'rgba(0,0,0,.2)',border:'none',
@@ -3612,7 +3621,7 @@ function RakePredictor({rows}){
                   {isActive?'▲ Close details':'▼ Order details'}
                 </button>
               </div>;
-            })}
+            })})()}
           </div>
 
           {/* Siding footer: AI + Map + Excel */}
