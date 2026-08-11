@@ -6,7 +6,7 @@
 <title>Angul PlateMill Rake Planner · JSPL</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Inter+Tight:wght@500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800;9..40,900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -21,20 +21,20 @@ html,body,#root{min-height:100%;height:100%}
 /* ── M3 Dark (default) ── */
 :root{
   /* Surfaces — neutral grey-blue, no harsh contrast */
-  --bg:#0b0f18;
-  --s0:rgba(18,24,38,.72);
-  --s1:rgba(24,32,50,.62);
-  --s2:rgba(30,40,60,.58);
-  --s3:rgba(38,50,72,.55);
-  --s4:rgba(46,60,84,.52);
-  --bdr:rgba(255,255,255,.08);
+  --bg:#0f172a;
+  --s0:rgba(22,30,48,.72);
+  --s1:rgba(30,41,59,.62);
+  --s2:rgba(36,49,70,.58);
+  --s3:rgba(44,58,82,.55);
+  --s4:rgba(52,68,94,.52);
+  --bdr:rgba(255,255,255,.1);
   --bdrHi:rgba(255,255,255,.14);
 
   /* Typography — warm white, readable at every size */
-  --text:#e8eaf0;        /* body — off-white, not harsh */
-  --text-hi:#f4f5f9;     /* headings */
-  --dim:#9da8bb;         /* secondary labels */
-  --mute:#5c6880;        /* placeholder, disabled */
+  --text:#f8fafc;        /* body — off-white, not harsh */
+  --text-hi:#ffffff;     /* headings */
+  --dim:#94a3b8;         /* secondary labels */
+  --mute:#64748b;        /* placeholder, disabled */
 
   /* M3 Accent palette — muted, not neon */
   --amber:#d4923c;       --amber-bg:rgba(212,146,60,.12);
@@ -46,9 +46,9 @@ html,body,#root{min-height:100%;height:100%}
   --teal:#3da8a0;
 
   /* Glass */
-  --glass:rgba(14,20,32,.58);
-  --glass-card:rgba(20,28,44,.54);
-  --glass-hi:rgba(16,22,36,.94);
+  --glass:rgba(30,41,59,.65);
+  --glass-card:rgba(30,41,59,.55);
+  --glass-hi:rgba(30,41,59,.92);
   --glass-border:rgba(255,255,255,.1);
   --glass-border-hi:rgba(255,255,255,.18);
 
@@ -62,30 +62,30 @@ html,body,#root{min-height:100%;height:100%}
   --shadow-glow-amber:0 0 0 2px rgba(212,146,60,.25),0 3px 12px rgba(212,146,60,.15);
 
   /* Radius */
-  --radius-xs:6px; --radius-sm:10px; --radius-md:14px;
+  --radius-xs:6px; --radius-sm:10px; --radius-md:16px;
   --radius-lg:18px; --radius-xl:24px; --radius-pill:999px;
 
   /* Composites */
-  --s1-80:rgba(28,34,48,.8); --s2-50:rgba(35,43,59,.5); --s2-80:rgba(35,43,59,.8);
+  --s1-80:rgba(30,41,59,.8); --s2-50:rgba(36,49,70,.5); --s2-80:rgba(36,49,70,.8);
   --bdr-10:rgba(255,255,255,.04);
   color-scheme:dark;
 }
 
 /* ── M3 Light — rich, high-contrast, fully readable ── */
 [data-theme="light"]{
-  --bg:#eef1f8;
+  --bg:#f0f4f8;
   --s0:rgba(255,255,255,.95);
   --s1:rgba(255,255,255,.88);
   --s2:rgba(240,244,252,.85);
   --s3:rgba(226,232,246,.80);
   --s4:rgba(212,220,240,.76);
-  --bdr:rgba(0,0,0,.11);
-  --bdrHi:rgba(0,0,0,.20);
+  --bdr:rgba(0,0,0,.08);
+  --bdrHi:rgba(0,0,0,.18);
 
   /* Typography — deep, readable on white */
-  --text:#111827;
+  --text:#1a1c1e;
   --text-hi:#030712;
-  --dim:#374151;
+  --dim:#44474e;
   --mute:#6b7280;
 
   /* Accent colours — vivid enough to read on white/light grey */
@@ -116,7 +116,7 @@ html,body,#root{min-height:100%;height:100%}
   color-scheme:light;
 }
 
-/* ── Body — Inter, proper line-height ── */
+/* ── Body — DM Sans, proper line-height ── */
 body{
   background:var(--bg);
   background-image:
@@ -125,7 +125,7 @@ body{
     radial-gradient(ellipse 50% 40% at 50% 50%, rgba(155,135,212,.04) 0%, transparent 70%);
   background-attachment:fixed;
   color:var(--text);
-  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  font-family:'DM Sans',system-ui,-apple-system,sans-serif;
   font-size:14px;
   line-height:1.5;
   -webkit-font-smoothing:antialiased;
@@ -135,7 +135,7 @@ body{
 }
 
 /* ── Typography scale ── */
-h1,h2,h3{font-family:'Inter Tight',sans-serif;font-weight:700;color:var(--text-hi);line-height:1.2}
+h1,h2,h3{font-family:'DM Sans',sans-serif;font-weight:700;color:var(--text-hi);line-height:1.2}
 
 /* ── Scrollbars ── */
 ::-webkit-scrollbar{width:5px;height:5px}
@@ -157,26 +157,26 @@ select option{background:var(--s1);color:var(--text)}
 /* ── M3 Glass ── */
 .m3-glass{
   background:var(--glass);
-  backdrop-filter:blur(40px) saturate(1.8);
-  -webkit-backdrop-filter:blur(40px) saturate(1.8);
+  backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);
   border:1px solid var(--glass-border);
 }
 .glass-card{
   background:var(--glass-card);
-  backdrop-filter:blur(28px) saturate(1.6);
-  -webkit-backdrop-filter:blur(28px) saturate(1.6);
+  backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);
   border:1px solid var(--glass-border);
 }
 
 /* ── Leaflet ── */
 .leaflet-tooltip{background:rgba(14,20,32,.92) !important;border:1px solid rgba(255,255,255,.14) !important;
-  color:#eceef4 !important;font-family:'Inter',system-ui,sans-serif !important;
+  color:#eceef4 !important;font-family:'DM Sans',system-ui,sans-serif !important;
   font-size:13px !important;line-height:1.5 !important;border-radius:10px !important;
   box-shadow:0 8px 32px rgba(0,0,0,.6) !important;padding:9px 13px !important;
   backdrop-filter:blur(16px) !important;-webkit-backdrop-filter:blur(16px) !important;}
 [data-theme="light"] .leaflet-tooltip{background:rgba(255,255,255,.92) !important;border:1px solid rgba(0,0,0,.12) !important;color:#1a1e2a !important;}
 .leaflet-tooltip::before{border-top-color:var(--bdrHi) !important;border-bottom-color:var(--bdrHi) !important}
-.leaflet-container{background:var(--bg) !important;font-family:'Inter',sans-serif}
+.leaflet-container{background:var(--bg) !important;font-family:'DM Sans',sans-serif}
 .leaflet-control-zoom a{background:var(--s1) !important;color:var(--dim) !important;border-color:var(--bdrHi) !important}
 .leaflet-control-zoom a:hover{background:var(--s2) !important;color:var(--text) !important}
 .leaflet-control-attribution{background:var(--glass) !important;color:var(--mute) !important;font-size:10px !important;backdrop-filter:blur(8px) !important}
@@ -203,7 +203,7 @@ thead tr th:last-child{border-radius:0 var(--radius-xs) 0 0}
 /* ── Portal dropdown ── */
 .portal-dropdown{box-shadow:var(--shadow-lg);border-radius:var(--radius-md);border:1px solid var(--bdrHi);overflow:hidden;}
 .leaflet-div-icon{background:transparent !important;border:none !important}
-.leaflet-container *{font-family:'Inter',system-ui,sans-serif}
+.leaflet-container *{font-family:'DM Sans',system-ui,sans-serif}
 </style>
 </head>
 <body>
@@ -314,7 +314,7 @@ function useThemeManager(){
   return{pref,setPref,effective};
 }
 
-const F={h:"'Inter Tight',sans-serif",b:"'Inter',sans-serif",m:"'DM Mono',monospace"};
+const F={h:"'DM Sans',sans-serif",b:"'DM Sans',sans-serif",m:"'DM Mono',monospace"};
 const RAKE_CAP=2850,RAKE_TOL=0.03,RAKE_MIN_SHOW=0.5; // hide rakes < 50% in predictor
 const RO=['East','West','North','South','Export','Road'];
 
@@ -1513,8 +1513,8 @@ function getHTC(extGrade, supplyCondition){
 /* ═══════════════════ SHARED STYLES ═══════════════════ */
 const card={
   background:'var(--glass-card)',
-  backdropFilter:'blur(28px) saturate(1.6)',
-  WebkitBackdropFilter:'blur(28px) saturate(1.6)',
+  backdropFilter:'blur(24px)',
+  WebkitBackdropFilter:'blur(24px)',
   border:'1px solid var(--glass-border)',
   borderRadius:'var(--radius-lg)',
   boxShadow:'var(--shadow-sm)',
@@ -1649,7 +1649,7 @@ function RemarksMSel({all,sel,onChange}){
   const dropdown=open&&pos&&ReactDOM.createPortal(
     <div ref={ref} style={{position:'fixed',top:pos.top,bottom:pos.bottom,left:pos.left,width:pos.width,zIndex:9999,
       background:'var(--glass-hi)',
-      backdropFilter:'blur(32px) saturate(1.8)',WebkitBackdropFilter:'blur(32px) saturate(1.8)',
+      backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
       border:'1px solid var(--glass-border-hi)',borderRadius:'var(--radius-md)',overflow:'hidden',
       boxShadow:'var(--shadow-lg)',animation:'fadeUp .14s cubic-bezier(.2,0,.4,1)'}}>
       <div style={{padding:'6px 8px',borderBottom:'1px solid var(--bdr)'}}>
@@ -1707,7 +1707,7 @@ function MultiSel({all,sel,onChange,placeholder='All',accent,searchable=false}){
   const dropdown=open&&pos&&ReactDOM.createPortal(
     <div ref={ref} style={{position:'fixed',top:pos.top,bottom:pos.bottom,left:pos.left,width:pos.width,zIndex:9999,
       background:'var(--glass-hi)',
-      backdropFilter:'blur(32px) saturate(1.8)',WebkitBackdropFilter:'blur(32px) saturate(1.8)',
+      backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
       border:'1px solid var(--glass-border-hi)',borderRadius:'var(--radius-md)',overflow:'hidden',
       boxShadow:'var(--shadow-lg)',animation:'fadeUp .14s cubic-bezier(.2,0,.4,1)'}}>
       {searchable&&<div style={{padding:'6px 8px',borderBottom:'1px solid var(--bdr)'}}>
@@ -2118,7 +2118,7 @@ function OverviewMapModal({rows,onClose}){
         <div style="width:10px;height:10px;border-radius:50%;background:${C.amber};box-shadow:0 0 8px ${C.amber}aa"></div>
       </div>`,[22,22]);
     L.marker([ANGUL.lat,ANGUL.lng],{icon:angulIcon,zIndexOffset:200}).addTo(map)
-      .bindTooltip('<b style="font-family:Inter Tight,sans-serif;font-size:13px">JSPL Angul PlateMill</b><br><span style="color:#94a3b8;font-size:11px">Origin · All Rakes</span>',
+      .bindTooltip('<b style="font-family:DM Sans,sans-serif;font-size:13px">JSPL Angul PlateMill</b><br><span style="color:#94a3b8;font-size:11px">Origin · All Rakes</span>',
         {direction:'right',offset:[14,0],sticky:false,permanent:false});
 
     // ── Trunk line: Angul → selected hub (same as RakeMapModal) ──
@@ -2160,7 +2160,7 @@ function OverviewMapModal({rows,onClose}){
           <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
             width:8px;height:8px;border-radius:50%;background:${clr};box-shadow:0 0 6px ${clr}cc"></div>
           <div style="position:absolute;left:16px;top:3px;white-space:nowrap;
-            font-family:'Inter Tight',Inter,system-ui,sans-serif;font-size:11px;font-weight:700;
+            font-family:'DM Sans',DM Sans,system-ui,sans-serif;font-size:11px;font-weight:700;
             color:${clr};letter-spacing:.04em;
             text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 8px rgba(0,0,0,.8)">
             ${ct.name.length>18?ct.name.slice(0,16)+'\u2026':ct.name}
@@ -2180,8 +2180,8 @@ function OverviewMapModal({rows,onClose}){
             const custEntries=Object.entries(custMap).sort((a,b)=>b[1]-a[1]);
             const custRows=custEntries.slice(0,8).map(([nm,b])=>`<tr><td style="padding:2px 8px 2px 0;color:#94a3b8;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:145px">${nm}</td><td style="padding:2px 0;color:#f59e0b;text-align:right;font-size:10px;white-space:nowrap">${fmt(b)}</td></tr>`).join('');
             const moreRow=custEntries.length>8?`<tr><td colspan="2" style="color:#64748b;font-size:9px;padding-top:2px">+${custEntries.length-8} more</td></tr>`:'';
-            return '<div style="font-family:Inter,sans-serif;min-width:190px;max-width:240px">'
-              +'<div style="font-family:Inter Tight,Inter,sans-serif;font-size:13px;font-weight:700;margin-bottom:3px">'+ct.name+'</div>'
+            return '<div style="font-family:DM Sans,sans-serif;min-width:190px;max-width:240px">'
+              +'<div style="font-family:DM Sans,DM Sans,sans-serif;font-size:13px;font-weight:700;margin-bottom:3px">'+ct.name+'</div>'
               +'<div style="color:#38bdf8;font-size:11px">Bal: <b>'+fmt(ct.bal)+' MT</b>'
               +' · '+(ct.direction==='forward'?'→ Fwd':'← Rev '+ct.distFromHub+'km')
               +(!ct.included?' <span style="color:#f43f5e">✕ Excl</span>':'')
@@ -2219,14 +2219,14 @@ function OverviewMapModal({rows,onClose}){
           <div style="width:${isSel?14:8}px;height:${isSel?14:8}px;border-radius:50%;background:${rc.glow};
             box-shadow:0 0 ${isSel?12:4}px ${rc.glow}aa"></div>
           <div style="position:absolute;left:${isSel?36:26}px;top:${isSel?4:3}px;white-space:nowrap;
-            font-family:'Inter Tight',Inter,system-ui,sans-serif;font-size:${isSel?12:10}px;font-weight:700;
+            font-family:'DM Sans',DM Sans,system-ui,sans-serif;font-size:${isSel?12:10}px;font-weight:700;
             color:${rc.glow};text-shadow:0 1px 4px rgba(0,0,0,.95)">
             ${sid} (${rakes}R)
           </div>
         </div>`,[isSel?140:120,isSel?32:22]);
       L.marker([hub.lat,hub.lng],{icon,zIndexOffset:isSel?50:10}).addTo(map)
-        .bindTooltip(`<div style="font-family:Inter,sans-serif;font-size:12px;min-width:160px">
-          <b style="font-family:'Inter Tight',sans-serif;font-size:13px">${hub.name} <span style="opacity:.5">(${sid})</span></b><br>
+        .bindTooltip(`<div style="font-family:DM Sans,sans-serif;font-size:12px;min-width:160px">
+          <b style="font-family:'DM Sans',sans-serif;font-size:13px">${hub.name} <span style="opacity:.5">(${sid})</span></b><br>
           <span style="color:${rc.glow}">${hub.region} Region</span><br>
           <span style="color:#38bdf8">${rakes} rake${rakes>1?'s':''} · ${bal.toLocaleString()} MT</span><br>
           <span style="color:#64748b;font-size:10px">${isSel?'Click to collapse':'Click to expand delivery cities'}</span>
@@ -2481,7 +2481,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
             width:8px;height:8px;border-radius:50%;background:${clr};
             box-shadow:0 0 6px ${clr}cc"></div>
           <div style="position:absolute;left:16px;top:3px;white-space:nowrap;
-            font-family:'Inter Tight',Inter,system-ui,sans-serif;font-size:11px;font-weight:700;
+            font-family:'DM Sans',DM Sans,system-ui,sans-serif;font-size:11px;font-weight:700;
             color:${clr};letter-spacing:.04em;
             text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 8px rgba(0,0,0,.8)">
             ${ct.name.length>18?ct.name.slice(0,16)+'…':ct.name}
@@ -2506,8 +2506,8 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
             const custEntries=Object.entries(custMap).sort((a,b)=>b[1]-a[1]);
             const custRows=custEntries.slice(0,8).map(([name,bal])=>`<tr><td style="padding:2px 8px 2px 0;color:#94a3b8;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:145px">${name}</td><td style="padding:2px 0;color:#f59e0b;text-align:right;font-size:10px;white-space:nowrap">${fmt(bal)}</td></tr>`).join('');
             const moreRow=custEntries.length>8?`<tr><td colspan="2" style="color:#64748b;font-size:9px;padding-top:2px">+${custEntries.length-8} more</td></tr>`:'';
-            return '<div style="font-family:Inter,sans-serif;min-width:190px;max-width:240px">'
-              +'<div style="font-family:Inter Tight,Inter,sans-serif;font-size:13px;font-weight:700;margin-bottom:3px">'+ct.name+'</div>'
+            return '<div style="font-family:DM Sans,sans-serif;min-width:190px;max-width:240px">'
+              +'<div style="font-family:DM Sans,DM Sans,sans-serif;font-size:13px;font-weight:700;margin-bottom:3px">'+ct.name+'</div>'
               +'<div style="color:#38bdf8;font-size:11px">Bal: <b>'+fmt(ct.bal)+' MT</b>'
               +' · '+(ct.direction==='forward'?'→ Fwd':'← Rev '+ct.distFromHub+'km')
               +(!ct.included?' <span style="color:#f43f5e">✕ Excl</span>':'')
@@ -2559,8 +2559,8 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
         const hubCity=cities.find(ct=>haversine(hub.lat,hub.lng,ct.lat,ct.lng)<2);
         L.marker([hub.lat,hub.lng],{icon,zIndexOffset:20}).addTo(map)
           .bindTooltip(
-            '<div style="font-family:Inter,system-ui,sans-serif;line-height:1.6">'
-            +'<div style="font-family:Inter Tight,Inter,sans-serif;font-size:14px;font-weight:800;letter-spacing:.05em;margin-bottom:3px">'+hub.name.toUpperCase()+'</div>'
+            '<div style="font-family:DM Sans,system-ui,sans-serif;line-height:1.6">'
+            +'<div style="font-family:DM Sans,DM Sans,sans-serif;font-size:14px;font-weight:800;letter-spacing:.05em;margin-bottom:3px">'+hub.name.toUpperCase()+'</div>'
             +'<div style="font-size:12px;color:'+rc.txt+'">Rake Siding: <b>'+baseCode+'</b></div>'
             +'<div style="font-size:12px;color:#9da8bb">Hub · '+rakePlan.rakes.length+' rake'+(rakePlan.rakes.length!==1?'s':'')+'</div>'
             +_costHtml
@@ -2590,7 +2590,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
           box-shadow:0 0 14px ${C._amber}cc;border:2px solid rgba(255,255,255,.4);z-index:1"></div>
       </div>`,[38,38]);
     L.marker([ANGUL.lat,ANGUL.lng],{icon:originIcon,zIndexOffset:30}).addTo(map)
-      .bindTooltip(`<b style="font-family:'Inter Tight',Inter,system-ui,sans-serif;font-size:14px;letter-spacing:.06em;color:${C.amber}">ANGUL PLATEMILL</b><br>
+      .bindTooltip(`<b style="font-family:'DM Sans',DM Sans,system-ui,sans-serif;font-size:14px;letter-spacing:.06em;color:${C.amber}">ANGUL PLATEMILL</b><br>
         <span style="color:${C.dim}">JSL Origin · Angul, Odisha</span>`,
         {direction:'top',permanent:false,offset:[0,-22]});
 
@@ -3256,7 +3256,7 @@ function RakeDrillPanel({rakePlan,rakeIdx,onClose,mob}){
 
   return<div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:500,
     background:'rgba(13,18,28,.88)',
-    backdropFilter:'blur(48px) saturate(2)',WebkitBackdropFilter:'blur(48px) saturate(2)',
+    backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
     borderTop:`1px solid ${rc.bdr}`,
     boxShadow:`0 -20px 60px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.1)`,
     display:'flex',flexDirection:'column',
@@ -3830,7 +3830,7 @@ function DrillPanel({rows,info,onClose,mob}){
 
   return<div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:500,
     background:'var(--glass-hi)',
-    backdropFilter:'blur(48px) saturate(2)',WebkitBackdropFilter:'blur(48px) saturate(2)',
+    backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
     borderTop:'1px solid var(--glass-border-hi)',
     boxShadow:'var(--shadow-xl)',
     display:'flex',flexDirection:'column',userSelect:'none',
@@ -4717,7 +4717,7 @@ function App(){
     {/* ── Top Bar (glassmorphic M3) ── */}
     <div style={{height:62,display:'flex',alignItems:'center',gap:12,padding:`0 ${mob?14:22}px`,
       background:'var(--glass)',
-      backdropFilter:'blur(48px) saturate(2)',WebkitBackdropFilter:'blur(48px) saturate(2)',
+      backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
       borderBottom:'1px solid var(--glass-border)',flexShrink:0,
       position:'sticky',top:0,zIndex:50,boxShadow:'var(--shadow-md)',transition:'box-shadow .2s'}}>
 
@@ -4862,7 +4862,7 @@ function App(){
           position:'fixed',left:0,top:0,bottom:0,zIndex:201,
           width:tab?310:288,
           background:'var(--glass)',
-          backdropFilter:'blur(48px) saturate(2)',WebkitBackdropFilter:'blur(48px) saturate(2)',
+          backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
           borderRight:'1px solid var(--glass-border)',
           display:'flex',flexDirection:'column',
           boxShadow:'var(--shadow-xl)',
