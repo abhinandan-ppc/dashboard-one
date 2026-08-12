@@ -317,6 +317,121 @@ function useThemeManager(){
 const F={h:"'DM Sans',sans-serif",b:"'DM Sans',sans-serif",m:"'DM Mono',monospace"};
 const RAKE_CAP=2850,RAKE_TOL=0.03,RAKE_MIN_SHOW=0.5; // hide rakes < 50% in predictor
 const RO=['East','West','North','South','Export','Road'];
+const LIVE_FETCH_SESSION_KEY='jspl-rake-planner-live-csv';
+const PLANNER_STATE_SESSION_KEY='jspl-rake-planner-session-state';
+const LIVE_FETCH_LOCAL_KEY='jspl-rake-planner-live-csv-cache';
+const PLANNER_STATE_LOCAL_KEY='jspl-rake-planner-session-state-cache';
+const PLANNER_CACHE_DB='jspl-rake-planner-cache-db';
+const PLANNER_CACHE_STORE='planner-state';
+const PLANNER_CACHE_RECORD='latest';
+
+function readSessionLikeCache(primaryKey,fallbackKey){
+  try{
+    const raw=sessionStorage.getItem(primaryKey);
+    if(raw)return raw;
+  }catch(e){}
+  try{
+    return localStorage.getItem(fallbackKey);
+  }catch(e){}
+  return null;
+}
+
+function writeSessionLikeCache(primaryKey,fallbackKey,value){
+  try{sessionStorage.setItem(primaryKey,value);}catch(e){}
+  try{localStorage.setItem(fallbackKey,value);}catch(e){}
+}
+
+function removeSessionLikeCache(primaryKey,fallbackKey){
+  try{sessionStorage.removeItem(primaryKey);}catch(e){}
+  try{localStorage.removeItem(fallbackKey);}catch(e){}
+}
+
+function openPlannerCacheDb(){
+  return new Promise((resolve,reject)=>{
+    try{
+      if(!window.indexedDB){resolve(null);return;}
+      const req=window.indexedDB.open(PLANNER_CACHE_DB,1);
+      req.onupgradeneeded=function(){
+        const db=req.result;
+        if(!db.objectStoreNames.contains(PLANNER_CACHE_STORE)){
+          db.createObjectStore(PLANNER_CACHE_STORE,{keyPath:'id'});
+        }
+      };
+      req.onsuccess=function(){resolve(req.result);};
+      req.onerror=function(){reject(req.error||new Error('IndexedDB open failed'));};
+    }catch(err){reject(err);}
+  });
+}
+
+function readPlannerStateFromIndexedDb(){
+  return openPlannerCacheDb().then(db=>{
+    if(!db) return null;
+    return new Promise((resolve,reject)=>{
+      try{
+        const tx=db.transaction(PLANNER_CACHE_STORE,'readonly');
+        const store=tx.objectStore(PLANNER_CACHE_STORE);
+        const req=store.get(PLANNER_CACHE_RECORD);
+        req.onsuccess=function(){
+          const result=req.result&&req.result.value?req.result.value:null;
+          try{db.close();}catch(e){}
+          resolve(result);
+        };
+        req.onerror=function(){
+          try{db.close();}catch(e){}
+          reject(req.error||new Error('IndexedDB read failed'));
+        };
+      }catch(err){
+        try{db.close();}catch(e){}
+        reject(err);
+      }
+    });
+  }).catch(()=>null);
+}
+
+function writePlannerStateToIndexedDb(state){
+  return openPlannerCacheDb().then(db=>{
+    if(!db) return;
+    return new Promise((resolve,reject)=>{
+      try{
+        const tx=db.transaction(PLANNER_CACHE_STORE,'readwrite');
+        const store=tx.objectStore(PLANNER_CACHE_STORE);
+        store.put({id:PLANNER_CACHE_RECORD,value:state});
+        tx.oncomplete=function(){ try{db.close();}catch(e){} resolve(); };
+        tx.onerror=function(){ try{db.close();}catch(e){} reject(tx.error||new Error('IndexedDB write failed')); };
+      }catch(err){
+        try{db.close();}catch(e){}
+        reject(err);
+      }
+    });
+  }).catch(()=>null);
+}
+
+function readPlannerSessionState(){
+  try{
+    const raw=readSessionLikeCache(PLANNER_STATE_SESSION_KEY,PLANNER_STATE_LOCAL_KEY);
+    if(!raw)return null;
+    const parsed=JSON.parse(raw);
+    if(!parsed||!Array.isArray(parsed.rows)||!parsed.rows.length)return null;
+    return{
+      rows:parsed.rows,
+      fileName:typeof parsed.fileName==='string'?parsed.fileName:'',
+      fileDate:parsed.fileDate?new Date(parsed.fileDate):null
+    };
+  }catch(e){}
+  return null;
+}
+
+function writePlannerSessionState(rows,fileName,fileDate){
+  const payload={
+    rows:Array.isArray(rows)?rows:[],
+    fileName:fileName||'',
+    fileDate:fileDate instanceof Date?fileDate.toISOString():(fileDate||null)
+  };
+  try{
+    writeSessionLikeCache(PLANNER_STATE_SESSION_KEY,PLANNER_STATE_LOCAL_KEY,JSON.stringify(payload));
+  }catch(e){}
+  writePlannerStateToIndexedDb(payload);
+}
 
 /* ═══════════════════ BREAKPOINTS ═══════════════════ */
 function useBreakpoint(){
@@ -4270,12 +4385,13 @@ function tryFetch(proxyUrl,json){
 }
 
 
-function UploadScreen({onFile,onCSV}){
+function UploadScreen({onFile,onCSV,autoFetchEnabled=true}){
   const[drag,setDrag]=useState(false);
   const[fetching,setFetching]=useState(false);
   const[fetchErr,setFetchErr]=useState('');
   const[fetchStatus,setFetchStatus]=useState('');
   const ref=useRef();
+  const autoFetchStarted=useRef(false);
   const{mob}=useBreakpoint();
 
   const fetchOnline=async()=>{
@@ -4301,9 +4417,15 @@ function UploadScreen({onFile,onCSV}){
         onCSV(text);setFetchStatus('');setFetching(false);return;
       }catch(e){lastErr=n+': '+(e.name==='AbortError'?'timeout':e.message);}
     }
-    setFetchErr(lastErr+'. Download the sheet as .xlsx and upload it above.');
-    setFetchStatus('');setFetching(false);
-  };
+  setFetchErr(lastErr+'. Download the sheet as .xlsx and upload it above.');
+  setFetchStatus('');setFetching(false);
+};
+
+  useEffect(()=>{
+    if(!autoFetchEnabled||autoFetchStarted.current)return;
+    autoFetchStarted.current=true;
+    fetchOnline();
+  },[autoFetchEnabled]);
 
   const feats=[
     ['🗺️','City Mapping','160+ cities + ML siding dictionary'],
@@ -4454,15 +4576,32 @@ function App(){
   const{mob,tab}=useBreakpoint();
   const{pref,setPref,effective}=useThemeManager();
   const[themeKey,setThemeKey]=useState(0); // forces re-render when theme changes
+  const initialSessionState=useMemo(()=>readPlannerSessionState(),[]);
+  const[cacheBooting,setCacheBooting]=useState(()=>!initialSessionState);
+  const hasLiveSessionCache=useMemo(()=>{
+    return !!readSessionLikeCache(LIVE_FETCH_SESSION_KEY,LIVE_FETCH_LOCAL_KEY)||!!initialSessionState;
+  },[initialSessionState]);
+  const restoredLiveSession=useRef(false);
 
   // Update C and force re-render when effective theme changes
   useEffect(()=>{
     C=effective==='dark'?DARK_C:LIGHT_C;
     setThemeKey(k=>k+1);
   },[effective]);
-  const[rows,setRows]         =useState([]);
-  const[fileName,setFileName] =useState('');
-  const[fileDate,setFileDate] =useState(null);
+  useEffect(()=>{
+    window.__hub_handle_theme = function(themeValue){
+      var normalized = String(themeValue || '').toLowerCase();
+      if(normalized !== 'dark' && normalized !== 'light' && normalized !== 'auto') return;
+      setPref(normalized);
+      try{ localStorage.setItem('jspl-hub-theme', normalized); }catch(err){}
+    };
+    return ()=>{
+      try{ delete window.__hub_handle_theme; }catch(err){ window.__hub_handle_theme = undefined; }
+    };
+  },[setPref]);
+  const[rows,setRows]         =useState(()=>initialSessionState?.rows||[]);
+  const[fileName,setFileName] =useState(()=>initialSessionState?.fileName||'');
+  const[fileDate,setFileDate] =useState(()=>initialSessionState?.fileDate||null);
   const[loading,setLoading]   =useState(false);
   const[srch,setSrch]         =useState('');
   const[selR,setSelR]         =useState(new Set());
@@ -4482,6 +4621,23 @@ function App(){
   const[ovMap,setOvMap]       =useState(false);
   const[sideOpen,setSideOpen] =useState(false);
   const fileRef=useRef();
+
+  useEffect(()=>{
+    let alive=true;
+    if(initialSessionState){
+      setCacheBooting(false);
+      return ()=>{ alive=false; };
+    }
+    readPlannerStateFromIndexedDb().then(state=>{
+      if(!alive||!state||!Array.isArray(state.rows)||!state.rows.length) return;
+      setRows(state.rows);
+      setFileName(typeof state.fileName==='string'?state.fileName:'');
+      setFileDate(state.fileDate?new Date(state.fileDate):null);
+    }).finally(()=>{
+      if(alive) setCacheBooting(false);
+    });
+    return ()=>{ alive=false; };
+  },[initialSessionState]);
 
   // Close drawer on desktop resize
   useEffect(()=>{if(!mob&&!tab)setSideOpen(false);},[mob,tab]);
@@ -4505,10 +4661,12 @@ function App(){
           obj['_ModeC']   =String(row[2]!=null?row[2]:''); // Column C — raw Mode from EBTP
           obj['_MODE1_HI']=String(row[216]!=null?row[216]:''); // HI col
           return obj;
-        });
-        const processed=raw.map(r=>({...r,...computeRow(r)}));
-        setRows(processed);
-        setFileName(f.name);setFileDate(new Date());setDrill(null);
+          });
+          const processed=raw.map(r=>({...r,...computeRow(r)}));
+          const loadedAt=new Date();
+          writePlannerSessionState(processed,f.name,loadedAt);
+          setRows(processed);
+          setFileName(f.name);setFileDate(loadedAt);setDrill(null);
         setSrch('');setSelR(new Set());setSelS(new Set());setCustT('All');
         // Apply default filters on load — match actual Remarks values in data
         // Uses regex so "FI Released(2)", "FI Released (2)", "FI Released(2)" all match
@@ -4644,9 +4802,9 @@ function App(){
     setExcHold,setExcDummy,setSelCust,clearAll,actCnt};
 
   const parseCSV=useCallback(csvText=>{
-    setLoading(true);
-    setTimeout(()=>{
-      try{
+      setLoading(true);
+      setTimeout(()=>{
+        try{
         const lines=csvText.split('\n').filter(l=>l.trim());
         if(!lines.length){setLoading(false);return;}
         // CSV-aware column split
@@ -4670,10 +4828,18 @@ function App(){
           obj['_ModeC']   =String(cols[2]??''); // Column C — raw Mode from EBTP
           obj['_MODE1_HI']=String(cols[216]??'');
           return obj;
-        }).filter(r=>Object.values(r).some(v=>v!==''));
-        const processed=raw.map(r=>({...r,...computeRow(r)}));
-        setRows(processed);setFileName('Live Google Sheet');setFileDate(new Date());
-        setSrch('');setSelR(new Set());setSelS(new Set());setCustT('All');
+          }).filter(r=>Object.values(r).some(v=>v!==''));
+          const processed=raw.map(r=>({...r,...computeRow(r)}));
+            try{
+              writeSessionLikeCache(LIVE_FETCH_SESSION_KEY,LIVE_FETCH_LOCAL_KEY,JSON.stringify({
+                csvText,
+                cachedAt:new Date().toISOString()
+              }));
+            }catch(e){}
+            const loadedAt=new Date();
+            writePlannerSessionState(processed,'Live Google Sheet',loadedAt);
+            setRows(processed);setFileName('Live Google Sheet');setFileDate(loadedAt);
+          setSrch('');setSelR(new Set());setSelS(new Set());setCustT('All');
         const allRemarks=[...new Set(processed.map(r=>r['Remarks']).filter(Boolean))];
         const defaultRemarks=new Set(allRemarks.filter(rem=>{
           const r=String(rem).trim();
@@ -4690,10 +4856,36 @@ function App(){
         setSelCust(new Set(_allC2.filter(c=>!isDefaultExclCust(c))));
       }catch(e){console.error('CSV parse:',e);}
       setLoading(false);
-    },50);
-  },[]);
+      },50);
+    },[]);
 
-  if(!rows.length&&!loading)return<UploadScreen onFile={parseFile} onCSV={parseCSV}/>;
+  useEffect(()=>{
+    if(cacheBooting||restoredLiveSession.current||rows.length||loading)return;
+    let cached=null;
+    try{cached=readSessionLikeCache(LIVE_FETCH_SESSION_KEY,LIVE_FETCH_LOCAL_KEY);}catch(e){}
+    if(!cached)return;
+    try{
+      const parsed=JSON.parse(cached);
+      if(parsed&&typeof parsed.csvText==='string'&&parsed.csvText.trim()){
+        restoredLiveSession.current=true;
+        parseCSV(parsed.csvText);
+      }
+    }catch(e){
+      removeSessionLikeCache(LIVE_FETCH_SESSION_KEY,LIVE_FETCH_LOCAL_KEY);
+    }
+  },[cacheBooting,rows.length,loading,parseCSV]);
+  
+  if(cacheBooting&&!rows.length&&!loading)return(
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',
+      flexDirection:'column',gap:20,background:'var(--bg)'}}>
+      <div style={{width:52,height:52,border:'3px solid var(--bdr)',
+        borderTopColor:C.sky,borderRadius:'50%',animation:'spin .7s linear infinite'}}/>
+      <div style={{fontFamily:F.b,color:'var(--dim)',fontSize:15,letterSpacing:'.02em'}}>
+        Restoring cached planner…
+      </div>
+    </div>
+  );
+  if(!rows.length&&!loading)return<UploadScreen onFile={parseFile} onCSV={parseCSV} autoFetchEnabled={!hasLiveSessionCache}/>;
   if(loading)return(
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',
       flexDirection:'column',gap:20,background:'var(--bg)'}}>
@@ -4797,19 +4989,22 @@ function App(){
         onMouseLeave={e=>e.currentTarget.style.background='rgba(20,184,166,.12)'}>
         🗺 Overview
       </button>}
-      {!mob&&<button onClick={()=>exportEBTPWithMapping(rows)}
-        title="Export full EBTP raw file with _State, _Region, _Siding appended as last 3 columns"
-        style={{background:'rgba(91,163,217,.12)',border:'1px solid rgba(91,163,217,.35)',
-          borderRadius:'var(--radius-sm)',color:C.sky,fontFamily:F.h,fontSize:12,fontWeight:700,
-          letterSpacing:'.07em',textTransform:'uppercase',padding:'9px 16px',cursor:'pointer',
-          display:'flex',alignItems:'center',gap:5,transition:'all .15s',flexShrink:0}}
-        onMouseEnter={e=>e.currentTarget.style.background='rgba(91,163,217,.22)'}
-        onMouseLeave={e=>e.currentTarget.style.background='rgba(91,163,217,.12)'}>
-        ↓ EBTP+Map
-      </button>}
-      <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:'none'}}
-        onChange={e=>e.target.files[0]&&parseFile(e.target.files[0])}/>
-    </div>
+        {!mob&&<button onClick={()=>exportEBTPWithMapping(rows)}
+          title="Export full EBTP raw file with _State, _Region, _Siding appended as last 3 columns"
+          style={{background:'rgba(91,163,217,.12)',border:'1px solid rgba(91,163,217,.35)',
+            borderRadius:'var(--radius-sm)',color:C.sky,fontFamily:F.h,fontSize:12,fontWeight:700,
+            letterSpacing:'.07em',textTransform:'uppercase',padding:'9px 16px',cursor:'pointer',
+            display:'flex',alignItems:'center',gap:5,transition:'all .15s',flexShrink:0}}
+          onMouseEnter={e=>e.currentTarget.style.background='rgba(91,163,217,.22)'}
+          onMouseLeave={e=>e.currentTarget.style.background='rgba(91,163,217,.12)'}>
+          ↓ EBTP+Map
+        </button>}
+        {!mob&&<div id="hubFrameHeaderSlot" style={{
+          display:'flex',alignItems:'center',gap:8,flexShrink:0,minHeight:34
+        }}/>}
+        <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:'none'}}
+          onChange={e=>e.target.files[0]&&parseFile(e.target.files[0])}/>
+      </div>
 
     {/* ── Mobile Search + Theme ── */}
     {mob&&<div style={{padding:'10px 14px',background:'var(--s0)',
@@ -4939,6 +5134,41 @@ function App(){
 
 var _s=document.getElementById('load-status');if(_s)_s.style.display='none';
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+<script>
+// Hub message listener: accept theme/reset from parent hub
+(function(){
+  function handleHubMessage(e){
+    try{
+      var d = e.data;
+      if(!d || !d.type) return;
+      if (d.type === 'theme') {
+        if (d.value && typeof window.__hub_handle_theme === 'function') {
+          window.__hub_handle_theme(d.value);
+        } else if (d.value) {
+          document.documentElement.setAttribute('data-theme', d.value);
+        }
+        try { localStorage.setItem('jspl-hub-theme', d.value); } catch(err){}
+      } else if (d.type === 'reset') {
+        // If page exposes a reset function call it, otherwise reload iframe
+        if (typeof window.__hub_handle_reset === 'function') {
+          try { window.__hub_handle_reset(); } catch(err){ location.reload(); }
+        } else {
+          location.reload();
+        }
+      }
+    }catch(err){ console.warn('Hub message handler error', err); }
+  }
+  window.addEventListener('message', handleHubMessage, false);
+
+  if (window.parent && window.parent !== window) {
+    try { window.parent.postMessage({ type: 'ready' }, '*'); } catch(err){}
+    try{
+      // embedded: notify parent only; do not auto-hide or remove the page's internal header — keep native controls intact
+      document.documentElement.classList.add('in-hub');
+    }catch(e){}
+  }
+})();
 </script>
 </body>
 </html>
