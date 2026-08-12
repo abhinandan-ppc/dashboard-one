@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>JSPL Angul &middot; Operations Hub</title>
+<title>Jindal Steel Angul &middot; Operations Hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800;9..40,900&display=swap" rel="stylesheet">
@@ -523,7 +523,8 @@ var STORAGE_KEY = "jspl-hub-items";
 var DEFAULTS = [
   {id:"sms-heat-planner", name:"SMS Heat Planner", path:"SMS-Heat-Planner.html", icon:"flame"},
   {id:"rake-planner",     name:"Rake Planner",      path:"Rake-Planner.html",     icon:"train"},
-  {id:"pm-yard",          name:"PM Yard",           path:"PM-Yard.html",         icon:"warehouse"}
+  {id:"pm-yard",          name:"PM Yard",           path:"PM-Yard.html",         icon:"warehouse"},
+  {id:"plate-tagging-tool", name:"Plate Tagging Tool", path:"Plate-Tagging-Tool.html", icon:"tag"}
 ];
 
 function loadItems(){
@@ -532,7 +533,13 @@ function loadItems(){
     if(!raw){ saveItems(DEFAULTS); return DEFAULTS.slice(); }
     var parsed = JSON.parse(raw);
     if(!Array.isArray(parsed)) throw new Error("bad data");
-    return parsed;
+    var seen = new Set(parsed.map(function(it){ return it && it.id; }).filter(Boolean));
+    var merged = parsed.slice();
+    DEFAULTS.forEach(function(def){
+      if(!seen.has(def.id)) merged.push(def);
+    });
+    if(merged.length !== parsed.length) saveItems(merged);
+    return merged;
   }catch(e){
     saveItems(DEFAULTS);
     return DEFAULTS.slice();
