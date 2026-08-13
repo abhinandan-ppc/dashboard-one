@@ -159,6 +159,13 @@ h1{font-size:20px;margin:0;letter-spacing:-.2px;font-weight:800;color:var(--acc2
 .maprow.req select{border-left:2px solid var(--acc)}
 @media(max-width:900px){.mapgrid{grid-template-columns:1fr}}
 .run{display:flex;align-items:center;gap:12px;margin-top:22px;flex-wrap:wrap}
+.gradeModeRow{display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap}
+.gradeModeLabel{font-family:var(--sans);font-weight:700;font-size:13px;color:var(--tx)}
+.gradeModeSwitch{display:inline-flex;background:var(--input-bg);border:var(--glass-border);border-radius:999px;padding:3px;gap:2px}
+.gmOpt{font-family:var(--sans);font-weight:700;font-size:12px;padding:8px 16px;border-radius:999px;cursor:pointer;background:transparent;border:none;color:var(--tm);transition:background-color .2s ease,color .2s ease}
+.gmOpt.active{background:linear-gradient(135deg,var(--acc),#5ea8da);color:#001e30}
+.gmOpt:not(.active):hover{color:var(--tx)}
+.gmOpt:disabled{opacity:.4;cursor:not-allowed}
 button{
   font-family:var(--sans);font-weight:700;font-size:14px;border-radius:999px;padding:12px 20px;cursor:pointer;
   transition:transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s ease,background-color .2s ease,border-color .2s ease,color .2s ease,filter .2s ease
@@ -283,10 +290,17 @@ details b{color:var(--tx)}
       <input type="file" id="file-ebtp" accept=".xlsx,.xls">
     </label>
   </div>
-  <div class="embed">✓ Grade Matrix built in — <b id="gmCount">819</b> rules embedded · no upload needed</div>
   <div id="pormap" class="pormap"></div>
 
   <div class="step">Step 2 · Run</div>
+  <div class="gradeModeRow">
+    <span class="gradeModeLabel">Tag by:</span>
+    <div class="gradeModeSwitch" id="gradeModeSwitch" role="group" aria-label="Grade matching mode">
+      <button type="button" class="gmOpt active" data-mode="int" id="gmOptInt">Internal Grade</button>
+      <button type="button" class="gmOpt" data-mode="ext" id="gmOptExt">External Grade</button>
+    </div>
+    <span class="hint" id="gradeModeHint">Matches Order → Plate Int Grade via the embedded grade matrix.</span>
+  </div>
   <div class="run">
     <button id="runBtn" disabled>Run Tagging</button>
     <button id="dlBtn">⤓ Download Excel</button>
@@ -347,6 +361,32 @@ const EPS = 1e-3;
 const up = x => String(x==null?'':x).trim().toUpperCase();
 const r3 = x => Math.round(Number(x)*1000)/1000;
 const num = x => { const n = Number(x); return isFinite(n)?n:0; };
+
+/* ---------- fuzzy grade matching (external grades are hand-typed and inconsistent) ---------- */
+const normGrade = s => String(s==null?'':s).toUpperCase().replace(/[^A-Z0-9]/g,'');   // strip spaces/hyphens/punctuation, e.g. "E 250-BR" & "E250BR" -> "E250BR"
+function levenshtein(a,b){
+  if(a===b) return 0;
+  const al=a.length, bl=b.length;
+  if(!al) return bl; if(!bl) return al;
+  let prev=new Array(bl+1); for(let j=0;j<=bl;j++) prev[j]=j;
+  for(let i=1;i<=al;i++){
+    const cur=[i];
+    for(let j=1;j<=bl;j++){
+      cur[j]=a[i-1]===b[j-1] ? prev[j-1] : 1+Math.min(prev[j-1],prev[j],cur[j-1]);
+    }
+    prev=cur;
+  }
+  return prev[bl];
+}
+function gradeFuzzyMatch(a,b){
+  const na=normGrade(a), nb=normGrade(b);
+  if(!na || !nb) return false;
+  if(na===nb) return true;
+  if(na.length>=4 && nb.length>=4 && (na.includes(nb)||nb.includes(na))) return true;   // one is a prefix/suffix-qualified form of the other
+  const maxLen=Math.max(na.length,nb.length);
+  const threshold = maxLen<=6 ? 1 : (maxLen<=12 ? 2 : 3);                                // allow more edits for longer grade codes
+  return levenshtein(na,nb)<=threshold;
+}
 function dateMs(v){
   if(v==null || v==='') return null;
   if(v instanceof Date){
@@ -380,7 +420,9 @@ function orderPriorityMs(r){
 }
 
 /* ---------- engine (plate fields come via mapping M) ---------- */
-function runTagging(porRows, M, ebtpRows, gmRows){
+let TAG_MODE='int';
+function runTagging(porRows, M, ebtpRows, gmRows, mode){
+  mode = mode==='ext' ? 'ext' : 'int';
   const uidDigits = v => String(v??'').replace(/\D/g,'');
   const uidPart = v => {
     const d=uidDigits(v);
@@ -417,6 +459,12 @@ function runTagging(porRows, M, ebtpRows, gmRows){
   }
   const idx=new Map();
   stock.forEach((p,i)=>{const k=p.grade+'|'+p.thk;(idx.get(k)||idx.set(k,[]).get(k)).push(i);});
+  const thkIdx=new Map();                                    // thickness-only bucket, used for fuzzy external-grade matching
+  stock.forEach((p,i)=>{const k=String(p.thk);(thkIdx.get(k)||thkIdx.set(k,[]).get(k)).push(i);});
+  function candidatesFor(g,thk){
+    if(mode==='ext') return (thkIdx.get(String(thk))||[]).filter(pos=>gradeFuzzyMatch(stock[pos].extGrade,g));
+    return idx.get(g+'|'+thk)||[];
+  }
 
   const gmByOg=new Map();
   for(const r of gmRows){const og=up(r['Order Grade']);
@@ -424,6 +472,7 @@ function runTagging(porRows, M, ebtpRows, gmRows){
       {min:num(r['FG Thickness (MM) Min']),max:num(r['FG Thickness (MM) Max']),tgt:up(r['Target Attribute']),prio:parseInt(r['Priority'])});}
   function eligible(og,thk){const rows=gmByOg.get(og);if(!rows)return null;const tiers=new Map();
     for(const m of rows){if(m.min-EPS<=thk&&thk<=m.max+EPS){(tiers.get(m.prio)||tiers.set(m.prio,new Set()).get(m.prio)).add(m.tgt);}}return tiers;}
+  function eligibleExt(eg){ if(!eg) return null; return new Map([[1,new Set([eg])]]); }
 
   let orders=[];
   for(const r of ebtpRows){
@@ -440,13 +489,13 @@ function runTagging(porRows, M, ebtpRows, gmRows){
 
   const tags=[],coverage=[];
   for(const o of orders){
-    const og=up(o.ig),oth=o.thk,ow=o.width,ol=o.length; let remaining=o.demand,reason='';
-    const tiers=eligible(og,oth);
+    const og=mode==='ext'?up(o.eg):up(o.ig),oth=o.thk,ow=o.width,ol=o.length; let remaining=o.demand,reason='';
+    const tiers=mode==='ext'?eligibleExt(og):eligible(og,oth);
     if(tiers===null) reason='Grade not in matrix';
     else if(tiers.size===0) reason='Thickness outside grade band';
     else { for(const pr of [...tiers.keys()].sort((a,b)=>a-b)){ const grades=tiers.get(pr);
         while(remaining>EPS){ let best=null,bestWaste=null;
-          for(const g of grades){ for(const pos of (idx.get(g+'|'+oth)||[])){ const p=stock[pos]; if(p.tagged)continue;
+          for(const g of grades){ for(const pos of candidatesFor(g,oth)){ const p=stock[pos]; if(p.tagged)continue;
             if(p.width+EPS<ow||p.length+EPS<ol) continue;
             const pw=oth*p.width*p.length*7.85e-6;            // plate PIECE WEIGHT
             if(pw>remaining+EPS) continue;                     // must fit remaining balance
@@ -492,10 +541,11 @@ const FIELDS=[
   {k:'soItem',label:'Plate stock SO Item (optional, enables PSFS UID exclusion)',req:false,syn:['soitem','soitm','salesorderitem','orderitem','itemno','item']},
 ];
 const norm = s => String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
-function detectMap(cols){
+function detectMap(cols, fields){
+  fields = fields || FIELDS;
   const map={}, used=new Set();
   const ncols=cols.map(c=>({c,n:norm(c)}));
-  for(const f of FIELDS){
+  for(const f of fields){
     let best='',bestScore=0;
     for(const o of ncols){
       if(used.has(o.c)) continue;
@@ -517,7 +567,61 @@ function detectMap(cols){
 /* ---------- file handling ---------- */
 const FILES={por:null,ebtp:null};
 let POR_COLS=[], PORMAP={};
-const NEED_EBTP=['SO No.','BTR','Int Grade','Length Plan'];
+
+/* ---------- order-book (EBTP) field mapping ---------- */
+const EBTP_FIELDS=[
+  {k:'UID',req:false,syn:['uid']},
+  {k:'SO No.',req:true,syn:['sono','salesorderno','salesorder','orderno','so']},
+  {k:'SOItm',req:false,syn:['soitm','soitem','salesorderitem','orderitem','itemno','item']},
+  {k:'Sold To Party Name',req:false,syn:['soldtopartyname','soldtoparty','soldto','customername','custname','customer','partyname']},
+  {k:'Int Grade',req:true,syn:['intgrade','internalgrade','grade','quality']},
+  {k:'Ext Grade',req:true,syn:['extgrade','externalgrade','customergrade','custgrade']},
+  {k:'Thick',req:true,syn:['thick','thickness','thk']},
+  {k:'Width',req:true,syn:['width','wid','wdt']},
+  {k:'Length Plan',req:true,syn:['lengthplan','plannedlength','lengthm','length','len','lngth']},
+  {k:'Age SO',req:false,syn:['ageso','soage','orderage','age']},
+  {k:'BTR',req:true,syn:['btr']},
+  {k:'BTC',req:false,syn:['btc']},
+  {k:'Order Qty',req:false,syn:['orderqty','orderquantity','qtyordered','orderedqty','ordqty']},
+  {k:'Plate Stock',req:false,syn:['platestock','stockplate','platestockqty','pstock']},
+  {k:'Remarks',req:true,syn:['remarks','remark','status','ordstatus']},
+  {k:'SBU Rel. DT',req:false,syn:['sbureldt','sburelease','sburel']},
+  {k:'FI Rel Dt(2)',req:false,syn:['fireldt2','firelease2','firel2','fireldt']},
+  {k:'SO Date',req:false,syn:['sodate','orderdate']},
+];
+function bestEbtpParse(wb){
+  const reqN=EBTP_FIELDS.filter(f=>f.req).length;
+  let best=null;
+  for(const name of wb.SheetNames){
+    const grid=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:null,blankrows:false});
+    if(!grid.length) continue;
+    const maxHr=Math.min(8,grid.length-1);
+    for(let hr=0;hr<=maxHr;hr++){
+      const raw=grid[hr]||[];
+      const nonEmpty=raw.filter(h=>h!=null&&String(h).trim()!=='').length;
+      if(nonEmpty<3) continue;
+      const headers=raw.map((h,j)=>(h==null||String(h).trim()==='')?('Column_'+(j+1)):String(h).trim());
+      const map=detectMap(headers,EBTP_FIELDS);
+      const reqScore=EBTP_FIELDS.filter(f=>f.req&&map[f.k]).length;
+      const dataRows=grid.length-hr-1;
+      if(dataRows<1) continue;
+      const score=reqScore*100000 + nonEmpty*10 - hr;         // prioritise required-field coverage, then richer header, earliest row
+      if(!best||score>best.score) best={name,hr,headers,map,score,reqScore,grid};
+    }
+  }
+  if(!best || best.reqScore<reqN) return null;                // required order-book columns not found on any sheet
+  const rows=[];
+  for(let i=best.hr+1;i<best.grid.length;i++){
+    const r=best.grid[i]; if(!r||r.every(c=>c==null||String(c).trim()==='')) continue;
+    const o={};
+    EBTP_FIELDS.forEach(f=>{
+      const col=best.map[f.k]; if(!col) return;
+      const j=best.headers.indexOf(col); o[f.k]=r[j]===undefined?null:r[j];
+    });
+    rows.push(o);
+  }
+  return {rows,cols:best.headers,map:best.map,sheet:best.name,reqScore:best.reqScore,reqN};
+}
 function setTheme(theme){
   const next=theme==='light'?'light':'dark';
   document.documentElement.setAttribute('data-theme',next);
@@ -556,12 +660,6 @@ function resetAll(){
   updateRun();
 }
 
-function pickSheet(wb, needCols){
-  for(const name of wb.SheetNames){
-    const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{defval:null});
-    if(rows.length && needCols.every(c=>c in rows[0])) return rows;
-  } return null;
-}
 function bestStockParse(wb){
   const reqN=FIELDS.filter(f=>f.req).length;
   let best=null;
@@ -597,11 +695,14 @@ function readFile(kind,file){
       const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
       const slot=document.getElementById('slot-'+kind);
       if(kind==='ebtp'){
-        const rows=pickSheet(wb,NEED_EBTP);
-        if(!rows){ slot.classList.remove('ok'); slot.classList.add('err');
-          slot.querySelector('.status').textContent='Order-book columns not found (need SO No., BTR…)';
+        const parsed=bestEbtpParse(wb);
+        if(!parsed||!parsed.rows.length){ slot.classList.remove('ok'); slot.classList.add('err');
+          slot.querySelector('.status').textContent='Order-book columns not found (need SO No., BTR, Int Grade, Ext Grade, Thick, Width, Length Plan, Remarks…)';
           FILES.ebtp=null; updateRun(); return; }
-        FILES.ebtp=rows; markOk(slot,file.name,rows.length);
+        FILES.ebtp=parsed.rows;
+        slot.classList.remove('err'); slot.classList.add('ok');
+        slot.querySelector('.fname').textContent=file.name;
+        slot.querySelector('.status').textContent=`Sheet "${parsed.sheet}" · ${parsed.rows.length.toLocaleString()} rows · ${parsed.reqScore}/${parsed.reqN} required fields auto-mapped`;
       } else {
         const parsed=bestStockParse(wb);
         if(!parsed||!parsed.rows.length){ slot.classList.remove('ok'); slot.classList.add('err');
@@ -619,8 +720,6 @@ function readFile(kind,file){
   };
   fr.readAsArrayBuffer(file);
 }
-function markOk(slot,name,n){ slot.classList.remove('err'); slot.classList.add('ok');
-  slot.querySelector('.fname').textContent=name; slot.querySelector('.status').textContent=n.toLocaleString()+' rows loaded'; }
 
 function renderMapping(parsed){
   const box=document.getElementById('pormap');
@@ -650,7 +749,27 @@ function renderMapping(parsed){
   }));
 }
 function mapComplete(){ return FIELDS.filter(f=>f.req).every(f=>PORMAP[f.k]); }
-function updateRun(){ document.getElementById('runBtn').disabled=!(FILES.por&&FILES.ebtp&&mapComplete()); }
+function updateRun(){
+  document.getElementById('runBtn').disabled=!(FILES.por&&FILES.ebtp&&mapComplete());
+  syncGradeModeSwitch();
+}
+function syncGradeModeSwitch(){
+  const extBtn=document.getElementById('gmOptExt');
+  const hasExt=!!PORMAP.extGrade;
+  extBtn.disabled=!hasExt;
+  extBtn.title=hasExt?'':'Map the optional External Grade plate-stock column to enable this mode';
+  if(!hasExt && TAG_MODE==='ext') setGradeMode('int');
+}
+function setGradeMode(mode){
+  TAG_MODE = mode==='ext' ? 'ext' : 'int';
+  document.getElementById('gmOptInt').classList.toggle('active',TAG_MODE==='int');
+  document.getElementById('gmOptExt').classList.toggle('active',TAG_MODE==='ext');
+  document.getElementById('gradeModeHint').textContent = TAG_MODE==='ext'
+    ? 'Matches Order → Plate External Grade directly (exact match, no matrix).'
+    : 'Matches Order → Plate Int Grade via the embedded grade matrix.';
+}
+document.getElementById('gmOptInt').addEventListener('click',()=>setGradeMode('int'));
+document.getElementById('gmOptExt').addEventListener('click',()=>{ if(!document.getElementById('gmOptExt').disabled) setGradeMode('ext'); });
 
 let RESULT=null;
 let DASH_CHARTS=[];
@@ -659,7 +778,7 @@ function execute(){
   const btn=document.getElementById('runBtn'); btn.disabled=true; btn.textContent='Processing…';
   setTimeout(()=>{
     const gmRows=GRADE_MATRIX.map(r=>({'Order Grade':r[0],'FG Thickness (MM) Min':r[1],'FG Thickness (MM) Max':r[2],'Target Attribute':r[3],'Priority':r[4]}));
-    RESULT=runTagging(FILES.por,PORMAP,FILES.ebtp,gmRows);
+    RESULT=runTagging(FILES.por,PORMAP,FILES.ebtp,gmRows,TAG_MODE);
     renderKPIs(RESULT); renderDashboard(RESULT); renderTables(RESULT);
     document.getElementById('results').classList.add('show');
     btn.textContent='Re-run'; btn.disabled=false;
