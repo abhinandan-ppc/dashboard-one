@@ -406,6 +406,30 @@ function writePlannerStateToIndexedDb(state){
   }).catch(()=>null);
 }
 
+function clearPlannerStateFromIndexedDb(){
+  return openPlannerCacheDb().then(db=>{
+    if(!db) return;
+    return new Promise((resolve,reject)=>{
+      try{
+        const tx=db.transaction(PLANNER_CACHE_STORE,'readwrite');
+        const store=tx.objectStore(PLANNER_CACHE_STORE);
+        store.delete(PLANNER_CACHE_RECORD);
+        tx.oncomplete=function(){ try{db.close();}catch(e){} resolve(); };
+        tx.onerror=function(){ try{db.close();}catch(e){} reject(tx.error||new Error('IndexedDB clear failed')); };
+      }catch(err){
+        try{db.close();}catch(e){}
+        reject(err);
+      }
+    });
+  }).catch(()=>null);
+}
+
+function clearAllPlannerCache(){
+  removeSessionLikeCache(LIVE_FETCH_SESSION_KEY,LIVE_FETCH_LOCAL_KEY);
+  removeSessionLikeCache(PLANNER_STATE_SESSION_KEY,PLANNER_STATE_LOCAL_KEY);
+  return clearPlannerStateFromIndexedDb();
+}
+
 function readPlannerSessionState(){
   try{
     const raw=readSessionLikeCache(PLANNER_STATE_SESSION_KEY,PLANNER_STATE_LOCAL_KEY);
@@ -4578,9 +4602,9 @@ function App(){
   const[themeKey,setThemeKey]=useState(0); // forces re-render when theme changes
   const initialSessionState=useMemo(()=>readPlannerSessionState(),[]);
   const[cacheBooting,setCacheBooting]=useState(()=>!initialSessionState);
-  const hasLiveSessionCache=useMemo(()=>{
+  const[hasLiveSessionCache,setHasLiveSessionCache]=useState(()=>{
     return !!readSessionLikeCache(LIVE_FETCH_SESSION_KEY,LIVE_FETCH_LOCAL_KEY)||!!initialSessionState;
-  },[initialSessionState]);
+  });
   const restoredLiveSession=useRef(false);
 
   // Update C and force re-render when effective theme changes
@@ -4599,6 +4623,37 @@ function App(){
       try{ delete window.__hub_handle_theme; }catch(err){ window.__hub_handle_theme = undefined; }
     };
   },[setPref]);
+  useEffect(()=>{
+    window.__hub_handle_reset = function(){
+      clearAllPlannerCache();
+      restoredLiveSession.current=false;
+      setHasLiveSessionCache(false);
+      setRows([]);
+      setFileName('');
+      setFileDate(null);
+      setLoading(false);
+      setSrch('');
+      setSelR(new Set());
+      setSelS(new Set());
+      setSelO(new Set());
+      setCustT('All');
+      setSelM(new Set());
+      setSelWagon(new Set());
+      setSelHTC(new Set());
+      setSelRem(new Set());
+      setExcHold(true);
+      setExcDummy(true);
+      setSelCust(new Set());
+      setDrill(null);
+      setActDrill(null);
+      setActMap(null);
+      setOvMap(false);
+      setSideOpen(false);
+    };
+    return ()=>{
+      try{ delete window.__hub_handle_reset; }catch(err){ window.__hub_handle_reset = undefined; }
+    };
+  },[]);
   const[rows,setRows]         =useState(()=>initialSessionState?.rows||[]);
   const[fileName,setFileName] =useState(()=>initialSessionState?.fileName||'');
   const[fileDate,setFileDate] =useState(()=>initialSessionState?.fileDate||null);
