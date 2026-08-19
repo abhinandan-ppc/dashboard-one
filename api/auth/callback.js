@@ -32,10 +32,10 @@ export default async function handler(req) {
   const payloadB64 = tokens.id_token.split('.')[1];
   const claims = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
 
-  const allowedDomain = (process.env.ALLOWED_DOMAIN || '').toLowerCase();
+  const allowedDomains = (process.env.ALLOWED_DOMAIN || '').split(',').map(d => d.trim().toLowerCase()).filter(Boolean);
   const emailDomain = (claims.email || '').split('@')[1]?.toLowerCase();
-  if (!claims.email_verified || emailDomain !== allowedDomain) {
-    return new Response(`Access denied — your Google account is not part of ${allowedDomain}.`, { status: 403 });
+  if (!claims.email_verified || !allowedDomains.includes(emailDomain)) {
+    return new Response(`Access denied — your Google account is not part of ${allowedDomains.join(', ')}.`, { status: 403 });
   }
 
   const session = await createSession({ email: claims.email, exp: Date.now() + 1000 * 60 * 60 * 12 });

@@ -3,7 +3,7 @@ export const config = { runtime: 'edge' };
 export default function handler(req) {
   const url = new URL(req.url);
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const allowedDomain = process.env.ALLOWED_DOMAIN || '';
+  const allowedDomains = (process.env.ALLOWED_DOMAIN || '').split(',').map(d => d.trim()).filter(Boolean);
   const redirectUri = `${url.origin}/api/auth/callback`;
   const next = url.searchParams.get('next') || '/';
   const state = btoa(JSON.stringify({ next, n: crypto.randomUUID() }));
@@ -13,7 +13,7 @@ export default function handler(req) {
   authUrl.searchParams.set('redirect_uri', redirectUri);
   authUrl.searchParams.set('response_type', 'code');
   authUrl.searchParams.set('scope', 'openid email profile');
-  authUrl.searchParams.set('hd', allowedDomain);
+  if (allowedDomains.length === 1) authUrl.searchParams.set('hd', allowedDomains[0]);
   authUrl.searchParams.set('prompt', 'select_account');
   authUrl.searchParams.set('state', state);
 
