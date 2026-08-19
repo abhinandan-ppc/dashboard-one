@@ -1,3 +1,5 @@
+import { redirectWithCookies } from '../_session.js';
+
 export const config = { runtime: 'edge' };
 
 export default function handler(req) {
@@ -17,7 +19,7 @@ export default function handler(req) {
   authUrl.searchParams.set('prompt', 'select_account');
   authUrl.searchParams.set('state', state);
 
-  const res = Response.redirect(authUrl.toString(), 302);
-  res.headers.append('Set-Cookie', `oauth_state=${encodeURIComponent(state)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`);
-  return res;
+  return redirectWithCookies(authUrl.toString(), [
+    `oauth_state=${encodeURIComponent(state)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`,
+  ]);
 }

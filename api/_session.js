@@ -46,3 +46,11 @@ export function readCookie(req, name) {
   const match = cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
   return match ? decodeURIComponent(match[1]) : null;
 }
+
+// Response.redirect() returns a Response with immutable headers, so
+// Set-Cookie can't be appended to it afterwards. Build it manually instead.
+export function redirectWithCookies(location, cookies) {
+  const headers = new Headers({ Location: location });
+  for (const c of cookies) headers.append('Set-Cookie', c);
+  return new Response(null, { status: 302, headers });
+}

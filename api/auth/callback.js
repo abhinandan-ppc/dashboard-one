@@ -1,4 +1,4 @@
-import { createSession, readCookie } from '../_session.js';
+import { createSession, readCookie, redirectWithCookies } from '../_session.js';
 
 export const config = { runtime: 'edge' };
 
@@ -42,8 +42,8 @@ export default async function handler(req) {
   }
 
   const session = await createSession({ email: claims.email, exp: Date.now() + 1000 * 60 * 60 * 12 });
-  const res = Response.redirect(new URL(next, url.origin).toString(), 302);
-  res.headers.append('Set-Cookie', `session=${encodeURIComponent(session)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=43200`);
-  res.headers.append('Set-Cookie', `oauth_state=; Path=/; HttpOnly; Max-Age=0`);
-  return res;
+  return redirectWithCookies(new URL(next, url.origin).toString(), [
+    `session=${encodeURIComponent(session)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=43200`,
+    `oauth_state=; Path=/; HttpOnly; Max-Age=0`,
+  ]);
 }
