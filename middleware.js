@@ -1,7 +1,10 @@
 import { verifySession, readCookie } from './api/_session.js';
 
+// The root page and index.html render unauthenticated too — they show their
+// own login box and call /api/auth/me client-side. Every other page (the
+// actual tools) stays hard-gated by this middleware.
 export const config = {
-  matcher: ['/((?!api/auth|favicon.ico).*)'],
+  matcher: ['/((?!api/auth|favicon.ico|favicon.png|index.html|$).*)'],
 };
 
 export default async function middleware(req) {

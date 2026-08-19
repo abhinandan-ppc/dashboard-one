@@ -41,7 +41,13 @@ export default async function handler(req) {
     return new Response(`Access denied — your Google account is not part of ${allowedDomains.join(', ')}.`, { status: 403 });
   }
 
-  const session = await createSession({ email: claims.email, exp: Date.now() + 1000 * 60 * 60 * 12 });
+  const session = await createSession({
+    email: claims.email,
+    name: claims.name || claims.email,
+    picture: claims.picture || '',
+    domain: emailDomain,
+    exp: Date.now() + 1000 * 60 * 60 * 12,
+  });
   return redirectWithCookies(new URL(next, url.origin).toString(), [
     `session=${encodeURIComponent(session)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=43200`,
     `oauth_state=; Path=/; HttpOnly; Max-Age=0`,

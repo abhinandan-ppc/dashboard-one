@@ -181,6 +181,43 @@ input { font: inherit; color: inherit; }
 .hdr-r button svg {
   transition: transform 0.2s cubic-bezier(.22,1,.36,1);
 }
+.user-menu { position: relative; }
+.user-btn {
+  height: 40px; width: 40px; padding: 0; border-radius: 20px; overflow: hidden;
+  border: var(--glass-border); background: var(--input-bg); display: inline-flex; align-items: center; justify-content: center;
+}
+.user-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.user-panel {
+  position: absolute; top: calc(100% + 10px); right: 0; min-width: 220px;
+  background: var(--glass-bg-solid); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border); border-radius: var(--radius-m); box-shadow: var(--glass-shadow);
+  padding: 14px; display: none; flex-direction: column; gap: 4px; z-index: 400;
+}
+.user-panel.open { display: flex; }
+.user-panel-name { font-weight: 800; font-size: 13px; color: var(--tx); }
+.user-panel-domain { font-size: 11.5px; color: var(--tm); margin-bottom: 8px; }
+.user-panel-logout {
+  margin-top: 6px; text-align: center; padding: 8px 12px; border-radius: var(--radius-pill);
+  background: var(--input-bg); color: var(--tx); font-weight: 700; font-size: 12.5px; text-decoration: none; border: var(--glass-border);
+}
+.user-panel-logout:hover { background: var(--input-hover); }
+
+.login-wrap { display: none; align-items: center; justify-content: center; min-height: 60vh; padding: calc(var(--frame-top, 88px) + 28px) 24px 60px; }
+.login-box {
+  background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border); border-radius: var(--radius-l); box-shadow: var(--glass-shadow);
+  padding: 40px 36px; max-width: 380px; width: 100%; text-align: center;
+}
+.login-box h2 { font-size: 18px; margin-bottom: 8px; }
+.login-box p { font-size: 13px; color: var(--tm); margin-bottom: 24px; line-height: 1.5; }
+.google-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+  padding: 12px 16px; border-radius: var(--radius-pill); background: #fff; color: #1f1f1f;
+  font-weight: 700; font-size: 14px; text-decoration: none; border: 1px solid rgba(0,0,0,0.12);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.google-btn:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.14); transform: translateY(-1px); }
+.google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
 
 .stage { width: 100%; max-width: none; margin: 0; padding: calc(var(--frame-top, 88px) + 28px) 24px 60px; }
 .stage-hd { margin-bottom: 20px; }
@@ -380,6 +417,16 @@ input { font: inherit; color: inherit; }
       <button class="add-btn" id="addBtn" type="button" title="Add Page" aria-label="Add Page">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
       </button>
+      <div class="user-menu" id="userMenu" style="display:none">
+        <button class="user-btn" id="userMenuBtn" type="button" title="Account" aria-label="Account">
+          <img id="userAvatar" src="" alt="">
+        </button>
+        <div class="user-panel" id="userPanel">
+          <div class="user-panel-name" id="userName"></div>
+          <div class="user-panel-domain" id="userDomain"></div>
+          <a class="user-panel-logout" href="/api/auth/logout">Log out</a>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -390,7 +437,18 @@ input { font: inherit; color: inherit; }
   </div>
 </div>
 
-<div class="stage">
+<div class="login-wrap" id="loginWrap">
+  <div class="login-box">
+    <h2>Sign in to continue</h2>
+    <p>Use your Jindal Steel Google account to access the Operations Hub.</p>
+    <a class="google-btn" id="googleLoginBtn" href="/api/auth/login?next=%2F">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.5 5.5 29.6 3.5 24 3.5 12.7 3.5 3.5 12.7 3.5 24S12.7 44.5 24 44.5 44.5 35.3 44.5 24c0-1.2-.1-2.4-.3-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.9 19 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.5 7.5 29.6 5.5 24 5.5c-7.6 0-14.2 4.3-17.7 10.6z"/><path fill="#4CAF50" d="M24 44.5c5.5 0 10.4-1.9 14.1-5.1l-6.5-5.5c-2 1.5-4.6 2.4-7.6 2.4-5.3 0-9.7-3.4-11.3-8.1l-6.6 5.1C9.7 40.1 16.3 44.5 24 44.5z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4 5.6l6.5 5.5C41.7 35.8 44.5 30.4 44.5 24c0-1.2-.1-2.4-.3-3.5z"/></svg>
+      Continue with Google
+    </a>
+  </div>
+</div>
+
+<div class="stage" id="stage" style="display:none">
   <div class="stage-hd">
     <h2>Planning &amp; Monitoring Tools</h2>
     <div class="stage-sub">Click a card to open the tool. Use the &#43; icon to pin a new page.</div>
@@ -1411,6 +1469,45 @@ themeBtn.addEventListener("click", function(){
   setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
 });
 setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
+
+(function(){
+  var stageEl = document.getElementById('stage');
+  var loginWrap = document.getElementById('loginWrap');
+  var userMenu = document.getElementById('userMenu');
+  var userMenuBtn = document.getElementById('userMenuBtn');
+  var userPanel = document.getElementById('userPanel');
+  var userAvatar = document.getElementById('userAvatar');
+  var userName = document.getElementById('userName');
+  var userDomain = document.getElementById('userDomain');
+
+  fetch('/api/auth/me', { credentials: 'same-origin' }).then(function(r){
+    if(!r.ok) throw new Error('unauthenticated');
+    return r.json();
+  }).then(function(u){
+    if(stageEl) stageEl.style.display = '';
+    if(loginWrap) loginWrap.style.display = 'none';
+    if(userMenu) userMenu.style.display = '';
+    if(userAvatar) userAvatar.src = u.picture || '';
+    if(userName) userName.textContent = u.name || u.email || '';
+    if(userDomain) userDomain.textContent = u.domain || '';
+  }).catch(function(){
+    if(stageEl) stageEl.style.display = 'none';
+    if(loginWrap) loginWrap.style.display = 'flex';
+    if(userMenu) userMenu.style.display = 'none';
+  });
+
+  if(userMenuBtn && userPanel){
+    userMenuBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      userPanel.classList.toggle('open');
+    });
+    document.addEventListener('click', function(e){
+      if(!userPanel.contains(e.target) && e.target !== userMenuBtn){
+        userPanel.classList.remove('open');
+      }
+    });
+  }
+})();
 </script>
 
 </body>
