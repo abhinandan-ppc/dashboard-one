@@ -151,7 +151,8 @@ input { font: inherit; color: inherit; }
 .add-btn svg, .reset-link svg, .theme-toggle svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .home-btn,
 .reset-link,
-.theme-toggle {
+.theme-toggle,
+.user-btn {
   background: var(--input-bg);
   color: var(--tx);
   border: var(--glass-border);
@@ -159,7 +160,8 @@ input { font: inherit; color: inherit; }
 }
 .home-btn:hover,
 .reset-link:hover,
-.theme-toggle:hover {
+.theme-toggle:hover,
+.user-btn:hover {
   background: var(--input-hover);
   color: var(--tx);
   border-color: rgba(255,255,255,0.22);
@@ -1489,7 +1491,7 @@ setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
     if(userMenu) userMenu.style.display = '';
     if(userAvatar) userAvatar.src = u.picture || '';
     if(userName) userName.textContent = u.name || u.email || '';
-    if(userDomain) userDomain.textContent = u.domain || '';
+    if(userDomain) userDomain.textContent = u.email || '';
   }).catch(function(){
     if(stageEl) stageEl.style.display = 'none';
     if(loginWrap) loginWrap.style.display = 'flex';
