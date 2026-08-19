@@ -12,5 +12,5 @@ export default async function middleware(req) {
   const url = new URL(req.url);
   const loginUrl = new URL('/api/auth/login', url);
   loginUrl.searchParams.set('next', url.pathname + url.search);
-  return Response.redirect(loginUrl, 302);
+  return Response.redirect(loginUrl.toString(), 302);
 }

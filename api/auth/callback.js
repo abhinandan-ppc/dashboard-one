@@ -12,7 +12,10 @@ export default async function handler(req) {
     return new Response('Invalid or expired sign-in attempt. Go back and try again.', { status: 400 });
   }
   let next = '/';
-  try { next = JSON.parse(atob(state)).next || '/'; } catch {}
+  try {
+    const decoded = JSON.parse(atob(state)).next;
+    if (typeof decoded === 'string' && decoded.startsWith('/') && !decoded.startsWith('//')) next = decoded;
+  } catch {}
 
   const redirectUri = `${url.origin}/api/auth/callback`;
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -39,7 +42,7 @@ export default async function handler(req) {
   }
 
   const session = await createSession({ email: claims.email, exp: Date.now() + 1000 * 60 * 60 * 12 });
-  const res = Response.redirect(new URL(next, url.origin), 302);
+  const res = Response.redirect(new URL(next, url.origin).toString(), 302);
   res.headers.append('Set-Cookie', `session=${encodeURIComponent(session)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=43200`);
   res.headers.append('Set-Cookie', `oauth_state=; Path=/; HttpOnly; Max-Age=0`);
   return res;
