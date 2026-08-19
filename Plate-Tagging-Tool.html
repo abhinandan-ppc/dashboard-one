@@ -40,8 +40,10 @@
   --radius-m:16px;
   --radius-l:22px;
   --radius-pill:999px;
+  color-scheme:light;
 }
 [data-theme="dark"]{
+  color-scheme:dark;
   --bg-color:#0f172a;
   --surface:rgba(30,41,59,.68);
   --surface-solid:rgba(15,23,42,.96);
@@ -114,12 +116,13 @@ h1{font-size:20px;margin:0;letter-spacing:-.2px;font-weight:800;color:var(--acc2
   cursor:pointer;overflow:hidden;backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
   box-shadow:var(--glass-shadow)
 }
+.slot::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:var(--radius-l) 0 0 var(--radius-l);background:transparent}
+.slot.ok::before{background:var(--grn)}
+.slot.err::before{background:var(--red)}
 .slot:hover{border-color:rgba(141,205,255,.34);background:var(--surface-hover);transform:translateY(-2px);box-shadow:0 16px 34px rgba(2,6,23,.22)}
 .slot.drag{border-color:rgba(141,205,255,.55);background:rgba(59,130,246,.18)}
 .slot.ok{border-color:rgba(74,222,128,.35)}
-.slot.ok::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--grn)}
 .slot.err{border-color:rgba(248,113,113,.36)}
-.slot.err::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red)}
 .slot .dot{width:9px;height:9px;border-radius:50%;background:var(--tm);display:inline-block;margin-right:8px}
 .slot.ok .dot{background:var(--grn)}.slot.err .dot{background:var(--red)}
 .slot h3{margin:0 0 4px;font-size:14px;font-weight:700;color:var(--tx)}
@@ -127,35 +130,52 @@ h1{font-size:20px;margin:0;letter-spacing:-.2px;font-weight:800;color:var(--acc2
 .slot .fname{font-size:12px;color:var(--tx);margin-top:10px;font-weight:600;word-break:break-all}
 .slot .status{font-size:11.5px;color:var(--tm);margin-top:3px}
 .slot input{display:none}
+.slotTrigger{display:block;cursor:pointer}
 .embed{
   margin-top:16px;padding:14px 16px;border-radius:var(--radius-m);
   background:var(--surface);border:var(--glass-border);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
   box-shadow:var(--glass-shadow);color:var(--tx);display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap
 }
 .embed b{color:var(--acc2)}
-.pormap{
-  display:none;position:relative;margin-top:16px;background:var(--surface);border:var(--glass-border);border-radius:var(--radius-l);
-  padding:18px;backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);box-shadow:var(--glass-shadow)
-}
+.pormap{display:none;position:relative;margin-top:14px;cursor:default}
 .pormap.show{display:block}
-.pormap-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.pormap-body{margin-top:14px}
-.pormap.collapsed .pormap-body{display:none}
 .pormap-toggle{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;
   padding:9px 14px;border-radius:var(--radius-pill);border:var(--glass-border);background:var(--input-bg);color:var(--tx);
-  font-size:12px;font-weight:700;letter-spacing:.04em;flex-shrink:0
+  font-size:12px;font-weight:700;letter-spacing:.02em;cursor:pointer;font-family:inherit;text-align:left
 }
 .pormap-toggle:hover{background:var(--input-hover)}
-.maphd{font-size:13px;font-weight:700;margin-bottom:14px}
-.maphd span{display:block;font-weight:400;color:var(--tm);font-size:11.5px;margin-top:3px}
-.mapgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 16px}
-.maprow{display:flex;flex-direction:column;gap:5px;font-size:11.5px;color:var(--tm)}
+.pormap-toggle .maphd{font-size:12px;font-weight:700;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pormap-toggle .maphd span{display:none}
+.mapArrow{flex-shrink:0;width:9px;height:9px;border-right:2px solid var(--tm);border-bottom:2px solid var(--tm);
+  transform:rotate(45deg);transition:transform .25s ease;margin-top:-3px}
+.pormap.open .mapArrow{transform:rotate(-135deg);margin-top:3px}
+.pormap-panel{
+  display:none;position:fixed;z-index:9999;
+  background:var(--surface);border:var(--glass-border);border-radius:var(--radius-l);
+  padding:20px 22px;backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  box-shadow:0 20px 48px rgba(2,6,23,.4);animation:mapPop .18s ease-out;cursor:default;
+  overflow-x:hidden;overflow-y:auto;box-sizing:border-box
+}
+.pormap-panel.open{display:block}
+.pormap-panel::-webkit-scrollbar{width:8px}
+.pormap-panel::-webkit-scrollbar-track{background:transparent}
+.pormap-panel::-webkit-scrollbar-thumb{background:var(--input-hover);border-radius:99px}
+.pormap-panel .mapgrid{margin-top:2px;padding-right:6px}
+@keyframes mapPop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.pormap-panel .maphd{font-size:12.5px;font-weight:700;margin-bottom:14px}
+.pormap-panel .maphd span{display:block;font-weight:400;color:var(--tm);font-size:11.5px;margin-top:3px}
+.mapgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 16px}
+.maprow{display:flex;flex-direction:column;gap:5px;font-size:11.5px;color:var(--tm);min-width:0}
+.maprow span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .maprow.req span{color:var(--tx)}
 .maprow select{
+  width:100%;min-width:0;box-sizing:border-box;
   background:var(--input-bg);color:var(--tx);border:var(--glass-border);border-radius:12px;padding:8px 10px;font-size:12.5px;
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);text-overflow:ellipsis
 }
 .maprow select:focus{outline:none;border-color:rgba(141,205,255,.55);box-shadow:0 0 0 3px rgba(141,205,255,.12)}
+.maprow select option{background:var(--surface-solid);color:var(--tx)}
 .maprow.req select{border-left:2px solid var(--acc)}
 @media(max-width:900px){.mapgrid{grid-template-columns:1fr}}
 .run{display:flex;align-items:center;gap:12px;margin-top:22px;flex-wrap:wrap}
@@ -275,22 +295,27 @@ details b{color:var(--tx)}
 
   <div class="step">Step 1 · Load the two files</div>
   <div class="slots">
-    <label class="slot" id="slot-por" for="file-por">
-      <h3><span class="dot"></span>Free Plate Stock</h3>
-      <div class="code">POR / PSFS · any column layout — you map the columns</div>
-      <div class="fname">Drop or click to choose .xlsx</div>
-      <div class="status">Not loaded</div>
+    <div class="slot" id="slot-por">
+      <label class="slotTrigger" for="file-por">
+        <h3><span class="dot"></span>Free Plate Stock</h3>
+        <div class="code">POR / PSFS · any column layout — you map the columns</div>
+        <div class="fname">Drop or click to choose .xlsx</div>
+        <div class="status">Not loaded</div>
+      </label>
       <input type="file" id="file-por" accept=".xlsx,.xls">
-    </label>
-    <label class="slot" id="slot-ebtp" for="file-ebtp">
-      <h3><span class="dot"></span>Order Book</h3>
-      <div class="code">EBTP · Sheet with SO No. + BTR</div>
-      <div class="fname">Drop or click to choose .xlsx</div>
-      <div class="status">Not loaded</div>
+      <div id="pormap" class="pormap"></div>
+    </div>
+    <div class="slot" id="slot-ebtp">
+      <label class="slotTrigger" for="file-ebtp">
+        <h3><span class="dot"></span>Order Book</h3>
+        <div class="code">EBTP · Sheet with SO No. + BTR</div>
+        <div class="fname">Drop or click to choose .xlsx</div>
+        <div class="status">Not loaded</div>
+      </label>
       <input type="file" id="file-ebtp" accept=".xlsx,.xls">
-    </label>
+      <div id="ebtpmap" class="pormap"></div>
+    </div>
   </div>
-  <div id="pormap" class="pormap"></div>
 
   <div class="step">Step 2 · Run</div>
   <div class="gradeModeRow">
@@ -298,6 +323,7 @@ details b{color:var(--tx)}
     <div class="gradeModeSwitch" id="gradeModeSwitch" role="group" aria-label="Grade matching mode">
       <button type="button" class="gmOpt active" data-mode="int" id="gmOptInt">Internal Grade</button>
       <button type="button" class="gmOpt" data-mode="ext" id="gmOptExt">External Grade</button>
+      <button type="button" class="gmOpt" data-mode="cross" id="gmOptCross">Cross Order</button>
     </div>
     <span class="hint" id="gradeModeHint">Matches Order → Plate Int Grade via the embedded grade matrix.</span>
   </div>
@@ -315,12 +341,14 @@ details b{color:var(--tx)}
       <button class="tabbtn" onclick="showTab('cov',this)">Order Coverage</button>
       <button class="tabbtn" onclick="showTab('idle',this)">Idle Free Stock</button>
       <button class="tabbtn" onclick="showTab('nim',this)">Grade Not In Matrix</button>
+      <button class="tabbtn" onclick="showTab('cross',this)">Cross Order</button>
       <button class="tabbtn" onclick="showTab('analysis',this)">Analysis</button>
     </div>
     <div class="tabpane show" id="tab-tags"></div>
     <div class="tabpane" id="tab-cov"></div>
     <div class="tabpane" id="tab-idle"></div>
     <div class="tabpane" id="tab-nim"></div>
+    <div class="tabpane" id="tab-cross"></div>
     <div class="tabpane" id="tab-analysis">
       <div class="dashnote dashtools">
         <span>Interactive analysis: click any chart element to inspect the matching rows below. Double-click inside a chart to reset hidden series using the legend if needed.</span>
@@ -419,23 +447,27 @@ function orderPriorityMs(r){
   return so;
 }
 
+function buildGradeMatrix(gmRows){
+  const gmByOg=new Map();
+  for(const r of gmRows){const og=up(r['Order Grade']);
+    (gmByOg.get(og)||gmByOg.set(og,[]).get(og)).push(
+      {min:num(r['FG Thickness (MM) Min']),max:num(r['FG Thickness (MM) Max']),tgt:up(r['Target Attribute']),prio:parseInt(r['Priority'])});}
+  return function eligible(og,thk){const rows=gmByOg.get(og);if(!rows)return null;const tiers=new Map();
+    for(const m of rows){if(m.min-EPS<=thk&&thk<=m.max+EPS){(tiers.get(m.prio)||tiers.set(m.prio,new Set()).get(m.prio)).add(m.tgt);}}return tiers;};
+}
+function makeUidFns(){
+  const uidDigits = v => String(v??'').replace(/\D/g,'');
+  const uidPart = v => { const d=uidDigits(v); if(!d) return ''; const t=d.replace(/^0+/,''); return t || '0'; };
+  return { makeUid: (so,item) => { const a=uidPart(so), b=uidPart(item); return a&&b ? a+b : ''; } };
+}
+
 /* ---------- engine (plate fields come via mapping M) ---------- */
 let TAG_MODE='int';
 function runTagging(porRows, M, ebtpRows, gmRows, mode){
   mode = mode==='ext' ? 'ext' : 'int';
-  const uidDigits = v => String(v??'').replace(/\D/g,'');
-  const uidPart = v => {
-    const d=uidDigits(v);
-    if(!d) return '';
-    const t=d.replace(/^0+/,'');
-    return t || '0';
-  };
-  const makeUid = (so,item) => {
-    const a=uidPart(so), b=uidPart(item);
-    return a&&b ? a+b : '';
-  };
+  const { makeUid } = makeUidFns();
   const normalizeUid = v => {
-    const d=uidDigits(v);
+    const d=String(v??'').replace(/\D/g,'');
     if(!d) return '';
     const t=d.replace(/^0+/,'');
     return t || '0';
@@ -466,12 +498,7 @@ function runTagging(porRows, M, ebtpRows, gmRows, mode){
     return idx.get(g+'|'+thk)||[];
   }
 
-  const gmByOg=new Map();
-  for(const r of gmRows){const og=up(r['Order Grade']);
-    (gmByOg.get(og)||gmByOg.set(og,[]).get(og)).push(
-      {min:num(r['FG Thickness (MM) Min']),max:num(r['FG Thickness (MM) Max']),tgt:up(r['Target Attribute']),prio:parseInt(r['Priority'])});}
-  function eligible(og,thk){const rows=gmByOg.get(og);if(!rows)return null;const tiers=new Map();
-    for(const m of rows){if(m.min-EPS<=thk&&thk<=m.max+EPS){(tiers.get(m.prio)||tiers.set(m.prio,new Set()).get(m.prio)).add(m.tgt);}}return tiers;}
+  const eligible=buildGradeMatrix(gmRows);
   function eligibleExt(eg){ if(!eg) return null; return new Map([[1,new Set([eg])]]); }
 
   let orders=[];
@@ -526,6 +553,82 @@ function runTagging(porRows, M, ebtpRows, gmRows, mode){
   return {tags,coverage,idle,scope:orders.length,psfsEligibleStock:stock.length,linkedStockExcluded:excludedLinked};
 }
 
+/* ---------- Cross Order: donate excess stock from over-covered orders to older ageing orders ---------- */
+function runCrossOrder(porRows, M, ebtpRows, gmRows){
+  const eligible=buildGradeMatrix(gmRows);
+  const { makeUid } = makeUidFns();
+
+  const stockByUid=new Map();
+  for(const r of porRows){
+    const sloc = M.sloc ? up(r[M.sloc]) : '';
+    const unres = num(r[M.unres]);
+    if((M.sloc && SLOC_DROP.has(sloc)) || unres<=EPS) continue;
+    const stockUid = M.soNo && M.soItem ? makeUid(r[M.soNo],r[M.soItem]) : '';
+    if(!stockUid) continue;
+    (stockByUid.get(stockUid) || stockByUid.set(stockUid,[]).get(stockUid))
+      .push({thk:r3(r[M.thk]), width:num(r[M.width]), length:num(r[M.length]), unres});
+  }
+
+  let recipients=[];
+  for(const r of ebtpRows){
+    if(!KEEP_REMARKS.has(r['Remarks'])) continue;
+    const btr=num(r['BTR']); let demand=0;
+    if(btr>EPS) demand=Math.max(num(r['BTC']),0);
+    else if(String(r['Remarks']).trim()==='POR') demand=Math.max(num(r['Order Qty'])-num(r['Plate Stock']),0);
+    if(demand<=EPS) continue;
+    const uid=r['UID']||makeUid(r['SO No.'],r['SOItm']);
+    recipients.push({uid,so:r['SO No.'],item:r['SOItm'],cust:r['Sold To Party Name'],
+      ig:up(r['Int Grade']),thk:r3(r['Thick']),width:num(r['Width']),length:num(r['Length Plan']),
+      pieceWt:num(r['Piece Wt']),priorityMs:orderPriorityMs(r),ageSO:num(r['Age SO']),demand,btr});
+  }
+  recipients.sort((a,b)=>(a.priorityMs ?? Number.POSITIVE_INFINITY) - (b.priorityMs ?? Number.POSITIVE_INFINITY));
+
+  let donors=[];
+  for(const r of ebtpRows){
+    if(num(r['BTR'])>EPS) continue;                          // own BTR (balance to produce) already <=0 -> excess candidate
+    const stockUid=M.soNo && M.soItem ? makeUid(r['SO No.'],r['SOItm']) : '';
+    if(!stockUid || !stockByUid.has(stockUid)) continue;
+    const uid=r['UID']||makeUid(r['SO No.'],r['SOItm']);
+    donors.push({uid,so:r['SO No.'],item:r['SOItm'],cust:r['Sold To Party Name'],ig:up(r['Int Grade']),stockUid,ageSO:num(r['Age SO'])});
+  }
+
+  const crossOrders=[];
+  for(const rec of recipients){
+    let remaining=rec.demand;
+    let btrLeft=rec.btr>EPS ? rec.btr : 0;
+    const tiers=eligible(rec.ig,rec.thk);
+    if(!tiers || !tiers.size) continue;
+    const grades=new Set(); for(const s of tiers.values()) for(const g of s) grades.add(g);
+    for(const d of donors){
+      if(remaining<=EPS) break;
+      if(rec.btr>EPS && btrLeft<=EPS) break;
+      if(d.uid===rec.uid) continue;
+      if(!grades.has(d.ig)) continue;
+      if(d.ageSO>rec.ageSO) continue;                          // donor must not be older than the recipient it's fulfilling
+      for(const p of stockByUid.get(d.stockUid)){
+        if(remaining<=EPS) break;
+        if(rec.btr>EPS && btrLeft<=EPS) break;
+        if(p.unres<=EPS) continue;
+        if(Math.abs(p.thk-rec.thk)>EPS) continue;
+        if(p.width+EPS<rec.width || p.length+EPS<rec.length) continue;
+        const pieceWt=rec.pieceWt>EPS ? rec.pieceWt : rec.thk*rec.width*rec.length*7.85e-6;
+        const cap=rec.btr>EPS ? Math.min(remaining,p.unres,btrLeft) : Math.min(remaining,p.unres);
+        const plateCount=pieceWt>EPS ? Math.floor(cap/pieceWt) : 0;
+        if(plateCount<=0) continue;
+        const qty=r3(plateCount*pieceWt);
+        const donorExcess=r3(stockByUid.get(d.stockUid).reduce((s,x)=>s+x.unres,0));
+        remaining-=qty; p.unres-=qty; if(rec.btr>EPS) btrLeft=r3(btrLeft-qty);
+        crossOrders.push({recipUid:rec.uid,recipSo:rec.so,recipItem:rec.item,recipCust:rec.cust,recipAgeSO:rec.ageSO,
+          donorUid:d.uid,donorSo:d.so,donorItem:d.item,donorCust:d.cust,donorExcess,donorAgeSO:d.ageSO,donorGrade:d.ig,
+          grade:rec.ig,thk:rec.thk,width:rec.width,length:rec.length,qty,plates:plateCount,
+          recipBtr:r3(rec.btr),updatedBtr:rec.btr>EPS?btrLeft:r3(rec.btr)});
+      }
+    }
+  }
+  crossOrders.sort((a,b)=>(b.recipAgeSO??-Infinity)-(a.recipAgeSO??-Infinity));
+  return {crossOrders, scope:recipients.length};
+}
+
 /* ---------- plate-stock field mapping ---------- */
 const FIELDS=[
   {k:'id',label:'Plate / Batch ID',req:true,syn:['batch','plateid','platenumber','plateno','plate','slabid','coilid','heatno','pieceno','materialcode','materialnumber','materialno','material','id']},
@@ -566,7 +669,7 @@ function detectMap(cols, fields){
 
 /* ---------- file handling ---------- */
 const FILES={por:null,ebtp:null};
-let POR_COLS=[], PORMAP={};
+let POR_COLS=[], PORMAP={}, EBTP_COLS=[], EBTPMAP={}, EBTP_RAW=null;
 
 /* ---------- order-book (EBTP) field mapping ---------- */
 const EBTP_FIELDS=[
@@ -582,7 +685,8 @@ const EBTP_FIELDS=[
   {k:'Age SO',req:false,syn:['ageso','soage','orderage','age']},
   {k:'BTR',req:true,syn:['btr']},
   {k:'BTC',req:false,syn:['btc']},
-  {k:'Order Qty',req:false,syn:['orderqty','orderquantity','qtyordered','orderedqty','ordqty']},
+  {k:'Piece Wt',req:false,syn:['piecewt','pcwt','pieceweight','plateweight','pcweight']},
+  {k:'Order Qty',req:false,syn:['orderqtylive','orderqty','orderquantity','qtyordered','orderedqty','ordqty']},
   {k:'Plate Stock',req:false,syn:['platestock','stockplate','platestockqty','pstock']},
   {k:'Remarks',req:true,syn:['remarks','remark','status','ordstatus']},
   {k:'SBU Rel. DT',req:false,syn:['sbureldt','sburelease','sburel']},
@@ -620,7 +724,8 @@ function bestEbtpParse(wb){
     });
     rows.push(o);
   }
-  return {rows,cols:best.headers,map:best.map,sheet:best.name,reqScore:best.reqScore,reqN};
+  return {rows,cols:best.headers,map:best.map,sheet:best.name,reqScore:best.reqScore,reqN,
+    raw:{headers:best.headers,grid:best.grid,hr:best.hr,sheet:best.name}};
 }
 function setTheme(theme){
   const next=theme==='light'?'light':'dark';
@@ -639,13 +744,17 @@ function resetSlot(kind,title,code){
   slot.querySelector('h3').innerHTML=`<span class="dot"></span>${title}`;
 }
 function resetAll(){
-  FILES.por=null; FILES.ebtp=null; POR_COLS=[]; PORMAP={}; RESULT=null;
+  FILES.por=null; FILES.ebtp=null; POR_COLS=[]; PORMAP={}; EBTP_COLS=[]; EBTPMAP={}; EBTP_RAW=null; RESULT=null;
   destroyCharts();
   resetSlot('por','Free Plate Stock','POR / PSFS · any column layout — you map the columns');
   resetSlot('ebtp','Order Book','EBTP · Sheet with SO No. + BTR');
   const pormap=document.getElementById('pormap');
   pormap.className='pormap';
   pormap.innerHTML='';
+  const ebtpmap=document.getElementById('ebtpmap');
+  ebtpmap.className='pormap';
+  ebtpmap.innerHTML='';
+  document.querySelectorAll('.pormap-panel').forEach(p=>{ p.remove(); });
   document.getElementById('kpis').innerHTML='';
   document.getElementById('dashTop').innerHTML='';
   document.getElementById('dashMid').innerHTML='';
@@ -699,10 +808,11 @@ function readFile(kind,file){
         if(!parsed||!parsed.rows.length){ slot.classList.remove('ok'); slot.classList.add('err');
           slot.querySelector('.status').textContent='Order-book columns not found (need SO No., BTR, Int Grade, Ext Grade, Thick, Width, Length Plan, Remarks…)';
           FILES.ebtp=null; updateRun(); return; }
-        FILES.ebtp=parsed.rows;
+        FILES.ebtp=parsed.rows; EBTP_COLS=parsed.cols; EBTPMAP=parsed.map; EBTP_RAW=parsed.raw;
         slot.classList.remove('err'); slot.classList.add('ok');
         slot.querySelector('.fname').textContent=file.name;
         slot.querySelector('.status').textContent=`Sheet "${parsed.sheet}" · ${parsed.rows.length.toLocaleString()} rows · ${parsed.reqScore}/${parsed.reqN} required fields auto-mapped`;
+        renderEbtpMapping(parsed);
       } else {
         const parsed=bestStockParse(wb);
         if(!parsed||!parsed.rows.length){ slot.classList.remove('ok'); slot.classList.add('err');
@@ -721,34 +831,74 @@ function readFile(kind,file){
   fr.readAsArrayBuffer(file);
 }
 
-function renderMapping(parsed){
-  const box=document.getElementById('pormap');
-  const sheetNote = parsed&&parsed.sheet ? `Auto-recognised sheet “${parsed.sheet}” — batch columns mapped automatically` : 'Plate-stock columns mapped automatically';
-  box.innerHTML = `<div class="pormap-head"><div class="maphd">${sheetNote} <span>nothing to do — adjust a dropdown only if a guess looks wrong</span></div>`+
-    `<button type="button" class="pormap-toggle" id="pormapToggle">Expand Mapping</button></div>`+
-    `<div class="pormap-body"><div class="mapgrid">`+FIELDS.map(f=>{
-      const sel=PORMAP[f.k]||'';
-      const options=['<option value="">— none —</option>'].concat(
-        POR_COLS.map(c=>`<option value="${String(c).replace(/"/g,'&quot;')}"${c===sel?' selected':''}>${c}</option>`)).join('');
-      return `<label class="maprow${f.req?' req':''}"><span>${f.label}${f.req?' *':''}</span>
-        <select data-fk="${f.k}">${options}</select></label>`;
-    }).join('')+`</div></div>`;
-  box.classList.add('show','collapsed');
-  const syncMapToggle=()=>{
-    const btn=box.querySelector('#pormapToggle');
-    if(btn) btn.textContent=box.classList.contains('collapsed')?'Expand Mapping':'Collapse Mapping';
-  };
-  syncMapToggle();
-  box.querySelector('#pormapToggle').addEventListener('click',()=>{
-    box.classList.toggle('collapsed');
-    syncMapToggle();
-  });
-  box.querySelectorAll('select').forEach(s=>s.addEventListener('change',e=>{
-    const fk=e.target.dataset.fk; if(e.target.value) PORMAP[fk]=e.target.value; else delete PORMAP[fk];
-    updateRun();
-  }));
+function closeMapPanel(box){
+  box.classList.remove('open');
+  const panel=document.getElementById(box.id+'-panel');
+  if(panel) panel.classList.remove('open');
 }
-function mapComplete(){ return FIELDS.filter(f=>f.req).every(f=>PORMAP[f.k]); }
+function renderFieldMapping(boxId,toggleId,fields,cols,map,sheetName,defaultNote,onChange){
+  const box=document.getElementById(boxId);
+  const sheetNote = sheetName ? `Auto-recognised sheet “${sheetName}” — batch columns mapped automatically` : defaultNote;
+  box.innerHTML = `<button type="button" class="pormap-toggle" id="${toggleId}"><span class="maphd">${sheetNote}</span><span class="mapArrow"></span></button>`;
+  box.classList.add('show');
+  const panelId=boxId+'-panel';
+  let panel=document.getElementById(panelId);
+  if(!panel){ panel=document.createElement('div'); panel.id=panelId; panel.className='pormap-panel'; document.body.appendChild(panel); }
+  panel.innerHTML = `<div class="maphd">Field mapping <span>nothing to do — adjust a dropdown only if a guess looks wrong</span></div>`+
+    `<div class="mapgrid">`+fields.map(f=>{
+      const sel=map[f.k]||'';
+      const options=['<option value="">— none —</option>'].concat(
+        cols.map(c=>`<option value="${String(c).replace(/"/g,'&quot;')}"${c===sel?' selected':''}>${c}</option>`)).join('');
+      return `<label class="maprow${f.req?' req':''}"><span>${f.label||f.k}${f.req?' *':''}</span>
+        <select data-fk="${f.k}">${options}</select></label>`;
+    }).join('')+`</div>`;
+  const toggleBtn=box.querySelector('#'+toggleId);
+  const positionPanel=()=>{
+    const r=toggleBtn.getBoundingClientRect();
+    const top=r.bottom+8;
+    panel.style.left=r.left+'px'; panel.style.top=top+'px'; panel.style.width=r.width+'px';
+    panel.style.maxHeight=Math.max(160,window.innerHeight-top-20)+'px';
+  };
+  toggleBtn.addEventListener('click',e=>{
+    e.preventDefault(); e.stopPropagation();
+    const willOpen=!panel.classList.contains('open');
+    document.querySelectorAll('.pormap.open').forEach(b=>{ if(b!==box) closeMapPanel(b); });
+    if(willOpen){ positionPanel(); panel.classList.add('open'); box.classList.add('open'); }
+    else closeMapPanel(box);
+  });
+  panel.querySelectorAll('select').forEach(s=>s.addEventListener('click',e=>e.stopPropagation()));
+  panel.querySelectorAll('select').forEach(s=>s.addEventListener('change',e=>{
+    const fk=e.target.dataset.fk; if(e.target.value) map[fk]=e.target.value; else delete map[fk];
+    onChange();
+  }));
+  panel._reposition=positionPanel;
+}
+function renderMapping(parsed){
+  renderFieldMapping('pormap','pormapToggle',FIELDS,POR_COLS,PORMAP,parsed&&parsed.sheet,'Plate-stock columns mapped automatically',updateRun);
+}
+function renderEbtpMapping(parsed){
+  renderFieldMapping('ebtpmap','ebtpmapToggle',EBTP_FIELDS,EBTP_COLS,EBTPMAP,parsed&&parsed.sheet,'Order-book columns mapped automatically',rebuildEbtpRows);
+}
+function rebuildEbtpRows(){
+  if(!EBTP_RAW) return;
+  const {headers,grid,hr,sheet}=EBTP_RAW;
+  const rows=[];
+  for(let i=hr+1;i<grid.length;i++){
+    const r=grid[i]; if(!r||r.every(c=>c==null||String(c).trim()==='')) continue;
+    const o={};
+    EBTP_FIELDS.forEach(f=>{
+      const col=EBTPMAP[f.k]; if(!col) return;
+      const j=headers.indexOf(col); o[f.k]=r[j]===undefined?null:r[j];
+    });
+    rows.push(o);
+  }
+  FILES.ebtp=rows;
+  const reqScore=EBTP_FIELDS.filter(f=>f.req&&EBTPMAP[f.k]).length, reqN=EBTP_FIELDS.filter(f=>f.req).length;
+  const slot=document.getElementById('slot-ebtp');
+  slot.querySelector('.status').textContent=`Sheet "${sheet}" · ${rows.length.toLocaleString()} rows · ${reqScore}/${reqN} required fields auto-mapped`;
+  updateRun();
+}
+function mapComplete(){ return FIELDS.filter(f=>f.req).every(f=>PORMAP[f.k]) && EBTP_FIELDS.filter(f=>f.req).every(f=>EBTPMAP[f.k]); }
 function updateRun(){
   document.getElementById('runBtn').disabled=!(FILES.por&&FILES.ebtp&&mapComplete());
   syncGradeModeSwitch();
@@ -761,15 +911,19 @@ function syncGradeModeSwitch(){
   if(!hasExt && TAG_MODE==='ext') setGradeMode('int');
 }
 function setGradeMode(mode){
-  TAG_MODE = mode==='ext' ? 'ext' : 'int';
+  TAG_MODE = (mode==='ext'||mode==='cross') ? mode : 'int';
   document.getElementById('gmOptInt').classList.toggle('active',TAG_MODE==='int');
   document.getElementById('gmOptExt').classList.toggle('active',TAG_MODE==='ext');
+  document.getElementById('gmOptCross').classList.toggle('active',TAG_MODE==='cross');
   document.getElementById('gradeModeHint').textContent = TAG_MODE==='ext'
     ? 'Matches Order → Plate External Grade directly (exact match, no matrix).'
+    : TAG_MODE==='cross'
+    ? 'Finds excess stock from over-covered orders (BTR ≤ 0) to donate to older ageing orders with matching dimensions & compatible Int Grade.'
     : 'Matches Order → Plate Int Grade via the embedded grade matrix.';
 }
 document.getElementById('gmOptInt').addEventListener('click',()=>setGradeMode('int'));
 document.getElementById('gmOptExt').addEventListener('click',()=>{ if(!document.getElementById('gmOptExt').disabled) setGradeMode('ext'); });
+document.getElementById('gmOptCross').addEventListener('click',()=>setGradeMode('cross'));
 
 let RESULT=null;
 let DASH_CHARTS=[];
@@ -778,8 +932,13 @@ function execute(){
   const btn=document.getElementById('runBtn'); btn.disabled=true; btn.textContent='Processing…';
   setTimeout(()=>{
     const gmRows=GRADE_MATRIX.map(r=>({'Order Grade':r[0],'FG Thickness (MM) Min':r[1],'FG Thickness (MM) Max':r[2],'Target Attribute':r[3],'Priority':r[4]}));
-    RESULT=runTagging(FILES.por,PORMAP,FILES.ebtp,gmRows,TAG_MODE);
-    renderKPIs(RESULT); renderDashboard(RESULT); renderTables(RESULT);
+    if(TAG_MODE==='cross'){
+      RESULT=runCrossOrder(FILES.por,PORMAP,FILES.ebtp,gmRows);
+      renderCrossOrder(RESULT);
+    } else {
+      RESULT=runTagging(FILES.por,PORMAP,FILES.ebtp,gmRows,TAG_MODE);
+      renderKPIs(RESULT); renderDashboard(RESULT); renderTables(RESULT);
+    }
     document.getElementById('results').classList.add('show');
     btn.textContent='Re-run'; btn.disabled=false;
     document.getElementById('results').scrollIntoView({behavior:'smooth'});
@@ -1171,6 +1330,27 @@ function renderTables(R){
 function showTab(k,el){document.querySelectorAll('.tabpane').forEach(p=>p.classList.remove('show'));
   document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+k).classList.add('show'); el.classList.add('active');}
+function renderCrossOrder(R){
+  const {crossOrders}=R;
+  const qty=crossOrders.reduce((s,c)=>s+c.qty,0), plates=crossOrders.reduce((s,c)=>s+c.plates,0);
+  const recips=new Set(crossOrders.map(c=>c.recipUid)).size, donors=new Set(crossOrders.map(c=>c.donorUid)).size;
+  document.getElementById('kpis').innerHTML=[
+    ['Old ageing orders in scope',R.scope.toLocaleString(),''],
+    ['Cross-order matches',crossOrders.length.toLocaleString(),'accent'],
+    ['Donor orders used',donors.toLocaleString(),''],
+    ['Recipient orders covered',recips.toLocaleString(),'accent'],
+    ['Qty tagged from excess (MT)',fmt(qty,1),'accent'],
+    ['Plates to be tagged',plates.toLocaleString(),''],
+  ].map(c=>`<div class="kpi ${c[2]}"><div class="kv">${c[1]}</div><div class="kl">${c[0]}</div></div>`).join('');
+  document.getElementById('tab-cross').innerHTML=table(crossOrders,[
+    {h:'Donor UID',k:'donorUid'},{h:'Donor SO',k:'donorSo'},{h:'Item',k:'donorItem'},{h:'Donor Customer',k:'donorCust'},{h:'Donor Int Grade',k:'donorGrade'},{h:'Donor Ageing (d)',k:'donorAgeSO',num:1,fmt:0},{h:'Donor Excess (MT)',k:'donorExcess',num:1,fmt:3},
+    {h:'Recipient UID',k:'recipUid'},{h:'Recipient SO',k:'recipSo'},{h:'Item',k:'recipItem'},{h:'Recipient Customer',k:'recipCust'},{h:'Recipient Ageing (d)',k:'recipAgeSO',num:1,fmt:0},{h:'Updated BTR (MT)',k:'updatedBtr',num:1,fmt:3},
+    {h:'Grade',k:'grade'},{h:'Thk',k:'thk',num:1,fmt:2},{h:'Width',k:'width',num:1,fmt:0},{h:'Length',k:'length',num:1,fmt:3},
+    {h:'Qty (MT)',k:'qty',num:1,fmt:3},{h:'Plates',k:'plates',num:1}]);
+  for(const k of ['tags','cov','idle','nim']) document.getElementById('tab-'+k).innerHTML='';
+  document.getElementById('dashTop').innerHTML=''; document.getElementById('dashMid').innerHTML=''; document.getElementById('dashBottom').innerHTML='';
+  showTab('cross', document.querySelector('.tabbtn[onclick*="cross"]'));
+}
 
 /* ---------- styled Excel export ---------- */
 const NAVY='1F3864',BLUE='2E5496',LRED='FCE4E4',LGRN='E2EFDA',LYEL='FFF2CC',ORG='F8CBAD';
@@ -1201,7 +1381,18 @@ function kvSheet(sections){
   ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:r,c:2}});
   ws['!cols']=[{wch:40},{wch:3},{wch:16}]; return ws;
 }
+function buildCrossWorkbook(R){
+  const wb=XLSX.utils.book_new();
+  const crossWs=sheetFromCols([
+    {h:'Donor UID',k:'donorUid',w:14},{h:'Donor SO',k:'donorSo',w:11},{h:'Item',k:'donorItem',w:7},{h:'Donor Customer',k:'donorCust',w:24},{h:'Donor Int Grade',k:'donorGrade',w:14},{h:'Donor Ageing (d)',k:'donorAgeSO',w:13,z:'#,##0'},{h:'Donor Excess (MT)',k:'donorExcess',w:13,z:'#,##0.000'},
+    {h:'Recipient UID',k:'recipUid',w:14},{h:'Recipient SO',k:'recipSo',w:11},{h:'Item',k:'recipItem',w:7},{h:'Recipient Customer',k:'recipCust',w:24},{h:'Recipient Ageing (d)',k:'recipAgeSO',w:13,z:'#,##0'},{h:'Updated BTR (MT)',k:'updatedBtr',w:13,z:'#,##0.000'},
+    {h:'Grade',k:'grade',w:14},{h:'Thk',k:'thk',w:7,z:'0.00'},{h:'Width',k:'width',w:9,z:'#,##0'},{h:'Length',k:'length',w:9,z:'0.000'},
+    {h:'Qty (MT)',k:'qty',w:11,z:'#,##0.000'},{h:'Plates',k:'plates',w:9}], R.crossOrders);
+  XLSX.utils.book_append_sheet(wb,crossWs,'Cross Order');
+  return wb;
+}
 function buildWorkbook(R){
+  if(R.crossOrders) return buildCrossWorkbook(R);
   const {tags,coverage,idle,scope}=R;
   const dem=coverage.reduce((s,c)=>s+c.demand,0),tg=coverage.reduce((s,c)=>s+c.tagged,0);
   const pq=tags.reduce((s,t)=>s+t.plateQty,0),cut=tags.reduce((s,t)=>s+t.cutQty,0),loss=tags.reduce((s,t)=>s+t.lossMT,0);
@@ -1288,6 +1479,19 @@ window.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('runBtn').addEventListener('click',execute);
   document.getElementById('dlBtn').addEventListener('click',download);
   document.getElementById('analysisReset').addEventListener('click',clearAnalysisDetail);
+  document.addEventListener('click',e=>{
+    document.querySelectorAll('.pormap.open').forEach(box=>{
+      const panel=document.getElementById(box.id+'-panel');
+      if(!box.contains(e.target) && !(panel&&panel.contains(e.target))) closeMapPanel(box);
+    });
+  });
+  window.addEventListener('resize',()=>{
+    document.querySelectorAll('.pormap-panel.open').forEach(p=>{ if(p._reposition) p._reposition(); });
+  });
+  window.addEventListener('scroll',e=>{
+    if(e.target instanceof Element && e.target.closest('.pormap-panel')) return;
+    document.querySelectorAll('.pormap.open').forEach(closeMapPanel);
+  },true);
   try{ if(window.parent && window.parent!==window) window.parent.postMessage({type:'ready'},'*'); }catch{}
 });
 window.addEventListener('message',e=>{
