@@ -2,6 +2,39 @@ import { createSession, readCookie, redirectWithCookies } from '../_session.js';
 
 export const config = { runtime: 'edge' };
 
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+function accessDeniedPage(email, allowedDomains) {
+  const domainList = allowedDomains.map(d => `<code>${esc(d)}</code>`).join(', ') || '(none configured)';
+  const html = `<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Access Denied</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Sans', system-ui, -apple-system, Segoe UI, sans-serif; background: #0f172a; color: #f8fafc; padding: 24px; }
+  .card { max-width: 420px; width: 100%; background: rgba(30,41,59,0.75); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 22px; padding: 36px 32px; text-align: center; box-shadow: 0 10px 40px rgba(2,6,23,0.4); }
+  h1 { font-size: 19px; margin: 0 0 12px; color: #f87171; }
+  p { font-size: 13.5px; color: #94a3b8; line-height: 1.6; margin: 0 0 10px; }
+  code { background: rgba(255,255,255,0.08); border-radius: 6px; padding: 2px 7px; color: #8dcdff; font-size: 12.5px; }
+  a { display: inline-block; margin-top: 18px; padding: 10px 20px; border-radius: 999px; background: #8dcdff;
+    color: #00344f; font-weight: 700; font-size: 13px; text-decoration: none; }
+</style></head>
+<body>
+  <div class="card">
+    <h1>Access Denied</h1>
+    <p>The Google account <code>${esc(email || 'unknown')}</code> isn't part of an allowed organization.</p>
+    <p>Only accounts on these domains can sign in: ${domainList}</p>
+    <a href="/">Back to sign-in</a>
+  </div>
+</body></html>`;
+  return new Response(html, { status: 403, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+}
+
 export default async function handler(req) {
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
@@ -38,7 +71,7 @@ export default async function handler(req) {
   const allowedDomains = (process.env.ALLOWED_DOMAIN || '').split(',').map(d => d.trim().toLowerCase()).filter(Boolean);
   const emailDomain = (claims.email || '').split('@')[1]?.toLowerCase();
   if (!claims.email_verified || !allowedDomains.includes(emailDomain)) {
-    return new Response(`Access denied — your Google account is not part of ${allowedDomains.join(', ')}.`, { status: 403 });
+    return accessDeniedPage(claims.email, allowedDomains);
   }
 
   const session = await createSession({
