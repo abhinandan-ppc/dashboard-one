@@ -189,7 +189,7 @@ input { font: inherit; color: inherit; }
   height: 40px; width: 40px; padding: 0; border-radius: 20px; overflow: hidden; flex-shrink: 0;
   border: var(--glass-border); background: var(--input-bg); display: inline-flex; align-items: center; justify-content: center;
 }
-.user-btn img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; display: block; }
+.user-btn img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
 .user-panel {
   position: absolute; top: calc(100% + 10px); right: 0; min-width: 220px;
   background: var(--glass-bg-solid); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
@@ -934,6 +934,8 @@ function removeInjectedFrameControls(){
       });
       var node = doc.getElementById('hubFrameHeaderControls');
       if(node) node.remove();
+      var panelNode = doc.getElementById('hubFrameUserPanel');
+      if(panelNode) panelNode.remove();
     }
   }catch(e){}
 }
@@ -1045,6 +1047,8 @@ function installFrameHeaderControls(){
         try{
           var existing = doc.getElementById('hubFrameHeaderControls');
           if(existing) existing.remove();
+          var existingPanel = doc.getElementById('hubFrameUserPanel');
+          if(existingPanel) existingPanel.remove();
 
           var rakeFrame = isRakePlannerFrame(doc);
           var rakeSlot = rakeFrame ? doc.getElementById('hubFrameHeaderSlot') : null;
@@ -1121,6 +1125,80 @@ function installFrameHeaderControls(){
           });
         };
 
+        var userAvatarBtn = null;
+        var userAvatarPanel = null;
+        var mainUserMenu = document.getElementById('userMenu');
+        var mainUserAvailable = !!(mainUserMenu && mainUserMenu.style.display !== 'none');
+        if(mainUserAvailable){
+          userAvatarBtn = doc.createElement('button');
+          userAvatarBtn.type = 'button';
+          userAvatarBtn.title = 'Account';
+          userAvatarBtn.dataset.variant = 'neutral';
+          userAvatarBtn.setAttribute('aria-label', 'Account');
+          userAvatarBtn.style.cssText = btnBase + 'overflow:hidden;';
+          var userAvatarImg = doc.createElement('img');
+          userAvatarImg.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;';
+          userAvatarBtn.appendChild(userAvatarImg);
+
+          userAvatarPanel = doc.createElement('div');
+          userAvatarPanel.id = 'hubFrameUserPanel';
+          userAvatarPanel.style.cssText = 'position:fixed;min-width:220px;background:rgba(15,23,42,0.94);backdrop-filter:blur(18px) saturate(130%);-webkit-backdrop-filter:blur(18px) saturate(130%);border:1px solid rgba(255,255,255,0.14);border-radius:16px;box-shadow:0 20px 44px rgba(2,6,23,0.4);padding:14px;display:none;flex-direction:column;gap:4px;z-index:2147483647;';
+          var panelName = doc.createElement('div');
+          panelName.style.cssText = 'font-weight:800;font-size:13px;color:#f8fafc;';
+          var panelDomain = doc.createElement('div');
+          panelDomain.style.cssText = 'font-size:11.5px;color:#94a3b8;margin-bottom:8px;';
+          var panelLogout = doc.createElement('a');
+          panelLogout.href = '/api/auth/logout';
+          panelLogout.textContent = 'Log out';
+          panelLogout.style.cssText = 'margin-top:6px;text-align:center;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,0.08);color:#f8fafc;font-weight:700;font-size:12.5px;text-decoration:none;border:1px solid rgba(255,255,255,0.14);';
+          userAvatarPanel.appendChild(panelName);
+          userAvatarPanel.appendChild(panelDomain);
+          userAvatarPanel.appendChild(panelLogout);
+          doc.body.appendChild(userAvatarPanel);
+
+          var applyInjectedUserStyles = function(theme){
+            var isDark = theme !== 'light';
+            userAvatarPanel.style.background = isDark ? 'rgba(15,23,42,0.94)' : 'rgba(255,255,255,0.96)';
+            userAvatarPanel.style.borderColor = isDark ? 'rgba(255,255,255,0.14)' : 'rgba(148,163,184,0.42)';
+            panelName.style.color = isDark ? '#f8fafc' : '#1e293b';
+            panelDomain.style.color = isDark ? '#94a3b8' : '#64748b';
+            panelLogout.style.background = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)';
+            panelLogout.style.color = isDark ? '#f8fafc' : '#1e293b';
+            panelLogout.style.borderColor = isDark ? 'rgba(255,255,255,0.14)' : 'rgba(148,163,184,0.42)';
+          };
+
+          var syncUserPanelContent = function(){
+            var srcAvatar = document.getElementById('userAvatar');
+            var srcName = document.getElementById('userName');
+            var srcDomain = document.getElementById('userDomain');
+            userAvatarImg.src = srcAvatar ? srcAvatar.src : '';
+            panelName.textContent = srcName ? srcName.textContent : '';
+            panelDomain.textContent = srcDomain ? srcDomain.textContent : '';
+          };
+          syncUserPanelContent();
+          applyInjectedUserStyles(document.documentElement.getAttribute('data-theme') || 'dark');
+
+          userAvatarBtn.addEventListener('click', function(e){
+            e.stopPropagation();
+            syncUserPanelContent();
+            var isOpen = userAvatarPanel.style.display === 'flex';
+            if(isOpen){
+              userAvatarPanel.style.display = 'none';
+            } else {
+              var rect = userAvatarBtn.getBoundingClientRect();
+              userAvatarPanel.style.top = (rect.bottom + 10) + 'px';
+              userAvatarPanel.style.left = 'auto';
+              userAvatarPanel.style.right = Math.max(16, (doc.documentElement.clientWidth - rect.right)) + 'px';
+              userAvatarPanel.style.display = 'flex';
+            }
+          });
+          doc.addEventListener('click', function(e){
+            if(userAvatarPanel && userAvatarPanel.style.display === 'flex' && !userAvatarPanel.contains(e.target) && e.target !== userAvatarBtn){
+              userAvatarPanel.style.display = 'none';
+            }
+          });
+        }
+
         homeBtn.addEventListener('click', function(){ document.getElementById('homeBtn').click(); });
         resetBtn.addEventListener('click', function(){ broadcastToFrame({type:'reset'}); });
         themeBtn.addEventListener('click', function(){
@@ -1129,6 +1207,7 @@ function installFrameHeaderControls(){
           var theme = document.documentElement.getAttribute('data-theme');
           syncInjectedThemeIcon(theme);
           applyInjectedThemeStyles(theme);
+          if(userAvatarPanel) applyInjectedUserStyles(theme);
           broadcastToFrame({type:'theme', value: theme});
         });
         syncInjectedThemeIcon(document.documentElement.getAttribute('data-theme') || 'dark');
@@ -1153,13 +1232,13 @@ function installFrameHeaderControls(){
               }
             }catch(e){}
             controls.style.cssText = 'display:inline-flex;align-items:center;gap:6px;position:relative;z-index:5;margin-left:8px;flex-shrink:0;vertical-align:middle;';
-            [homeBtn, resetBtn, themeBtn].forEach(function(btn){
+            [homeBtn, resetBtn, themeBtn, userAvatarBtn].filter(Boolean).forEach(function(btn){
               btn.style.width = '34px';
               btn.style.height = '34px';
               btn.style.minWidth = '34px';
               btn.style.minHeight = '34px';
             });
-            [homeBtn, resetBtn, themeBtn].forEach(function(btn){
+            [homeBtn, resetBtn, themeBtn, userAvatarBtn].filter(Boolean).forEach(function(btn){
               var svg = btn.querySelector('svg');
               if(svg){
                 svg.style.width = '15px';
@@ -1175,6 +1254,7 @@ function installFrameHeaderControls(){
           controls.appendChild(homeBtn);
           controls.appendChild(resetBtn);
           controls.appendChild(themeBtn);
+          if(userAvatarBtn) controls.appendChild(userAvatarBtn);
 
           if(host){
             var actionsHost = host.matches('.h-actions, .hdr-r, .header-actions, .actions') ? host : host.querySelector('.h-actions, .hdr-r, .header-actions, .actions');
@@ -1204,12 +1284,12 @@ function installFrameHeaderControls(){
                   var sampleStyle = pageFrame.contentWindow.getComputedStyle(sampleBtn);
                   var sampleHeight = parseFloat(sampleStyle.height) || 32;
                   var sampleRadius = sampleStyle.borderRadius || '999px';
-                  [homeBtn, resetBtn, themeBtn].forEach(function(btn){
+                  [homeBtn, resetBtn, themeBtn, userAvatarBtn].filter(Boolean).forEach(function(btn){
                     btn.style.width = sampleHeight + 'px';
                     btn.style.height = sampleHeight + 'px';
                     btn.style.borderRadius = sampleRadius;
                   });
-                  [homeBtn, resetBtn, themeBtn].forEach(function(btn){
+                  [homeBtn, resetBtn, themeBtn, userAvatarBtn].filter(Boolean).forEach(function(btn){
                     var svg = btn.querySelector('svg');
                     if(svg){
                       var iconSize = Math.max(16, Math.round(sampleHeight * 0.45));
