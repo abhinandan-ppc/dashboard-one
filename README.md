@@ -1,12 +1,8 @@
 <div align="center">
-  
-  <h1>🏭 Dashboard One</h1>
-  
-  <p><b>A comprehensive suite of static dashboards for industrial planning, yard management, and logistics tracking.</b></p>
 
-  <p>
-    <img src="https://github.com/abhinandan-ppc/dashboard-one/actions/workflows/deploy-pages.yml/badge.svg" alt="Deploy to GitHub Pages">
-  </p>
+  <h1>🏭 Dashboard One</h1>
+
+  <p><b>AI Planning Hub — a suite of static dashboards for industrial planning, yard management, and logistics tracking at Jindal Steel Angul (Plate Mill).</b></p>
 
 </div>
 
@@ -14,22 +10,20 @@
 
 ## 📖 About The Project
 
-**Dashboard One** provides a centralized interface for managing complex industrial operations. Instead of relying on a heavy backend framework, this project utilizes fast, static HTML files to serve dedicated planning tools for Steel Melting Shops (SMS), plate tagging, and rake (railway) logistics.
+**Dashboard One** provides a centralized interface for managing complex industrial operations. Instead of relying on a heavy backend framework, this project uses fast, static HTML pages for dedicated planning tools covering Steel Melting Shop (SMS) heat planning, plate/PSFS tagging, PM Yard management, and rake (railway) logistics.
 
-Optimized for automated deployment via GitHub Pages, it utilizes a `.nojekyll` configuration to ensure seamless static file serving.
+Access is gated behind Google Workspace SSO: a Vercel Edge Middleware protects every tool page, and the landing page (`index.html`, the **AI Planning Hub**) renders its own login/user menu by checking session state client-side.
 
 ---
 
 ## 📊 Dashboard Modules
 
-*Here is the suite of standalone dashboard views, each tailored to a specific operational requirement:*
-
 <table width="100%">
   <tr>
     <td width="50%">
-      <h3>🏠 Main Hub</h3>
+      <h3>🏠 AI Planning Hub</h3>
       <code>index.html</code>
-      <p>The central landing page connecting all operational planners and views.</p>
+      <p>The central landing page connecting all operational planners and views, with sign-in and user menu.</p>
     </td>
     <td width="50%">
       <h3>🏗️ PM Yard</h3>
@@ -46,7 +40,7 @@ Optimized for automated deployment via GitHub Pages, it utilizes a `.nojekyll` c
     <td>
       <h3>🪧 Plate Tagging Tool</h3>
       <code>Plate-Tagging-Tool.html</code>
-      <p>Tool for seamlessly tracking and logging industrial plate tags.</p>
+      <p>Tool for tracking and logging industrial plate tags, with cross-order and external-grade fuzzy matching.</p>
     </td>
   </tr>
   <tr>
@@ -77,21 +71,63 @@ Optimized for automated deployment via GitHub Pages, it utilizes a `.nojekyll` c
 
 ---
 
+## 🔐 Authentication
+
+Access is restricted to specific Google Workspace domains via OAuth:
+
+* `middleware.js` — Vercel Edge Middleware that gates every route except `api/auth/*`, favicons, and the root hub page. Unauthenticated requests to any tool page are redirected to `/api/auth/login`.
+* `api/auth/login.js` — redirects the user into the Google OAuth consent flow.
+* `api/auth/callback.js` — handles the OAuth callback, validates the account's domain against `ALLOWED_DOMAIN`, and issues a signed session cookie.
+* `api/auth/me.js` — returns the current session as JSON (used by the hub's client-side login check and user menu).
+* `api/auth/logout.js` — clears the session cookie.
+* `api/_session.js` — creates/verifies HMAC-signed session tokens using the Web Crypto API.
+
+Users outside the allowed domain(s) are shown an Access Denied page instead of a session.
+
+---
+
 ## 🛠️ Tech Stack & Architecture
 
-* ⚡ **Frontend:** Pure HTML / JS / CSS for lightweight, fast rendering.
-* ☁️ **Hosting:** GitHub Pages.
-* ⚙️ **CI/CD Pipeline:** Configured using GitHub Actions (`deploy-pages.yml`) for automated deployments.
-* 🔧 **Build Configuration:** Includes a `.nojekyll` file to bypass standard Jekyll processing, ensuring standard HTML routing works as intended.
+* ⚡ **Frontend:** Pure HTML / JS / CSS, no build step or framework.
+* ⚙️ **Backend:** Vercel Edge Functions (`api/`), written as ES modules (`export const config = { runtime: 'edge' }`).
+* 🔐 **Auth:** Google OAuth 2.0 + Vercel Edge Middleware with HMAC-signed session cookies.
+* ☁️ **Hosting:** Vercel (zero-config static + edge functions, no `vercel.json` required).
+
+---
+
+## ⚙️ Environment Variables
+
+Configure these in your Vercel project settings (no `.env.example` is committed):
+
+| Variable | Purpose |
+|---|---|
+| `SESSION_SECRET` | Secret key used to sign/verify session cookies (HMAC). |
+| `GOOGLE_CLIENT_ID` | OAuth client ID for Google Sign-In. |
+| `GOOGLE_CLIENT_SECRET` | OAuth client secret for Google Sign-In. |
+| `ALLOWED_DOMAIN` | Comma-separated list of Google Workspace domains permitted to sign in. |
 
 ---
 
 ## 🚀 Quick Start
 
-Since this project consists of static HTML files, getting started is incredibly simple. You do not need a complex local development server to view the dashboards.
+This project has no build step or npm dependencies — it's static HTML plus Vercel Edge Functions.
 
 ### 💻 Local Development
 
 1. **Clone the repository**
    ```sh
-   git clone [https://github.com/abhinandan-ppc/dashboard-one.git](https://github.com/abhinandan-ppc/dashboard-one.git)
+   git clone https://github.com/abhinandan-ppc/dashboard-one.git
+   cd dashboard-one
+   ```
+
+2. **Set environment variables** (see table above) in a `.env.local` file or your Vercel project settings.
+
+3. **Run with the Vercel CLI** to exercise auth middleware and edge functions locally:
+   ```sh
+   npm i -g vercel
+   vercel dev
+   ```
+
+### ☁️ Deployment
+
+Push to the connected branch — Vercel builds and deploys automatically (no CI/CD workflow files needed; the previous GitHub Pages workflow has been removed).
