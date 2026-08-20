@@ -1130,12 +1130,8 @@ function installFrameHeaderControls(){
         var mainUserMenu = document.getElementById('userMenu');
         var mainUserAvailable = !!(mainUserMenu && mainUserMenu.style.display !== 'none');
         if(mainUserAvailable){
-          userAvatarBtn = doc.createElement('button');
-          userAvatarBtn.type = 'button';
-          userAvatarBtn.title = 'Account';
-          userAvatarBtn.dataset.variant = 'neutral';
-          userAvatarBtn.setAttribute('aria-label', 'Account');
-          userAvatarBtn.style.cssText = btnBase + 'overflow:hidden;';
+          userAvatarBtn = mkBtn('Account', 'neutral', '');
+          userAvatarBtn.style.cssText += 'overflow:hidden;';
           var userAvatarImg = doc.createElement('img');
           userAvatarImg.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;';
           userAvatarBtn.appendChild(userAvatarImg);
