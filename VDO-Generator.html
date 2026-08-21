@@ -195,7 +195,10 @@ tr:hover td{background:var(--input-hover)}
 
 <div class="panel" id="results" style="display:none"><h2>3 · Result</h2>
 <div id="sumCards"></div><div id="dist"></div>
-<div style="margin:6px 0 16px"><button class="btn" id="dlbtn" disabled>⤓ Download dump (.xlsx)</button></div>
+<div style="margin:6px 0 16px;display:flex;gap:10px;flex-wrap:wrap">
+ <button class="btn" id="dlbtn" disabled>⤓ Download all (.xlsx)</button>
+ <button class="btn ghost" id="dlFilteredBtn" disabled>⤓ Download filtered (.xlsx)</button>
+</div>
 <div class="tabs">
  <button class="tabbtn on" id="tabData" type="button">Data</button>
  <button class="tabbtn" id="tabPivot" type="button">Pivot · PPC Remarks</button>
@@ -534,6 +537,7 @@ function renderSummary(){
     dh+='<span class="pill" style="background:'+(REM_COLORS[k]||'#555')+'">'+k+' <b>'+v+'</b></span>';});
   $('#dist').innerHTML=dh;
   $('#results').style.display='block'; $('#dlbtn').disabled=n===0;
+  $('#dlFilteredBtn').disabled=n===0;
   $('#status').textContent=n+' orders after filters · VDO ₹'+fmtCr(tot)+' cr';
   renderTable();
   renderPivot();
@@ -638,6 +642,7 @@ function renderTable(){
 
   renderPager(rows.length, totalPages);
   renderPivot();
+  $('#dlFilteredBtn').disabled=getSelectedRows().length===0;
 }
 
 function renderPager(total,totalPages){
@@ -736,44 +741,23 @@ const THIN_BORDER={style:'thin',color:{argb:'FFD0D5DD'}};
 const thinBox={top:THIN_BORDER,bottom:THIN_BORDER,left:THIN_BORDER,right:THIN_BORDER};
 const BAND_FILL={type:'pattern',pattern:'solid',fgColor:{argb:'FFF5F7FA'}};
 
-async function download(){
+// Builds a full workbook (Pivot sheet first, then VDO data) for whatever row set is passed in —
+// shared by the "download all" and "download filtered" buttons.
+async function buildWorkbook(rows){
   const wb=new ExcelJS.Workbook();
-
-  const ws=wb.addWorksheet('VDO');
-  const headerRow=ws.addRow(OUT_COLS);
-  headerRow.eachCell(cell=>{
-    cell.fill=HEADER_FILL; cell.font=HEADER_FONT;
-    cell.alignment={vertical:'middle',horizontal:'center',wrapText:true};
-    cell.border=thinBox;
-  });
-  RESULT.forEach((r,ri)=>{
-    const row=ws.addRow(OUT_COLS.map(c=>{ const v=r[c]; return v==null?'':v; }));
-    row.eachCell((cell,Ci)=>{
-      const c=OUT_COLS[Ci-1];
-      if(c==='SO Pr Date'||c==='FI Rel Dt(2)') cell.numFmt='dd-mmm-yyyy';
-      else if(c==='VDO in crs.') cell.numFmt='#,##0.00';
-      else if(['Bal to PGI','FG UR Stock','Difference','BTR','Slab Stock','NO PLAN','WIP & TPIP'].includes(c)) cell.numFmt='#,##0.000';
-      cell.border=thinBox;
-      if(ri%2===1) cell.fill=BAND_FILL;
-    });
-  });
-  ws.columns.forEach((col,i)=>{
-    const c=OUT_COLS[i];
-    col.width=c==='Sold To Party Name'?28:(c==='PPC Remarks'?19:(c==='Current Order Status'?20:12));
-  });
-  ws.autoFilter={from:{row:1,column:1},to:{row:1,column:OUT_COLS.length}};
-  ws.views=[{state:'frozen',ySplit:1}];
 
   // Pivot sheet — SUMIF/COUNTIF formulas against the VDO sheet rather than baked-in numbers,
   // so it recalculates automatically in Excel if rows on the VDO sheet are edited or removed
   // (as close to a live pivot as a formula-only workbook gets without a native PivotTable engine).
+  // Added before the VDO sheet so it lands as the first tab; formulas can reference VDO by
+  // name regardless of which sheet object exists first.
   const remarksCol=String.fromCharCode(65+OUT_COLS.indexOf('PPC Remarks'));
   const balCol=String.fromCharCode(65+OUT_COLS.indexOf('Bal to PGI'));
   const vdoCol=String.fromCharCode(65+OUT_COLS.indexOf('VDO in crs.'));
-  const lastDataRow=RESULT.length+1;
+  const lastDataRow=rows.length+1;
   const remarksRange=remarksCol+'2:'+remarksCol+lastDataRow;
   const vdoByRemark={};
-  RESULT.forEach(r=>{ const k=r['PPC Remarks']; vdoByRemark[k]=(vdoByRemark[k]||0)+r['VDO in crs.']; });
+  rows.forEach(r=>{ const k=r['PPC Remarks']; vdoByRemark[k]=(vdoByRemark[k]||0)+r['VDO in crs.']; });
   const remarkKeys=Object.keys(vdoByRemark).sort((a,b)=>vdoByRemark[b]-vdoByRemark[a]);
 
   const pws=wb.addWorksheet('Pivot');
@@ -814,14 +798,53 @@ async function download(){
 
   pws.columns=[{width:22},{width:10},{width:16},{width:14}];
 
+  const ws=wb.addWorksheet('VDO');
+  const headerRow=ws.addRow(OUT_COLS);
+  headerRow.eachCell(cell=>{
+    cell.fill=HEADER_FILL; cell.font=HEADER_FONT;
+    cell.alignment={vertical:'middle',horizontal:'center',wrapText:true};
+    cell.border=thinBox;
+  });
+  rows.forEach((r,ri)=>{
+    const row=ws.addRow(OUT_COLS.map(c=>{ const v=r[c]; return v==null?'':v; }));
+    row.eachCell((cell,Ci)=>{
+      const c=OUT_COLS[Ci-1];
+      if(c==='SO Pr Date'||c==='FI Rel Dt(2)') cell.numFmt='dd-mmm-yyyy';
+      else if(c==='VDO in crs.') cell.numFmt='#,##0.00';
+      else if(['Bal to PGI','FG UR Stock','Difference','BTR','Slab Stock','NO PLAN','WIP & TPIP'].includes(c)) cell.numFmt='#,##0.000';
+      cell.border=thinBox;
+      if(ri%2===1) cell.fill=BAND_FILL;
+    });
+  });
+  ws.columns.forEach((col,i)=>{
+    const c=OUT_COLS[i];
+    col.width=c==='Sold To Party Name'?28:(c==='PPC Remarks'?19:(c==='Current Order Status'?20:12));
+  });
+  ws.autoFilter={from:{row:1,column:1},to:{row:1,column:OUT_COLS.length}};
+  ws.views=[{state:'frozen',ySplit:1}];
+
+  return wb;
+}
+
+async function saveWorkbook(wb, filenameSuffix){
   const d=$('#asof').value.replace(/-/g,'_');
   const buf=await wb.xlsx.writeBuffer();
   const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url; a.download='VDO_dump_'+d+'.xlsx';
+  a.href=url; a.download='VDO_dump_'+filenameSuffix+'_'+d+'.xlsx';
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
+}
+
+async function downloadAll(){
+  const wb=await buildWorkbook(RESULT);
+  await saveWorkbook(wb, 'all');
+}
+
+async function downloadFiltered(){
+  const wb=await buildWorkbook(getSelectedRows());
+  await saveWorkbook(wb, 'filtered');
 }
 
 // ── theme (works standalone, and syncs with the hub when opened in-frame) ──
@@ -847,7 +870,8 @@ window.addEventListener('DOMContentLoaded',()=>{
   dz.addEventListener('drop',e=>{if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
   $('#psearch').addEventListener('input',e=>renderParties(e.target.value));
   $('#runbtn').addEventListener('click',run);
-  $('#dlbtn').addEventListener('click',download);
+  $('#dlbtn').addEventListener('click',downloadAll);
+  $('#dlFilteredBtn').addEventListener('click',downloadFiltered);
   $('#clearParties').addEventListener('click',()=>{CHECKED_PARTIES=new Set(); document.querySelectorAll('#partyList input').forEach(c=>c.checked=false);});
   $('#tabData').addEventListener('click',()=>switchTab('data'));
   $('#tabPivot').addEventListener('click',()=>switchTab('pivot'));
