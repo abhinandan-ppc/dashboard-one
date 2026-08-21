@@ -78,7 +78,8 @@ input[type=text]{width:100%}
 .pchk:hover{background:var(--input-hover)}.pchk span{color:var(--tx)}
 .status{font-size:13px;color:var(--tm);margin:14px 0;min-height:18px}
 #sumCards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
-.card{background:var(--glass-bg);border:var(--glass-border);border-left:3px solid var(--md-sys-color-primary);border-radius:var(--radius-m);padding:14px 16px}
+.card{background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:var(--glass-border);border-left:3px solid var(--md-sys-color-primary);border-radius:var(--radius-m);padding:14px 16px;box-shadow:var(--glass-shadow);transition:transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s ease}
+.card:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.14)}
 .card .cv{font-size:24px;font-weight:800;color:var(--md-sys-color-primary)}
 .card .cl{font-size:11px;color:var(--tm);text-transform:uppercase;letter-spacing:1px;margin-top:2px;font-weight:700}
 #dist{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
@@ -88,19 +89,22 @@ input[type=text]{width:100%}
 .tabbtn{padding:9px 18px;border-radius:var(--radius-pill);font-size:12.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;background:var(--input-bg);color:var(--tm);border:1px solid var(--br);cursor:pointer;transition:.15s}
 .tabbtn:hover{background:var(--input-hover)}
 .tabbtn.on{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border-color:transparent}
-#preview,#pivotWrap{overflow:auto;border:1px solid var(--br);border-radius:var(--radius-s);max-height:600px}
+#preview{overflow-x:hidden;overflow-y:auto;border:1px solid var(--br);border-radius:var(--radius-s);max-height:600px}
+#pivotWrap{overflow:auto;border:1px solid var(--br);border-radius:var(--radius-s);max-height:600px}
+#preview table{table-layout:fixed}
 table{border-collapse:collapse;width:100%;font-size:13px}
-th.chkcol,td.chkcol{width:40px;text-align:center;padding-left:0;padding-right:0}
+th.chkcol,td.chkcol{width:36px;text-align:center;padding-left:0;padding-right:0}
 tr.rowsel td{background:rgba(56,189,248,.14)}
-th{position:sticky;top:0;background:var(--glass-bg-solid);color:var(--md-sys-color-primary);text-align:left;padding:0;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--br);white-space:nowrap;z-index:2}
-th .thhead{display:flex;align-items:center;gap:10px;padding:14px 16px}
-th .thlabel{cursor:pointer;user-select:none;flex:1}
+th{position:sticky;top:0;background:var(--glass-bg-solid);color:var(--md-sys-color-primary);text-align:left;padding:0;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--br);white-space:nowrap;z-index:2}
+th .thhead{display:flex;align-items:center;gap:6px;padding:11px 10px;overflow:hidden}
+th .thlabel{cursor:pointer;user-select:none;flex:1;overflow:hidden;text-overflow:ellipsis}
 th .thlabel:hover{color:var(--tx)}
-th .fbtn{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tm);flex-shrink:0}
+th .fbtn{width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tm);flex-shrink:0}
 th .fbtn:hover{background:var(--input-hover);color:var(--tx)}
 th .fbtn.active{color:var(--md-sys-color-primary)}
-th .fbtn svg{width:12px;height:12px}
-td{padding:12px 16px;border-bottom:1px solid var(--br);white-space:nowrap;color:var(--tx)}
+th .fbtn svg{width:11px;height:11px}
+#preview td{padding:11px 10px;border-bottom:1px solid var(--br);color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:0}
+#pivotWrap td{padding:12px 16px;border-bottom:1px solid var(--br);color:var(--tx);white-space:nowrap}
 tr:hover td{background:var(--input-hover)}
 #pivotWrap td,#pivotWrap th{padding:14px 18px}
 .muted{color:var(--tm);font-size:12px;padding:8px}
@@ -124,8 +128,8 @@ tr:hover td{background:var(--input-hover)}
   .wrap{padding:16px 12px 40px}
   .panel{padding:16px}
   .row{gap:14px}
-  th .thhead{padding:10px 10px}
-  td{padding:10px 10px}
+  th .thhead{padding:9px 6px}
+  #preview td{padding:9px 6px}
   #pivotWrap td,#pivotWrap th{padding:10px 12px}
 }
 @media (max-width:560px){
@@ -421,6 +425,8 @@ const fmtCr=n=>n.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFraction
 const REM_COLORS={'FG - No Pay':'#c0392b','Casting Pending':'#b9770e','in WIP':'#2471a3',
  'Slabs to be Rolled':'#ca6f1e','FG-CT':'#1e8449','FG-PT':'#16a085','Under Dispatch Plan':'#7d3c98','FG-Other (check mode)':'#555'};
 const PREVIEW_COLS=['UID','Sold To Party Name','Mode-Book','Bal to PGI','FG UR Stock','Difference','VDO in crs.','BTR','PPC Remarks','SO Pr Date','FI Rel Dt(2)','Days Overdue','Release Aging'];
+// percentages sum to 97 (checkbox col takes the rest) so the table always fits its container width
+const COL_WIDTH_PCT={'UID':6,'Sold To Party Name':15,'Mode-Book':6,'Bal to PGI':7,'FG UR Stock':7,'Difference':7,'VDO in crs.':7,'BTR':5,'PPC Remarks':10,'SO Pr Date':7,'FI Rel Dt(2)':7,'Days Overdue':6,'Release Aging':7};
 
 let FILTERS={};       // col -> Set of allowed display values (absent = no filter)
 let SORT={col:null,dir:1};
@@ -588,11 +594,13 @@ function renderTable(){
       PREVIEW_COLS.map(c=>{
         const v=dispVal(r,c);
         const style=c==='PPC Remarks'?' style="color:#fff;background:'+(REM_COLORS[r[c]]||'#555')+';font-weight:600"':'';
-        return '<td'+style+'>'+v+'</td>';
+        return '<td'+style+' title="'+v.replace(/"/g,'&quot;')+'">'+v+'</td>';
       }).join('')+'</tr>';
   }).join('');
 
-  $('#preview').innerHTML='<table><thead>'+th+'</thead><tbody>'+
+  const colgroup='<colgroup><col style="width:36px">'+PREVIEW_COLS.map(c=>'<col style="width:'+(COL_WIDTH_PCT[c]||7)+'%">').join('')+'</colgroup>';
+
+  $('#preview').innerHTML='<table>'+colgroup+'<thead>'+th+'</thead><tbody>'+
     (tb || '<tr><td class="muted" colspan="'+(PREVIEW_COLS.length+1)+'">No rows match the current filters.</td></tr>')+
     '</tbody></table>';
 
@@ -755,7 +763,9 @@ async function download(){
   const vdoCol=String.fromCharCode(65+OUT_COLS.indexOf('VDO in crs.'));
   const lastDataRow=RESULT.length+1;
   const remarksRange=remarksCol+'2:'+remarksCol+lastDataRow;
-  const remarkKeys=[...new Set(RESULT.map(r=>r['PPC Remarks']))].sort();
+  const vdoByRemark={};
+  RESULT.forEach(r=>{ const k=r['PPC Remarks']; vdoByRemark[k]=(vdoByRemark[k]||0)+r['VDO in crs.']; });
+  const remarkKeys=Object.keys(vdoByRemark).sort((a,b)=>vdoByRemark[b]-vdoByRemark[a]);
 
   const pws=wb.addWorksheet('Pivot');
   const pHeader=pws.addRow(['PPC Remarks','Orders','Bal to PGI (T)','VDO in Crs.']);
