@@ -129,6 +129,15 @@ tr:hover td{background:var(--input-hover)}
 .filterpop .fitem{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:3px 4px;border-radius:5px}
 .filterpop .fitem:hover{background:var(--input-hover)}
 .filterpop .factions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.filterpop .dtree{gap:0}
+.filterpop .dnode{display:flex;flex-direction:column}
+.filterpop .dnode .dnode{padding-left:16px}
+.filterpop .drow{display:flex;align-items:center;gap:2px}
+.filterpop .dtoggle{width:14px;flex-shrink:0;text-align:center;cursor:pointer;font-size:9px;color:var(--tm);user-select:none}
+.filterpop .drow .fitem{flex:1;padding:3px 4px}
+.filterpop .dchildren{display:flex;flex-direction:column}
+.filterpop .dday{padding-left:16px}
+.filterpop .dday .fitem{padding:2px 4px}
 
 @media (max-width:900px){
   #sumCards{grid-template-columns:repeat(2,1fr)}
@@ -453,6 +462,7 @@ const fmtCr=n=>n.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFraction
 const REM_COLORS={'FG - No Pay':'#c0392b','Casting Pending':'#b9770e','in WIP':'#2471a3',
  'Slabs to be Rolled':'#ca6f1e','FG-CT':'#1e8449','FG-PT':'#16a085','Under Dispatch Plan':'#7d3c98','FG-Other (check mode)':'#555'};
 const PREVIEW_COLS=['UID','Sold To Party Name','Mode','Bal to PGI','FG UR Stock','Difference','VDO in crs.','BTR','PPC Remarks','SO Pr Date','FI Rel Dt(2)','Days Overdue','Release Aging'];
+const DATE_COLS=new Set(['SO Pr Date','FI Rel Dt(2)']);
 // percentages sum to 97 (checkbox col takes the rest) so the table always fits its container width
 const COL_WIDTH_PCT={'UID':6,'Sold To Party Name':15,'Mode':6,'Bal to PGI':7,'FG UR Stock':7,'Difference':7,'VDO in crs.':7,'BTR':5,'PPC Remarks':10,'SO Pr Date':7,'FI Rel Dt(2)':7,'Days Overdue':6,'Release Aging':7};
 
@@ -793,21 +803,107 @@ let ACTIVE_POPUP=null;
 function closeFilterPopup(){ if(ACTIVE_POPUP){ ACTIVE_POPUP.remove(); ACTIVE_POPUP=null; } }
 document.addEventListener('click', closeFilterPopup);
 
+// Year > Month > Day grouping for date-column filters (Excel-style tree)
+function buildDateTree(col){
+  const tree={};
+  RESULT.forEach(r=>{
+    const v=r[col];
+    const label=dispVal(r,col);
+    let y,mIdx,mName,day;
+    if(v instanceof Date && !isNaN(v)){
+      y=v.getFullYear(); mIdx=v.getMonth(); day=v.getDate();
+      mName=v.toLocaleDateString('en-GB',{month:'long'});
+    }else{ y='(Blanks)'; mIdx=-1; mName=''; day=label||'(blank)'; }
+    tree[y]=tree[y]||{};
+    tree[y][mIdx]=tree[y][mIdx]||{name:mName,days:{}};
+    tree[y][mIdx].days[day]=label;
+  });
+  return tree;
+}
+function renderDateTree(tree,selected){
+  const years=Object.keys(tree).sort((a,b)=> a==='(Blanks)'?1 : b==='(Blanks)'?-1 : b-a);
+  return years.map(y=>{
+    const months=tree[y];
+    const monthKeys=Object.keys(months).sort((a,b)=>a-b);
+    const monthsHtml=monthKeys.map(mk=>{
+      const mo=months[mk];
+      const dayKeys=Object.keys(mo.days).sort((a,b)=>(''+a).localeCompare(''+b,undefined,{numeric:true}));
+      const daysHtml=dayKeys.map(dk=>{
+        const leaf=mo.days[dk];
+        const checked=selected.has(leaf);
+        return '<div class="dday"><label class="fitem"><input type="checkbox" class="dchk" data-leaf="'+encodeURIComponent(leaf)+'" '+(checked?'checked':'')+'> <span>'+(dk===''?'(blank)':dk)+'</span></label></div>';
+      }).join('');
+      const leavesForMonth=dayKeys.map(dk=>mo.days[dk]);
+      const mChecked=leavesForMonth.every(l=>selected.has(l));
+      const mIndet=!mChecked && leavesForMonth.some(l=>selected.has(l));
+      return '<div class="dnode dmonth">'+
+        '<div class="drow"><span class="dtoggle" data-toggle>▸</span>'+
+        '<label class="fitem"><input type="checkbox" class="dchk"'+(mChecked?' checked':'')+(mIndet?' data-indet="1"':'')+'> <span>'+(mo.name||'(blank)')+'</span></label></div>'+
+        '<div class="dchildren" style="display:none">'+daysHtml+'</div>'+
+      '</div>';
+    }).join('');
+    const leavesForYear=monthKeys.flatMap(mk=>Object.values(months[mk].days));
+    const yChecked=leavesForYear.every(l=>selected.has(l));
+    const yIndet=!yChecked && leavesForYear.some(l=>selected.has(l));
+    return '<div class="dnode dyear">'+
+      '<div class="drow"><span class="dtoggle" data-toggle>▸</span>'+
+      '<label class="fitem"><input type="checkbox" class="dchk"'+(yChecked?' checked':'')+(yIndet?' data-indet="1"':'')+'> <span>'+y+'</span></label></div>'+
+      '<div class="dchildren" style="display:none">'+monthsHtml+'</div>'+
+    '</div>';
+  }).join('');
+}
+function refreshNodeCheckbox(node){
+  const chk=node.querySelector(':scope > .drow > label > input.dchk');
+  const leaves=[...node.querySelectorAll('.dday input.dchk')];
+  if(!chk||!leaves.length) return;
+  const n=leaves.filter(c=>c.checked).length;
+  chk.checked = n===leaves.length;
+  chk.indeterminate = n>0 && n<leaves.length;
+}
+function wireDateTree(pop){
+  pop.querySelectorAll('.dtoggle').forEach(t=>t.addEventListener('click',()=>{
+    const kids=t.closest('.dnode').querySelector(':scope > .dchildren');
+    const open=kids.style.display!=='none';
+    kids.style.display=open?'none':'block';
+    t.textContent=open?'▸':'▾';
+  }));
+  pop.querySelectorAll('.dnode > .drow input.dchk').forEach(chk=>{
+    if(chk.dataset.indet) chk.indeterminate=true;
+    chk.addEventListener('change',e=>{
+      const node=e.target.closest('.dnode');
+      node.querySelectorAll('.dday input.dchk').forEach(leaf=>leaf.checked=e.target.checked);
+      e.target.indeterminate=false;
+      let cur=node.parentElement.closest('.dnode');
+      while(cur){ refreshNodeCheckbox(cur); cur=cur.parentElement.closest('.dnode'); }
+    });
+  });
+  pop.querySelectorAll('.dday input.dchk').forEach(leaf=>{
+    leaf.addEventListener('change',()=>{
+      let cur=leaf.closest('.dchildren').parentElement;
+      while(cur && cur.classList.contains('dnode')){ refreshNodeCheckbox(cur); cur=cur.parentElement.closest('.dnode'); }
+    });
+  });
+}
+
 function openFilterPopup(col, anchor){
   const wasOpenFor = ACTIVE_POPUP && ACTIVE_POPUP.dataset.col===col;
   closeFilterPopup();
   if(wasOpenFor) return;
+  const isDate=DATE_COLS.has(col);
   const values=distinctFor(col);
   const selected = FILTERS[col] ? FILTERS[col] : new Set(values);
   const pop=document.createElement('div');
   pop.className='filterpop'; pop.dataset.col=col;
   pop.addEventListener('click',e=>e.stopPropagation());
+  const listHtml = isDate
+    ? '<div class="flist dtree">'+renderDateTree(buildDateTree(col),selected)+'</div>'
+    : '<div class="flist">'+values.map(v=>
+        '<label class="fitem"><input type="checkbox" value="'+v.replace(/"/g,'&quot;')+'" '+(selected.has(v)?'checked':'')+'> <span>'+(v===''?'(blank)':v)+'</span></label>'
+      ).join('')+'</div>';
   pop.innerHTML =
     '<input type="text" placeholder="Search values…" class="fsearch">'+
     '<div class="flinks"><a data-act="all">Select all</a><a data-act="none">Clear</a></div>'+
-    '<div class="flist">'+values.map(v=>
-      '<label class="fitem"><input type="checkbox" value="'+v.replace(/"/g,'&quot;')+'" '+(selected.has(v)?'checked':'')+'> <span>'+(v===''?'(blank)':v)+'</span></label>'
-    ).join('')+'</div>'+
+    listHtml+
     '<div class="factions"><button class="btn ghost" type="button" data-act="cancel">Cancel</button><button class="btn" type="button" data-act="ok">OK</button></div>';
   document.body.appendChild(pop);
   const th=anchor.closest('th');
@@ -815,16 +911,35 @@ function openFilterPopup(col, anchor){
   pop.style.top=Math.min(r.bottom+6, window.innerHeight-360)+'px';
   pop.style.left=Math.min(Math.max(r.left,8), window.innerWidth-292)+'px';
   ACTIVE_POPUP=pop;
+  if(isDate) wireDateTree(pop);
 
   pop.querySelector('.fsearch').addEventListener('input',e=>{
     const q=e.target.value.toLowerCase();
-    pop.querySelectorAll('.fitem').forEach(it=>{ it.style.display = it.textContent.toLowerCase().includes(q)?'':'none'; });
+    if(isDate){
+      pop.querySelectorAll('.dday').forEach(d=>{ d.style.display = !q||d.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+      pop.querySelectorAll('.dnode').forEach(n=>{
+        const anyVisible=[...n.querySelectorAll('.dday')].some(d=>d.style.display!=='none');
+        n.style.display = q ? (anyVisible?'':'none') : '';
+        if(q){
+          const kids=n.querySelector(':scope > .dchildren'); const t=n.querySelector(':scope > .drow > .dtoggle');
+          if(anyVisible && kids){ kids.style.display='block'; if(t)t.textContent='▾'; }
+        }
+      });
+    }else{
+      pop.querySelectorAll('.fitem').forEach(it=>{ it.style.display = it.textContent.toLowerCase().includes(q)?'':'none'; });
+    }
   });
-  pop.querySelector('[data-act="all"]').addEventListener('click',()=>pop.querySelectorAll('.fitem input').forEach(c=>c.checked=true));
-  pop.querySelector('[data-act="none"]').addEventListener('click',()=>pop.querySelectorAll('.fitem input').forEach(c=>c.checked=false));
+  pop.querySelector('[data-act="all"]').addEventListener('click',()=>{
+    pop.querySelectorAll('.fitem input').forEach(c=>{c.checked=true;c.indeterminate=false;});
+  });
+  pop.querySelector('[data-act="none"]').addEventListener('click',()=>{
+    pop.querySelectorAll('.fitem input').forEach(c=>{c.checked=false;c.indeterminate=false;});
+  });
   pop.querySelector('[data-act="cancel"]').addEventListener('click',closeFilterPopup);
   pop.querySelector('[data-act="ok"]').addEventListener('click',()=>{
-    const checked=[...pop.querySelectorAll('.fitem input:checked')].map(c=>c.value);
+    const checked = isDate
+      ? [...pop.querySelectorAll('.dday input.dchk:checked')].map(c=>decodeURIComponent(c.dataset.leaf))
+      : [...pop.querySelectorAll('.fitem input:checked')].map(c=>c.value);
     if(checked.length===values.length) delete FILTERS[col];
     else FILTERS[col]=new Set(checked);
     closeFilterPopup(); PAGE=1; renderTable();
