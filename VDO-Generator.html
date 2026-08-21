@@ -51,13 +51,22 @@ body{margin:0;min-height:100vh;background-color:var(--bg-color);color:var(--tx);
 .hdr-r button:hover{background:var(--input-hover);transform:translateY(-2px)}
 .hdr-r button svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #themeToggle{width:40px;padding:0;border-radius:50%;justify-content:center}
-@media (max-width:720px){.top-bar{flex-direction:column;align-items:stretch}.hdr-r{justify-content:center}}
+.hdr-r .upload-btn{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border-color:transparent;position:relative}
+.hdr-r .upload-btn:hover{filter:brightness(1.08);background:var(--md-sys-color-primary)}
+.hdr-r .upload-btn:disabled{opacity:.7;cursor:default;transform:none}
+.file-badge{display:none;align-items:center;gap:8px;padding:0 14px;height:40px;border-radius:var(--radius-pill);background:var(--input-bg);border:var(--glass-border);font-size:12.5px;color:var(--tx);white-space:nowrap;max-width:260px}
+.file-badge svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;color:var(--md-sys-color-primary)}
+.file-badge span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-badge b{color:var(--md-sys-color-primary);font-weight:800;flex-shrink:0}
+.spinner{display:none;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;opacity:.85;animation:spin .7s linear infinite}
+.spinner.on{display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (max-width:900px){.file-badge{max-width:160px}.file-badge span{max-width:70px}}
+@media (max-width:720px){.top-bar{flex-direction:column;align-items:stretch}.hdr-r{justify-content:center;flex-wrap:wrap}.file-badge{max-width:none}}
 .sub{color:var(--tm);font-size:13px;margin:0 0 20px}
 .panel{background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:var(--glass-border);border-radius:var(--radius-l);box-shadow:var(--glass-shadow);padding:20px 22px;margin-bottom:18px}
 .panel h2{margin:0 0 14px;font-size:12.5px;text-transform:uppercase;letter-spacing:1.4px;color:var(--md-sys-color-primary);font-weight:800}
-#drop{border:2px dashed var(--md-sys-color-secondary);border-radius:var(--radius-m);padding:34px;text-align:center;cursor:pointer;transition:.15s;background:var(--input-bg)}
-#drop:hover,#drop.over{border-color:var(--md-sys-color-primary);background:var(--input-hover)}
-#drop .big{font-size:16px;font-weight:700}#drop .sm{color:var(--tm);font-size:13px;margin-top:6px}
+body.drag-over::after{content:'Drop EBTP .xlsx to upload';position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:var(--md-sys-color-on-primary);background:rgba(0,100,147,.55);backdrop-filter:blur(3px);border:3px dashed var(--md-sys-color-on-primary);margin:14px;border-radius:var(--radius-l);pointer-events:none}
 #fname{font-weight:700;color:var(--md-sys-color-primary);font-size:13px}
 .row{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-end}
 .fld{display:flex;flex-direction:column;gap:6px}
@@ -162,20 +171,25 @@ tr:hover td{background:var(--input-hover)}
       </div>
     </div>
     <div class="hdr-r">
+      <span class="file-badge" id="fileBadge" style="display:none">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        <span id="fname"></span><b id="fSnapshot"></b>
+      </span>
+      <button class="reset-btn upload-btn" id="uploadBtn" type="button" title="Upload EBTP" aria-label="Upload EBTP">
+        <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M4 21h16"/></svg>
+        <span>Upload EBTP</span>
+        <span class="spinner" id="uploadSpinner"></span>
+      </button>
+      <input type="file" id="file" accept=".xlsx,.xlsm" style="display:none">
       <button class="reset-btn" id="resetBtn" type="button" title="Reset" aria-label="Reset"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg> Reset</button>
       <button id="themeToggle" type="button" title="Theme" aria-label="Toggle theme"><svg id="themeIcon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path></svg></button>
     </div>
   </div>
 </div>
 <p class="sub">Upload an EBTP export → FI(2)-Released + past promise-date orders are scored, PPC-remarked, and dumped to Excel. Runs fully offline.</p>
+<p class="status" id="status">Waiting for file…</p>
 
-<div class="panel"><h2>1 · Upload EBTP</h2>
-<div id="drop"><div class="big">Drop EBTP .xlsx here, or click to browse</div>
-<div class="sm">Reads the <b>WS</b> sheet automatically</div></div>
-<input type="file" id="file" accept=".xlsx,.xlsm" style="display:none">
-<p class="status" id="status">Waiting for file… <span id="fname"></span></p></div>
-
-<div class="panel" id="controls" style="display:none"><h2>2 · Options &amp; Filters</h2>
+<div class="panel" id="controls" style="display:none"><h2>1 · Options &amp; Filters</h2>
 <div class="row">
  <div class="fld"><label class="lab">As-of (snapshot) date</label><input type="date" id="asof"><span class="hint" id="asofNote"></span></div>
  <div class="fld"><label class="lab">Take orders promised on / before</label><input type="date" id="cutoff"><span class="hint">defaults to snapshot date · push forward to include more</span></div>
@@ -193,7 +207,7 @@ tr:hover td{background:var(--input-hover)}
 <div style="margin-top:18px"><button class="btn" id="runbtn" disabled>Generate</button></div>
 </div>
 
-<div class="panel" id="results" style="display:none"><h2>3 · Result</h2>
+<div class="panel" id="results" style="display:none"><h2>2 · Result</h2>
 <div id="sumCards"></div><div id="dist"></div>
 <div style="margin:6px 0 16px;display:flex;gap:10px;flex-wrap:wrap">
  <button class="btn" id="dlbtn" disabled>⤓ Download all (.xlsx)</button>
@@ -457,8 +471,19 @@ function parseDateFromName(name){
 function mkDate(y,mo,d){ if(mo<1||mo>12||d<1||d>31) return null;
   return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
 
+function fmtBadgeDate(iso){
+  const d=new Date(iso+'T00:00:00');
+  return isNaN(d) ? iso : d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+}
+
+function setUploading(on){
+  $('#uploadBtn').disabled=on;
+  $('#uploadSpinner').classList.toggle('on', on);
+}
+
 function handleFile(file){
-  $('#fname').textContent=file.name; $('#status').textContent='Reading workbook…';
+  setUploading(true);
+  $('#status').textContent='Reading workbook…';
   const fr=new FileReader();
   fr.onload=e=>{
     try{
@@ -470,12 +495,18 @@ function handleFile(file){
       $('#status').textContent='Loaded "'+sn+'" — '+(rows.length-1)+' rows. Set options and Generate.';
       $('#controls').style.display='block'; $('#runbtn').disabled=false;
       const detected=parseDateFromName(file.name);
-      $('#asof').value=detected||todayStr();
-      $('#cutoff').value=$('#asof').value;
+      const snapshot=detected||todayStr();
+      $('#asof').value=snapshot;
+      $('#cutoff').value=snapshot;
       $('#asofNote').textContent=detected?('snapshot date read from filename'):('no date in filename — defaulting to today');
+      $('#fname').textContent=file.name;
+      $('#fSnapshot').textContent=' · EBTP as of '+fmtBadgeDate(snapshot);
+      $('#fileBadge').style.display='inline-flex';
       buildPartyList();
     }catch(err){$('#status').textContent='Error reading file: '+err.message;}
+    finally{ setUploading(false); }
   };
+  fr.onerror=()=>{ $('#status').textContent='Error reading file.'; setUploading(false); };
   fr.readAsArrayBuffer(file);
 }
 
@@ -862,12 +893,19 @@ setTheme(localStorage.getItem('jspl-hub-theme') || 'dark');
 
 // wire up
 window.addEventListener('DOMContentLoaded',()=>{
-  const dz=$('#drop'), fi=$('#file');
-  dz.addEventListener('click',()=>fi.click());
+  const fi=$('#file');
+  $('#uploadBtn').addEventListener('click',()=>fi.click());
   fi.addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0]);});
-  ['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over');}));
-  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over');}));
-  dz.addEventListener('drop',e=>{if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+  // whole page stays a drop target even though the visible drop-zone moved into the header
+  let dragDepth=0;
+  ['dragover','dragenter'].forEach(ev=>document.body.addEventListener(ev,e=>{
+    e.preventDefault(); dragDepth++; document.body.classList.add('drag-over');
+  }));
+  document.body.addEventListener('dragleave',()=>{ if(--dragDepth<=0){ dragDepth=0; document.body.classList.remove('drag-over'); } });
+  document.body.addEventListener('drop',e=>{
+    e.preventDefault(); dragDepth=0; document.body.classList.remove('drag-over');
+    if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
   $('#psearch').addEventListener('input',e=>renderParties(e.target.value));
   $('#runbtn').addEventListener('click',run);
   $('#dlbtn').addEventListener('click',downloadAll);
