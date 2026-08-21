@@ -95,9 +95,9 @@ input[type=text]{width:100%}
 table{border-collapse:collapse;width:100%;font-size:13px}
 th.chkcol,td.chkcol{width:36px;text-align:center;padding-left:0;padding-right:0}
 tr.rowsel td{background:rgba(56,189,248,.14)}
-th{position:sticky;top:0;background:var(--glass-bg-solid);color:var(--md-sys-color-primary);text-align:left;padding:0;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--br);white-space:nowrap;z-index:2}
-th .thhead{display:flex;align-items:center;gap:6px;padding:11px 10px;overflow:hidden}
-th .thlabel{cursor:pointer;user-select:none;flex:1;overflow:hidden;text-overflow:ellipsis}
+th{position:sticky;top:0;background:var(--glass-bg-solid);color:var(--md-sys-color-primary);text-align:left;padding:0;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--br);white-space:normal;z-index:2}
+th .thhead{display:flex;align-items:flex-start;gap:6px;padding:9px 10px}
+th .thlabel{cursor:pointer;user-select:none;flex:1;white-space:normal;word-break:break-word;line-height:1.3;padding-top:2px}
 th .thlabel:hover{color:var(--tx)}
 th .fbtn{width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tm);flex-shrink:0}
 th .fbtn:hover{background:var(--input-hover);color:var(--tx)}
@@ -123,6 +123,12 @@ tr:hover td{background:var(--input-hover)}
 
 @media (max-width:900px){
   #sumCards{grid-template-columns:repeat(2,1fr)}
+  /* below this width, fixed proportional columns get squeezed past legibility —
+     switch to natural column widths and let the table scroll horizontally instead */
+  #preview{overflow-x:auto}
+  #preview table{table-layout:auto;min-width:920px}
+  #preview td{white-space:nowrap;max-width:none;overflow:visible;text-overflow:clip}
+  th .thlabel{white-space:nowrap}
 }
 @media (max-width:720px){
   .wrap{padding:16px 12px 40px}
@@ -281,7 +287,7 @@ let RESULT = [];       // processed+filtered records
 let ALL_PARTIES = [];
 
 const BUCKETS = ['TPIP','HOLD','RWIP','WIPH','HWIP','TEMP','QNCH','WIP(MP)','WIPCP(CP)'];
-const OUT_COLS = ['Sales Office','Customer TYPE','MODE','Mode-Book','SO No.','SOItm','UID',
+const OUT_COLS = ['Sales Office','Customer TYPE','MODE','Mode','SO No.','SOItm','UID',
  'Sold To Party Name','Ship To Party City','Ext Grade','Int Grade','Thick','Width','Length Plan',
  'Piece Wt.','Order Qty_Live','Bal to PGI','FG UR Stock','Difference','Ass Rate','VDO in crs.',
  'BTR','Slab Stock','NO PLAN','PPC Remarks','Current Order Status','FI Rel Sta','FI Rel Dt(2)',
@@ -401,7 +407,7 @@ function process(asof, cutoff){
     const releaseAging = relDt ? Math.floor((prd-relDt)/86400000) : null;   // SO Pr Date − FI Rel Dt(2)
     const rec={
       'Sales Office':office,'Customer TYPE':office.startsWith('Export')?'Export':'Domestic',
-      'MODE':md,'Mode-Book':mb,'SO No.':sono,'SOItm':soitm,
+      'MODE':md,'Mode':mb,'SO No.':sono,'SOItm':soitm,
       'UID':String(sono==null?'':sono).trim()+String(soitm==null?'':soitm).trim(),
       'Sold To Party Name':party,'Ship To Party City':get(row,'Ship To Party City'),
       'Ext Grade':get(row,'Ext Grade'),'Int Grade':get(row,'Int Grade'),'Thick':get(row,'Thick'),
@@ -424,9 +430,9 @@ function process(asof, cutoff){
 const fmtCr=n=>n.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const REM_COLORS={'FG - No Pay':'#c0392b','Casting Pending':'#b9770e','in WIP':'#2471a3',
  'Slabs to be Rolled':'#ca6f1e','FG-CT':'#1e8449','FG-PT':'#16a085','Under Dispatch Plan':'#7d3c98','FG-Other (check mode)':'#555'};
-const PREVIEW_COLS=['UID','Sold To Party Name','Mode-Book','Bal to PGI','FG UR Stock','Difference','VDO in crs.','BTR','PPC Remarks','SO Pr Date','FI Rel Dt(2)','Days Overdue','Release Aging'];
+const PREVIEW_COLS=['UID','Sold To Party Name','Mode','Bal to PGI','FG UR Stock','Difference','VDO in crs.','BTR','PPC Remarks','SO Pr Date','FI Rel Dt(2)','Days Overdue','Release Aging'];
 // percentages sum to 97 (checkbox col takes the rest) so the table always fits its container width
-const COL_WIDTH_PCT={'UID':6,'Sold To Party Name':15,'Mode-Book':6,'Bal to PGI':7,'FG UR Stock':7,'Difference':7,'VDO in crs.':7,'BTR':5,'PPC Remarks':10,'SO Pr Date':7,'FI Rel Dt(2)':7,'Days Overdue':6,'Release Aging':7};
+const COL_WIDTH_PCT={'UID':6,'Sold To Party Name':15,'Mode':6,'Bal to PGI':7,'FG UR Stock':7,'Difference':7,'VDO in crs.':7,'BTR':5,'PPC Remarks':10,'SO Pr Date':7,'FI Rel Dt(2)':7,'Days Overdue':6,'Release Aging':7};
 
 let FILTERS={};       // col -> Set of allowed display values (absent = no filter)
 let SORT={col:null,dir:1};
@@ -507,8 +513,11 @@ function run(){
       return mode==='include'? inSet : !inSet;});
   }
   FILTERS={}; SORT={col:null,dir:1}; PAGE=1;
-  // everything selected by default, except rows with Release Aging below 20
-  SELECTED_ROWS=new Set(RESULT.filter(r=>!(r['Release Aging']!=null && r['Release Aging']<20)).map(r=>String(r['UID'])));
+  // everything selected by default, except rows with Release Aging below 20 or a Mode starting with HOLD
+  SELECTED_ROWS=new Set(RESULT.filter(r=>
+    !(r['Release Aging']!=null && r['Release Aging']<20) &&
+    !String(r['Mode']||'').trim().toUpperCase().startsWith('HOLD')
+  ).map(r=>String(r['UID'])));
   renderSummary();
 }
 
