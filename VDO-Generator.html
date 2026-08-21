@@ -180,6 +180,11 @@ tr:hover td{background:var(--input-hover)}
         <span>Upload EBTP</span>
         <span class="spinner" id="uploadSpinner"></span>
       </button>
+      <button class="reset-btn upload-btn" id="onlineBtn" type="button" title="Online EBTP Refresh" aria-label="Online EBTP Refresh">
+        <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg>
+        <span id="onlineBtnLabel">Online EBTP Refresh</span>
+        <span class="spinner" id="onlineSpinner"></span>
+      </button>
       <input type="file" id="file" accept=".xlsx,.xlsm" style="display:none">
       <button class="reset-btn" id="resetBtn" type="button" title="Reset" aria-label="Reset"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg> Reset</button>
       <button id="themeToggle" type="button" title="Theme" aria-label="Toggle theme"><svg id="themeIcon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path></svg></button>
@@ -479,6 +484,98 @@ function fmtBadgeDate(iso){
 function setUploading(on){
   $('#uploadBtn').disabled=on;
   $('#uploadSpinner').classList.toggle('on', on);
+}
+
+/* ── Online EBTP fetch (same published Google Sheet as Rake-Planner) ── */
+const EBTP_SHEET_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vQEKS6uq6epbkSmpv548hSG63WVUiFwKLXctpeM3G8NMeXJ_ZJaTCuFj95n4gTRuhchM_T4q_kp5_au/pub?gid=0&single=true&output=csv";
+
+function tryXHR(url){
+  return new Promise((res,rej)=>{
+    const x=new XMLHttpRequest();
+    x.open('GET',url,true);
+    x.timeout=10000;
+    x.onload=()=>x.status>=200&&x.status<300?res(x.responseText):rej(new Error('XHR '+x.status));
+    x.onerror=()=>rej(new Error('XHR error'));
+    x.ontimeout=()=>rej(new Error('XHR timeout'));
+    x.send();
+  });
+}
+function tryIframe(url){
+  return new Promise((res,rej)=>{
+    const iframe=document.createElement('iframe');
+    iframe.style.cssText='position:fixed;width:1px;height:1px;top:-999px;left:-999px;opacity:0;';
+    iframe.sandbox='allow-same-origin';
+    const t=setTimeout(()=>{try{document.body.removeChild(iframe);}catch(e){}rej(new Error('iframe timeout'));},12000);
+    iframe.onload=()=>{
+      clearTimeout(t);
+      try{
+        const txt=iframe.contentDocument?.body?.innerText||iframe.contentDocument?.documentElement?.innerText||'';
+        document.body.removeChild(iframe);
+        txt.includes(',')&&txt.length>50?res(txt):rej(new Error('iframe: no csv'));
+      }catch(e){try{document.body.removeChild(iframe);}catch(_){}rej(e);}
+    };
+    iframe.onerror=()=>{clearTimeout(t);try{document.body.removeChild(iframe);}catch(e){}rej(new Error('iframe error'));};
+    document.body.appendChild(iframe);
+    iframe.src=url;
+  });
+}
+function tryFetch(proxyUrl,json){
+  return fetch(proxyUrl,{cache:'no-store',mode:'cors',credentials:'omit'})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);
+      return json?r.json().then(d=>{const t=d?.contents||d?.data||'';if(!t)throw new Error('empty');return t;}):r.text();
+    });
+}
+
+function setOnlineFetching(on,label){
+  $('#onlineBtn').disabled=on;
+  $('#onlineSpinner').classList.toggle('on', on);
+  $('#onlineBtnLabel').textContent=label||'Online EBTP Refresh';
+}
+
+function handleCSV(text,label){
+  const wb=XLSX.read(text,{type:'string',cellDates:true});
+  const sn=wb.SheetNames[0];
+  const ws=wb.Sheets[sn];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  RAW={headers:rows[0],rows:rows};
+  $('#status').textContent='Loaded online EBTP — '+(rows.length-1)+' rows. Set options and Generate.';
+  $('#controls').style.display='block'; $('#runbtn').disabled=false;
+  const snapshot=todayStr();
+  $('#asof').value=snapshot;
+  $('#cutoff').value=snapshot;
+  $('#asofNote').textContent='online fetch — defaulting snapshot to today';
+  $('#fname').textContent=label||'Online EBTP';
+  $('#fSnapshot').textContent=' · EBTP as of '+fmtBadgeDate(snapshot);
+  $('#fileBadge').style.display='inline-flex';
+  buildPartyList();
+}
+
+async function fetchOnlineEBTP(){
+  setOnlineFetching(true);
+  const enc=encodeURIComponent(EBTP_SHEET_URL);
+  const strats=[
+    {n:'XHR',           f:()=>tryXHR(EBTP_SHEET_URL)},
+    {n:'Iframe',        f:()=>tryIframe(EBTP_SHEET_URL)},
+    {n:'corsproxy.io',  f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
+    {n:'allorigins/raw',f:()=>tryFetch('https://api.allorigins.win/raw?url='+enc,false)},
+    {n:'allorigins/get',f:()=>tryFetch('https://api.allorigins.win/get?url='+enc,true)},
+    {n:'jsonp.afeld.me',f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
+  ];
+  let lastErr='All methods blocked';
+  for(const{n,f}of strats){
+    setOnlineFetching(true,'Trying '+n+'…');
+    try{
+      const text=await f();
+      if(!text||text.length<50)throw new Error('empty');
+      if(!text.split('\n')[0].includes(','))throw new Error('not CSV');
+      setOnlineFetching(true,'✓ '+n+' — parsing…');
+      handleCSV(text,'Online EBTP ('+n+')');
+      setOnlineFetching(false);
+      return;
+    }catch(e){lastErr=n+': '+(e.name==='AbortError'?'timeout':e.message);}
+  }
+  $('#status').textContent='Online EBTP refresh failed: '+lastErr+'. Upload the .xlsx manually instead.';
+  setOnlineFetching(false);
 }
 
 function handleFile(file){
@@ -896,6 +993,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   const fi=$('#file');
   $('#uploadBtn').addEventListener('click',()=>fi.click());
   fi.addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0]);});
+  $('#onlineBtn').addEventListener('click',fetchOnlineEBTP);
   // whole page stays a drop target even though the visible drop-zone moved into the header
   let dragDepth=0;
   ['dragover','dragenter'].forEach(ev=>document.body.addEventListener(ev,e=>{
