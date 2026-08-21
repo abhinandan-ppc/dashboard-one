@@ -235,9 +235,11 @@ const OUT_COLS = ['Sales Office','Customer TYPE','MODE','Mode-Book','SO No.','SO
  'SO Pr Date','Days Overdue','WIP & TPIP'].concat(BUCKETS);
 
 // Trial/defence accounts — pre-checked for exclusion in the party picker by default (overridable).
-const EXCLUDED_PARTIES = ['DUMMY CUSTOMER','DEFENCE (NAVY)','AAKANKSHA'];
+// Matched fuzzily (substring, not exact) since EBTP dumps often carry the fuller legal name
+// (e.g. "M/S AAKANKSHA TRADERS", "DEFENCE(NAVY)" with no space) rather than the bare keyword.
+const TRIAL_PARTY_KEYWORDS = ['DUMMY','DEFENCE','DEFENSE','AAKANKSHA'];
 const normParty = v => String(v||'').trim().toUpperCase();
-const EXCLUDED_PARTIES_SET = new Set(EXCLUDED_PARTIES.map(normParty));
+const isTrialParty = p => { const n=normParty(p); return TRIAL_PARTY_KEYWORDS.some(k=>n.indexOf(k)>=0); };
 
 const num = v => { const n = parseFloat(v); return isNaN(n)?0:n; };
 
@@ -418,7 +420,8 @@ function buildPartyList(){
   const set=new Set();
   for(let r=1;r<RAW.rows.length;r++){const v=RAW.rows[r][i];if(v!=null&&String(v).trim())set.add(String(v).trim());}
   ALL_PARTIES=[...set].sort();
-  CHECKED_PARTIES=new Set(ALL_PARTIES.filter(p=>EXCLUDED_PARTIES_SET.has(normParty(p))));
+  const mode=document.querySelector('input[name=pmode]:checked').value;
+  CHECKED_PARTIES = mode==='exclude' ? new Set(ALL_PARTIES.filter(isTrialParty)) : new Set();
   renderParties('');
 }
 function renderParties(filter){
@@ -446,7 +449,8 @@ function run(){
     RESULT=RESULT.filter(r=>{const inSet=setP.has(String(r['Sold To Party Name']||'').trim());
       return mode==='include'? inSet : !inSet;});
   }
-  FILTERS={}; SORT={col:null,dir:1}; PAGE=1; SELECTED_ROWS=new Set();
+  FILTERS={}; SORT={col:null,dir:1}; PAGE=1;
+  SELECTED_ROWS=new Set(RESULT.map(r=>String(r['UID']))); // everything selected by default
   renderSummary();
 }
 
@@ -497,6 +501,10 @@ function getFiltered(){
     });
   }
   return rows;
+}
+
+function getSelectedRows(){
+  return getFiltered().filter(r=>SELECTED_ROWS.has(String(r['UID'])));
 }
 
 function distinctFor(col){
@@ -620,9 +628,9 @@ function openFilterPopup(col, anchor){
   });
 }
 
-// ── Pivot: PPC Remarks vs Bal to PGI and VDO in Crs. (reflects the active filters) ──
+// ── Pivot: PPC Remarks vs Bal to PGI and VDO in Crs. (reflects filters + row checkboxes) ──
 function renderPivot(){
-  const rows=getFiltered();
+  const rows=getSelectedRows();
   const agg={};
   rows.forEach(r=>{
     const k=r['PPC Remarks']||'(blank)';
@@ -689,6 +697,15 @@ window.addEventListener('DOMContentLoaded',()=>{
   $('#runbtn').addEventListener('click',run);
   $('#dlbtn').addEventListener('click',download);
   $('#clearParties').addEventListener('click',()=>{CHECKED_PARTIES=new Set(); document.querySelectorAll('#partyList input').forEach(c=>c.checked=false);});
+  document.querySelectorAll('input[name=pmode]').forEach(r=>r.addEventListener('change',e=>{
+    // trial accounts should exclude themselves in "exclude" mode, and never silently
+    // narrow "include" mode down to just those three — so flip them with the mode.
+    const mode=e.target.value;
+    ALL_PARTIES.filter(isTrialParty).forEach(p=>{
+      if(mode==='exclude') CHECKED_PARTIES.add(p); else CHECKED_PARTIES.delete(p);
+    });
+    renderParties($('#psearch').value);
+  }));
   $('#resetBtn').addEventListener('click',()=>location.reload());
   $('#themeToggle').addEventListener('click',()=>{
     const next = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
