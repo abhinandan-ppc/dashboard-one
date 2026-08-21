@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800;9..40,900&display=swap" rel="stylesheet">
 <style>
 :root{
+  color-scheme:light;
   --md-sys-color-primary:#006493; --md-sys-color-on-primary:#ffffff;
   --md-sys-color-primary-container:#cbe6ff; --md-sys-color-on-primary-container:#001e30;
   --md-sys-color-secondary:#0ea5e9;
@@ -18,6 +19,7 @@
   --radius-xs:6px; --radius-s:12px; --radius-m:16px; --radius-l:22px; --radius-pill:100px;
 }
 [data-theme="dark"]{
+  color-scheme:dark;
   --md-sys-color-primary:#8dcdff; --md-sys-color-on-primary:#00344f;
   --md-sys-color-primary-container:#004b70; --md-sys-color-on-primary-container:#cbe6ff;
   --md-sys-color-secondary:#38bdf8;
@@ -32,7 +34,7 @@ body{margin:0;min-height:100vh;background-color:var(--bg-color);color:var(--tx);
 ::-webkit-scrollbar{width:8px;height:8px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(150,150,150,.35);border-radius:10px}
-.wrap{max-width:1200px;margin:0 auto;padding:24px 20px 60px}
+.wrap{max-width:1440px;width:100%;margin:0 auto;padding:24px 20px 60px}
 .top-wrapper{margin-bottom:20px}
 .top-bar{background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);padding:12px 20px;border-radius:var(--radius-m);border:var(--glass-border);box-shadow:var(--glass-shadow);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .top-l{display:flex;align-items:center;gap:14px;min-width:0}
@@ -82,12 +84,14 @@ input[type=text]{width:100%}
 #dist{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
 .pill{color:#fff;font-size:12px;padding:5px 11px;border-radius:20px;font-weight:700}
 .pill b{margin-left:4px}
-.tabs{display:flex;gap:6px;margin-bottom:14px}
-.tabbtn{padding:9px 18px;border-radius:var(--radius-pill);font-size:12.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;background:var(--input-bg);color:var(--tm);border:1px solid var(--br);cursor:pointer;transition:.15s}
-.tabbtn:hover{background:var(--input-hover)}
-.tabbtn.on{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border-color:transparent}
-#preview,#pivotWrap{overflow:auto;border:1px solid var(--br);border-radius:var(--radius-s);max-height:560px}
+.section-h{margin:24px 0 10px}
+.section-h:first-child{margin-top:0}
+.section-h h3{margin:0;font-size:12.5px;text-transform:uppercase;letter-spacing:1.4px;color:var(--md-sys-color-primary);font-weight:800}
+#preview{overflow:auto;border:1px solid var(--br);border-radius:var(--radius-s);max-height:460px}
+#pivotWrap{overflow:auto;border:1px solid var(--br);border-radius:var(--radius-s);max-height:360px}
 table{border-collapse:collapse;width:100%;font-size:13px}
+th.chkcol,td.chkcol{width:40px;text-align:center;padding-left:0;padding-right:0}
+tr.rowsel td{background:rgba(56,189,248,.14)}
 th{position:sticky;top:0;background:var(--glass-bg-solid);color:var(--md-sys-color-primary);text-align:left;padding:0;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--br);white-space:nowrap;z-index:2}
 th .thhead{display:flex;align-items:center;gap:10px;padding:14px 16px}
 th .thlabel{cursor:pointer;user-select:none;flex:1}
@@ -103,7 +107,7 @@ tr:hover td{background:var(--input-hover)}
 .note{font-size:12.5px;color:var(--tm);line-height:1.7}
 .note b{color:var(--md-sys-color-primary)}
 .pager{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12.5px;color:var(--tm);flex-wrap:wrap}
-.pager select{background:var(--input-bg);border:1px solid var(--br);color:var(--tx);border-radius:6px;padding:4px 6px;font-family:inherit}
+.pager select{background:var(--input-bg);border:1px solid var(--br);color:var(--tx);border-radius:6px;padding:4px 6px;font-family:inherit;color-scheme:inherit}
 .filterpop{position:fixed;min-width:220px;max-width:280px;max-height:340px;display:flex;flex-direction:column;background:var(--glass-bg-solid);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:var(--glass-border);border-radius:var(--radius-m);box-shadow:var(--glass-shadow);padding:10px;z-index:900}
 .filterpop input[type=text]{margin-bottom:8px}
 .filterpop .flinks{display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px}
@@ -112,6 +116,24 @@ tr:hover td{background:var(--input-hover)}
 .filterpop .fitem{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:3px 4px;border-radius:5px}
 .filterpop .fitem:hover{background:var(--input-hover)}
 .filterpop .factions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+
+@media (max-width:900px){
+  #sumCards{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:720px){
+  .wrap{padding:16px 12px 40px}
+  .panel{padding:16px}
+  .row{gap:14px}
+  th .thhead{padding:10px 10px}
+  td{padding:10px 10px}
+  #pivotWrap td,#pivotWrap th{padding:10px 12px}
+}
+@media (max-width:560px){
+  #sumCards{grid-template-columns:1fr}
+  .radios{gap:10px}
+  .pager{justify-content:center;text-align:center}
+  .filterpop{left:12px !important;right:12px !important;max-width:none;width:auto}
+}
 </style></head><body><div class="wrap">
 <div class="top-wrapper">
   <div class="top-bar">
@@ -164,13 +186,11 @@ tr:hover td{background:var(--input-hover)}
 <div class="panel" id="results" style="display:none"><h2>3 · Result</h2>
 <div id="sumCards"></div><div id="dist"></div>
 <div style="margin:6px 0 16px"><button class="btn" id="dlbtn" disabled>⤓ Download dump (.xlsx)</button></div>
-<div class="tabs">
- <button class="tabbtn on" id="tabData" type="button">Data</button>
- <button class="tabbtn" id="tabPivot" type="button">Pivot · PPC Remarks</button>
-</div>
+<div class="section-h"><h3>Data</h3></div>
 <div id="preview"></div>
-<div id="pivotWrap" style="display:none"></div>
 <div class="pager" id="pager"></div>
+<div class="section-h"><h3>Pivot · PPC Remarks vs Bal to PGI &amp; VDO in Crs.</h3></div>
+<div id="pivotWrap"></div>
 </div>
 
 <div class="panel"><h2>PPC Remarks logic</h2><p class="note">
@@ -352,6 +372,7 @@ const PREVIEW_COLS=['UID','Sold To Party Name','Mode-Book','Bal to PGI','FG UR S
 let FILTERS={};       // col -> Set of allowed display values (absent = no filter)
 let SORT={col:null,dir:1};
 let PAGE=1, PAGE_SIZE=100;
+let SELECTED_ROWS=new Set(); // row UIDs checked in the data table
 
 function todayStr(){const d=new Date();return d.toISOString().slice(0,10);}
 
@@ -425,7 +446,7 @@ function run(){
     RESULT=RESULT.filter(r=>{const inSet=setP.has(String(r['Sold To Party Name']||'').trim());
       return mode==='include'? inSet : !inSet;});
   }
-  FILTERS={}; SORT={col:null,dir:1}; PAGE=1;
+  FILTERS={}; SORT={col:null,dir:1}; PAGE=1; SELECTED_ROWS=new Set();
   renderSummary();
 }
 
@@ -490,20 +511,29 @@ function renderTable(){
   if(PAGE>totalPages) PAGE=totalPages;
   const pageRows = PAGE_SIZE===Infinity ? rows : rows.slice((PAGE-1)*PAGE_SIZE, PAGE*PAGE_SIZE);
 
-  const th='<tr>'+PREVIEW_COLS.map(c=>{
+  const pageUids = pageRows.map(r=>String(r['UID']));
+  const allOnPageSelected = pageUids.length>0 && pageUids.every(u=>SELECTED_ROWS.has(u));
+  const someOnPageSelected = pageUids.some(u=>SELECTED_ROWS.has(u));
+
+  const th='<tr><th class="chkcol"><input type="checkbox" id="selAllChk"'+(allOnPageSelected?' checked':'')+'></th>'+PREVIEW_COLS.map(c=>{
     const active = !!FILTERS[c];
     const arrow = SORT.col===c ? (SORT.dir===1?' ▲':' ▼') : '';
     return '<th><div class="thhead"><span class="thlabel" data-sort="'+c+'">'+c+arrow+'</span>'+
       '<span class="fbtn'+(active?' active':'')+'" data-filter="'+c+'" title="Filter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16l-6 8v6l-4-2v-4z"/></svg></span></div></th>';
   }).join('')+'</tr>';
 
-  const tb=pageRows.map(r=>'<tr>'+PREVIEW_COLS.map(c=>{
-    const v=dispVal(r,c);
-    const style=c==='PPC Remarks'?' style="color:#fff;background:'+(REM_COLORS[r[c]]||'#555')+';font-weight:600"':'';
-    return '<td'+style+'>'+v+'</td>';}).join('')+'</tr>').join('');
+  const tb=pageRows.map(r=>{
+    const uid=String(r['UID']), sel=SELECTED_ROWS.has(uid);
+    return '<tr'+(sel?' class="rowsel"':'')+'><td class="chkcol"><input type="checkbox" data-rowchk="'+uid.replace(/"/g,'&quot;')+'"'+(sel?' checked':'')+'></td>'+
+      PREVIEW_COLS.map(c=>{
+        const v=dispVal(r,c);
+        const style=c==='PPC Remarks'?' style="color:#fff;background:'+(REM_COLORS[r[c]]||'#555')+';font-weight:600"':'';
+        return '<td'+style+'>'+v+'</td>';
+      }).join('')+'</tr>';
+  }).join('');
 
   $('#preview').innerHTML='<table><thead>'+th+'</thead><tbody>'+
-    (tb || '<tr><td class="muted" colspan="'+PREVIEW_COLS.length+'">No rows match the current filters.</td></tr>')+
+    (tb || '<tr><td class="muted" colspan="'+(PREVIEW_COLS.length+1)+'">No rows match the current filters.</td></tr>')+
     '</tbody></table>';
 
   $('#preview').querySelectorAll('[data-sort]').forEach(el=>el.addEventListener('click',()=>{
@@ -514,6 +544,20 @@ function renderTable(){
   $('#preview').querySelectorAll('[data-filter]').forEach(el=>el.addEventListener('click',e=>{
     e.stopPropagation(); openFilterPopup(el.dataset.filter, el);
   }));
+  $('#preview').querySelectorAll('[data-rowchk]').forEach(el=>el.addEventListener('change',e=>{
+    const uid=el.dataset.rowchk;
+    if(e.target.checked) SELECTED_ROWS.add(uid); else SELECTED_ROWS.delete(uid);
+    renderTable();
+  }));
+  const selAll=$('#selAllChk');
+  if(selAll){
+    selAll.indeterminate = someOnPageSelected && !allOnPageSelected;
+    selAll.addEventListener('change',e=>{
+      if(e.target.checked) pageUids.forEach(u=>SELECTED_ROWS.add(u));
+      else pageUids.forEach(u=>SELECTED_ROWS.delete(u));
+      renderTable();
+    });
+  }
 
   renderPager(rows.length, totalPages);
   renderPivot();
@@ -597,14 +641,6 @@ function renderPivot(){
     '</tbody></table>';
 }
 
-function switchTab(tab){
-  $('#tabData').classList.toggle('on', tab==='data');
-  $('#tabPivot').classList.toggle('on', tab==='pivot');
-  $('#preview').style.display = tab==='data' ? '' : 'none';
-  $('#pager').style.display = tab==='data' ? '' : 'none';
-  $('#pivotWrap').style.display = tab==='pivot' ? '' : 'none';
-}
-
 function download(){
   const data=[OUT_COLS];
   RESULT.forEach(r=>data.push(OUT_COLS.map(c=>{
@@ -653,8 +689,6 @@ window.addEventListener('DOMContentLoaded',()=>{
   $('#runbtn').addEventListener('click',run);
   $('#dlbtn').addEventListener('click',download);
   $('#clearParties').addEventListener('click',()=>{CHECKED_PARTIES=new Set(); document.querySelectorAll('#partyList input').forEach(c=>c.checked=false);});
-  $('#tabData').addEventListener('click',()=>switchTab('data'));
-  $('#tabPivot').addEventListener('click',()=>switchTab('pivot'));
   $('#resetBtn').addEventListener('click',()=>location.reload());
   $('#themeToggle').addEventListener('click',()=>{
     const next = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
