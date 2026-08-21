@@ -454,9 +454,8 @@ function run(){
       return mode==='include'? inSet : !inSet;});
   }
   FILTERS={}; SORT={col:null,dir:1}; PAGE=1;
-  // everything selected by default, except rows released less than 20 days after promise
-  // (Release Aging = SO Pr Date − FI Rel Dt(2), so "released 20+ days late" means <= -20)
-  SELECTED_ROWS=new Set(RESULT.filter(r=>!(r['Release Aging']!=null && r['Release Aging']>-20)).map(r=>String(r['UID'])));
+  // everything selected by default, except rows with Release Aging below 20
+  SELECTED_ROWS=new Set(RESULT.filter(r=>!(r['Release Aging']!=null && r['Release Aging']<20)).map(r=>String(r['UID'])));
   renderSummary();
 }
 
