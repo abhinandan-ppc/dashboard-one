@@ -86,20 +86,19 @@ input[type=text]{width:100%}
 .tabbtn{padding:9px 18px;border-radius:var(--radius-pill);font-size:12.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;background:var(--input-bg);color:var(--tm);border:1px solid var(--br);cursor:pointer;transition:.15s}
 .tabbtn:hover{background:var(--input-hover)}
 .tabbtn.on{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border-color:transparent}
-#preview,#pivotWrap{overflow:auto;border:1px solid var(--br);border-radius:var(--radius-s);max-height:520px}
-table{border-collapse:collapse;width:100%;font-size:12.5px}
-th{position:sticky;top:0;background:var(--glass-bg-solid);color:var(--md-sys-color-primary);text-align:left;padding:0;font-size:11px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--br);white-space:nowrap;z-index:2}
-th .thhead{display:flex;align-items:center;gap:6px;padding:8px 8px}
+#preview,#pivotWrap{overflow:auto;border:1px solid var(--br);border-radius:var(--radius-s);max-height:560px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{position:sticky;top:0;background:var(--glass-bg-solid);color:var(--md-sys-color-primary);text-align:left;padding:0;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--br);white-space:nowrap;z-index:2}
+th .thhead{display:flex;align-items:center;gap:10px;padding:14px 16px}
 th .thlabel{cursor:pointer;user-select:none;flex:1}
 th .thlabel:hover{color:var(--tx)}
-th .fbtn{width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tm);flex-shrink:0}
+th .fbtn{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tm);flex-shrink:0}
 th .fbtn:hover{background:var(--input-hover);color:var(--tx)}
 th .fbtn.active{color:var(--md-sys-color-primary)}
-th .fbtn svg{width:11px;height:11px}
-.searchrow th{padding:4px 6px;background:var(--glass-bg)}
-.searchrow input{width:100%;padding:4px 6px;font-size:11.5px;border-radius:6px;border:1px solid var(--br);background:var(--input-bg);color:var(--tx);font-family:inherit;text-transform:none;letter-spacing:normal}
-td{padding:6px 10px;border-bottom:1px solid var(--br);white-space:nowrap;color:var(--tx)}
+th .fbtn svg{width:12px;height:12px}
+td{padding:12px 16px;border-bottom:1px solid var(--br);white-space:nowrap;color:var(--tx)}
 tr:hover td{background:var(--input-hover)}
+#pivotWrap td,#pivotWrap th{padding:14px 18px}
 .muted{color:var(--tm);font-size:12px;padding:8px}
 .note{font-size:12.5px;color:var(--tm);line-height:1.7}
 .note b{color:var(--md-sys-color-primary)}
@@ -151,13 +150,13 @@ tr:hover td{background:var(--input-hover)}
 </div>
 <div style="margin-top:18px"><label class="lab">Sold-to-Party filter</label>
  <div class="radios" style="margin:8px 0">
-  <label class="chk"><input type="radio" name="pmode" value="include" checked> Include only selected</label>
-  <label class="chk"><input type="radio" name="pmode" value="exclude"> Exclude selected</label>
+  <label class="chk"><input type="radio" name="pmode" value="include"> Include only selected</label>
+  <label class="chk"><input type="radio" name="pmode" value="exclude" checked> Exclude selected</label>
   <button class="btn ghost" id="clearParties" type="button">Clear selection</button>
  </div>
  <input type="text" id="psearch" placeholder="Search parties… (leave none selected = all parties)">
  <div id="partyList"></div>
- <p class="hint" style="margin-top:8px">Defence/trial accounts (DUMMY CUSTOMER, DEFENCE (NAVY), AAKANKSHA) are always excluded and won't appear here.</p>
+ <p class="hint" style="margin-top:8px">Defence/trial accounts (DUMMY CUSTOMER, DEFENCE (NAVY), AAKANKSHA) are pre-selected for exclusion by default — uncheck any of them to include it.</p>
 </div>
 <div style="margin-top:18px"><button class="btn" id="runbtn" disabled>Generate</button></div>
 </div>
@@ -215,7 +214,7 @@ const OUT_COLS = ['Sales Office','Customer TYPE','MODE','Mode-Book','SO No.','SO
  'BTR','Slab Stock','NO PLAN','PPC Remarks','Current Order Status','FI Rel Sta','FI Rel Dt(2)',
  'SO Pr Date','Days Overdue','WIP & TPIP'].concat(BUCKETS);
 
-// Trial/defence accounts excluded from every run by default — never real dispatch orders.
+// Trial/defence accounts — pre-checked for exclusion in the party picker by default (overridable).
 const EXCLUDED_PARTIES = ['DUMMY CUSTOMER','DEFENCE (NAVY)','AAKANKSHA'];
 const normParty = v => String(v||'').trim().toUpperCase();
 const EXCLUDED_PARTIES_SET = new Set(EXCLUDED_PARTIES.map(normParty));
@@ -303,7 +302,6 @@ function process(asof, cutoff){
   for(let r=1;r<rows.length;r++){
     const row=rows[r]; if(!row||row.length===0) continue;
     const party=get(row,'Sold To Party Name');
-    if(EXCLUDED_PARTIES_SET.has(normParty(party))) continue;               // defence/trial accounts
     const fi=String(get(row,'FI Rel Sta')||'').trim();
     if(fi!=='FI Released(2)') continue;
     const prd=parseAnyDate(get(row,'SO Pr Date')); if(!prd) continue;      // blank/unparseable promise date removed
@@ -352,7 +350,6 @@ const REM_COLORS={'FG - No Pay':'#c0392b','Casting Pending':'#b9770e','in WIP':'
 const PREVIEW_COLS=['UID','Sold To Party Name','Mode-Book','Bal to PGI','FG UR Stock','Difference','VDO in crs.','BTR','PPC Remarks','Days Overdue'];
 
 let FILTERS={};       // col -> Set of allowed display values (absent = no filter)
-let COL_SEARCH={};    // col -> substring
 let SORT={col:null,dir:1};
 let PAGE=1, PAGE_SIZE=100;
 
@@ -393,11 +390,14 @@ function handleFile(file){
   fr.readAsArrayBuffer(file);
 }
 
+let CHECKED_PARTIES=new Set(); // persists across re-renders (e.g. typing in the party search box)
+
 function buildPartyList(){
   const i=RAW.headers.findIndex(h=>String(h).trim()==='Sold To Party Name');
   const set=new Set();
   for(let r=1;r<RAW.rows.length;r++){const v=RAW.rows[r][i];if(v!=null&&String(v).trim())set.add(String(v).trim());}
-  ALL_PARTIES=[...set].filter(p=>!EXCLUDED_PARTIES_SET.has(normParty(p))).sort();
+  ALL_PARTIES=[...set].sort();
+  CHECKED_PARTIES=new Set(ALL_PARTIES.filter(p=>EXCLUDED_PARTIES_SET.has(normParty(p))));
   renderParties('');
 }
 function renderParties(filter){
@@ -405,7 +405,10 @@ function renderParties(filter){
   const f=filter.toLowerCase();
   ALL_PARTIES.filter(p=>p.toLowerCase().includes(f)).slice(0,400).forEach(p=>{
     const lab=document.createElement('label'); lab.className='pchk';
-    lab.innerHTML='<input type="checkbox" value="'+p.replace(/"/g,'&quot;')+'"> <span>'+p+'</span>';
+    lab.innerHTML='<input type="checkbox" value="'+p.replace(/"/g,'&quot;')+'" '+(CHECKED_PARTIES.has(p)?'checked':'')+'> <span>'+p+'</span>';
+    lab.querySelector('input').addEventListener('change',e=>{
+      if(e.target.checked) CHECKED_PARTIES.add(p); else CHECKED_PARTIES.delete(p);
+    });
     box.appendChild(lab);
   });
 }
@@ -416,13 +419,13 @@ function run(){
   RESULT=process(asof, cutoff);
   // party include/exclude
   const mode=document.querySelector('input[name=pmode]:checked').value;
-  const picked=[...document.querySelectorAll('#partyList input:checked')].map(c=>c.value);
+  const picked=[...CHECKED_PARTIES];
   if(picked.length){
     const setP=new Set(picked);
     RESULT=RESULT.filter(r=>{const inSet=setP.has(String(r['Sold To Party Name']||'').trim());
       return mode==='include'? inSet : !inSet;});
   }
-  FILTERS={}; COL_SEARCH={}; SORT={col:null,dir:1}; PAGE=1;
+  FILTERS={}; SORT={col:null,dir:1}; PAGE=1;
   renderSummary();
 }
 
@@ -455,9 +458,7 @@ function dispVal(r,c){
 
 function rowMatches(r){
   for(const c of PREVIEW_COLS){
-    const v=dispVal(r,c);
-    if(FILTERS[c] && !FILTERS[c].has(v)) return false;
-    if(COL_SEARCH[c] && !v.toLowerCase().includes(COL_SEARCH[c].toLowerCase())) return false;
+    if(FILTERS[c] && !FILTERS[c].has(dispVal(r,c))) return false;
   }
   return true;
 }
@@ -490,21 +491,18 @@ function renderTable(){
   const pageRows = PAGE_SIZE===Infinity ? rows : rows.slice((PAGE-1)*PAGE_SIZE, PAGE*PAGE_SIZE);
 
   const th='<tr>'+PREVIEW_COLS.map(c=>{
-    const active = !!(FILTERS[c] || COL_SEARCH[c]);
+    const active = !!FILTERS[c];
     const arrow = SORT.col===c ? (SORT.dir===1?' ▲':' ▼') : '';
     return '<th><div class="thhead"><span class="thlabel" data-sort="'+c+'">'+c+arrow+'</span>'+
       '<span class="fbtn'+(active?' active':'')+'" data-filter="'+c+'" title="Filter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16l-6 8v6l-4-2v-4z"/></svg></span></div></th>';
   }).join('')+'</tr>';
-
-  const searchRow='<tr class="searchrow">'+PREVIEW_COLS.map(c=>
-    '<th><input type="text" placeholder="Search…" data-search="'+c+'" value="'+(COL_SEARCH[c]||'').replace(/"/g,'&quot;')+'"></th>').join('')+'</tr>';
 
   const tb=pageRows.map(r=>'<tr>'+PREVIEW_COLS.map(c=>{
     const v=dispVal(r,c);
     const style=c==='PPC Remarks'?' style="color:#fff;background:'+(REM_COLORS[r[c]]||'#555')+';font-weight:600"':'';
     return '<td'+style+'>'+v+'</td>';}).join('')+'</tr>').join('');
 
-  $('#preview').innerHTML='<table><thead>'+th+searchRow+'</thead><tbody>'+
+  $('#preview').innerHTML='<table><thead>'+th+'</thead><tbody>'+
     (tb || '<tr><td class="muted" colspan="'+PREVIEW_COLS.length+'">No rows match the current filters.</td></tr>')+
     '</tbody></table>';
 
@@ -515,11 +513,6 @@ function renderTable(){
   }));
   $('#preview').querySelectorAll('[data-filter]').forEach(el=>el.addEventListener('click',e=>{
     e.stopPropagation(); openFilterPopup(el.dataset.filter, el);
-  }));
-  $('#preview').querySelectorAll('[data-search]').forEach(el=>el.addEventListener('input',e=>{
-    const c=el.dataset.search, v=e.target.value;
-    if(v) COL_SEARCH[c]=v; else delete COL_SEARCH[c];
-    PAGE=1; renderTable();
   }));
 
   renderPager(rows.length, totalPages);
@@ -659,7 +652,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   $('#psearch').addEventListener('input',e=>renderParties(e.target.value));
   $('#runbtn').addEventListener('click',run);
   $('#dlbtn').addEventListener('click',download);
-  $('#clearParties').addEventListener('click',()=>{document.querySelectorAll('#partyList input').forEach(c=>c.checked=false);});
+  $('#clearParties').addEventListener('click',()=>{CHECKED_PARTIES=new Set(); document.querySelectorAll('#partyList input').forEach(c=>c.checked=false);});
   $('#tabData').addEventListener('click',()=>switchTab('data'));
   $('#tabPivot').addEventListener('click',()=>switchTab('pivot'));
   $('#resetBtn').addEventListener('click',()=>location.reload());
