@@ -1168,7 +1168,7 @@ function installFrameHeaderControls(){
             var srcAvatar = document.getElementById('userAvatar');
             var srcName = document.getElementById('userName');
             var srcDomain = document.getElementById('userDomain');
-            userAvatarImg.src = srcAvatar ? srcAvatar.src : '';
+            if(srcAvatar && srcAvatar.src) userAvatarImg.src = srcAvatar.src; else userAvatarImg.removeAttribute('src');
             panelName.textContent = srcName ? srcName.textContent : '';
             panelDomain.textContent = srcDomain ? srcDomain.textContent : '';
           };
@@ -1189,11 +1189,16 @@ function installFrameHeaderControls(){
               userAvatarPanel.style.display = 'flex';
             }
           });
-          doc.addEventListener('click', function(e){
-            if(userAvatarPanel && userAvatarPanel.style.display === 'flex' && !userAvatarPanel.contains(e.target) && e.target !== userAvatarBtn){
-              userAvatarPanel.style.display = 'none';
-            }
-          });
+          if(!doc.__hubUserPanelClickBound){
+            doc.__hubUserPanelClickBound = true;
+            doc.addEventListener('click', function(e){
+              var panel = doc.getElementById('hubFrameUserPanel');
+              var btn = doc.getElementById('hubFrameHeaderControls');
+              if(panel && panel.style.display === 'flex' && !panel.contains(e.target) && (!btn || !btn.contains(e.target))){
+                panel.style.display = 'none';
+              }
+            });
+          }
         }
 
         homeBtn.addEventListener('click', function(){ document.getElementById('homeBtn').click(); });
@@ -1493,6 +1498,7 @@ itemForm.addEventListener("submit", function(e){
   var name = fName.value.trim();
   var path = fPath.value.trim();
   if(!name || !path) return;
+  if(/^\s*(javascript|data|vbscript):/i.test(path)) return;
   if(editingId){
     var idx = items.findIndex(function(i){return i.id===editingId;});
     if(idx>-1) items[idx] = {id:editingId, name:name, path:path, icon:selectedIcon};
@@ -1567,7 +1573,7 @@ setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
     if(stageEl) stageEl.style.display = '';
     if(loginWrap) loginWrap.style.display = 'none';
     if(userMenu) userMenu.style.display = '';
-    if(userAvatar) userAvatar.src = u.picture || '';
+    if(userAvatar){ if(u.picture) userAvatar.src = u.picture; else userAvatar.removeAttribute('src'); }
     if(userName) userName.textContent = u.name || u.email || '';
     if(userDomain) userDomain.textContent = u.email || '';
   }).catch(function(){

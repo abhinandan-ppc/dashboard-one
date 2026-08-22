@@ -389,6 +389,7 @@ const EPS = 1e-3;
 const up = x => String(x==null?'':x).trim().toUpperCase();
 const r3 = x => Math.round(Number(x)*1000)/1000;
 const num = x => { const n = Number(x); return isFinite(n)?n:0; };
+const escHtml = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 /* ---------- fuzzy grade matching (external grades are hand-typed and inconsistent) ---------- */
 const normGrade = s => String(s==null?'':s).toUpperCase().replace(/[^A-Z0-9]/g,'');   // strip spaces/hyphens/punctuation, e.g. "E 250-BR" & "E250BR" -> "E250BR"
@@ -838,7 +839,7 @@ function closeMapPanel(box){
 }
 function renderFieldMapping(boxId,toggleId,fields,cols,map,sheetName,defaultNote,onChange){
   const box=document.getElementById(boxId);
-  const sheetNote = sheetName ? `Auto-recognised sheet “${sheetName}” — batch columns mapped automatically` : defaultNote;
+  const sheetNote = sheetName ? `Auto-recognised sheet “${escHtml(sheetName)}” — batch columns mapped automatically` : defaultNote;
   box.innerHTML = `<button type="button" class="pormap-toggle" id="${toggleId}"><span class="maphd">${sheetNote}</span><span class="mapArrow"></span></button>`;
   box.classList.add('show');
   const panelId=boxId+'-panel';
@@ -848,8 +849,8 @@ function renderFieldMapping(boxId,toggleId,fields,cols,map,sheetName,defaultNote
     `<div class="mapgrid">`+fields.map(f=>{
       const sel=map[f.k]||'';
       const options=['<option value="">— none —</option>'].concat(
-        cols.map(c=>`<option value="${String(c).replace(/"/g,'&quot;')}"${c===sel?' selected':''}>${c}</option>`)).join('');
-      return `<label class="maprow${f.req?' req':''}"><span>${f.label||f.k}${f.req?' *':''}</span>
+        cols.map(c=>`<option value="${escHtml(c)}"${c===sel?' selected':''}>${escHtml(c)}</option>`)).join('');
+      return `<label class="maprow${f.req?' req':''}"><span>${escHtml(f.label||f.k)}${f.req?' *':''}</span>
         <select data-fk="${f.k}">${options}</select></label>`;
     }).join('')+`</div>`;
   const toggleBtn=box.querySelector('#'+toggleId);
@@ -1027,7 +1028,7 @@ function setAnalysisDetail(title,rows,cols,rowClass,summary){
   const el=document.getElementById('analysisDetail');
   if(!el) return;
   const info=summary||`${rows.length.toLocaleString()} matching row${rows.length===1?'':'s'}`;
-  el.innerHTML=`<h3>${title}</h3><p>${info}</p>${table(rows,cols,rowClass)}`;
+  el.innerHTML=`<h3>${escHtml(title)}</h3><p>${escHtml(info)}</p>${table(rows,cols,rowClass)}`;
 }
 function mkChart(id,config,onPick){
   const el=document.getElementById(id);
@@ -1303,7 +1304,7 @@ function table(rows,cols,rowClass){
   const body=rows.slice(0,300).map(r=>{
     const cls=rowClass?rowClass(r):'';
     return `<tr class="${cls}">`+cols.map(c=>{let v=r[c.k];
-      if(v==null)v='';else if(c.fmt!=null)v=fmt(v,c.fmt);return `<td class="${c.num?'num':''}">${v}</td>`;}).join('')+'</tr>';
+      if(v==null)v='';else if(c.fmt!=null)v=fmt(v,c.fmt);return `<td class="${c.num?'num':''}">${escHtml(v)}</td>`;}).join('')+'</tr>';
   }).join('');
   const more=rows.length>300?`<div class="more">Showing first 300 of ${rows.length.toLocaleString()} rows — full set is in the Excel download.</div>`:'';
   return `<div class="tw"><table>${head}${body}</table></div>${more}`;

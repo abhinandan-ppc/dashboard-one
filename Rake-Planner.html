@@ -1029,6 +1029,9 @@ const CITY_COORDS={
 /* ═══════════════════ UTILS ═══════════════════ */
 const n2=v=>(isNaN(v)||v==null)?0:v;
 const fmt=(v,d=0)=>n2(v).toLocaleString('en-IN',{maximumFractionDigits:d,minimumFractionDigits:0});
+// Escape text pulled from uploaded EBTP data before it is interpolated into raw HTML
+// strings handed to Leaflet (divIcon/bindTooltip build innerHTML directly, unlike JSX).
+const escHtml=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 function buildPivot(rows,selR,excHold){
   let src=selR.size>0?rows.filter(r=>selR.has(r['Remarks'])):rows;
@@ -1175,7 +1178,7 @@ const RK_PRIORITY_LABELS=[
    1. Score every order by: stock phase (FG→WIP→BTR→short) × FI release
    2. Sort globally: best score first; within same score, group by city
       so nearby destinations cluster together in one rake naturally
-   3. Fill each rake to exactly RAKE_CAP (2450 MT) — open new rake
+   3. Fill each rake to exactly RAKE_CAP (2850 MT) — open new rake
       only when current is full (sequential fill)
    4. After sequential pass, run gap-fill: leftover orders are tried
       against each existing rake from the one with most remaining space
@@ -2302,7 +2305,7 @@ function OverviewMapModal({rows,onClose}){
             font-family:'DM Sans',DM Sans,system-ui,sans-serif;font-size:11px;font-weight:700;
             color:${clr};letter-spacing:.04em;
             text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 8px rgba(0,0,0,.8)">
-            ${ct.name.length>18?ct.name.slice(0,16)+'\u2026':ct.name}
+            ${escHtml(ct.name.length>18?ct.name.slice(0,16)+'\u2026':ct.name)}
           </div>
         </div>`,[24,24]);
       try{
@@ -2317,10 +2320,10 @@ function OverviewMapModal({rows,onClose}){
               if(n)custMap[n]=(custMap[n]||0)+n2(parseFloat(o['Bal to PGI']));
             });
             const custEntries=Object.entries(custMap).sort((a,b)=>b[1]-a[1]);
-            const custRows=custEntries.slice(0,8).map(([nm,b])=>`<tr><td style="padding:2px 8px 2px 0;color:#94a3b8;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:145px">${nm}</td><td style="padding:2px 0;color:#f59e0b;text-align:right;font-size:10px;white-space:nowrap">${fmt(b)}</td></tr>`).join('');
+            const custRows=custEntries.slice(0,8).map(([nm,b])=>`<tr><td style="padding:2px 8px 2px 0;color:#94a3b8;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:145px">${escHtml(nm)}</td><td style="padding:2px 0;color:#f59e0b;text-align:right;font-size:10px;white-space:nowrap">${fmt(b)}</td></tr>`).join('');
             const moreRow=custEntries.length>8?`<tr><td colspan="2" style="color:#64748b;font-size:9px;padding-top:2px">+${custEntries.length-8} more</td></tr>`:'';
             return '<div style="font-family:DM Sans,sans-serif;min-width:190px;max-width:240px">'
-              +'<div style="font-family:DM Sans,DM Sans,sans-serif;font-size:13px;font-weight:700;margin-bottom:3px">'+ct.name+'</div>'
+              +'<div style="font-family:DM Sans,DM Sans,sans-serif;font-size:13px;font-weight:700;margin-bottom:3px">'+escHtml(ct.name)+'</div>'
               +'<div style="color:#38bdf8;font-size:11px">Bal: <b>'+fmt(ct.bal)+' MT</b>'
               +' · '+(ct.direction==='forward'?'→ Fwd':'← Rev '+ct.distFromHub+'km')
               +(!ct.included?' <span style="color:#f43f5e">✕ Excl</span>':'')
@@ -2328,7 +2331,7 @@ function OverviewMapModal({rows,onClose}){
               +(custRows?'<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:3px;padding-top:4px;max-height:130px;overflow-y:auto"><table style="width:100%;border-collapse:collapse">'+custRows+moreRow+'</table></div>':'')
               +'<div style="font-size:10px;color:#64748b;margin-top:4px">Click to view orders</div>'
               +'</div>';
-          }catch(e){return '<div>'+ct.name+'</div>';}
+          }catch(e){return '<div>'+escHtml(ct.name)+'</div>';}
         },{direction:'right',offset:[8,0],sticky:false,interactive:true,opacity:.97});
         // Click → open DrillPanel with city orders
         cityMarker.on('click',()=>{
@@ -2623,7 +2626,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
             font-family:'DM Sans',DM Sans,system-ui,sans-serif;font-size:11px;font-weight:700;
             color:${clr};letter-spacing:.04em;
             text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 8px rgba(0,0,0,.8)">
-            ${ct.name.length>18?ct.name.slice(0,16)+'…':ct.name}
+            ${escHtml(ct.name.length>18?ct.name.slice(0,16)+'…':ct.name)}
           </div>
         </div>`,[24,24]);
       {
@@ -2643,10 +2646,10 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
               custMap[n]=(custMap[n]||0)+n2(parseFloat(o['Bal to PGI']));
             });
             const custEntries=Object.entries(custMap).sort((a,b)=>b[1]-a[1]);
-            const custRows=custEntries.slice(0,8).map(([name,bal])=>`<tr><td style="padding:2px 8px 2px 0;color:#94a3b8;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:145px">${name}</td><td style="padding:2px 0;color:#f59e0b;text-align:right;font-size:10px;white-space:nowrap">${fmt(bal)}</td></tr>`).join('');
+            const custRows=custEntries.slice(0,8).map(([name,bal])=>`<tr><td style="padding:2px 8px 2px 0;color:#94a3b8;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:145px">${escHtml(name)}</td><td style="padding:2px 0;color:#f59e0b;text-align:right;font-size:10px;white-space:nowrap">${fmt(bal)}</td></tr>`).join('');
             const moreRow=custEntries.length>8?`<tr><td colspan="2" style="color:#64748b;font-size:9px;padding-top:2px">+${custEntries.length-8} more</td></tr>`:'';
             return '<div style="font-family:DM Sans,sans-serif;min-width:190px;max-width:240px">'
-              +'<div style="font-family:DM Sans,DM Sans,sans-serif;font-size:13px;font-weight:700;margin-bottom:3px">'+ct.name+'</div>'
+              +'<div style="font-family:DM Sans,DM Sans,sans-serif;font-size:13px;font-weight:700;margin-bottom:3px">'+escHtml(ct.name)+'</div>'
               +'<div style="color:#38bdf8;font-size:11px">Bal: <b>'+fmt(ct.bal)+' MT</b>'
               +' · '+(ct.direction==='forward'?'→ Fwd':'← Rev '+ct.distFromHub+'km')
               +(!ct.included?' <span style="color:#f43f5e">✕ Excl</span>':'')
@@ -2703,7 +2706,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
             +'<div style="font-size:12px;color:'+rc.txt+'">Rake Siding: <b>'+baseCode+'</b></div>'
             +'<div style="font-size:12px;color:#9da8bb">Hub · '+rakePlan.rakes.length+' rake'+(rakePlan.rakes.length!==1?'s':'')+'</div>'
             +_costHtml
-            +(hubCity?'<div style="font-size:10px;color:#64748b;margin-top:4px">Click to view '+hubCity.name+' orders</div>':'')
+            +(hubCity?'<div style="font-size:10px;color:#64748b;margin-top:4px">Click to view '+escHtml(hubCity.name)+' orders</div>':'')
             +'</div>',
             {direction:'top',permanent:false,offset:[0,-18]})
           .on('click',()=>{
@@ -4454,7 +4457,7 @@ function UploadScreen({onFile,onCSV,autoFetchEnabled=true}){
   const feats=[
     ['🗺️','City Mapping','160+ cities + ML siding dictionary'],
     ['📊','Pivot Analysis','Region › Siding drill-down'],
-    ['🚂','Rake Predictor','FG→WIP→BTR · 2450 MT'],
+    ['🚂','Rake Predictor','FG→WIP→BTR · 2850 MT'],
     ['🚛','Transport Plan','Forward/reverse optimizer'],
     ['📥','Excel Export','Full DD format · per-rake'],
   ];

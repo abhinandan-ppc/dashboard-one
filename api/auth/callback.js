@@ -64,9 +64,15 @@ export default async function handler(req) {
   });
   if (!tokenRes.ok) return new Response('Google sign-in failed during token exchange.', { status: 401 });
   const tokens = await tokenRes.json();
+  if (!tokens.id_token) return new Response('Google sign-in failed: no ID token returned.', { status: 401 });
 
   const payloadB64 = tokens.id_token.split('.')[1];
-  const claims = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+  let claims;
+  try {
+    claims = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+  } catch {
+    return new Response('Google sign-in failed: malformed ID token.', { status: 401 });
+  }
 
   const allowedDomains = (process.env.ALLOWED_DOMAIN || '').split(',').map(d => d.trim().toLowerCase()).filter(Boolean);
   const emailDomain = (claims.email || '').split('@')[1]?.toLowerCase();

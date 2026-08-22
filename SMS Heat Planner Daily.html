@@ -885,11 +885,8 @@ function smsOptimize(s){
   });
   t.dropped=t.planHeats-t.alloc;
   
-  var bf1Used = Math.min(S.bf[0].plan, t.hmUsed);
-  var bf2Used = t.hmUsed - bf1Used;
-  
-  recordEdge('BF-1', 'HM_POOL', S.bf[0].plan, 0);
-  recordEdge('BF-2', 'HM_POOL', S.bf[1].plan, 0);
+  recordEdge('BF-1', 'HM_POOL', s.bf[0].plan, 0);
+  recordEdge('BF-2', 'HM_POOL', s.bf[1].plan, 0);
   
   if (t.excessHM > 0) recordEdge('HM_POOL', 'GRANSHOT', t.excessHM, 0);
 
@@ -1632,7 +1629,6 @@ if (fw) {
     fw.addEventListener('touchmove', pointerMove, { passive: false });
     fw.addEventListener('touchend', pointerUp);
 }
-document.addEventListener('touchend', pointerUp); // Catch escapes
 
 // ---- EVENTS ----
 function syncInputs(){

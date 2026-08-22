@@ -1419,6 +1419,7 @@ window.recalc = function(){
 
   const s1_sum = eff_sms1 > 0 ? (eff_sms1 + s1tc1_t) : 1;
   const s2_sum = eff_sms2 > 0 ? eff_sms2 : 1;
+  const s2raw_sum = sms2_raw > 0 ? sms2_raw : 1;
   $('casterVisualBox').innerHTML = `
     <p class="sec-lbl" style="margin-top:0; margin-bottom:12px;">📊 Allocation Share Tracking (% wise Visualization)</p>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
@@ -1434,10 +1435,10 @@ window.recalc = function(){
       </div>
       <div>
         <label style="color:var(--mo); font-size:11px; font-weight:800">SMS 2 Allocation Ratios</label>
-        <div style="font-size:12px; margin-bottom:8px; color:var(--tx); font-weight:600">TC1 (Twin Slab): <b style="color:var(--sg)">${(tc1/s2_sum*100).toFixed(1)}%</b> | Overflow to SMS1: <b style="color:var(--gd)">${(s2s1_t/sms2_raw*100).toFixed(1)}%</b></div>
+        <div style="font-size:12px; margin-bottom:8px; color:var(--tx); font-weight:600">TC1 (Twin Slab): <b style="color:var(--sg)">${(tc1/s2_sum*100).toFixed(1)}%</b> | Overflow to SMS1: <b style="color:var(--gd)">${(s2s1_t/s2raw_sum*100).toFixed(1)}%</b></div>
         <div style="height:12px; background:var(--input-bg); border-radius:var(--radius-pill); overflow:hidden; display:flex; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
           <div style="width:${(tc1/s2_sum*100)}%; background:var(--sg)"></div>
-          <div style="width:${(s2s1_t/sms2_raw*100)}%; background:var(--gd)"></div>
+          <div style="width:${(s2s1_t/s2raw_sum*100)}%; background:var(--gd)"></div>
         </div>
       </div>
     </div>`;

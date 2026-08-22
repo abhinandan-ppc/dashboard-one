@@ -234,7 +234,6 @@ setTheme(localStorage.getItem('smsPlannerTheme') || 'dark');
           if (d.value && typeof window.__hub_handle_theme === 'function') {
             window.__hub_handle_theme(d.value);
           }
-          try { localStorage.setItem('jspl-hub-theme', d.value); } catch(err){}
         } else if (d.type === 'reset') {
           if (typeof window.__hub_handle_reset === 'function') {
             try { window.__hub_handle_reset(); } catch(err){ location.reload(); }
