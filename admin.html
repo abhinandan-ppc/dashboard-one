@@ -28,7 +28,26 @@ html, body { min-height: 100%; margin: 0; }
 body { font-family: 'DM Sans', system-ui, sans-serif; color: var(--tx); background: var(--bg-color); min-height: 100dvh; }
 button { font: inherit; cursor: pointer; border: none; outline: none; }
 input, select { font: inherit; color: inherit; }
-select option { background: #1e293b; color: #f8fafc; }
+
+.dd { position: relative; flex-shrink: 0; }
+.dd-btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px;
+  border-radius: var(--radius-pill); border: var(--glass-border); background: var(--input-bg);
+  color: var(--tx); font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.dd-btn:hover { background: var(--glass-bg-hover, var(--input-bg)); }
+.dd-btn svg { width: 14px; height: 14px; stroke: var(--tm); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.16s ease; flex-shrink: 0; }
+.dd.open .dd-btn svg { transform: rotate(180deg); }
+.dd-menu {
+  position: absolute; top: calc(100% + 8px); left: 0; min-width: 100%; width: max-content; max-width: 280px;
+  max-height: 280px; overflow-y: auto; background: var(--glass-bg-solid); backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px); border: var(--glass-border); border-radius: var(--radius-m);
+  box-shadow: var(--glass-shadow); padding: 6px; display: none; flex-direction: column; gap: 2px; z-index: 50;
+}
+.dd.open .dd-menu { display: flex; }
+.dd-item { padding: 8px 12px; border-radius: 10px; font-size: 13px; color: var(--tx); cursor: pointer; white-space: nowrap; }
+.dd-item:hover { background: var(--input-hover, rgba(148,163,184,0.14)); }
+.dd-item.on { background: rgba(0,100,147,0.16); color: var(--primary); font-weight: 700; }
 a { color: var(--primary); }
 
 .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 80px; }
@@ -127,18 +146,24 @@ a { color: var(--primary); }
   <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
     <input type="search" id="searchInput" placeholder="Search by name or email&hellip;"
       style="flex:1;min-width:200px;padding:9px 14px;border-radius:999px;border:var(--glass-border);background:var(--input-bg);color:var(--tx);font-size:13px">
-    <select id="statusFilter" style="padding:9px 14px;border-radius:999px;border:var(--glass-border);background:var(--input-bg);color:var(--tx);font-size:13px">
-      <option value="">All statuses</option>
-      <option value="pending">Pending</option>
-      <option value="approved">Approved</option>
-      <option value="blocked">Blocked</option>
-      <option value="admin">Admins</option>
-    </select>
-    <select id="pageFilter" style="padding:9px 14px;border-radius:999px;border:var(--glass-border);background:var(--input-bg);color:var(--tx);font-size:13px">
-      <option value="">Any page access</option>
-      <option value="__all__">Has "all pages"</option>
-      <option value="__dev__">Has dev preview access</option>
-    </select>
+    <div class="dd" id="statusFilterDd" data-value="">
+      <button type="button" class="dd-btn"><span class="dd-label">All statuses</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+      <div class="dd-menu">
+        <div class="dd-item on" data-value="">All statuses</div>
+        <div class="dd-item" data-value="pending">Pending</div>
+        <div class="dd-item" data-value="approved">Approved</div>
+        <div class="dd-item" data-value="blocked">Blocked</div>
+        <div class="dd-item" data-value="admin">Admins</div>
+      </div>
+    </div>
+    <div class="dd" id="pageFilterDd" data-value="">
+      <button type="button" class="dd-btn"><span class="dd-label">Any page access</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+      <div class="dd-menu">
+        <div class="dd-item on" data-value="">Any page access</div>
+        <div class="dd-item" data-value="__all__">Has "all pages"</div>
+        <div class="dd-item" data-value="__dev__">Has dev preview access</div>
+      </div>
+    </div>
     <span class="sub" id="filterCount"></span>
   </div>
 
@@ -272,6 +297,54 @@ function userCard(user){
   );
 }
 
+// Lightweight custom dropdown so filter menus match the app's glass theme —
+// native <select> popups are styled by the OS and can't be themed reliably.
+function initDropdown(rootId, onChange){
+  var root = document.getElementById(rootId);
+  var btn = root.querySelector('.dd-btn');
+  var label = root.querySelector('.dd-label');
+  var menu = root.querySelector('.dd-menu');
+
+  function closeAll(){ document.querySelectorAll('.dd.open').forEach(function(d){ d.classList.remove('open'); }); }
+
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    var willOpen = !root.classList.contains('open');
+    closeAll();
+    if(willOpen) root.classList.add('open');
+  });
+  menu.addEventListener('click', function(e){
+    var item = e.target.closest('.dd-item');
+    if(!item) return;
+    var value = item.getAttribute('data-value') || '';
+    root.setAttribute('data-value', value);
+    label.textContent = item.textContent;
+    menu.querySelectorAll('.dd-item').forEach(function(it){ it.classList.toggle('on', it === item); });
+    root.classList.remove('open');
+    onChange(value);
+  });
+
+  return {
+    getValue: function(){ return root.getAttribute('data-value') || ''; },
+    setItems: function(items){
+      var current = root.getAttribute('data-value') || '';
+      menu.innerHTML = items.map(function(it){
+        return '<div class="dd-item' + (it.value === current ? ' on' : '') + '" data-value="' + esc(it.value) + '">' + esc(it.label) + '</div>';
+      }).join('');
+      var stillValid = items.some(function(it){ return it.value === current; });
+      if(!stillValid && items.length){
+        root.setAttribute('data-value', items[0].value);
+        label.textContent = items[0].label;
+        menu.querySelector('.dd-item').classList.add('on');
+      }
+    }
+  };
+}
+document.addEventListener('click', function(){ document.querySelectorAll('.dd.open').forEach(function(d){ d.classList.remove('open'); }); });
+
+var statusFilterDd = initDropdown('statusFilterDd', function(){ render(); });
+var pageFilterDd = initDropdown('pageFilterDd', function(){ render(); });
+
 var registry = {};
 
 function renderCard(email){
@@ -286,22 +359,22 @@ function renderCard(email){
 }
 
 function populatePageFilterOptions(){
-  var select = document.getElementById('pageFilter');
-  if(!select) return;
-  var current = select.value;
   var pages = KNOWN_PAGES.slice();
   Object.keys(registry.users || {}).forEach(function(e){
     (registry.users[e].pages || []).forEach(function(p){ if(pages.indexOf(p) === -1) pages.push(p); });
   });
-  var head = '<option value="">Any page access</option><option value="__all__">Has "all pages"</option><option value="__dev__">Has dev preview access</option>';
-  select.innerHTML = head + pages.map(function(p){ return '<option value="' + esc(p) + '">' + esc(p) + '</option>'; }).join('');
-  if(pages.indexOf(current) !== -1 || current === '__all__' || current === '__dev__') select.value = current;
+  var items = [
+    { value: '', label: 'Any page access' },
+    { value: '__all__', label: 'Has "all pages"' },
+    { value: '__dev__', label: 'Has dev preview access' },
+  ].concat(pages.map(function(p){ return { value: p, label: p }; }));
+  pageFilterDd.setItems(items);
 }
 
 function matchesFilters(email, user){
   var search = (document.getElementById('searchInput').value || '').trim().toLowerCase();
-  var status = document.getElementById('statusFilter').value;
-  var pageF = document.getElementById('pageFilter').value;
+  var status = statusFilterDd.getValue();
+  var pageF = pageFilterDd.getValue();
 
   if(search){
     var hay = (email + ' ' + (user.name || '')).toLowerCase();
@@ -522,8 +595,6 @@ document.getElementById('usersHost').addEventListener('change', function(e){
 });
 
 document.getElementById('searchInput').addEventListener('input', render);
-document.getElementById('statusFilter').addEventListener('change', render);
-document.getElementById('pageFilter').addEventListener('change', render);
 
 loadMe();
 refresh();
