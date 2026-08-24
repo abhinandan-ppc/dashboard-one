@@ -116,9 +116,6 @@ a { color: var(--primary); }
       <h1>User &amp; Access Management</h1>
       <div class="sub" id="signedInAs">Loading&hellip;</div>
     </div>
-    <div class="hd-actions">
-      <button class="btn" id="refreshBtn">Refresh</button>
-    </div>
   </div>
 
   <div id="bannerHost"></div>
@@ -519,10 +516,21 @@ async function mutate(email, payload){
   }
 }
 
-document.getElementById('refreshBtn').addEventListener('click', function(){
+// The standalone "Refresh" button was dropped in favor of the hub's own
+// Reset button (shown in the injected top pill when this page is opened
+// inside the hub frame) — it broadcasts {type:'reset'} to the iframe.
+window.__hub_handle_reset = function(){
   pending = {};
   refresh();
+};
+window.addEventListener('message', function(e){
+  var d = e.data;
+  if(!d || !d.type) return;
+  if(d.type === 'reset') window.__hub_handle_reset();
 });
+try {
+  if(window.parent && window.parent !== window) window.parent.postMessage({ type: 'ready' }, '*');
+} catch(err){}
 
 document.getElementById('usersHost').addEventListener('click', function(e){
   var card = e.target.closest('.user-card');
