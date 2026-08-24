@@ -1,4 +1,5 @@
 import { createSession, readCookie, redirectWithCookies } from '../_session.js';
+import { recordLogin } from '../_acl.js';
 
 export const config = { runtime: 'edge' };
 
@@ -87,6 +88,11 @@ export default async function handler(req) {
     domain: emailDomain,
     exp: Date.now() + 1000 * 60 * 60 * 12,
   });
+  try {
+    await recordLogin({ email: claims.email, name: claims.name, picture: claims.picture, domain: emailDomain });
+  } catch {
+    // KV not configured yet or unreachable — don't block sign-in over it.
+  }
   return redirectWithCookies(new URL(next, url.origin).toString(), [
     `session=${encodeURIComponent(session)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=43200`,
     `oauth_state=; Path=/; HttpOnly; Max-Age=0`,

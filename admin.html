@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>User &amp; Access Management &middot; Jindal Steel Angul</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800;9..40,900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-color: #f0f4f8; --glass-bg: rgba(255,255,255,0.7); --glass-bg-solid: rgba(255,255,255,0.95);
+  --glass-border: 1px solid rgba(0,0,0,0.08); --glass-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  --tx: #1a1c1e; --tm: #44474e; --br: rgba(0,0,0,0.08); --input-bg: rgba(0,0,0,0.04);
+  --primary: #006493; --on-primary: #ffffff; --good: #15803d; --bad: #b91c1c; --warn: #b45309;
+  --radius-m: 14px; --radius-l: 20px; --radius-pill: 999px;
+}
+[data-theme="dark"] {
+  --bg-color: #0f172a; --glass-bg: rgba(30,41,59,0.65); --glass-bg-solid: rgba(15,23,42,0.97);
+  --glass-border: 1px solid rgba(255,255,255,0.1); --glass-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  --tx: #f8fafc; --tm: #94a3b8; --br: rgba(255,255,255,0.1); --input-bg: rgba(255,255,255,0.06);
+  --primary: #8dcdff; --on-primary: #00344f; --good: #4ade80; --bad: #f87171; --warn: #fbbf24;
+}
+* { box-sizing: border-box; }
+html, body { min-height: 100%; margin: 0; }
+body { font-family: 'DM Sans', system-ui, sans-serif; color: var(--tx); background: var(--bg-color); min-height: 100dvh; }
+button { font: inherit; cursor: pointer; border: none; outline: none; }
+input, select { font: inherit; color: inherit; }
+a { color: var(--primary); }
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 80px; }
+.hd { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+.hd h1 { font-size: 20px; font-weight: 800; margin: 0; }
+.hd .sub { font-size: 12.5px; color: var(--tm); margin-top: 4px; }
+.hd-actions { display: flex; align-items: center; gap: 10px; }
+.btn { padding: 9px 16px; border-radius: var(--radius-pill); font-weight: 700; font-size: 13px; background: var(--input-bg); color: var(--tx); border: var(--glass-border); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.btn:hover { filter: brightness(1.05); }
+.btn.primary { background: var(--primary); color: var(--on-primary); }
+
+.banner { padding: 14px 18px; border-radius: var(--radius-m); background: var(--glass-bg); border: var(--glass-border); margin-bottom: 18px; font-size: 13px; color: var(--tm); }
+.banner.error { color: var(--bad); border-color: var(--bad); }
+
+.panel { background: var(--glass-bg); backdrop-filter: blur(20px); border: var(--glass-border); border-radius: var(--radius-l); box-shadow: var(--glass-shadow); padding: 18px; margin-bottom: 20px; }
+.panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--tm); margin: 0 0 12px; }
+
+.stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.stat { flex: 1; min-width: 120px; background: var(--glass-bg); border: var(--glass-border); border-radius: var(--radius-m); padding: 14px 16px; }
+.stat .num { font-size: 24px; font-weight: 800; }
+.stat .lbl { font-size: 11.5px; color: var(--tm); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
+
+.users { display: flex; flex-direction: column; gap: 14px; }
+.user-card { background: var(--glass-bg); border: var(--glass-border); border-radius: var(--radius-l); box-shadow: var(--glass-shadow); padding: 18px 20px; }
+.user-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.user-id { display: flex; align-items: center; gap: 12px; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--input-bg); flex-shrink: 0; }
+.user-name { font-weight: 800; font-size: 14px; }
+.user-email { font-size: 12px; color: var(--tm); }
+.user-meta { font-size: 11px; color: var(--tm); margin-top: 2px; }
+
+.badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+.badge.approved { background: rgba(34,197,94,0.15); color: var(--good); }
+.badge.pending { background: rgba(251,191,36,0.15); color: var(--warn); }
+.badge.blocked { background: rgba(239,68,68,0.15); color: var(--bad); }
+
+.user-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.mini-btn { padding: 6px 13px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 700; background: var(--input-bg); border: var(--glass-border); color: var(--tx); }
+.mini-btn.good:hover { background: rgba(34,197,94,0.18); color: var(--good); }
+.mini-btn.bad:hover { background: rgba(239,68,68,0.18); color: var(--bad); }
+.mini-btn.warn:hover { background: rgba(251,191,36,0.18); color: var(--warn); }
+
+.divider { height: 1px; background: var(--br); margin: 14px 0; }
+
+.pages-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.page-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: var(--radius-pill); background: var(--input-bg); border: var(--glass-border); font-size: 12px; cursor: pointer; user-select: none; }
+.page-chip input { accent-color: var(--primary); }
+.page-chip.on { background: rgba(0,100,147,0.14); border-color: var(--primary); color: var(--primary); }
+
+.toggle-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 12px; }
+.switch-lbl { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; }
+.switch-lbl input { width: 34px; height: 18px; accent-color: var(--primary); }
+
+.add-page-row { display: flex; gap: 8px; margin-top: 10px; }
+.add-page-row input { flex: 1; min-width: 160px; padding: 7px 12px; border-radius: var(--radius-pill); border: var(--glass-border); background: var(--input-bg); color: var(--tx); font-size: 12.5px; }
+
+.empty { text-align: center; padding: 60px 20px; color: var(--tm); }
+.save-hint { font-size: 11px; color: var(--tm); margin-top: 10px; opacity: 0; transition: opacity 0.2s; }
+.save-hint.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">
+    <div>
+      <h1>User &amp; Access Management</h1>
+      <div class="sub" id="signedInAs">Loading&hellip;</div>
+    </div>
+    <div class="hd-actions">
+      <button class="btn" id="refreshBtn">Refresh</button>
+      <a class="btn primary" href="/">Back to Hub</a>
+    </div>
+  </div>
+
+  <div id="bannerHost"></div>
+
+  <div class="stat-row" id="statRow" style="display:none">
+    <div class="stat"><div class="num" id="statTotal">0</div><div class="lbl">Total users</div></div>
+    <div class="stat"><div class="num" id="statPending">0</div><div class="lbl">Pending</div></div>
+    <div class="stat"><div class="num" id="statApproved">0</div><div class="lbl">Approved</div></div>
+    <div class="stat"><div class="num" id="statBlocked">0</div><div class="lbl">Blocked</div></div>
+  </div>
+
+  <div id="usersHost" class="users">
+    <div class="empty">Loading users&hellip;</div>
+  </div>
+</div>
+
+<script>
+var KNOWN_PAGES = [];
+var DEV_HOSTS_NOTE = 'Users granted "dev preview" can open the pmppc-dev.vercel.app deployment (or whatever host is set via DEV_HOSTS).';
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+function fmtDate(ts){ if(!ts) return '—'; try{ return new Date(ts).toLocaleString(); }catch(e){ return '—'; } }
+
+function banner(msg, isError){
+  var host = document.getElementById('bannerHost');
+  host.innerHTML = '<div class="banner' + (isError ? ' error' : '') + '">' + esc(msg) + '</div>';
+}
+function clearBanner(){ document.getElementById('bannerHost').innerHTML = ''; }
+
+async function api(path, opts){
+  var res = await fetch(path, Object.assign({ credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } }, opts || {}));
+  var data = null;
+  try { data = await res.json(); } catch(e){}
+  if(!res.ok){
+    throw new Error((data && data.error) || ('Request failed (' + res.status + ')'));
+  }
+  return data;
+}
+
+async function loadMe(){
+  try {
+    var me = await api('/api/auth/me');
+    document.getElementById('signedInAs').textContent = 'Signed in as ' + (me.name || me.email) + ' (' + me.email + ')';
+  } catch(e) {
+    document.getElementById('signedInAs').textContent = '';
+  }
+}
+
+function pageChip(user, page, custom){
+  var checked = (user.allPages) || (user.pages || []).includes(page);
+  return '<label class="page-chip' + (checked ? ' on' : '') + '" data-email="' + esc(user._email) + '" data-page="' + esc(page) + '">' +
+    '<input type="checkbox" ' + (checked ? 'checked' : '') + (user.allPages ? ' disabled' : '') + '>' + esc(page) +
+    (custom ? ' <span title="custom path" style="opacity:.6">&#9998;</span>' : '') +
+  '</label>';
+}
+
+function userCard(user){
+  var email = user._email;
+  var status = user.status || 'pending';
+  var customPages = (user.pages || []).filter(function(p){ return KNOWN_PAGES.indexOf(p) === -1; });
+  var allChips = KNOWN_PAGES.concat(customPages);
+  var chipsHtml = allChips.map(function(p){ return pageChip(user, p, customPages.indexOf(p) !== -1); }).join('');
+
+  return (
+    '<div class="user-card" data-email="' + esc(email) + '">' +
+      '<div class="user-top">' +
+        '<div class="user-id">' +
+          '<img class="avatar" src="' + esc(user.picture || '') + '" onerror="this.style.visibility=\'hidden\'">' +
+          '<div>' +
+            '<div class="user-name">' + esc(user.name || email) + '</div>' +
+            '<div class="user-email">' + esc(email) + '</div>' +
+            '<div class="user-meta">First seen ' + esc(fmtDate(user.firstLogin)) + ' &middot; Last login ' + esc(fmtDate(user.lastLogin)) + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
+          '<span class="badge ' + esc(status) + '">' + esc(status) + '</span>' +
+          '<div class="user-actions">' +
+            '<button class="mini-btn good" data-action="approve">Approve</button>' +
+            '<button class="mini-btn warn" data-action="pending">Set pending</button>' +
+            '<button class="mini-btn bad" data-action="block">Block</button>' +
+            '<button class="mini-btn bad" data-action="delete">Remove</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="divider"></div>' +
+      '<div><strong style="font-size:12.5px">Page access</strong></div>' +
+      '<div class="pages-grid" style="margin-top:8px">' + chipsHtml + '</div>' +
+      '<div class="add-page-row">' +
+        '<input type="text" placeholder="Add a custom page path (e.g. reports/summary.html)" data-role="custom-path">' +
+        '<button class="mini-btn" data-action="add-custom">Add</button>' +
+      '</div>' +
+      '<div class="toggle-row">' +
+        '<label class="switch-lbl"><input type="checkbox" data-action="toggle-all" ' + (user.allPages ? 'checked' : '') + '> Grant access to ALL pages</label>' +
+        '<label class="switch-lbl"><input type="checkbox" data-action="toggle-dev" ' + (user.devAccess ? 'checked' : '') + '> Allow dev preview URL</label>' +
+        '<span class="save-hint" data-role="save-hint">Saved</span>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+var registry = {};
+
+function render(){
+  KNOWN_PAGES = registry.knownPages || [];
+  var users = registry.users || {};
+  var emails = Object.keys(users).sort(function(a,b){
+    return (users[b].lastLogin || 0) - (users[a].lastLogin || 0);
+  });
+
+  var total = emails.length, pending = 0, approved = 0, blocked = 0;
+  emails.forEach(function(e){
+    var s = users[e].status;
+    if(s === 'approved') approved++; else if(s === 'blocked') blocked++; else pending++;
+  });
+  document.getElementById('statRow').style.display = total ? '' : 'none';
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statPending').textContent = pending;
+  document.getElementById('statApproved').textContent = approved;
+  document.getElementById('statBlocked').textContent = blocked;
+
+  var host = document.getElementById('usersHost');
+  if(!emails.length){
+    host.innerHTML = '<div class="empty">No one has logged in yet. Once someone signs in with an allowed Google account, they\'ll show up here as "pending" and you can approve their access.</div>';
+    return;
+  }
+  host.innerHTML = emails.map(function(e){
+    var u = Object.assign({ _email: e }, users[e]);
+    return userCard(u);
+  }).join('');
+}
+
+async function refresh(){
+  clearBanner();
+  document.getElementById('usersHost').innerHTML = '<div class="empty">Loading users&hellip;</div>';
+  try {
+    registry = await api('/api/admin/users');
+    render();
+  } catch(e) {
+    document.getElementById('usersHost').innerHTML = '';
+    banner('Could not load users: ' + e.message + '. If this is the first time, make sure KV_REST_API_URL and KV_REST_API_TOKEN are set in your Vercel project environment variables.', true);
+  }
+}
+
+async function mutate(email, payload, cardEl){
+  var hint = cardEl && cardEl.querySelector('[data-role="save-hint"]');
+  try {
+    var body = Object.assign({ email: email }, payload);
+    var res = await api('/api/admin/users', { method: 'POST', body: JSON.stringify(body) });
+    if(res.user) registry.users[email] = res.user;
+    else if(payload.action === 'delete') delete registry.users[email];
+    render();
+    if(hint){ hint.classList.add('show'); setTimeout(function(){ hint.classList.remove('show'); }, 1200); }
+  } catch(e) {
+    banner('Update failed: ' + e.message, true);
+  }
+}
+
+document.getElementById('refreshBtn').addEventListener('click', refresh);
+
+document.getElementById('usersHost').addEventListener('click', function(e){
+  var card = e.target.closest('.user-card');
+  if(!card) return;
+  var email = card.getAttribute('data-email');
+
+  var actionBtn = e.target.closest('[data-action]');
+  if(actionBtn){
+    var action = actionBtn.getAttribute('data-action');
+    if(action === 'approve') return mutate(email, { action: 'approve' }, card);
+    if(action === 'pending') return mutate(email, { action: 'pending' }, card);
+    if(action === 'block') return mutate(email, { action: 'block' }, card);
+    if(action === 'delete'){
+      if(confirm('Remove ' + email + ' from the registry? They will show up again as "pending" if they log in again.')){
+        return mutate(email, { action: 'delete' }, card);
+      }
+      return;
+    }
+    if(action === 'add-custom'){
+      var input = card.querySelector('[data-role="custom-path"]');
+      var path = (input.value || '').trim();
+      if(!path) return;
+      var user = registry.users[email];
+      var pages = (user.pages || []).slice();
+      if(pages.indexOf(path) === -1) pages.push(path);
+      input.value = '';
+      return mutate(email, { action: 'setPages', pages: pages }, card);
+    }
+    return;
+  }
+
+  var chip = e.target.closest('.page-chip');
+  if(chip){
+    var page = chip.getAttribute('data-page');
+    var user = registry.users[email];
+    if(user.allPages) return; // disabled while "all pages" is on
+    var pages = (user.pages || []).slice();
+    var idx = pages.indexOf(page);
+    if(idx === -1) pages.push(page); else pages.splice(idx, 1);
+    return mutate(email, { action: 'setPages', pages: pages }, card);
+  }
+});
+
+document.getElementById('usersHost').addEventListener('change', function(e){
+  var card = e.target.closest('.user-card');
+  if(!card) return;
+  var email = card.getAttribute('data-email');
+  if(e.target.matches('[data-action="toggle-all"]')){
+    return mutate(email, { action: 'setAllPages', allPages: e.target.checked }, card);
+  }
+  if(e.target.matches('[data-action="toggle-dev"]')){
+    return mutate(email, { action: 'setDevAccess', devAccess: e.target.checked }, card);
+  }
+});
+
+loadMe();
+refresh();
+</script>
+</body>
+</html>

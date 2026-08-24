@@ -427,6 +427,7 @@ input { font: inherit; color: inherit; }
         <div class="user-panel" id="userPanel">
           <div class="user-panel-name" id="userName"></div>
           <div class="user-panel-domain" id="userDomain"></div>
+          <a class="user-panel-logout" id="adminLink" href="/admin.html" style="display:none;margin-top:6px">Admin: Users &amp; Access</a>
           <a class="user-panel-logout" href="/api/auth/logout">Log out</a>
         </div>
       </div>
@@ -1565,6 +1566,8 @@ setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
   var userAvatar = document.getElementById('userAvatar');
   var userName = document.getElementById('userName');
   var userDomain = document.getElementById('userDomain');
+  var adminLink = document.getElementById('adminLink');
+  var ADMIN_EMAILS = ['abhinandan.mandal@jindalsteel.in'];
 
   fetch('/api/auth/me', { credentials: 'same-origin' }).then(function(r){
     if(!r.ok) throw new Error('unauthenticated');
@@ -1576,6 +1579,13 @@ setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
     if(userAvatar){ if(u.picture) userAvatar.src = u.picture; else userAvatar.removeAttribute('src'); }
     if(userName) userName.textContent = u.name || u.email || '';
     if(userDomain) userDomain.textContent = u.email || '';
+    var isAdminUser = !!(u.email && ADMIN_EMAILS.indexOf(u.email.toLowerCase()) !== -1);
+    if(adminLink) adminLink.style.display = isAdminUser ? '' : 'none';
+    if(isAdminUser && !items.some(function(it){ return it.path === 'admin.html'; })){
+      items.push({ id: 'admin-users', name: 'Admin: Users & Access', path: 'admin.html', icon: 'shield' });
+      saveItems(items);
+      render();
+    }
   }).catch(function(){
     if(stageEl) stageEl.style.display = 'none';
     if(loginWrap) loginWrap.style.display = 'flex';
