@@ -1,9 +1,61 @@
 // Access-control registry backed by Vercel Blob storage.
 // Requires env var BLOB_READ_WRITE_TOKEN (auto-injected once a Blob store is
 // connected to the project in the Vercel dashboard).
-import { get, put, BlobNotFoundError } from '@vercel/blob';
+//
+// Talks to the Blob REST API directly via fetch instead of importing the
+// @vercel/blob SDK — that package pulls in Node-only deps (undici, node:*
+// builtins) that Edge Middleware can't bundle. Plain fetch works fine there.
 
 const REGISTRY_PATH = 'acl/registry.json';
+const BLOB_API_URL = 'https://vercel.com/api/blob';
+const BLOB_API_VERSION = '12';
+
+function blobToken() {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) throw new Error('BLOB_READ_WRITE_TOKEN is not configured');
+  return token;
+}
+
+function storeIdFromToken(token) {
+  // Tokens look like vercel_blob_rw_<storeId>_<secret>
+  return token.split('_')[3] || '';
+}
+
+async function blobPutJson(pathname, value) {
+  const token = blobToken();
+  const storeId = storeIdFromToken(token);
+  const requestId = `${storeId}:${Date.now()}:${Math.random().toString(16).slice(2)}`;
+  const url = `${BLOB_API_URL}/?${new URLSearchParams({ pathname })}`;
+  const res = await fetch(url, {
+    method: 'PUT',
+    body: JSON.stringify(value),
+    headers: {
+      'x-api-blob-request-id': requestId,
+      'x-vercel-blob-store-id': storeId,
+      'x-api-blob-request-attempt': '0',
+      'x-api-version': BLOB_API_VERSION,
+      authorization: `Bearer ${token}`,
+      'x-vercel-blob-access': 'private',
+      'x-content-type': 'application/json',
+      'x-add-random-suffix': '0',
+      'x-allow-overwrite': '1',
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Blob write failed (${res.status}): ${text}`);
+  }
+}
+
+async function blobGetJson(pathname) {
+  const token = blobToken();
+  const storeId = storeIdFromToken(token);
+  const url = `https://${storeId}.private.blob.vercel-storage.com/${pathname}`;
+  const res = await fetch(url, { headers: { authorization: `Bearer ${token}` } });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Blob read failed (${res.status})`);
+  return res.json();
+}
 
 export const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'abhinandan.mandal@jindalsteel.in')
   .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
@@ -28,27 +80,14 @@ export function isAdmin(email) {
 }
 
 export async function getRegistry() {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) throw new Error('BLOB_READ_WRITE_TOKEN is not configured');
-  try {
-    const res = await get(REGISTRY_PATH, { access: 'private' });
-    const text = await res.text();
-    const parsed = JSON.parse(text);
-    if (!parsed.users || typeof parsed.users !== 'object') parsed.users = {};
-    return parsed;
-  } catch (e) {
-    if (e instanceof BlobNotFoundError) return { users: {} };
-    throw e;
-  }
+  const parsed = await blobGetJson(REGISTRY_PATH);
+  if (!parsed || typeof parsed !== 'object') return { users: {} };
+  if (!parsed.users || typeof parsed.users !== 'object') parsed.users = {};
+  return parsed;
 }
 
 export async function saveRegistry(registry) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) throw new Error('BLOB_READ_WRITE_TOKEN is not configured');
-  await put(REGISTRY_PATH, JSON.stringify(registry), {
-    access: 'private',
-    contentType: 'application/json',
-    addRandomSuffix: false,
-    allowOverwrite: true,
-  });
+  await blobPutJson(REGISTRY_PATH, registry);
 }
 
 // Called on every successful login. Creates a pending record for new users,
