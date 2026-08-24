@@ -8,6 +8,23 @@
 
 ---
 
+## 🔗 Live Links
+
+| Environment | URL | Branch |
+|---|---|---|
+| 🟢 Production | [pmppc.vercel.app](https://pmppc.vercel.app) | `main` |
+| 🟡 Development / Preview | [pmppc-dev.vercel.app](https://pmppc-dev.vercel.app) | `dev` |
+
+---
+
+## 🌱 Branching Workflow
+
+**Commit to `dev` only.** All day-to-day work — new tools, fixes, admin panel changes — goes to the `dev` branch, which deploys automatically to `pmppc-dev.vercel.app`. Verify it there first.
+
+`main` (→ `pmppc.vercel.app`) only gets updated by explicitly merging/fast-forwarding from `dev` once changes are confirmed working on the dev URL. Don't push directly to `main`.
+
+---
+
 ## 📖 About The Project
 
 **Dashboard One** provides a centralized interface for managing complex industrial operations. Instead of relying on a heavy backend framework, this project uses fast, static HTML pages for dedicated planning tools covering Steel Melting Shop (SMS) heat planning, plate/PSFS tagging, PM Yard management, and rake (railway) logistics.
