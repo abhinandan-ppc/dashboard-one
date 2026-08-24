@@ -1,5 +1,5 @@
 import { verifySession, readCookie } from './api/_session.js';
-import { isAdmin, checkAccess, checkDevAccess, DEV_HOSTS } from './api/_acl.js';
+import { resolveAccess, DEV_HOSTS } from './api/_acl.js';
 
 // The root page and index.html render unauthenticated too — they show their
 // own login box and call /api/auth/me client-side. Every other page (the
@@ -55,22 +55,27 @@ export default async function middleware(req) {
     try { path = decodeURIComponent(path); } catch { /* keep raw path if malformed */ }
     const isAdminArea = path === 'admin.html' || path.startsWith('api/admin/');
 
-    if (isAdmin(email)) return; // admins have full access everywhere, including dev previews
+    let admin = false, user = null;
+    try {
+      ({ admin, user } = await resolveAccess(email));
+    } catch {
+      admin = false; user = null;
+    }
+
+    if (admin) return; // admins (env-configured or promoted) have full access everywhere, including dev previews
 
     if (isAdminArea) {
       return denyPage('Admins only', "This area is restricted to administrators.");
     }
 
     if (DEV_HOSTS.includes(url.hostname)) {
-      let devOk = false;
-      try { devOk = await checkDevAccess(email); } catch { devOk = false; }
+      const devOk = !!(user && user.status === 'approved' && user.devAccess);
       if (!devOk) {
         return denyPage('Preview access restricted', "You don't have access to this preview deployment yet. Ask the administrator to grant dev access.");
       }
     }
 
-    let allowed = false;
-    try { allowed = await checkAccess(email, path); } catch { allowed = false; }
+    const allowed = !!(user && user.status === 'approved' && (user.allPages || (user.pages || []).includes(path)));
     if (!allowed) {
       return denyPage('Access pending', "Your account is registered but doesn't have access to this page yet. Ask the administrator to approve it.");
     }

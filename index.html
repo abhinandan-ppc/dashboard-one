@@ -1567,7 +1567,6 @@ setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
   var userName = document.getElementById('userName');
   var userDomain = document.getElementById('userDomain');
   var adminLink = document.getElementById('adminLink');
-  var ADMIN_EMAILS = ['abhinandan.mandal@jindalsteel.in'];
 
   fetch('/api/auth/me', { credentials: 'same-origin' }).then(function(r){
     if(!r.ok) throw new Error('unauthenticated');
@@ -1579,7 +1578,7 @@ setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
     if(userAvatar){ if(u.picture) userAvatar.src = u.picture; else userAvatar.removeAttribute('src'); }
     if(userName) userName.textContent = u.name || u.email || '';
     if(userDomain) userDomain.textContent = u.email || '';
-    var isAdminUser = !!(u.email && ADMIN_EMAILS.indexOf(u.email.toLowerCase()) !== -1);
+    var isAdminUser = !!u.admin;
     if(adminLink) adminLink.style.display = isAdminUser ? '' : 'none';
     if(isAdminUser && !items.some(function(it){ return it.path === 'admin.html'; })){
       items.push({ id: 'admin-users', name: 'Admin: Users & Access', path: 'admin.html', icon: 'shield' });

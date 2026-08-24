@@ -160,10 +160,34 @@ async function loadMe(){
   }
 }
 
-function pageChip(user, page, custom){
-  var checked = (user.allPages) || (user.pages || []).includes(page);
-  return '<label class="page-chip' + (checked ? ' on' : '') + '" data-email="' + esc(user._email) + '" data-page="' + esc(page) + '">' +
-    '<input type="checkbox" ' + (checked ? 'checked' : '') + (user.allPages ? ' disabled' : '') + '>' + esc(page) +
+// Permission edits (page checkboxes, "all pages", "dev access") are staged
+// here per-email and only sent to the server when "Update permissions" is
+// clicked — one atomic write per save instead of one write per checkbox
+// click. That's what was causing checkboxes to silently revert: rapid
+// individual toggles each did their own read-modify-write against the
+// registry, and whichever save landed last won, discarding the others.
+var pending = {};
+
+function ensurePending(email, user){
+  if(!pending[email]){
+    pending[email] = { pages: (user.pages || []).slice(), allPages: !!user.allPages, devAccess: !!user.devAccess };
+  }
+  return pending[email];
+}
+
+function resetPending(email){ delete pending[email]; }
+
+function isDirty(email, user){
+  var p = pending[email];
+  if(!p) return false;
+  var savedPages = (user.pages || []).slice().sort().join('');
+  var pendingPages = p.pages.slice().sort().join('');
+  return savedPages !== pendingPages || !!p.allPages !== !!user.allPages || !!p.devAccess !== !!user.devAccess;
+}
+
+function pageChip(email, page, checked, disabled, custom){
+  return '<label class="page-chip' + (checked ? ' on' : '') + '" data-page="' + esc(page) + '">' +
+    '<input type="checkbox" ' + (checked ? 'checked' : '') + (disabled ? ' disabled' : '') + '>' + esc(page) +
     (custom ? ' <span title="custom path" style="opacity:.6">&#9998;</span>' : '') +
   '</label>';
 }
@@ -171,9 +195,33 @@ function pageChip(user, page, custom){
 function userCard(user){
   var email = user._email;
   var status = user.status || 'pending';
-  var customPages = (user.pages || []).filter(function(p){ return KNOWN_PAGES.indexOf(p) === -1; });
+  var isPromotedAdmin = user.role === 'admin';
+  var p = ensurePending(email, user);
+  var customPages = p.pages.filter(function(pg){ return KNOWN_PAGES.indexOf(pg) === -1; });
   var allChips = KNOWN_PAGES.concat(customPages);
-  var chipsHtml = allChips.map(function(p){ return pageChip(user, p, customPages.indexOf(p) !== -1); }).join('');
+  var chipsHtml = allChips.map(function(pg){
+    return pageChip(email, pg, p.allPages || p.pages.indexOf(pg) !== -1, p.allPages, customPages.indexOf(pg) !== -1);
+  }).join('');
+  var dirty = isDirty(email, user);
+
+  var accessSection = isPromotedAdmin
+    ? '<div class="sub" style="margin-top:4px">This user is an admin — they already have full access to every page and the admin panel.</div>'
+    : (
+      '<div><strong style="font-size:12.5px">Page access</strong></div>' +
+      '<div class="pages-grid" style="margin-top:8px">' + chipsHtml + '</div>' +
+      '<div class="add-page-row">' +
+        '<input type="text" placeholder="Add a custom page path (e.g. reports/summary.html)" data-role="custom-path">' +
+        '<button type="button" class="mini-btn" data-action="add-custom">Add</button>' +
+      '</div>' +
+      '<div class="toggle-row">' +
+        '<label class="switch-lbl"><input type="checkbox" data-action="toggle-all" ' + (p.allPages ? 'checked' : '') + '> Grant access to ALL pages</label>' +
+        '<label class="switch-lbl"><input type="checkbox" data-action="toggle-dev" ' + (p.devAccess ? 'checked' : '') + '> Allow dev preview URL</label>' +
+      '</div>' +
+      '<div class="toggle-row">' +
+        '<button type="button" class="btn primary" data-action="save-access"' + (dirty ? '' : ' style="opacity:.55"') + '>Update permissions</button>' +
+        '<span class="save-hint' + (dirty ? ' show' : '') + '" data-role="save-hint">' + (dirty ? 'Unsaved changes' : 'Saved') + '</span>' +
+      '</div>'
+    );
 
   return (
     '<div class="user-card" data-email="' + esc(email) + '">' +
@@ -181,7 +229,7 @@ function userCard(user){
         '<div class="user-id">' +
           '<img class="avatar" src="' + esc(user.picture || '') + '" onerror="this.style.visibility=\'hidden\'">' +
           '<div>' +
-            '<div class="user-name">' + esc(user.name || email) + '</div>' +
+            '<div class="user-name">' + esc(user.name || email) + (isPromotedAdmin ? ' <span class="badge approved" style="background:rgba(0,100,147,0.16);color:var(--primary)">admin</span>' : '') + '</div>' +
             '<div class="user-email">' + esc(email) + '</div>' +
             '<div class="user-meta">' + (user.lastLogin ? ('First seen ' + esc(fmtDate(user.firstLogin)) + ' &middot; Last login ' + esc(fmtDate(user.lastLogin))) : 'Added manually &middot; never logged in yet') + '</div>' +
           '</div>' +
@@ -189,30 +237,34 @@ function userCard(user){
         '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
           '<span class="badge ' + esc(status) + '">' + esc(status) + '</span>' +
           '<div class="user-actions">' +
-            '<button class="mini-btn good" data-action="approve">Approve</button>' +
-            '<button class="mini-btn warn" data-action="pending">Set pending</button>' +
-            '<button class="mini-btn bad" data-action="block">Block</button>' +
-            '<button class="mini-btn bad" data-action="delete">Remove</button>' +
+            '<button type="button" class="mini-btn good" data-action="approve">Approve</button>' +
+            '<button type="button" class="mini-btn warn" data-action="pending">Set pending</button>' +
+            '<button type="button" class="mini-btn bad" data-action="block">Block</button>' +
+            (isPromotedAdmin
+              ? '<button type="button" class="mini-btn warn" data-action="remove-admin">Remove admin</button>'
+              : '<button type="button" class="mini-btn" data-action="make-admin">Make admin</button>') +
+            '<button type="button" class="mini-btn bad" data-action="delete">Remove</button>' +
           '</div>' +
         '</div>' +
       '</div>' +
       '<div class="divider"></div>' +
-      '<div><strong style="font-size:12.5px">Page access</strong></div>' +
-      '<div class="pages-grid" style="margin-top:8px">' + chipsHtml + '</div>' +
-      '<div class="add-page-row">' +
-        '<input type="text" placeholder="Add a custom page path (e.g. reports/summary.html)" data-role="custom-path">' +
-        '<button class="mini-btn" data-action="add-custom">Add</button>' +
-      '</div>' +
-      '<div class="toggle-row">' +
-        '<label class="switch-lbl"><input type="checkbox" data-action="toggle-all" ' + (user.allPages ? 'checked' : '') + '> Grant access to ALL pages</label>' +
-        '<label class="switch-lbl"><input type="checkbox" data-action="toggle-dev" ' + (user.devAccess ? 'checked' : '') + '> Allow dev preview URL</label>' +
-        '<span class="save-hint" data-role="save-hint">Saved</span>' +
-      '</div>' +
+      accessSection +
     '</div>'
   );
 }
 
 var registry = {};
+
+function renderCard(email){
+  var users = registry.users || {};
+  var user = users[email];
+  var node = document.querySelector('.user-card[data-email="' + email.replace(/"/g, '') + '"]');
+  if(!user || !node) return render();
+  var u = Object.assign({ _email: email }, user);
+  var wrapper = document.createElement('div');
+  wrapper.innerHTML = userCard(u);
+  node.replaceWith(wrapper.firstElementChild);
+}
 
 function render(){
   KNOWN_PAGES = registry.knownPages || [];
@@ -276,36 +328,47 @@ async function refresh(){
   }
 }
 
-async function mutate(email, payload, cardEl){
-  var hint = cardEl && cardEl.querySelector('[data-role="save-hint"]');
+async function mutate(email, payload){
   try {
     var body = Object.assign({ email: email }, payload);
     var res = await api('/api/admin/users', { method: 'POST', body: JSON.stringify(body) });
     if(res.user) registry.users[email] = res.user;
     else if(payload.action === 'delete') delete registry.users[email];
-    render();
-    if(hint){ hint.classList.add('show'); setTimeout(function(){ hint.classList.remove('show'); }, 1200); }
+    if(payload.action === 'delete'){ resetPending(email); render(); }
+    else { resetPending(email); renderCard(email); }
   } catch(e) {
     banner('Update failed: ' + e.message, true);
   }
 }
 
-document.getElementById('refreshBtn').addEventListener('click', refresh);
+document.getElementById('refreshBtn').addEventListener('click', function(){
+  pending = {};
+  refresh();
+});
 
 document.getElementById('usersHost').addEventListener('click', function(e){
   var card = e.target.closest('.user-card');
   if(!card) return;
   var email = card.getAttribute('data-email');
+  var user = registry.users[email];
+  if(!user) return;
 
   var actionBtn = e.target.closest('[data-action]');
   if(actionBtn){
     var action = actionBtn.getAttribute('data-action');
-    if(action === 'approve') return mutate(email, { action: 'approve' }, card);
-    if(action === 'pending') return mutate(email, { action: 'pending' }, card);
-    if(action === 'block') return mutate(email, { action: 'block' }, card);
+    if(action === 'approve') return mutate(email, { action: 'approve' });
+    if(action === 'pending') return mutate(email, { action: 'pending' });
+    if(action === 'block') return mutate(email, { action: 'block' });
+    if(action === 'make-admin'){
+      if(confirm('Make ' + email + ' an admin? They will get full access to every page, plus this user management panel.')){
+        return mutate(email, { action: 'makeAdmin' });
+      }
+      return;
+    }
+    if(action === 'remove-admin') return mutate(email, { action: 'removeAdmin' });
     if(action === 'delete'){
       if(confirm('Remove ' + email + ' from the registry? They will show up again as "pending" if they log in again.')){
-        return mutate(email, { action: 'delete' }, card);
+        return mutate(email, { action: 'delete' });
       }
       return;
     }
@@ -313,11 +376,14 @@ document.getElementById('usersHost').addEventListener('click', function(e){
       var input = card.querySelector('[data-role="custom-path"]');
       var path = (input.value || '').trim();
       if(!path) return;
-      var user = registry.users[email];
-      var pages = (user.pages || []).slice();
-      if(pages.indexOf(path) === -1) pages.push(path);
+      var p = ensurePending(email, user);
+      if(p.pages.indexOf(path) === -1) p.pages.push(path);
       input.value = '';
-      return mutate(email, { action: 'setPages', pages: pages }, card);
+      return renderCard(email);
+    }
+    if(action === 'save-access'){
+      var p2 = ensurePending(email, user);
+      return mutate(email, { action: 'updateAccess', pages: p2.pages, allPages: p2.allPages, devAccess: p2.devAccess });
     }
     return;
   }
@@ -325,12 +391,11 @@ document.getElementById('usersHost').addEventListener('click', function(e){
   var chip = e.target.closest('.page-chip');
   if(chip){
     var page = chip.getAttribute('data-page');
-    var user = registry.users[email];
-    if(user.allPages) return; // disabled while "all pages" is on
-    var pages = (user.pages || []).slice();
-    var idx = pages.indexOf(page);
-    if(idx === -1) pages.push(page); else pages.splice(idx, 1);
-    return mutate(email, { action: 'setPages', pages: pages }, card);
+    var p3 = ensurePending(email, user);
+    if(p3.allPages) return; // disabled while "all pages" is pending on
+    var idx = p3.pages.indexOf(page);
+    if(idx === -1) p3.pages.push(page); else p3.pages.splice(idx, 1);
+    return renderCard(email);
   }
 });
 
@@ -338,11 +403,16 @@ document.getElementById('usersHost').addEventListener('change', function(e){
   var card = e.target.closest('.user-card');
   if(!card) return;
   var email = card.getAttribute('data-email');
+  var user = registry.users[email];
+  if(!user) return;
+  var p = ensurePending(email, user);
   if(e.target.matches('[data-action="toggle-all"]')){
-    return mutate(email, { action: 'setAllPages', allPages: e.target.checked }, card);
+    p.allPages = e.target.checked;
+    return renderCard(email);
   }
   if(e.target.matches('[data-action="toggle-dev"]')){
-    return mutate(email, { action: 'setDevAccess', devAccess: e.target.checked }, card);
+    p.devAccess = e.target.checked;
+    return renderCard(email);
   }
 });
 

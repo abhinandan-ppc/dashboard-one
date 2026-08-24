@@ -1,5 +1,5 @@
 import { readCookie, verifySession } from '../_session.js';
-import { isAdmin, getRegistry, saveRegistry, KNOWN_PAGES, ADMIN_EMAILS } from '../_acl.js';
+import { isPrimaryAdmin, resolveAccess, getRegistry, saveRegistry, KNOWN_PAGES, ADMIN_EMAILS } from '../_acl.js';
 
 export const config = { runtime: 'edge' };
 
@@ -12,8 +12,9 @@ function json(obj, status) {
 
 async function requireAdmin(req) {
   const session = await verifySession(readCookie(req, 'session'));
-  if (!session || !isAdmin(session.email)) return null;
-  return session;
+  if (!session) return null;
+  const { admin } = await resolveAccess(session.email);
+  return admin ? session : null;
 }
 
 export default async function handler(req) {
@@ -36,7 +37,7 @@ export default async function handler(req) {
     const { action } = body;
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
     if (!email) return json({ error: 'email is required' }, 400);
-    if (isAdmin(email)) return json({ error: 'admins manage themselves — nothing to change' }, 400);
+    if (isPrimaryAdmin(email)) return json({ error: 'this account is a primary admin (set via ADMIN_EMAILS) and manages itself — nothing to change' }, 400);
 
     try {
       const registry = await getRegistry();
@@ -89,6 +90,21 @@ export default async function handler(req) {
           break;
         case 'setDevAccess':
           user.devAccess = !!body.devAccess;
+          break;
+        case 'updateAccess':
+          // One atomic write for the whole permissions panel (pages + allPages +
+          // devAccess), so rapid-fire checkbox toggles can't race each other into
+          // clobbering one another's save — the UI batches them into one call.
+          if (!Array.isArray(body.pages)) return json({ error: 'pages must be an array' }, 400);
+          user.pages = [...new Set(body.pages.filter(p => typeof p === 'string' && p.trim()).map(p => p.trim()))];
+          user.allPages = !!body.allPages;
+          user.devAccess = !!body.devAccess;
+          break;
+        case 'makeAdmin':
+          user.role = 'admin';
+          break;
+        case 'removeAdmin':
+          delete user.role;
           break;
         default:
           return json({ error: 'unknown action' }, 400);

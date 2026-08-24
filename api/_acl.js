@@ -75,9 +75,15 @@ export const KNOWN_PAGES = [
   'VDO-Generator.html',
 ];
 
-export function isAdmin(email) {
+// The env-configured admin(s). This list is the irrevocable safety net —
+// these accounts can never be demoted or blocked through the UI, so access
+// can't be locked out by a mistake in the registry.
+export function isPrimaryAdmin(email) {
   return !!email && ADMIN_EMAILS.includes(String(email).toLowerCase());
 }
+
+// Back-compat alias.
+export const isAdmin = isPrimaryAdmin;
 
 export async function getRegistry() {
   const parsed = await blobGetJson(REGISTRY_PATH);
@@ -90,12 +96,30 @@ export async function saveRegistry(registry) {
   await blobPutJson(REGISTRY_PATH, registry);
 }
 
+// Resolves everything a request needs to know about one user in a single
+// registry fetch: whether they're an admin (env-configured OR promoted via
+// the admin page), and their registry record (null for primary admins,
+// who are never stored).
+export async function resolveAccess(email) {
+  const lower = String(email || '').toLowerCase();
+  if (isPrimaryAdmin(lower)) return { admin: true, user: null, registry: null };
+  let registry;
+  try {
+    registry = await getRegistry();
+  } catch {
+    return { admin: false, user: null, registry: null };
+  }
+  const user = registry.users[lower] || null;
+  const admin = !!(user && user.role === 'admin' && user.status !== 'blocked');
+  return { admin, user, registry };
+}
+
 // Called on every successful login. Creates a pending record for new users,
 // refreshes profile fields + lastLogin for existing ones. Admin accounts are
 // never stored — they always have full access.
 export async function recordLogin({ email, name, picture, domain }) {
   const lower = String(email || '').toLowerCase();
-  if (!lower || isAdmin(lower)) return;
+  if (!lower || isPrimaryAdmin(lower)) return;
   const registry = await getRegistry();
   const now = Date.now();
   const existing = registry.users[lower];
