@@ -39,37 +39,42 @@ function denyPage(title, message, status) {
 }
 
 export default async function middleware(req) {
-  const token = readCookie(req, 'session');
-  const session = await verifySession(token);
-  const url = new URL(req.url);
+  try {
+    const token = readCookie(req, 'session');
+    const session = await verifySession(token);
+    const url = new URL(req.url);
 
-  if (!session) {
-    const loginUrl = new URL('/api/auth/login', url);
-    loginUrl.searchParams.set('next', url.pathname + url.search);
-    return Response.redirect(loginUrl.toString(), 302);
-  }
-
-  const email = session.email;
-  const path = decodeURIComponent(url.pathname.replace(/^\//, ''));
-  const isAdminArea = path === 'admin.html' || path.startsWith('api/admin/');
-
-  if (isAdmin(email)) return; // admins have full access everywhere, including dev previews
-
-  if (isAdminArea) {
-    return denyPage('Admins only', "This area is restricted to administrators.");
-  }
-
-  if (DEV_HOSTS.includes(url.hostname)) {
-    let devOk = false;
-    try { devOk = await checkDevAccess(email); } catch { devOk = false; }
-    if (!devOk) {
-      return denyPage('Preview access restricted', "You don't have access to this preview deployment yet. Ask the administrator to grant dev access.");
+    if (!session) {
+      const loginUrl = new URL('/api/auth/login', url);
+      loginUrl.searchParams.set('next', url.pathname + url.search);
+      return Response.redirect(loginUrl.toString(), 302);
     }
-  }
 
-  let allowed = false;
-  try { allowed = await checkAccess(email, path); } catch { allowed = false; }
-  if (!allowed) {
-    return denyPage('Access pending', "Your account is registered but doesn't have access to this page yet. Ask the administrator to approve it.");
+    const email = session.email;
+    let path = url.pathname.replace(/^\//, '');
+    try { path = decodeURIComponent(path); } catch { /* keep raw path if malformed */ }
+    const isAdminArea = path === 'admin.html' || path.startsWith('api/admin/');
+
+    if (isAdmin(email)) return; // admins have full access everywhere, including dev previews
+
+    if (isAdminArea) {
+      return denyPage('Admins only', "This area is restricted to administrators.");
+    }
+
+    if (DEV_HOSTS.includes(url.hostname)) {
+      let devOk = false;
+      try { devOk = await checkDevAccess(email); } catch { devOk = false; }
+      if (!devOk) {
+        return denyPage('Preview access restricted', "You don't have access to this preview deployment yet. Ask the administrator to grant dev access.");
+      }
+    }
+
+    let allowed = false;
+    try { allowed = await checkAccess(email, path); } catch { allowed = false; }
+    if (!allowed) {
+      return denyPage('Access pending', "Your account is registered but doesn't have access to this page yet. Ask the administrator to approve it.");
+    }
+  } catch (e) {
+    return denyPage('Something went wrong', 'Unexpected error while checking access: ' + (e && e.message ? e.message : String(e)), 500);
   }
 }
