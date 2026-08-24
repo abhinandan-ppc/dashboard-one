@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Order Status Report · Jindal Steel Angul</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800;9..40,900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body,#root{min-height:100%;height:100%}
+
+/* ══════════════════════════════════════════════
+   MATERIAL 3 DESIGN SYSTEM — Jindal Steel Angul Order Status Report
+   (design system copied verbatim from Rake-Planner.html)
+   ══════════════════════════════════════════════ */
+:root{
+  --bg:#0f172a;
+  --s0:rgba(22,30,48,.72);
+  --s1:rgba(30,41,59,.62);
+  --s2:rgba(36,49,70,.58);
+  --s3:rgba(44,58,82,.55);
+  --s4:rgba(52,68,94,.52);
+  --bdr:rgba(255,255,255,.1);
+  --bdrHi:rgba(255,255,255,.14);
+  --text:#f8fafc;
+  --text-hi:#ffffff;
+  --dim:#94a3b8;
+  --mute:#64748b;
+  --amber:#d4923c;       --amber-bg:rgba(212,146,60,.12);
+  --sky:#5ba3d9;         --sky-bg:rgba(91,163,217,.1);
+  --green:#4caf7d;       --green-bg:rgba(76,175,125,.1);
+  --rose:#e07070;        --rose-bg:rgba(224,112,112,.1);
+  --violet:#9b87d4;
+  --orange:#d4793c;      --orange-bg:rgba(212,121,60,.1);
+  --teal:#3da8a0;
+  --glass:rgba(30,41,59,.65);
+  --glass-card:rgba(30,41,59,.55);
+  --glass-hi:rgba(30,41,59,.92);
+  --glass-border:rgba(255,255,255,.1);
+  --glass-border-hi:rgba(255,255,255,.18);
+  --shadow-xs:0 1px 2px rgba(0,0,0,.3);
+  --shadow-sm:0 2px 8px rgba(0,0,0,.35),0 1px 3px rgba(0,0,0,.2);
+  --shadow-md:0 4px 16px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.25);
+  --shadow-lg:0 10px 32px rgba(0,0,0,.55),0 4px 12px rgba(0,0,0,.3);
+  --shadow-xl:0 20px 56px rgba(0,0,0,.65),0 8px 20px rgba(0,0,0,.35);
+  --shadow-inset:inset 0 1px 0 rgba(255,255,255,.05);
+  --shadow-glow-amber:0 0 0 2px rgba(212,146,60,.25),0 3px 12px rgba(212,146,60,.15);
+  --radius-xs:6px; --radius-sm:10px; --radius-md:16px;
+  --radius-lg:18px; --radius-xl:24px; --radius-pill:999px;
+  --s1-80:rgba(30,41,59,.8); --s2-50:rgba(36,49,70,.5); --s2-80:rgba(36,49,70,.8);
+  --bdr-10:rgba(255,255,255,.04);
+  color-scheme:dark;
+}
+[data-theme="light"]{
+  --bg:#f0f4f8;
+  --s0:rgba(255,255,255,.95);
+  --s1:rgba(255,255,255,.88);
+  --s2:rgba(240,244,252,.85);
+  --s3:rgba(226,232,246,.80);
+  --s4:rgba(212,220,240,.76);
+  --bdr:rgba(0,0,0,.08);
+  --bdrHi:rgba(0,0,0,.18);
+  --text:#1a1c1e;
+  --text-hi:#030712;
+  --dim:#44474e;
+  --mute:#6b7280;
+  --amber:#b45309;       --amber-bg:rgba(180,83,9,.1);
+  --sky:#1d4ed8;         --sky-bg:rgba(29,78,216,.09);
+  --green:#15803d;       --green-bg:rgba(21,128,61,.09);
+  --rose:#b91c1c;        --rose-bg:rgba(185,28,28,.09);
+  --violet:#6d28d9;      --violet-bg:rgba(109,40,217,.09);
+  --orange:#c2410c;      --orange-bg:rgba(194,65,12,.09);
+  --teal:#0f766e;
+  --glass:rgba(255,255,255,.72);
+  --glass-card:rgba(255,255,255,.80);
+  --glass-hi:rgba(255,255,255,.98);
+  --glass-border:rgba(0,0,0,.10);
+  --glass-border-hi:rgba(0,0,0,.18);
+  --shadow-xs:0 1px 3px rgba(0,0,0,.08);
+  --shadow-sm:0 2px 8px rgba(0,0,0,.10),0 1px 3px rgba(0,0,0,.06);
+  --shadow-md:0 4px 16px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08);
+  --shadow-lg:0 10px 32px rgba(0,0,0,.16),0 4px 12px rgba(0,0,0,.10);
+  --shadow-xl:0 20px 56px rgba(0,0,0,.20),0 8px 20px rgba(0,0,0,.12);
+  --shadow-inset:inset 0 1px 0 rgba(255,255,255,.9);
+  --shadow-glow-amber:0 0 0 2px rgba(180,83,9,.25),0 3px 12px rgba(180,83,9,.15);
+  --s1-80:rgba(255,255,255,.88); --s2-50:rgba(240,244,252,.55); --s2-80:rgba(240,244,252,.85);
+  --bdr-10:rgba(0,0,0,.06);
+  color-scheme:light;
+}
+body{
+  background:var(--bg);
+  background-image:
+    radial-gradient(ellipse 70% 50% at 15% 10%, rgba(91,163,217,.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 70% at 85% 90%, rgba(76,175,125,.06) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(155,135,212,.04) 0%, transparent 70%);
+  background-attachment:fixed;
+  color:var(--text);
+  font-family:'DM Sans',system-ui,-apple-system,sans-serif;
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  overflow-x:hidden;
+  transition:background .3s,color .3s;
+}
+h1,h2,h3{font-family:'DM Sans',sans-serif;font-weight:700;color:var(--text-hi);line-height:1.2}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bdrHi);border-radius:var(--radius-pill);transition:background .2s}
+::-webkit-scrollbar-thumb:hover{background:var(--sky)}
+select option{background:var(--s1);color:var(--text)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes glow{0%,100%{opacity:.9}50%{opacity:1}}
+.m3-glass{background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--glass-border);}
+.glass-card{background:var(--glass-card);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--glass-border);}
+.leaflet-tooltip{background:rgba(14,20,32,.92) !important;border:1px solid rgba(255,255,255,.14) !important;
+  color:#eceef4 !important;font-family:'DM Sans',system-ui,sans-serif !important;
+  font-size:13px !important;line-height:1.5 !important;border-radius:10px !important;
+  box-shadow:0 8px 32px rgba(0,0,0,.6) !important;padding:9px 13px !important;
+  backdrop-filter:blur(16px) !important;-webkit-backdrop-filter:blur(16px) !important;}
+[data-theme="light"] .leaflet-tooltip{background:rgba(255,255,255,.92) !important;border:1px solid rgba(0,0,0,.12) !important;color:#1a1e2a !important;}
+.leaflet-tooltip::before{border-top-color:var(--bdrHi) !important;border-bottom-color:var(--bdrHi) !important}
+.leaflet-container{background:var(--bg) !important;font-family:'DM Sans',sans-serif}
+.leaflet-control-zoom a{background:var(--s1) !important;color:var(--dim) !important;border-color:var(--bdrHi) !important}
+.leaflet-control-zoom a:hover{background:var(--s2) !important;color:var(--text) !important}
+.leaflet-control-attribution{background:var(--glass) !important;color:var(--mute) !important;font-size:10px !important;backdrop-filter:blur(8px) !important}
+.leaflet-control-attribution a{color:var(--sky) !important}
+.leaflet-div-icon{background:transparent !important;border:none !important}
+.leaflet-container *{font-family:'DM Sans',system-ui,sans-serif}
+input:focus{outline:none;border-color:var(--amber) !important;box-shadow:var(--shadow-glow-amber);background:var(--s0);}
+button:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
+input::placeholder{color:var(--mute);opacity:1}
+.card-lift{transition:transform .2s ease,box-shadow .2s ease}
+.card-lift:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+table{border-collapse:collapse}
+thead tr th:first-child{border-radius:var(--radius-xs) 0 0 0}
+thead tr th:last-child{border-radius:0 var(--radius-xs) 0 0}
+.portal-dropdown{box-shadow:var(--shadow-lg);border-radius:var(--radius-md);border:1px solid var(--bdrHi);overflow:hidden;}
+/* Defensive: ensure nothing globally forces Leaflet's SVG circle markers to black — each marker
+   sets its own fill/stroke inline via Leaflet's path options, but guard against any stray
+   `svg *{fill:...}` / `path{fill:...}` rule elsewhere overriding .leaflet-interactive shapes. */
+.leaflet-container path.leaflet-interactive{fill-opacity:inherit !important;stroke-opacity:inherit !important;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="load-status" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#0a0f1e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-family:system-ui,sans-serif;z-index:9999">
+  <div id="load-spinner" style="width:40px;height:40px;border:3px solid #334;border-top-color:#f59e0b;border-radius:50%;animation:sp .8s linear infinite"></div>
+  <div id="load-msg" style="color:#94a3b8;font-size:14px">Loading scripts…</div>
+  <style>@keyframes sp{to{transform:rotate(360deg)}}</style>
+</div>
+<script>
+window._loadOk = {};
+window._loadErr = {};
+function checkReady(){
+  var msgs = [];
+  ['React','ReactDOM','Babel','XLSX','L'].forEach(function(k){
+    if(!window[k]) msgs.push(k+' missing');
+  });
+  if(msgs.length){
+    document.getElementById('load-msg').textContent = 'Failed: '+msgs.join(', ');
+    document.getElementById('load-spinner').style.display='none';
+  }
+}
+window.addEventListener('error',function(e){
+  var el=document.getElementById('load-status');
+  if(el&&el.style.display!=='none'){
+    document.getElementById('load-msg').style.color='#f43f5e';
+    document.getElementById('load-msg').textContent='JS Error: '+(e.message||'unknown').slice(0,120);
+    document.getElementById('load-spinner').style.display='none';
+  }
+});
+</script>
+<script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" onload="window._loadOk['react.pr']=1" onerror="document.getElementById('load-msg').textContent='CDN failed: react.production.min';document.getElementById('load-spinner').style.display='none'"></script>
+<script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" onload="window._loadOk['react-do']=1" onerror="document.getElementById('load-msg').textContent='CDN failed: react-dom/umd/react-';document.getElementById('load-spinner').style.display='none'"></script>
+<script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js" onload="window._loadOk['babel.mi']=1" onerror="document.getElementById('load-msg').textContent='CDN failed: babel.min.js';document.getElementById('load-spinner').style.display='none'"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" onload="window._loadOk['leaflet.']=1" onerror="document.getElementById('load-msg').textContent='CDN failed: leaflet.js';document.getElementById('load-spinner').style.display='none'"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" onload="window._loadOk['xlsx.ful']=1" onerror="document.getElementById('load-msg').textContent='CDN failed: xlsx.full.min.js';document.getElementById('load-spinner').style.display='none'"></script>
+<script type="text/babel" data-presets="react" data-type="text/javascript">
+const{useState,useCallback,useMemo,useEffect,useRef}=React;
+
+/* ═══════════════════ THEME SYSTEM (copied from Rake-Planner) ═══════════════════ */
+const DARK_C={
+  bg:'var(--bg)',s0:'var(--s0)',s1:'var(--s1)',s2:'var(--s2)',s3:'var(--s3)',s4:'var(--s4)',
+  bdr:'var(--bdr)',bdrHi:'var(--bdrHi)',
+  text:'var(--text)',dim:'var(--dim)',mute:'var(--mute)',
+  _amber:'#d4923c',_sky:'#5ba3d9',_green:'#4caf7d',_rose:'#e07070',_violet:'#9b87d4',_orange:'#d4793c',_teal:'#3da8a0',
+  amber:'var(--amber)',amberBg:'var(--amber-bg)',
+  sky:'var(--sky)',skyBg:'var(--sky-bg)',
+  green:'var(--green)',greenBg:'var(--green-bg)',
+  rose:'var(--rose)',roseBg:'var(--rose-bg)',
+  violet:'var(--violet)',violetBg:'rgba(100,60,220,.1)',
+  orange:'var(--orange)',orangeBg:'var(--orange-bg)',teal:'var(--teal)',
+  jsplBlue:'#2a5cc8',jsplGold:'#f5a623',isDark:true
+};
+const LIGHT_C={
+  bg:'var(--bg)',s0:'var(--s0)',s1:'var(--s1)',s2:'var(--s2)',s3:'var(--s3)',s4:'var(--s4)',
+  bdr:'var(--bdr)',bdrHi:'var(--bdrHi)',
+  text:'var(--text)',dim:'var(--dim)',mute:'var(--mute)',
+  _amber:'#b45309',_sky:'#1d4ed8',_green:'#15803d',_rose:'#b91c1c',_violet:'#6d28d9',_orange:'#c2410c',_teal:'#0f766e',
+  amber:'var(--amber)',amberBg:'var(--amber-bg)',
+  sky:'var(--sky)',skyBg:'var(--sky-bg)',
+  green:'var(--green)',greenBg:'var(--green-bg)',
+  rose:'var(--rose)',roseBg:'var(--rose-bg)',
+  violet:'var(--violet)',violetBg:'rgba(109,40,217,.09)',
+  orange:'var(--orange)',orangeBg:'var(--orange-bg)',teal:'var(--teal)',
+  jsplBlue:'#1e3a8a',jsplGold:'#b45309',isDark:false
+};
+let C=DARK_C;
+function useThemeManager(){
+  const[pref,setPref]=useState(()=>localStorage.getItem('jspl-osr-theme')||'auto');
+  const[systemDark,setSystemDark]=useState(()=>window.matchMedia('(prefers-color-scheme:dark)').matches);
+  useEffect(()=>{
+    const mq=window.matchMedia('(prefers-color-scheme:dark)');
+    const h=e=>setSystemDark(e.matches);
+    mq.addEventListener('change',h);
+    return()=>mq.removeEventListener('change',h);
+  },[]);
+  const effective=pref==='auto'?(systemDark?'dark':'light'):pref;
+  useEffect(()=>{
+    C=effective==='dark'?DARK_C:LIGHT_C;
+    document.documentElement.setAttribute('data-theme',effective);
+    localStorage.setItem('jspl-osr-theme',pref);
+  },[effective,pref]);
+  return{pref,setPref,effective};
+}
+const F={h:"'DM Sans',sans-serif",b:"'DM Sans',sans-serif",m:"'DM Mono',monospace"};
+
+/* ═══════════════════ SHARED STYLES (copied from Rake-Planner) ═══════════════════ */
+const card={
+  background:'var(--glass-card)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
+  border:'1px solid var(--glass-border)',borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-sm)',
+  transition:'box-shadow .22s ease,transform .22s ease,border-color .2s',
+};
+const inp={
+  background:'var(--s2)',border:'1px solid var(--bdrHi)',borderRadius:'var(--radius-sm)',color:'var(--text)',
+  fontFamily:F.b,fontSize:13,padding:'8px 12px',outline:'none',width:'100%',
+  boxShadow:'var(--shadow-inset)',transition:'border-color .18s,box-shadow .18s,background .18s',
+};
+const th0={
+  padding:'9px 12px',fontSize:10.5,fontFamily:F.b,letterSpacing:'.06em',textTransform:'uppercase',
+  color:'var(--mute)',fontWeight:600,background:'var(--s2)',borderBottom:'1px solid var(--bdr)',
+  whiteSpace:'nowrap',userSelect:'none',position:'relative',
+};
+const td0={
+  padding:'9px 12px',fontSize:13,fontFamily:F.b,fontWeight:400,
+  borderBottom:'1px solid var(--bdr)',color:'var(--text)',background:'transparent',lineHeight:1.45,
+};
+
+/* ═══════════════════ HELPERS ═══════════════════ */
+function n2(v){return isNaN(v)?0:v;}
+function fmt(v,dp){if(v==null||isNaN(v))return'0';const d=dp==null?0:dp;return Number(v).toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function pct(a,b){return b?(a/b*100):0;}
+function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function excelDateToJS(v){
+  if(v==null||v==='')return null;
+  if(typeof v==='number'){ if(v<1)return null; const d=new Date(Math.round((v-25569)*86400*1000)); return isNaN(d.getTime())?null:d; }
+  const d=new Date(v); return isNaN(d.getTime())?null:d;
+}
+function monthKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+
+/* Heat Treatment Category — mirrors CASE formula from BI (verbatim from Rake-Planner) */
+function getHTC(extGrade, supplyCondition){
+  const g=String(extGrade||'').toLowerCase().trim();
+  const s=String(supplyCondition||'').toLowerCase().trim();
+  const Q_GRADES=new Set(['rock hard 400','rockhard 400','rockhard 450','rockhard 500',
+    'cat 1e1839','cat 1e4187','hb450','hb400','hb500',
+    'cat 1e1839 / is 18809 isar 400','cat 1e4187/is 18809 isar 450',
+    'is 18809 isar 400/rockhard 400','is 18809 isar 500/rockhard 500']);
+  const FN_CONDS=new Set(['furnace nomalized & tempering','furnace normalizing',
+    'furnace normalizng','normalized','normalized & tempered',
+    'furnace normalized & tempering',
+    'austenizing+ accelerated cooled (water)+tempered']);
+  const NON_HTC_CONDS=new Set(['as rolled','normalized rolling','normalizing rolling',
+    'thermo mechanical rolled','tmcp','tmcp + tempering',
+    'normalized  rolling','normalizing rolling/normalized',
+    'thermo mechanical controlled']);
+  if(Q_GRADES.has(g))return'Q';
+  if(FN_CONDS.has(s))return'FN';
+  if(NON_HTC_CONDS.has(s)||!s)return'NON HTC';
+  return'Q/T';
+}
+const HTC_COLORS={'NON HTC':'#5ba3d9','FN':'#d4793c','Q/T':'#9b87d4','Q':'#7a8a3c'};
+const HTC_ORDER=['NON HTC','FN','Q/T','Q'];
+
+/* ═══════════════════ STATE_CENTROID (all 28 states + 8 UTs — standard published centroids) ═══════════════════
+   No live internet access in this environment — this is a static, well-known reference set embedded verbatim. */
+const STATE_CENTROID={
+  'ANDHRA PRADESH':[15.9129,79.7400],'ARUNACHAL PRADESH':[28.2180,94.7278],'ASSAM':[26.2006,92.9376],
+  'BIHAR':[25.0961,85.3131],'CHHATTISGARH':[21.2787,81.8661],'CHATTISGARH':[21.2787,81.8661],
+  'GOA':[15.2993,74.1240],'GUJARAT':[22.2587,71.1924],'HARYANA':[29.0588,76.0856],
+  'HIMACHAL PRADESH':[31.1048,77.1734],'JHARKHAND':[23.6102,85.2799],'KARNATAKA':[15.3173,75.7139],
+  'KERALA':[10.8505,76.2711],'MADHYA PRADESH':[22.9734,78.6569],'MAHARASHTRA':[19.7515,75.7139],
+  'MANIPUR':[24.6637,93.9063],'MEGHALAYA':[25.4670,91.3662],'MIZORAM':[23.1645,92.9376],
+  'NAGALAND':[26.1584,94.5624],'ODISHA':[20.9517,85.0985],'ORISSA':[20.9517,85.0985],
+  'PUNJAB':[31.1471,75.3412],'RAJASTHAN':[27.0238,74.2179],'SIKKIM':[27.5330,88.5122],
+  'TAMIL NADU':[11.1271,78.6569],'TELANGANA':[17.1231,79.2088],'TRIPURA':[23.9408,91.9882],
+  'UTTAR PRADESH':[26.8467,80.9462],'UTTARAKHAND':[30.0668,79.0193],'WEST BENGAL':[22.9868,87.8550],
+  // Union Territories
+  'ANDAMAN AND NICOBAR ISLANDS':[11.7401,92.6586],'CHANDIGARH':[30.7333,76.7794],
+  'DADRA AND NAGAR HAVELI AND DAMAN AND DIU':[20.1809,73.0169],'DADRA AND NAGAR HAV.':[20.1809,73.0169],
+  'DAMAN AND DIU':[20.4283,72.8397],'DELHI':[28.7041,77.1025],'JAMMU AND KASHMIR':[33.7782,76.5762],
+  'LADAKH':[34.1526,77.5770],'LAKSHADWEEP':[10.5667,72.6417],'PUDUCHERRY':[11.9416,79.8083],
+};
+function stateKey(v){ return String(v||'').trim().toUpperCase(); }
+
+/* ═══════════════════ CITY_CENTROID (100+ major Indian cities, lat/lng) ═══════════════════
+   Direct city hit is tried BEFORE falling back to state-level centroid, so as new ship-to/
+   sold-to cities show up in future EBTP snapshots there's a much higher chance of a precise
+   plot instead of the coarser state bubble. Keys are UPPERCASE city names. */
+const CITY_CENTROID={
+  'MUMBAI':[19.0760,72.8777],'DELHI':[28.7041,77.1025],'NEW DELHI':[28.6139,77.2090],
+  'BENGALURU':[12.9716,77.5946],'BANGALORE':[12.9716,77.5946],'HYDERABAD':[17.3850,78.4867],
+  'AHMEDABAD':[23.0225,72.5714],'CHENNAI':[13.0827,80.2707],'KOLKATA':[22.5726,88.3639],
+  'SURAT':[21.1702,72.8311],'PUNE':[18.5204,73.8567],'JAIPUR':[26.9124,75.7873],
+  'LUCKNOW':[26.8467,80.9462],'KANPUR':[26.4499,80.3319],'NAGPUR':[21.1458,79.0882],
+  'INDORE':[22.7196,75.8577],'THANE':[19.2183,72.9781],'BHOPAL':[23.2599,77.4126],
+  'VISAKHAPATNAM':[17.6868,83.2185],'PATNA':[25.5941,85.1376],'VADODARA':[22.3072,73.1812],
+  'GHAZIABAD':[28.6692,77.4538],'LUDHIANA':[30.9010,75.8573],'AGRA':[27.1767,78.0081],
+  'NASHIK':[19.9975,73.7898],'FARIDABAD':[28.4089,77.3178],'MEERUT':[28.9845,77.7064],
+  'RAJKOT':[22.3039,70.8022],'KALYAN':[19.2403,73.1305],'VASAI-VIRAR':[19.4912,72.8054],
+  'VARANASI':[25.3176,82.9739],'SRINAGAR':[34.0837,74.7973],'AURANGABAD':[19.8762,75.3433],
+  'DHANBAD':[23.7957,86.4304],'AMRITSAR':[31.6340,74.8723],'NAVI MUMBAI':[19.0330,73.0297],
+  'ALLAHABAD':[25.4358,81.8463],'PRAYAGRAJ':[25.4358,81.8463],'RANCHI':[23.3441,85.3096],
+  'HOWRAH':[22.5958,88.2636],'COIMBATORE':[11.0168,76.9558],'JABALPUR':[23.1815,79.9864],
+  'GWALIOR':[26.2183,78.1828],'VIJAYAWADA':[16.5062,80.6480],'JODHPUR':[26.2389,73.0243],
+  'MADURAI':[9.9252,78.1198],'RAIPUR':[21.2514,81.6296],'KOTA':[25.2138,75.8648],
+  'GUWAHATI':[26.1445,91.7362],'CHANDIGARH':[30.7333,76.7794],'SOLAPUR':[17.6599,75.9064],
+  'HUBLI':[15.3647,75.1240],'DHARWAD':[15.4589,75.0078],'BAREILLY':[28.3670,79.4304],
+  'MYSURU':[12.2958,76.6394],'MYSORE':[12.2958,76.6394],'TIRUCHIRAPPALLI':[10.7905,78.7047],
+  'TIRUPPUR':[11.1085,77.3411],'MORADABAD':[28.8386,78.7733],'JALANDHAR':[31.3260,75.5762],
+  'BHUBANESWAR':[20.2961,85.8245],'SALEM':[11.6643,78.1460],'WARANGAL':[17.9784,79.6003],
+  'GUNTUR':[16.3067,80.4365],'BHIWANDI':[19.3002,73.0629],'SAHARANPUR':[29.9680,77.5460],
+  'GORAKHPUR':[26.7606,83.3732],'BIKANER':[28.0229,73.3119],'AMRAVATI':[20.9374,77.7796],
+  'NOIDA':[28.5355,77.3910],'JAMSHEDPUR':[22.8046,86.2029],'BHILAI':[21.2094,81.4285],
+  'CUTTACK':[20.4625,85.8828],'FIROZABAD':[27.1592,78.3957],'KOCHI':[9.9312,76.2673],
+  'NELLORE':[14.4426,79.9865],'BHAVNAGAR':[21.7645,72.1519],'DEHRADUN':[30.3165,78.0322],
+  'DURGAPUR':[23.5204,87.3119],'ASANSOL':[23.6889,86.9661],'ROURKELA':[22.2604,84.8536],
+  'NANDED':[19.1383,77.3210],'KOLHAPUR':[16.7050,74.2433],'AJMER':[26.4499,74.6399],
+  'AKOLA':[20.7002,77.0082],'GULBARGA':[17.3297,76.8343],'KALABURAGI':[17.3297,76.8343],
+  'JAMNAGAR':[22.4707,70.0577],'UJJAIN':[23.1765,75.7885],'LONI':[28.7500,77.2833],
+  'SILIGURI':[26.7271,88.3953],'JHANSI':[25.4484,78.5685],'ULHASNAGAR':[19.2215,73.1645],
+  'JAMMU':[32.7266,74.8570],'SANGLI':[16.8524,74.5815],'MANGALURU':[12.9141,74.8560],
+  'MANGALORE':[12.9141,74.8560],'ERODE':[11.3410,77.7172],'BELGAUM':[15.8497,74.4977],
+  'BELAGAVI':[15.8497,74.4977],'KURNOOL':[15.8281,78.0373],'RAJAHMUNDRY':[17.0005,81.8040],
+  'BOKARO':[23.6693,86.1511],'BALLARI':[15.1394,76.9214],'BELLARY':[15.1394,76.9214],
+  'PATIALA':[30.3398,76.3869],'GORAKHPUR ':[26.7606,83.3732],'BHAGALPUR':[25.2425,86.9842],
+  'MUZAFFARPUR':[26.1225,85.3906],'BHATPARA':[22.8664,88.4041],'PANIPAT':[29.3909,76.9635],
+  'DARBHANGA':[26.1542,85.8918],'BALLIA':[25.7600,84.1500],'AIZAWL':[23.7271,92.7176],
+  'DIBRUGARH':[27.4728,94.9120],'SHILLONG':[25.5788,91.8933],'IMPHAL':[24.8170,93.9368],
+  'ITANAGAR':[27.0844,93.6053],'AGARTALA':[23.8315,91.2868],'GANGTOK':[27.3389,88.6065],
+  'KOHIMA':[25.6751,94.1086],'PANAJI':[15.4909,73.8278],'SHIMLA':[31.1048,77.1734],
+  'PORT BLAIR':[11.6234,92.7265],'PUDUCHERRY':[11.9416,79.8083],'ANGUL':[20.8400,85.1017],
+  'JAJPUR':[20.8500,86.3333],'KEONJHAR':[21.6333,85.5833],'SAMBALPUR':[21.4669,83.9756],
+  'BALASORE':[21.4942,86.9317],'PARADIP':[20.3160,86.6114],'KALINGANAGAR':[21.0300,86.1500],
+  'HAZARIBAGH':[23.9925,85.3637],'BOKARO STEEL CITY':[23.6693,86.1511],'VIZAG':[17.6868,83.2185],
+};
+/* Resolve a display coordinate for a row: direct city hit → STO/state fallback → null (Other/Unmapped). */
+function resolveGeo(city,sto){
+  const ck=String(city||'').trim().toUpperCase();
+  if(ck&&CITY_CENTROID[ck])return{lat:CITY_CENTROID[ck][0],lng:CITY_CENTROID[ck][1],level:'city',label:city};
+  const sk=stateKey(sto);
+  if(sk&&STATE_CENTROID[sk])return{lat:STATE_CENTROID[sk][0],lng:STATE_CENTROID[sk][1],level:'state',label:sto};
+  return null;
+}
+
+/* ═══════════════════ LIVE FETCH (reused verbatim from Rake-Planner) ═══════════════════ */
+const EBTP_SHEET_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vQEKS6uq6epbkSmpv548hSG63WVUiFwKLXctpeM3G8NMeXJ_ZJaTCuFj95n4gTRuhchM_T4q_kp5_au/pub?gid=0&single=true&output=csv";
+function tryXHR(url){
+  return new Promise((res,rej)=>{
+    const x=new XMLHttpRequest();
+    x.open('GET',url,true);
+    x.timeout=10000;
+    x.onload=()=>x.status>=200&&x.status<300?res(x.responseText):rej(new Error('XHR '+x.status));
+    x.onerror=()=>rej(new Error('XHR error'));
+    x.ontimeout=()=>rej(new Error('XHR timeout'));
+    x.send();
+  });
+}
+function tryIframe(url){
+  return new Promise((res,rej)=>{
+    const iframe=document.createElement('iframe');
+    iframe.style.cssText='position:fixed;width:1px;height:1px;top:-999px;left:-999px;opacity:0;';
+    iframe.sandbox='allow-same-origin';
+    const t=setTimeout(()=>{try{document.body.removeChild(iframe);}catch(e){}rej(new Error('iframe timeout'));},12000);
+    iframe.onload=()=>{
+      clearTimeout(t);
+      try{
+        const txt=iframe.contentDocument?.body?.innerText||iframe.contentDocument?.documentElement?.innerText||'';
+        document.body.removeChild(iframe);
+        txt.includes(',')&&txt.length>50?res(txt):rej(new Error('iframe: no csv'));
+      }catch(e){try{document.body.removeChild(iframe);}catch(_){}rej(e);}
+    };
+    iframe.onerror=()=>{clearTimeout(t);try{document.body.removeChild(iframe);}catch(e){}rej(new Error('iframe error'));};
+    document.body.appendChild(iframe);
+    iframe.src=url;
+  });
+}
+function tryFetch(proxyUrl,json){
+  return fetch(proxyUrl,{cache:'no-store',mode:'cors',credentials:'omit'})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);
+      return json?r.json().then(d=>{const t=d?.contents||d?.data||'';if(!t)throw new Error('empty');return t;}):r.text();
+    });
+}
+function splitCSV(line){
+  const out=[];let cur='',q=false;
+  for(let i=0;i<line.length;i++){const c=line[i];
+    if(q){ if(c==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else{ if(c==='"')q=true; else if(c===','){out.push(cur);cur='';} else cur+=c; }
+  }
+  out.push(cur);return out;
+}
+
+/* ═══════════════════ ROW PARSING — duplicate-column stash ═══════════════════
+   Columns MODE (idx 2 & idx 216) and BTR (idx 37 & idx 219) appear twice in the
+   sheet. Plain header→value assignment lets the LATER index win (obj[header]=row[i]
+   overwritten on each pass), so obj['MODE'] would end up holding col-216's value and
+   obj['BTR'] would hold col-219's value. We explicitly stash the FIRST-occurrence
+   (by raw index) values we actually want under distinct keys, exactly as Rake-Planner does. */
+function stashDupCols(obj,row){
+  // col 2 — simple Road/RAKE-xxx/HOLD mode. Any HOLD-* variant (HOLD-Exp, HOLD-MKTG, HOLD-Mktg, …)
+  // is a road-mode order sitting on a marketing/export hold — normalize it to ROAD so every
+  // downstream MODE-based grouping (rake chips, rake-mode summary table, filters) treats it as such.
+  const modeRaw=String(row[2]!=null?row[2]:'').trim();
+  obj['_MODE_SIMPLE']=/^HOLD-/i.test(modeRaw)?'Road':modeRaw;
+  obj['_BTR']=Number(row[37])||0;                        // col 37 — BTR (first occurrence)
+  obj['_MODE_HI']=String(row[216]!=null?row[216]:'');    // col 216 — secondary MODE (CAPTIVE etc, wins in obj['MODE'])
+  obj['_BTR_HI']=Number(row[219])||0;                    // col 219 — secondary BTR (wins in obj['BTR'])
+  return obj;
+}
+
+/* ═══════════════════ CHIP / MULTISELECT DROPDOWN (pattern reused from Rake-Planner) ═══════════════════ */
+function MultiSelect({label,options,selected,onChange,width}){
+  const[open,setOpen]=useState(false);
+  const ref=useRef();
+  useEffect(()=>{
+    const h=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};
+    document.addEventListener('mousedown',h);
+    return()=>document.removeEventListener('mousedown',h);
+  },[]);
+  const allSel=options.length>0&&options.every(o=>selected.has(o));
+  const toggle=o=>{ const s=new Set(selected); s.has(o)?s.delete(o):s.add(o); onChange(s); };
+  const toggleAll=()=>{ onChange(allSel?new Set():new Set(options)); };
+  return<div ref={ref} style={{position:'relative',width:width||170}}>
+    <button onClick={()=>setOpen(v=>!v)} style={{...inp,textAlign:'left',cursor:'pointer',
+      display:'flex',justifyContent:'space-between',alignItems:'center',gap:6,
+      borderColor:open?'var(--amber)':'var(--bdrHi)'}}>
+      <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:12.5,color:'var(--text)'}}>
+        {label}{selected.size?` (${selected.size})`:''}
+      </span>
+      <span style={{color:'var(--mute)',fontSize:10}}>{open?'▲':'▼'}</span>
+    </button>
+    {open&&<div className="portal-dropdown" style={{position:'absolute',top:'calc(100% + 4px)',left:0,
+      background:'var(--glass-hi)',backdropFilter:'blur(20px)',zIndex:400,width:Math.max(width||170,220),
+      maxHeight:280,overflowY:'auto'}}>
+      <div onClick={toggleAll} style={{padding:'8px 12px',fontSize:12,fontWeight:700,color:C.sky,
+        cursor:'pointer',borderBottom:'1px solid var(--bdr)'}}>{allSel?'Clear All':'Select All'}</div>
+      {options.map(o=>(
+        <div key={String(o)} onClick={()=>toggle(o)} style={{padding:'7px 12px',fontSize:12.5,
+          cursor:'pointer',display:'flex',alignItems:'center',gap:8,color:'var(--text)',
+          background:selected.has(o)?'var(--amber-bg)':'transparent'}}>
+          <span style={{width:14,height:14,borderRadius:4,border:`1.5px solid ${selected.has(o)?C.amber:'var(--bdrHi)'}`,
+            background:selected.has(o)?C.amber:'transparent',flexShrink:0}}/>
+          <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{String(o)||'(blank)'}</span>
+        </div>
+      ))}
+      {!options.length&&<div style={{padding:'10px 12px',fontSize:12,color:'var(--mute)'}}>No options</div>}
+    </div>}
+  </div>;
+}
+
+/* ═══════════════════ SVG DONUT CHART ═══════════════════ */
+function Donut({data,size=180,thickness=28,centerLabel,onSliceClick,activeLabels}){
+  const total=data.reduce((s,d)=>s+d.value,0)||1;
+  const R=size/2, r=R-thickness/2;
+  let acc=0;
+  const segs=data.map(d=>{
+    const frac=d.value/total;
+    const a0=acc*2*Math.PI-Math.PI/2, a1=(acc+frac)*2*Math.PI-Math.PI/2;
+    acc+=frac;
+    const x0=R+r*Math.cos(a0),y0=R+r*Math.sin(a0),x1=R+r*Math.cos(a1),y1=R+r*Math.sin(a1);
+    const large=frac>0.5?1:0;
+    return{...d,frac,path:`M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`};
+  });
+  return<svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    {segs.map((s,i)=>(
+      <path key={i} d={s.path} fill="none" stroke={s.color} strokeWidth={thickness} strokeLinecap="butt"
+        style={{cursor:onSliceClick?'pointer':'default',
+          opacity:(!activeLabels||!activeLabels.size||activeLabels.has(s.label))?1:0.35}}
+        onClick={onSliceClick?()=>onSliceClick(s.label):undefined}/>
+    ))}
+    <text x={R} y={R-6} textAnchor="middle" fontFamily={F.h} fontSize="10.5" fontWeight="800"
+      letterSpacing=".05em" fill="var(--mute)">{centerLabel}</text>
+    <text x={R} y={R+14} textAnchor="middle" fontFamily={F.m} fontSize="15" fontWeight="700"
+      fill="var(--text)">{fmt(total,0)}</text>
+  </svg>;
+}
+
+/* ═══════════════════ SVG LINE CHART (multi-series with avg dashed lines) ═══════════════════ */
+function LineChart({buckets,series,height=220,width=560,valueFmt}){
+  const pad={l:52,r:16,t:16,b:28};
+  const w=width-pad.l-pad.r, h=height-pad.t-pad.b;
+  const allVals=series.flatMap(s=>buckets.map((_,i)=>s.values[i]||0));
+  const maxV=Math.max(1,...allVals)*1.12;
+  const x=i=>pad.l+(buckets.length>1?i/(buckets.length-1)*w:w/2);
+  const y=v=>pad.t+h-(v/maxV)*h;
+  const vf=valueFmt||(v=>fmt(v,0));
+  return<svg width="100%" viewBox={`0 0 ${width} ${height}`} style={{overflow:'visible'}}>
+    {[0,0.25,0.5,0.75,1].map((f,i)=>(
+      <g key={i}>
+        <line x1={pad.l} x2={pad.l+w} y1={pad.t+h-f*h} y2={pad.t+h-f*h} stroke="var(--bdr)" strokeWidth="1"/>
+        <text x={pad.l-8} y={pad.t+h-f*h+3} textAnchor="end" fontFamily={F.m} fontSize="9.5" fill="var(--mute)">{vf(maxV*f)}</text>
+      </g>
+    ))}
+    {buckets.map((b,i)=>(i%Math.ceil(buckets.length/8||1)===0)&&(
+      <text key={i} x={x(i)} y={height-8} textAnchor="middle" fontFamily={F.m} fontSize="9.5" fill="var(--mute)">{b}</text>
+    ))}
+    {series.map((s,si)=>{
+      const avg=s.values.reduce((a,b)=>a+b,0)/(s.values.length||1);
+      const pts=s.values.map((v,i)=>`${x(i)},${y(v)}`).join(' ');
+      return<g key={si}>
+        <polyline points={pts} fill="none" stroke={s.color} strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round"/>
+        {s.values.map((v,i)=>(<circle key={i} cx={x(i)} cy={y(v)} r="2.6" fill={s.color}/>))}
+        <line x1={pad.l} x2={pad.l+w} y1={y(avg)} y2={y(avg)} stroke={s.color} strokeWidth="1.3" strokeDasharray="5 5" opacity="0.55"/>
+        <text x={pad.l+w-2} y={y(avg)-5} textAnchor="end" fontFamily={F.m} fontSize="9.5" fill={s.color}>Avg ({vf(avg)})</text>
+      </g>;
+    })}
+  </svg>;
+}
+
+/* ═══════════════════ STACKED HORIZONTAL BAR ═══════════════════ */
+function StackedBar({label,onlineV,offlineV,onSegClick,activeSet}){
+  const total=onlineV+offlineV||1;
+  const op=pct(onlineV,total), fp=pct(offlineV,total);
+  const onlineActive=activeSet&&activeSet.has('ONLINE'), offlineActive=activeSet&&activeSet.has('OFFLINE');
+  return<div style={{display:'flex',flexDirection:'column',gap:5}}>
+    <div style={{display:'flex',justifyContent:'space-between',fontSize:12,fontFamily:F.b,color:'var(--dim)'}}>
+      <span style={{fontWeight:700,color:'var(--text)'}}>{label}</span>
+      <span style={{fontFamily:F.m,color:'var(--mute)'}}>{fmt(onlineV+offlineV,0)} MT</span>
+    </div>
+    <div style={{display:'flex',height:26,borderRadius:8,overflow:'hidden',border:'1px solid var(--bdr)'}}>
+      <div onClick={onSegClick?()=>onSegClick('ONLINE'):undefined}
+        style={{width:op+'%',background:C.sky,display:'flex',alignItems:'center',justifyContent:'center',
+        fontSize:10.5,fontFamily:F.m,color:'#fff',minWidth:op>4?undefined:0,cursor:onSegClick?'pointer':'default',
+        opacity:activeSet&&activeSet.size&&!onlineActive?0.35:1}}>{op>7?op.toFixed(0)+'%':''}</div>
+      <div onClick={onSegClick?()=>onSegClick('OFFLINE'):undefined}
+        style={{width:fp+'%',background:C.orange,display:'flex',alignItems:'center',justifyContent:'center',
+        fontSize:10.5,fontFamily:F.m,color:'#fff',minWidth:fp>4?undefined:0,cursor:onSegClick?'pointer':'default',
+        opacity:activeSet&&activeSet.size&&!offlineActive?0.35:1}}>{fp>7?fp.toFixed(0)+'%':''}</div>
+    </div>
+  </div>;
+}
+
+/* ═══════════════════ UPLOAD SCREEN ═══════════════════ */
+function UploadScreen({onFile,onCSV,autoFetchEnabled=true}){
+  const[drag,setDrag]=useState(false);
+  const[fetching,setFetching]=useState(false);
+  const[fetchErr,setFetchErr]=useState('');
+  const[fetchStatus,setFetchStatus]=useState('');
+  const ref=useRef();
+  const autoFetchStarted=useRef(false);
+
+  const fetchOnline=async()=>{
+    setFetching(true);setFetchErr('');setFetchStatus('');
+    const enc=encodeURIComponent(EBTP_SHEET_URL);
+    const strats=[
+      {n:'XHR',           f:()=>tryXHR(EBTP_SHEET_URL)},
+      {n:'Iframe',        f:()=>tryIframe(EBTP_SHEET_URL)},
+      {n:'corsproxy.io',  f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
+      {n:'allorigins/raw',f:()=>tryFetch('https://api.allorigins.win/raw?url='+enc,false)},
+      {n:'allorigins/get',f:()=>tryFetch('https://api.allorigins.win/get?url='+enc,true)},
+      {n:'jsonp.afeld.me',f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
+    ];
+    let lastErr='All methods blocked';
+    for(const{n,f}of strats){
+      setFetchStatus('Trying '+n+'…');
+      try{
+        const text=await f();
+        if(!text||text.length<50)throw new Error('empty');
+        if(!text.split('\n')[0].includes(','))throw new Error('not CSV');
+        setFetchStatus('✓ '+n+' succeeded · Parsing…');
+        await new Promise(r=>setTimeout(r,200));
+        onCSV(text);setFetchStatus('');setFetching(false);return;
+      }catch(e){lastErr=n+': '+(e.name==='AbortError'?'timeout':e.message);}
+    }
+    setFetchErr(lastErr+'. Download the sheet as .xlsx and upload it above.');
+    setFetchStatus('');setFetching(false);
+  };
+
+  return<div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+    minHeight:'100dvh',gap:28,padding:'32px 20px',background:'var(--bg)'}}>
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:16,textAlign:'center'}}>
+      <div style={{fontFamily:F.h,fontWeight:900,fontSize:22,letterSpacing:'.04em',color:C.jsplGold}}>Jindal Steel Angul</div>
+      <div style={{width:100,height:1.5,background:'linear-gradient(90deg,transparent,var(--bdrHi),transparent)'}}/>
+      <div>
+        <div style={{fontSize:12,fontFamily:F.h,letterSpacing:'.22em',textTransform:'uppercase',
+          color:'var(--mute)',marginBottom:12}}>Jindal Steel Plate Mill</div>
+        <h1 style={{fontFamily:F.h,fontSize:`clamp(28px,6vw,54px)`,fontWeight:800,
+          color:'var(--text)',letterSpacing:'.03em',textTransform:'uppercase',margin:0,
+          animation:'glow 3s ease-in-out infinite'}}>Order Status Report</h1>
+        <p style={{fontFamily:F.b,fontSize:15,color:'var(--dim)',marginTop:14,maxWidth:460,lineHeight:1.7}}>
+          Upload the daily EBTP file (sheet <b>WS</b>) for KPI tracking, customer &amp; rake-mode
+          breakdowns, supply-condition analysis and geographic order distribution.
+        </p>
+      </div>
+    </div>
+    <div onClick={()=>ref.current.click()}
+      onDragOver={e=>{e.preventDefault();setDrag(true)}}
+      onDragLeave={()=>setDrag(false)}
+      onDrop={e=>{e.preventDefault();setDrag(false);onFile(e.dataTransfer.files[0])}}
+      style={{width:`min(500px,92vw)`,padding:'56px 40px',
+        border:`2px dashed ${drag?C.amber:'var(--bdrHi)'}`,
+        borderRadius:'var(--radius-xl)',cursor:'pointer',textAlign:'center',transition:'all .22s ease',
+        background:drag?'var(--amber-bg)':'var(--s1)',
+        boxShadow:drag?`var(--shadow-xl),0 0 48px ${C._amber}40`:'var(--shadow-md)'}}>
+      <div style={{fontSize:64,marginBottom:18,transform:drag?'scale(1.1)':'scale(1)',
+        filter:drag?`drop-shadow(0 0 20px ${C._amber}80)`:'none'}}>📊</div>
+      <div style={{fontFamily:F.h,fontSize:26,fontWeight:800,color:drag?C.amber:'var(--text)',
+        letterSpacing:'.04em',textTransform:'uppercase',marginBottom:10}}>
+        {drag?'Drop to Analyse':'Upload EBTP File'}
+      </div>
+      <div style={{fontFamily:F.b,fontSize:14,color:'var(--dim)'}}>Drag &amp; drop or click to browse</div>
+      <div style={{marginTop:20,fontFamily:F.m,fontSize:11,color:'var(--mute)',padding:'7px 16px',
+        background:'var(--s2)',borderRadius:'var(--radius-sm)',display:'inline-block',border:'1px solid var(--bdr)'}}>
+        EBTP-DD.MM.YYYY.xlsx · Sheet: WS
+      </div>
+    </div>
+    <input ref={ref} type="file" accept=".xlsx,.xls" style={{display:'none'}}
+      onChange={e=>e.target.files[0]&&onFile(e.target.files[0])}/>
+    <div style={{width:'min(500px,92vw)',borderRadius:'var(--radius-lg)',
+      border:`1px solid ${fetching?C.sky:'var(--bdrHi)'}`,background:'var(--s1)',boxShadow:'var(--shadow-sm)',overflow:'hidden'}}>
+      <div style={{padding:'14px 20px',display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',rowGap:8}}>
+        <div style={{fontSize:22,flexShrink:0}}>☁️</div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontFamily:F.h,fontSize:13,fontWeight:700,color:'var(--text)',
+            letterSpacing:'.06em',textTransform:'uppercase'}}>Fetch Live EBTP Data</div>
+          <div style={{fontFamily:F.b,fontSize:11,color:'var(--mute)',marginTop:2}}>
+            {fetching?(fetchStatus||'…'):'Google Sheet · XHR → iframe → 4 proxies'}
+          </div>
+        </div>
+        <button onClick={fetchOnline} disabled={fetching} style={{
+          padding:'9px 20px',borderRadius:'var(--radius-sm)',cursor:fetching?'wait':'pointer',flexShrink:0,
+          background:fetching?'var(--s3)':`${C._sky}20`,border:`1.5px solid ${fetching?C.sky:'var(--bdrHi)'}`,
+          color:fetching?C.sky:'var(--dim)',fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.08em',
+          textTransform:'uppercase'}}>
+          {fetching?<span style={{display:'inline-flex',alignItems:'center',gap:7}}>
+            <span style={{width:14,height:14,border:`2px solid ${C._sky}40`,borderTopColor:C.sky,
+              borderRadius:'50%',animation:'spin .7s linear infinite',display:'inline-block'}}/>
+            {fetchStatus||'Connecting…'}</span>:'⟳ Fetch Now'}
+        </button>
+      </div>
+      {fetchErr&&<div style={{padding:'10px 20px 14px',fontFamily:F.b,fontSize:12,color:C.rose,
+        borderTop:'1px solid var(--bdr)',lineHeight:1.7,background:'var(--rose-bg)'}}>⚠ {fetchErr}</div>}
+    </div>
+  </div>;
+}
+
+/* ═══════════════════ ROW PROCESSING ═══════════════════ */
+function buildRows(headers,dataRows){
+  return dataRows.map(row=>{
+    const obj={};
+    headers.forEach((h,i)=>{ if(h!=='') obj[h]=row[i]!=null?row[i]:''; });
+    stashDupCols(obj,row);
+    return obj;
+  });
+}
+function computeDerived(r){
+  const wip=[26,27,28,29,30,31,32,33,34,35].reduce((s,i)=>s+n2(parseFloat(r['_row']?r['_row'][i]:0)),0);
+  return r;
+}
+
+/* Column index constants (raw positions in sheet WS, 0-based) */
+const IDX={
+  MODE:2, SOLD_TO:7, SHIP_CITY:8, EXT_GRADE:9, INT_GRADE:10, ORDER_QTY_LIVE:16,
+  DELIVERED:23, BAL_TO_DELIVER:24, FG_UR:25, WIP_START:26, WIP_END:35,
+  PLATE_STOCK:36, BTR:37, SLAB_STOCK:39, NO_PLAN:40, BTC:41, ISSUED:43, BTP:45,
+  SUPPLY_COND:47, INSP_BY:49, CRTN_DT:54, SO_DATE:55, FI_REL_STA:70,
+  ORDER_QTY:80, MATGRP:124, REGION_NAME:144, STO:145, FINISHING_LINE:205,
+  VAG_STATUS:207, PRODUCED:212, MODE_HI:216, CASTING_PLANNED:218, BTR_HI:219,
+};
+
+/* "Released" was previously defined off `FI Rel Sta`. Redefined per business ask to be driven by
+   the Remarks column (col 6) instead — a row counts as released when Remarks is (case-insensitively,
+   exact-match after trim) one of: Captive, SBU Released, FI Released, FI Released(2).
+   Confirmed via direct inspection of the actual EBTP-22.08.2026.xlsx unique Remarks values, which are:
+   'Captive','FI Released','FI Released (1)','FI Released(2)','MARKETING HOLD','POR','SBU Released',
+   'Short Close','Short Close Pending','Waiting for FI Rel.' — note 'FI Released (1)' (space before the
+   paren) is a DISTINCT, deliberately-excluded value (mirrors the old logic's "not (1)" exclusion);
+   only the exact strings below count as released. */
+const RELEASED_REMARKS=new Set(['captive','sbu released','fi released','fi released(2)']);
+function isReleasedRow(r){
+  const v=String(r['Remarks']||'').trim().toLowerCase();
+  return RELEASED_REMARKS.has(v);
+}
+
+/* ═══════════════════ MAIN DASHBOARD ═══════════════════ */
+function Dashboard({rawRows,rawArr,headers,fileName}){
+  const[relStaSel,setRelStaSel]=useState(new Set());
+  const[vagSel,setVagSel]=useState(new Set());
+  const[htcSel,setHtcSel]=useState(new Set());
+  const[intGradeSel,setIntGradeSel]=useState(new Set());
+  const[extGradeSel,setExtGradeSel]=useState(new Set());
+  const[inspBySel,setInspBySel]=useState(new Set());
+  const[releasedOnly,setReleasedOnly]=useState(false);
+  const[rakeChip,setRakeChip]=useState(null);
+  const[custPage,setCustPage]=useState(0);
+  const[custSort,setCustSort]=useState({key:'Order Qty',dir:'desc'});
+  const[custSearch,setCustSearch]=useState('');
+  const[segSel,setSegSel]=useState(new Set());
+  const[gradeSegSel,setGradeSegSel]=useState(new Set());
+  const[dateSel,setDateSel]=useState('All');
+  const[lineSel,setLineSel]=useState(new Set());
+  // Cross-filters set by clicking a chart/table/map element (donut slice, rake chip, customer row,
+  // state bubble, bar segment). Keyed by field name → Set of selected values. Combined with the
+  // dropdown filters above via AND logic in the `filtered` memo below.
+  const[chartFilters,setChartFilters]=useState({});
+  const toggleChartFilter=(field,value)=>{
+    setChartFilters(prev=>{
+      const cur=new Set(prev[field]||[]);
+      cur.has(value)?cur.delete(value):cur.add(value);
+      const next={...prev};
+      if(cur.size)next[field]=cur; else delete next[field];
+      return next;
+    });
+  };
+  const chartFilterFieldGetters={
+    supplyBucket:r=>r._HTC, mode:r=>r['_MODE_SIMPLE'], state:r=>stateKey(r['STO']),
+    sold_to_party:r=>r['Sold To Party Name'], finishingLine:r=>String(r['Finishing Line']||'').trim().toUpperCase(),
+  };
+  const activeChartFilterCount=Object.values(chartFilters).reduce((s,set)=>s+set.size,0);
+  const clearChartFilters=()=>setChartFilters({});
+
+  // Augment rows with derived fields once.
+  // WIP redefined per business ask: Plate Stock (col 36) − FG UR Stock (col 25), replacing the old
+  // sum-of-10-WIP-sub-bucket-columns (26-35) approach — those sub-buckets are no longer relied on.
+  const rows=useMemo(()=>{
+    return rawRows.map(r=>{
+      const htc=getHTC(r['Ext Grade'],r['Supply Condition']);
+      const soDate=excelDateToJS(r['SO Date'])||excelDateToJS(r['Crtn Dt']);
+      const wip=n2(parseFloat(r['Plate Stock']))-n2(parseFloat(r['FG UR Stock']));
+      return{...r,_HTC:htc,_soDate:soDate,_WIP:wip};
+    });
+  },[rawRows]);
+
+  const modeOptions=useMemo(()=>[...new Set(rows.map(r=>r['_MODE_SIMPLE']).filter(Boolean))],[rows]);
+  const rakeOptions=useMemo(()=>modeOptions.filter(m=>/^RAKE-/i.test(m)),[modeOptions]);
+  const relStaOptions=useMemo(()=>[...new Set(rows.map(r=>r['FI Rel Sta']).filter(Boolean))],[rows]);
+  const vagOptions=useMemo(()=>[...new Set(rows.map(r=>r['VAG Status']).filter(Boolean))],[rows]);
+  const intGradeOptions=useMemo(()=>[...new Set(rows.map(r=>r['Int Grade']).filter(Boolean))].sort(),[rows]);
+  const extGradeOptions=useMemo(()=>[...new Set(rows.map(r=>r['Ext Grade']).filter(Boolean))].sort(),[rows]);
+  const inspByOptions=useMemo(()=>[...new Set(rows.map(r=>r['Insp By']).filter(Boolean))],[rows]);
+  const segOptions=useMemo(()=>[...new Set(rows.map(r=>r['Region Name']).filter(Boolean))],[rows]);
+  const gradeSegOptions=useMemo(()=>[...new Set(rows.map(r=>r['MatGrp Desc']).filter(Boolean))],[rows]);
+  const lineOptions=useMemo(()=>[...new Set(rows.map(r=>String(r['Finishing Line']||'').trim().toUpperCase()).filter(Boolean))],[rows]);
+  const custOptions=useMemo(()=>[...new Set(rows.map(r=>r['Sold To Party Name']).filter(Boolean))].sort(),[rows]);
+  const dateOptions=useMemo(()=>{
+    const s=new Set();
+    rows.forEach(r=>{ if(r._soDate) s.add(r._soDate.toISOString().slice(0,10)); });
+    return[...s].sort();
+  },[rows]);
+  const latestDate=dateOptions.length?dateOptions[dateOptions.length-1]:null;
+
+  const filtered=useMemo(()=>{
+    return rows.filter(r=>{
+      if(relStaSel.size&&!relStaSel.has(r['FI Rel Sta']))return false;
+      if(vagSel.size&&!vagSel.has(r['VAG Status']))return false;
+      if(htcSel.size&&!htcSel.has(r._HTC))return false;
+      if(intGradeSel.size&&!intGradeSel.has(r['Int Grade']))return false;
+      if(extGradeSel.size&&!extGradeSel.has(r['Ext Grade']))return false;
+      if(inspBySel.size&&!inspBySel.has(r['Insp By']))return false;
+      if(releasedOnly&&!isReleasedRow(r))return false;
+      if(rakeChip&&r['_MODE_SIMPLE']!==rakeChip)return false;
+      if(segSel.size&&!segSel.has(r['Region Name']))return false;
+      if(gradeSegSel.size&&!gradeSegSel.has(r['MatGrp Desc']))return false;
+      if(dateSel!=='All'&&(!r._soDate||r._soDate.toISOString().slice(0,10)!==dateSel))return false;
+      if(lineSel.size&&!lineSel.has(String(r['Finishing Line']||'').trim().toUpperCase()))return false;
+      // ── cross-filters (chart-click filters), AND-combined across every active field ──
+      for(const field in chartFilters){
+        const getter=chartFilterFieldGetters[field];
+        if(!getter)continue;
+        if(!chartFilters[field].has(getter(r)))return false;
+      }
+      return true;
+    });
+  },[rows,relStaSel,vagSel,htcSel,intGradeSel,extGradeSel,inspBySel,releasedOnly,rakeChip,segSel,gradeSegSel,dateSel,lineSel,chartFilters]);
+
+  const anyFilterActive=relStaSel.size||vagSel.size||htcSel.size||intGradeSel.size||extGradeSel.size||inspBySel.size||releasedOnly||rakeChip||segSel.size||gradeSegSel.size||dateSel!=='All'||lineSel.size||activeChartFilterCount;
+  const clearAll=()=>{
+    setRelStaSel(new Set());setVagSel(new Set());setHtcSel(new Set());setIntGradeSel(new Set());
+    setExtGradeSel(new Set());setInspBySel(new Set());setReleasedOnly(false);setRakeChip(null);
+    setSegSel(new Set());setGradeSegSel(new Set());setDateSel('All');setLineSel(new Set());
+    clearChartFilters();
+  };
+
+  /* ── KPIs ──
+     Re-assessed as a data analyst for an order→produce→stock→dispatch pipeline. The original 7
+     (Released, Delivered, Bal To Deliver, Produced, BTR, BTC, BTP) were mostly raw stage balances
+     with no ratio/context — BTR/BTC/BTP are three consecutive funnel stages shown as three
+     unrelated absolute numbers, redundant with the detailed Rake-Mode Summary / Supply-Condition
+     tables below that already break them out.
+     KEPT: Released Order Qty (order-book entry gate), Delivered (cumulative output), Bal To Deliver
+       (live backlog — the single most operationally urgent absolute number), BTR (the very next
+       bottleneck stage after backlog; BTC/BTP dropped as standalone cards, still visible in tables).
+     ADDED: Fulfillment % (Delivered/Order Qty) turns the raw Delivered balance into an actionable
+       ratio; Online Order Mix % surfaces channel health (rising offline mix usually signals
+       finishing-line capacity strain); Stock Cover Ratio ((Plate+Slab+FG stock) ÷ Bal To Deliver)
+       approximates how much of the backlog is already covered by stock on hand — a more useful
+       readiness signal than showing BTC/BTP as bare tonnages with no denominator. A true days-of-
+       cover or on-time-in-full metric would need a dispatch-rate time series / promise-date field
+       this single-snapshot file doesn't reliably carry, so the ratio form was used instead. */
+  const kpi=useMemo(()=>{
+    let orderQtyAll=0,releasedQty=0,delivered=0,balToDeliver=0,produced=0,btr=0,btc=0,btp=0,
+        onlineQty=0,offlineQty=0,plateStock=0,slabStock=0,fgStock=0;
+    filtered.forEach(r=>{
+      const oq=n2(parseFloat(r['Order Qty']));
+      orderQtyAll+=oq;
+      if(isReleasedRow(r))releasedQty+=oq;
+      delivered+=n2(parseFloat(r['Delivered']));
+      balToDeliver+=n2(parseFloat(r['Bal To deliver']));
+      produced+=n2(parseFloat(r['Produced']));
+      btr+=n2(r['_BTR']);
+      btc+=n2(parseFloat(r['BTC']));
+      btp+=n2(parseFloat(r['BTP']));
+      plateStock+=n2(parseFloat(r['Plate Stock']));
+      slabStock+=n2(parseFloat(r['Slab Stock']));
+      fgStock+=n2(parseFloat(r['FG UR Stock']));
+      const fl=String(r['Finishing Line']||'').trim().toUpperCase();
+      if(fl==='ONLINE')onlineQty+=oq; else if(fl==='OFFLINE')offlineQty+=oq;
+    });
+    return{orderQtyAll,releasedQty,delivered,balToDeliver,produced,btr,btc,btp,
+      onlineQty,offlineQty,plateStock,slabStock,fgStock};
+  },[filtered]);
+
+  const fulfillmentPct=pct(kpi.delivered,kpi.orderQtyAll);
+  const onlineMixPct=pct(kpi.onlineQty,kpi.onlineQty+kpi.offlineQty);
+  const stockCoverRatio=kpi.balToDeliver?(kpi.plateStock+kpi.slabStock+kpi.fgStock)/kpi.balToDeliver:0;
+
+  const kpiCards=[
+    {label:'Released Order Qty',value:kpi.releasedQty,sub:'% of Total Order',pctVal:pct(kpi.releasedQty,kpi.orderQtyAll),color:C.sky},
+    {label:'Delivered',value:kpi.delivered,sub:'% of Total',pctVal:pct(kpi.delivered,kpi.orderQtyAll),color:C.rose},
+    {label:'Bal To Deliver',value:kpi.balToDeliver,sub:'% of Total',pctVal:pct(kpi.balToDeliver,kpi.orderQtyAll),color:C.rose},
+    {label:'Fulfillment %',value:fulfillmentPct,isRatio:true,unit:'%',sub:'Delivered ÷ Order Qty',pctVal:fulfillmentPct,color:C.green},
+    {label:'BTR',value:kpi.btr,sub:'% Bal to Deliver',pctVal:pct(kpi.btr,kpi.balToDeliver),color:C.rose},
+    {label:'Online Order Mix',value:onlineMixPct,isRatio:true,unit:'%',sub:'Online ÷ (Online+Offline) Qty',pctVal:onlineMixPct,color:C.sky},
+    {label:'Stock Cover Ratio',value:stockCoverRatio,isRatio:true,unit:'×',dp:2,sub:'(Plate+Slab+FG Stock) ÷ Bal To Deliver',pctVal:Math.min(100,stockCoverRatio*100),color:C.violet},
+  ];
+
+  /* ── Supply condition donut ── */
+  const htcData=useMemo(()=>{
+    const m={};HTC_ORDER.forEach(k=>m[k]=0);
+    filtered.forEach(r=>{ m[r._HTC]=(m[r._HTC]||0)+n2(parseFloat(r['Order Qty'])); });
+    return HTC_ORDER.map(k=>({label:k,value:m[k]||0,color:HTC_COLORS[k]}));
+  },[filtered]);
+  const htcTotal=htcData.reduce((s,d)=>s+d.value,0)||1;
+
+  /* ── Customer table ── */
+  const custRows=useMemo(()=>{
+    const m={};
+    filtered.forEach(r=>{
+      const name=r['Sold To Party Name']||'(Blank)';
+      if(!m[name])m[name]={name,ordQty:0,btb:0,fg:0,wip:0,plateStock:0,btr:0,slabStock:0,btc:0,issued:0,btp:0};
+      const o=m[name];
+      o.ordQty+=n2(parseFloat(r['Order Qty']));
+      o.btb+=n2(parseFloat(r['Bal To deliver']));
+      o.fg+=n2(parseFloat(r['FG UR Stock']));
+      o.wip+=n2(r._WIP);
+      o.plateStock+=n2(parseFloat(r['Plate Stock']));
+      o.btr+=n2(r['_BTR']);
+      o.slabStock+=n2(parseFloat(r['Slab Stock']));
+      o.btc+=n2(parseFloat(r['BTC']));
+      o.issued+=n2(parseFloat(r['Casting plannned']));
+      o.btp+=n2(parseFloat(r['BTP']));
+    });
+    let arr=Object.values(m);
+    if(custSearch.trim()) arr=arr.filter(o=>o.name.toUpperCase().includes(custSearch.trim().toUpperCase()));
+    const keyMap={'Order Qty':'ordQty','BTB':'btb','FG':'fg','WIP':'wip','Plate Stock':'plateStock','BTR':'btr','Slab Stock':'slabStock','BTC':'btc','Issued':'issued','BTP':'btp'};
+    const k=keyMap[custSort.key]||'ordQty';
+    arr.sort((a,b)=>custSort.dir==='desc'?b[k]-a[k]:a[k]-b[k]);
+    return arr;
+  },[filtered,custSearch,custSort]);
+  const custTotal=useMemo(()=>{
+    const t={ordQty:0,btb:0,fg:0,wip:0,plateStock:0,btr:0,slabStock:0,btc:0,issued:0,btp:0};
+    custRows.forEach(o=>{ Object.keys(t).forEach(k=>t[k]+=o[k]); });
+    return t;
+  },[custRows]);
+  const CUST_PAGE_SIZE=20;
+  const custPageCount=Math.max(1,Math.ceil(custRows.length/CUST_PAGE_SIZE));
+  const custPageRows=custRows.slice(custPage*CUST_PAGE_SIZE,(custPage+1)*CUST_PAGE_SIZE);
+  const custMaxFG=Math.max(1,...custRows.map(o=>o.fg));
+  const custMaxHeat=Math.max(1,...custRows.map(o=>o.btr+o.btc+o.issued+o.btp));
+
+  /* ── Rake-mode summary table ── */
+  const modeRows=useMemo(()=>{
+    const m={};
+    filtered.forEach(r=>{
+      const mode=r['_MODE_SIMPLE']||'(Blank)';
+      if(!m[mode])m[mode]={mode,orderQtyLive:0,delivered:0,balToDeliver:0,fg:0,wip:0,plateStock:0,btr:0,slabStock:0,noPlan:0,btc:0,issued:0,btp:0};
+      const o=m[mode];
+      o.orderQtyLive+=n2(parseFloat(r['Order Qty_Live']));
+      o.delivered+=n2(parseFloat(r['Delivered']));
+      o.balToDeliver+=n2(parseFloat(r['Bal To deliver']));
+      o.fg+=n2(parseFloat(r['FG UR Stock']));
+      o.wip+=n2(r._WIP);
+      o.plateStock+=n2(parseFloat(r['Plate Stock']));
+      o.btr+=n2(r['_BTR']);
+      o.slabStock+=n2(parseFloat(r['Slab Stock']));
+      o.noPlan+=n2(parseFloat(r['NO PLAN']));
+      o.btc+=n2(parseFloat(r['BTC']));
+      o.issued+=n2(parseFloat(r['Casting plannned']));
+      o.btp+=n2(parseFloat(r['BTP']));
+    });
+    return Object.values(m).sort((a,b)=>b.orderQtyLive-a.orderQtyLive);
+  },[filtered]);
+  const modeCols=[
+    {key:'orderQtyLive',label:'Order Qty_Live'},{key:'delivered',label:'Delivered'},
+    {key:'balToDeliver',label:'Bal To Deliver'},{key:'fg',label:'FG UR Stock'},
+    {key:'wip',label:'WIP'},{key:'plateStock',label:'Plate Stock'},{key:'btr',label:'BTR'},
+    {key:'slabStock',label:'Slab Stock'},{key:'noPlan',label:'NO PLAN'},{key:'btc',label:'BTC'},
+    {key:'issued',label:'Issued (Casting Planned)'},{key:'btp',label:'BTP'},
+  ];
+  const modeMax=useMemo(()=>{
+    const mx={};modeCols.forEach(c=>{mx[c.key]=Math.max(1,...modeRows.map(r=>r[c.key]));});
+    return mx;
+  },[modeRows]);
+  const modeHeatFamily=['#5ba3d9','#9b87d4','#d4793c','#d99bb0'];
+  function heatColor(v,max,famIdx){
+    const f=Math.min(1,Math.max(0,v/max));
+    const base=modeHeatFamily[famIdx%modeHeatFamily.length];
+    return C.isDark?`${base}${Math.round(8+f*40).toString(16).padStart(2,'0')}`:`${base}${Math.round(6+f*28).toString(16).padStart(2,'0')}`;
+  }
+  const modeGrand=useMemo(()=>{
+    const t={};modeCols.forEach(c=>t[c.key]=0);
+    modeRows.forEach(r=>modeCols.forEach(c=>t[c.key]+=r[c.key]));
+    return t;
+  },[modeRows]);
+
+  /* ── State/city map aggregation ── city hit first, STO/state fallback, else "Other/Unmapped" bucket ── */
+  const stateAgg=useMemo(()=>{
+    const m={};let unmapped=0;
+    filtered.forEach(r=>{
+      const oq=n2(parseFloat(r['Order Qty']));
+      const geo=resolveGeo(r['Ship To Party City'],r['STO']);
+      if(!geo){ unmapped++; return; }
+      const key=geo.level+':'+String(geo.label||'').toUpperCase();
+      if(!m[key])m[key]={key,lat:geo.lat,lng:geo.lng,qty:0,label:geo.label,level:geo.level};
+      m[key].qty+=oq;
+    });
+    return{list:Object.values(m),unmapped};
+  },[filtered]);
+
+  /* ── Supply Condition x metrics table ── */
+  const htcMetrics=useMemo(()=>{
+    const m={};HTC_ORDER.forEach(k=>m[k]={htc:k,orderQty:0,btr:0,btc:0,btp:0,castingPlanned:0});
+    filtered.forEach(r=>{
+      const o=m[r._HTC]; if(!o)return;
+      o.orderQty+=n2(parseFloat(r['Order Qty']));
+      o.btr+=n2(r['_BTR']);
+      o.btc+=n2(parseFloat(r['BTC']));
+      o.btp+=n2(parseFloat(r['BTP']));
+      o.castingPlanned+=n2(parseFloat(r['Casting plannned']));
+    });
+    return HTC_ORDER.map(k=>m[k]);
+  },[filtered]);
+
+  /* ── Online/Offline stacked bars ── */
+  const onlineOffline=useMemo(()=>{
+    const mk=()=>({online:0,offline:0});
+    const b={orderQty:mk(),plateStock:mk(),slabStock:mk(),issued:mk()};
+    filtered.forEach(r=>{
+      const fl=String(r['Finishing Line']||'').trim().toUpperCase();
+      const key=fl==='ONLINE'?'online':fl==='OFFLINE'?'offline':null;
+      if(!key)return;
+      b.orderQty[key]+=n2(parseFloat(r['Order Qty']));
+      b.plateStock[key]+=n2(parseFloat(r['Plate Stock']));
+      b.slabStock[key]+=n2(parseFloat(r['Slab Stock']));
+      b.issued[key]+=n2(parseFloat(r['Casting plannned']));
+    });
+    return b;
+  },[filtered]);
+
+  /* ── Leaflet map ── */
+  const mapRef=useRef();const mapInst=useRef();
+  const onStateMarkerClickRef=useRef();
+  useEffect(()=>{ onStateMarkerClickRef.current=(key)=>toggleChartFilter('state',key); },[chartFilters]);
+  useEffect(()=>{
+    if(!mapRef.current||!window.L)return;
+    if(mapInst.current){mapInst.current.remove();mapInst.current=null;}
+    const L=window.L;
+    const map=L.map(mapRef.current,{center:[22,80],zoom:4.4,zoomControl:true,preferCanvas:true});
+    mapInst.current=map;
+    L.tileLayer(C.isDark
+      ?'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      :'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      {attribution:'©CARTO ©OSM',subdomains:'abcd',maxZoom:19}).addTo(map);
+    const maxQty=Math.max(1,...stateAgg.list.map(s=>s.qty));
+    // magnitude-scaled M3 color: low→sky, mid→amber, high→green (matches rest of dashboard's token palette)
+    function markerColor(frac){
+      if(frac<0.34)return C._sky;
+      if(frac<0.67)return C._amber;
+      return C._green;
+    }
+    stateAgg.list.forEach(s=>{
+      const frac=s.qty/maxQty;
+      const r=8+Math.sqrt(frac)*26;
+      const col=markerColor(frac);
+      const marker=L.circleMarker([s.lat,s.lng],{radius:r,color:col,weight:1.5,fillColor:col,fillOpacity:0.55})
+        .addTo(map)
+        .bindTooltip(`<b>${escHtml(s.label)}</b> (${s.level})<br/>Order Qty: <b>${fmt(s.qty)}</b> MT<br/><i>click to cross-filter</i>`,{direction:'top',sticky:false});
+      if(s.level==='state'&&onStateMarkerClickRef.current){
+        marker.on('click',()=>onStateMarkerClickRef.current(stateKey(s.label)));
+      }
+    });
+    return()=>{ if(mapInst.current){mapInst.current.remove();mapInst.current=null;} };
+  },[stateAgg,C.isDark]);
+
+  const sortHeader=(label,key)=>(
+    <th style={{...th0,cursor:'pointer'}} onClick={()=>setCustSort(s=>({key,dir:s.key===key&&s.dir==='desc'?'asc':'desc'}))}>
+      {label}{custSort.key===key?(custSort.dir==='desc'?' ▼':' ▲'):''}
+    </th>
+  );
+
+  return<div style={{padding:'20px 24px 60px',maxWidth:1600,margin:'0 auto'}}>
+    {/* ═══ HEADER ═══ */}
+    <div style={{...card,padding:'16px 22px',marginBottom:18,display:'flex',flexWrap:'wrap',
+      alignItems:'center',gap:14,justifyContent:'space-between'}}>
+      <div style={{display:'flex',alignItems:'center',gap:14}}>
+        <div style={{fontFamily:F.h,fontWeight:900,fontSize:16,letterSpacing:'.03em',color:C.jsplGold,whiteSpace:'nowrap'}}>Jindal Steel Angul</div>
+        <select value={dateSel} onChange={e=>setDateSel(e.target.value)}
+          style={{...inp,width:150}}>
+          <option value="All">All Dates</option>
+          {dateOptions.map(d=>(<option key={d} value={d}>{d}{d===latestDate?' (latest)':''}</option>))}
+        </select>
+      </div>
+      <h2 style={{fontFamily:F.h,fontSize:22,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase',
+        textAlign:'center',flex:'1 1 260px'}}>Order Status Report</h2>
+      <div style={{display:'flex',gap:8,alignItems:'center'}}>
+        <button onClick={()=>setReleasedOnly(v=>!v)} style={{padding:'8px 16px',borderRadius:'var(--radius-sm)',
+          border:`1.5px solid ${releasedOnly?C.sky:'var(--bdrHi)'}`,background:releasedOnly?'var(--sky-bg)':'var(--s2)',
+          color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:12,fontWeight:700,cursor:'pointer',textTransform:'uppercase'}}>
+          {releasedOnly?'✓ ':''}Released Orders
+        </button>
+        <button onClick={clearAll} disabled={!anyFilterActive} style={{padding:'8px 16px',borderRadius:'var(--radius-sm)',
+          border:'1.5px solid var(--bdrHi)',background:'var(--s2)',color:anyFilterActive?C.rose:'var(--mute)',
+          fontFamily:F.h,fontSize:12,fontWeight:700,cursor:anyFilterActive?'pointer':'default',textTransform:'uppercase'}}>
+          Clear Filters
+        </button>
+      </div>
+    </div>
+    <div style={{...card,padding:'12px 16px',marginBottom:18,display:'flex',gap:10,flexWrap:'wrap',position:'relative',zIndex:200}}>
+      <MultiSelect label="Release Status" options={relStaOptions} selected={relStaSel} onChange={setRelStaSel}/>
+      <MultiSelect label="VAG Status" options={vagOptions} selected={vagSel} onChange={setVagSel}/>
+      <MultiSelect label="Supply Condition" options={HTC_ORDER} selected={htcSel} onChange={setHtcSel}/>
+      <MultiSelect label="Int Grade" options={intGradeOptions} selected={intGradeSel} onChange={setIntGradeSel} width={150}/>
+      <MultiSelect label="Ext Grade" options={extGradeOptions} selected={extGradeSel} onChange={setExtGradeSel} width={150}/>
+      <MultiSelect label="Insp By" options={inspByOptions} selected={inspBySel} onChange={setInspBySel}/>
+      <MultiSelect label="Line" options={lineOptions} selected={lineSel} onChange={setLineSel} width={130}/>
+      <div style={{marginLeft:'auto',fontFamily:F.m,fontSize:11,color:'var(--mute)',alignSelf:'center'}}>
+        {fmt(filtered.length,0)} / {fmt(rows.length,0)} rows · {fileName}
+      </div>
+    </div>
+
+    {/* ═══ Active cross-filter chip row (chart-click filters — separate from dropdown filters above) ═══ */}
+    {activeChartFilterCount>0&&<div style={{...card,padding:'10px 16px',marginBottom:18,display:'flex',
+      gap:8,flexWrap:'wrap',alignItems:'center'}}>
+      <span style={{fontFamily:F.h,fontSize:11,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--mute)'}}>
+        Active cross-filters: {activeChartFilterCount}
+      </span>
+      {Object.entries(chartFilters).map(([field,set])=>[...set].map(v=>(
+        <span key={field+':'+v} onClick={()=>toggleChartFilter(field,v)} style={{cursor:'pointer',
+          padding:'4px 10px',borderRadius:'var(--radius-pill)',fontSize:11.5,fontFamily:F.b,fontWeight:600,
+          border:`1.5px solid ${C.violet}`,background:'var(--violet-bg)',color:C.violet,
+          display:'inline-flex',alignItems:'center',gap:6}}>
+          {field}: {String(v)||'(blank)'} <b>✕</b>
+        </span>
+      )))}
+      <button onClick={clearChartFilters} style={{marginLeft:'auto',padding:'6px 14px',borderRadius:'var(--radius-sm)',
+        border:'1.5px solid #7a1a1a',background:'#3a0f0f',color:'#f0a0a0',fontFamily:F.h,fontSize:11,
+        fontWeight:700,cursor:'pointer',textTransform:'uppercase'}}>Clear cross-filters</button>
+    </div>}
+
+    {/* ═══ PANEL 2: KPI CARDS ═══ */}
+    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:12,marginBottom:18,alignItems:'stretch'}}>
+      {kpiCards.map((k,i)=>(
+        <div key={k.label} className="card-lift" style={{...card,padding:'16px 18px',display:'flex',
+          flexDirection:'column',height:'100%'}}>
+          <div style={{fontFamily:F.h,fontSize:11,letterSpacing:'.08em',textTransform:'uppercase',color:'var(--mute)',marginBottom:8}}>{k.label}</div>
+          <div style={{fontFamily:F.m,fontSize:24,fontWeight:700,color:'var(--text)'}}>{k.isRatio?fmt(k.value,k.dp==null?1:k.dp)+k.unit:fmt(k.value)}</div>
+          <div style={{fontFamily:F.b,fontSize:11.5,color:k.color,marginTop:4,flex:1}}>{k.pctVal.toFixed(1)}% {k.sub}</div>
+          <div style={{height:5,borderRadius:3,background:'var(--s3)',marginTop:8,overflow:'hidden'}}>
+            <div style={{height:'100%',width:Math.min(100,k.pctVal)+'%',background:k.color,borderRadius:3}}/>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {/* ═══ PANEL 3+4+5: Donut / Rake chips / Customer table ═══ */}
+    <div style={{display:'grid',gridTemplateColumns:'320px 1fr',gap:16,marginBottom:18,alignItems:'stretch'}}>
+      <div style={{...card,padding:'20px',display:'flex',flexDirection:'column',gap:14,alignItems:'center',height:'100%'}}>
+        <div style={{fontFamily:F.h,fontSize:12,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase',color:'var(--mute)'}}>Supply Condition Split</div>
+        <Donut data={htcData} centerLabel="SUPPLY CONDITION"
+          onSliceClick={l=>toggleChartFilter('supplyBucket',l)} activeLabels={chartFilters.supplyBucket}/>
+        <div style={{display:'flex',flexDirection:'column',gap:6,width:'100%'}}>
+          {htcData.map(d=>{
+            const active=chartFilters.supplyBucket&&chartFilters.supplyBucket.has(d.label);
+            return<div key={d.label} onClick={()=>toggleChartFilter('supplyBucket',d.label)}
+              style={{display:'flex',alignItems:'center',gap:8,fontSize:12.5,cursor:'pointer',
+                padding:'2px 4px',borderRadius:6,background:active?'var(--violet-bg)':'transparent'}}>
+              <span style={{width:10,height:10,borderRadius:'50%',background:d.color,flexShrink:0}}/>
+              <span style={{flex:1,color:active?C.violet:'var(--text)',fontWeight:active?700:400}}>{d.label}</span>
+              <span style={{fontFamily:F.m,color:'var(--dim)'}}>{pct(d.value,htcTotal).toFixed(1)}%</span>
+            </div>;
+          })}
+        </div>
+        <div style={{width:'100%',borderTop:'1px solid var(--bdr)',paddingTop:12}}>
+          <div style={{fontFamily:F.h,fontSize:11,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',
+            color:'var(--mute)',marginBottom:8}}>RAKE Quick Filters</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+            {rakeOptions.map(m=>(
+              <button key={m} onClick={()=>setRakeChip(v=>v===m?null:m)} style={{
+                padding:'5px 11px',borderRadius:'var(--radius-pill)',fontSize:11.5,fontFamily:F.b,fontWeight:600,
+                cursor:'pointer',border:`1.5px solid ${rakeChip===m?C.violet:'var(--bdrHi)'}`,
+                background:rakeChip===m?'var(--violet-bg)':'var(--s2)',color:rakeChip===m?C.violet:'var(--dim)'}}>{m}</button>
+            ))}
+          </div>
+          {rakeChip&&<button onClick={()=>setRakeChip(null)} style={{marginTop:8,width:'100%',padding:'6px 10px',
+            borderRadius:'var(--radius-sm)',border:'1.5px solid #7a1a1a',background:'#3a0f0f',color:'#f0a0a0',
+            fontFamily:F.h,fontSize:11,fontWeight:700,cursor:'pointer'}}>✕ Clear RAKE Filter</button>}
+        </div>
+      </div>
+
+      <div style={{...card,padding:'18px',overflow:'hidden',display:'flex',flexDirection:'column',height:'100%'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:8}}>
+          <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase'}}>Customer-wise Order Status</div>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            <MultiSelect label="Segment" options={segOptions} selected={segSel} onChange={setSegSel} width={140}/>
+            <MultiSelect label="Grade Segment" options={gradeSegOptions} selected={gradeSegSel} onChange={setGradeSegSel} width={150}/>
+            <input placeholder="Search customer…" value={custSearch} onChange={e=>{setCustSearch(e.target.value);setCustPage(0);}}
+              style={{...inp,width:170}}/>
+          </div>
+        </div>
+        <div style={{overflowX:'auto'}}>
+          <table style={{width:'100%',fontSize:12.5}}>
+            <thead><tr>
+              <th style={th0}>Sold To Party</th>
+              {sortHeader('Ord Qty','Order Qty')}
+              <th style={{...th0,cursor:'pointer'}} title="Bal to Book ≈ Bal To Deliver" onClick={()=>setCustSort(s=>({key:'BTB',dir:s.key==='BTB'&&s.dir==='desc'?'asc':'desc'}))}>BTB ⓘ</th>
+              {sortHeader('FG','FG')}{sortHeader('WIP','WIP')}{sortHeader('Plate Stock','Plate Stock')}
+              {sortHeader('BTR','BTR')}{sortHeader('Slab Stock','Slab Stock')}{sortHeader('BTC','BTC')}
+              <th style={{...th0,cursor:'pointer'}} title="Sourced from Casting Planned (col 218), not the raw ISSUED column" onClick={()=>setCustSort(s=>({key:'Issued',dir:s.key==='Issued'&&s.dir==='desc'?'asc':'desc'}))}>Issued ⓘ</th>
+              {sortHeader('BTP','BTP')}
+            </tr></thead>
+            <tbody>
+              {custPageRows.map(o=>{
+                const active=chartFilters.sold_to_party&&chartFilters.sold_to_party.has(o.name);
+                return<tr key={o.name} onClick={()=>toggleChartFilter('sold_to_party',o.name)}
+                  style={{cursor:'pointer',background:active?'var(--violet-bg)':'transparent'}}>
+                  <td style={{...td0,maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={o.name}>{o.name}</td>
+                  <td style={{...td0,fontFamily:F.m}}>{fmt(o.ordQty)}</td>
+                  <td style={{...td0,fontFamily:F.m}} title="Bal to Book ≈ Bal To Deliver">{fmt(o.btb)}</td>
+                  <td style={{...td0,fontFamily:F.m,background:`${C._green}${Math.round(Math.min(1,o.fg/custMaxFG)*40+6).toString(16).padStart(2,'0')}`}}>{fmt(o.fg)}</td>
+                  <td style={{...td0,fontFamily:F.m}}>{fmt(o.wip)}</td>
+                  <td style={{...td0,fontFamily:F.m}}>{fmt(o.plateStock)}</td>
+                  <td style={{...td0,fontFamily:F.m,background:`${C._amber}${Math.round(Math.min(1,o.btr/custMaxHeat)*40+6).toString(16).padStart(2,'0')}`}}>{fmt(o.btr)}</td>
+                  <td style={{...td0,fontFamily:F.m}}>{fmt(o.slabStock)}</td>
+                  <td style={{...td0,fontFamily:F.m,background:`${C._amber}${Math.round(Math.min(1,o.btc/custMaxHeat)*40+6).toString(16).padStart(2,'0')}`}}>{fmt(o.btc)}</td>
+                  <td style={{...td0,fontFamily:F.m,background:`${C._amber}${Math.round(Math.min(1,o.issued/custMaxHeat)*40+6).toString(16).padStart(2,'0')}`}}>{fmt(o.issued)}</td>
+                  <td style={{...td0,fontFamily:F.m,background:`${C._amber}${Math.round(Math.min(1,o.btp/custMaxHeat)*40+6).toString(16).padStart(2,'0')}`}}>{fmt(o.btp)}</td>
+                </tr>;
+              })}
+              <tr>
+                <td style={{...td0,fontWeight:800,borderTop:'2px solid var(--bdrHi)'}}>GRAND TOTAL</td>
+                {['ordQty','btb','fg','wip','plateStock','btr','slabStock','btc','issued','btp'].map(k=>(
+                  <td key={k} style={{...td0,fontFamily:F.m,fontWeight:800,borderTop:'2px solid var(--bdrHi)'}}>{fmt(custTotal[k])}</td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:12,fontSize:12}}>
+          <span style={{color:'var(--mute)'}}>Page {custPage+1} / {custPageCount} · {custRows.length} customers</span>
+          <div style={{display:'flex',gap:6}}>
+            <button disabled={custPage===0} onClick={()=>setCustPage(p=>Math.max(0,p-1))} style={{...inp,width:'auto',padding:'5px 12px',cursor:custPage===0?'default':'pointer'}}>‹ Prev</button>
+            <button disabled={custPage>=custPageCount-1} onClick={()=>setCustPage(p=>Math.min(custPageCount-1,p+1))} style={{...inp,width:'auto',padding:'5px 12px',cursor:custPage>=custPageCount-1?'default':'pointer'}}>Next ›</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* ═══ PANEL 6: Rake-mode summary ═══ */}
+    <div style={{...card,padding:'18px',marginBottom:18,overflow:'hidden'}}>
+      <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',marginBottom:12}}>Rake-Mode Summary</div>
+      <div style={{overflowX:'auto'}}>
+        <table style={{width:'100%',fontSize:12}}>
+          <thead><tr>
+            <th style={th0}>MODE</th>
+            {modeCols.map(c=>(<th key={c.key} style={th0}>{c.label}</th>))}
+          </tr></thead>
+          <tbody>
+            {modeRows.map((r,ri)=>(
+              <tr key={r.mode}>
+                <td style={{...td0,fontWeight:600}}>{r.mode}</td>
+                {modeCols.map((c,ci)=>(
+                  <td key={c.key} style={{...td0,fontFamily:F.m,background:heatColor(r[c.key],modeMax[c.key],ci)}}>{fmt(r[c.key])}</td>
+                ))}
+              </tr>
+            ))}
+            <tr>
+              <td style={{...td0,fontWeight:800,borderTop:'2px solid var(--bdrHi)'}}>GRAND TOTAL</td>
+              {modeCols.map(c=>(<td key={c.key} style={{...td0,fontFamily:F.m,fontWeight:800,borderTop:'2px solid var(--bdrHi)'}}>{fmt(modeGrand[c.key])}</td>))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {/* ═══ PANEL 7+8: India map / Supply Condition x metrics ═══ */}
+    <div style={{display:'grid',gridTemplateColumns:'1.4fr 1fr',gap:16,marginBottom:18,alignItems:'stretch'}}>
+      <div style={{...card,padding:'16px',overflow:'hidden',display:'flex',flexDirection:'column',height:'100%'}}>
+        <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',marginBottom:10}}>
+          Order Qty by State/City
+        </div>
+        <div ref={mapRef} style={{width:'100%',flex:1,minHeight:340,borderRadius:'var(--radius-md)',overflow:'hidden'}}/>
+        {stateAgg.unmapped>0&&<div style={{marginTop:8,fontSize:11.5,color:'var(--mute)',fontFamily:F.b}}>
+          ⚠ Other/Unmapped: {fmt(stateAgg.unmapped,0)} rows (no matching city or state/STO centroid — likely export/overseas or blank destination)
+        </div>}
+      </div>
+      <div style={{...card,padding:'18px',overflow:'hidden',display:'flex',flexDirection:'column',height:'100%'}}>
+        <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',marginBottom:12}}>Supply Condition × Metrics</div>
+        <div style={{overflowX:'auto'}}>
+          <table style={{width:'100%',fontSize:12.5}}>
+            <thead><tr>
+              <th style={th0}>Supply Cond.</th><th style={th0}>Order Qty</th><th style={th0}>BTR</th>
+              <th style={th0}>BTC</th><th style={th0}>BTP</th><th style={th0}>Casting Planned</th>
+            </tr></thead>
+            <tbody>
+              {htcMetrics.map(h=>(
+                <tr key={h.htc}>
+                  <td style={{...td0,display:'flex',alignItems:'center',gap:7}}>
+                    <span style={{width:9,height:9,borderRadius:'50%',background:HTC_COLORS[h.htc],display:'inline-block'}}/>{h.htc}
+                  </td>
+                  <td style={{...td0,fontFamily:F.m}}>{fmt(h.orderQty)}</td>
+                  <td style={{...td0,fontFamily:F.m}}>{fmt(h.btr)}</td>
+                  <td style={{...td0,fontFamily:F.m}}>{fmt(h.btc)}</td>
+                  <td style={{...td0,fontFamily:F.m}}>{fmt(h.btp)}</td>
+                  <td style={{...td0,fontFamily:F.m}}>{fmt(h.castingPlanned)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div style={{marginTop:10,fontSize:11,color:'var(--mute)',fontFamily:F.b,lineHeight:1.6}}>
+          Note: source data has no separate "Released"/"Executable" BTR, BTC or BTP figures —
+          these columns show plant-wide totals per supply-condition bucket, filtered by the
+          active dashboard filters above.
+        </div>
+      </div>
+    </div>
+
+    {/* ═══ PANEL 9: Online/Offline stacked bars ═══ */}
+    <div style={{...card,padding:'18px',marginBottom:18}}>
+      <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',marginBottom:14}}>
+        Online vs Offline — Finishing Line Split
+      </div>
+      <div style={{display:'flex',gap:16,marginBottom:10,fontSize:11.5}}>
+        <span style={{display:'flex',alignItems:'center',gap:6}}><span style={{width:10,height:10,background:C.sky,borderRadius:3,display:'inline-block'}}/>ONLINE</span>
+        <span style={{display:'flex',alignItems:'center',gap:6}}><span style={{width:10,height:10,background:C.orange,borderRadius:3,display:'inline-block'}}/>OFFLINE</span>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:14}}>
+        <StackedBar label="Total Order (Order Qty)" onlineV={onlineOffline.orderQty.online} offlineV={onlineOffline.orderQty.offline}
+          onSegClick={v=>toggleChartFilter('finishingLine',v)} activeSet={chartFilters.finishingLine}/>
+        <StackedBar label="Plate Stock" onlineV={onlineOffline.plateStock.online} offlineV={onlineOffline.plateStock.offline}
+          onSegClick={v=>toggleChartFilter('finishingLine',v)} activeSet={chartFilters.finishingLine}/>
+        <StackedBar label="Slab Stock" onlineV={onlineOffline.slabStock.online} offlineV={onlineOffline.slabStock.offline}
+          onSegClick={v=>toggleChartFilter('finishingLine',v)} activeSet={chartFilters.finishingLine}/>
+        <StackedBar label="Issued" onlineV={onlineOffline.issued.online} offlineV={onlineOffline.issued.offline}
+          onSegClick={v=>toggleChartFilter('finishingLine',v)} activeSet={chartFilters.finishingLine}/>
+      </div>
+    </div>
+
+  </div>;
+}
+
+/* ═══════════════════ APP ROOT ═══════════════════ */
+function App(){
+  const{pref,setPref,effective}=useThemeManager();
+  const[rows,setRows]=useState(null);
+  const[headers,setHeaders]=useState(null);
+  const[fileName,setFileName]=useState('');
+  const[loading,setLoading]=useState(false);
+  const[err,setErr]=useState('');
+
+  const parseFile=useCallback(f=>{
+    setLoading(true);setErr('');
+    const rd=new FileReader();
+    rd.onload=e=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        const ws=wb.Sheets['WS']||wb.Sheets[wb.SheetNames[0]];
+        const allRows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        if(!allRows.length){setLoading(false);setErr('Empty sheet');return;}
+        const hdrs=(allRows[0]||[]).map(h=>h!=null?String(h).trim():'');
+        const dataRows=allRows.slice(1);
+        const processed=buildRows(hdrs,dataRows);
+        setHeaders(hdrs);setRows(processed);setFileName(f.name);setLoading(false);
+      }catch(ex){ setErr('Failed to parse file: '+ex.message); setLoading(false); }
+    };
+    rd.onerror=()=>{ setErr('Failed to read file'); setLoading(false); };
+    rd.readAsArrayBuffer(f);
+  },[]);
+
+  const parseCSV=useCallback(text=>{
+    setLoading(true);setErr('');
+    try{
+      const lines=text.split(/\r?\n/).filter(l=>l.length);
+      const hdrs=splitCSV(lines[0]).map(h=>h.trim());
+      const dataRows=lines.slice(1).map(l=>splitCSV(l));
+      const processed=buildRows(hdrs,dataRows);
+      setHeaders(hdrs);setRows(processed);setFileName('Live EBTP (Google Sheets)');setLoading(false);
+    }catch(ex){ setErr('Failed to parse CSV: '+ex.message); setLoading(false); }
+  },[]);
+
+  useEffect(()=>{
+    var _s=document.getElementById('load-status');if(_s)_s.style.display='none';
+  },[]);
+
+  if(!rows&&!loading){
+    return<>
+      <UploadScreen onFile={parseFile} onCSV={parseCSV}/>
+      {err&&<div style={{position:'fixed',bottom:20,left:'50%',transform:'translateX(-50%)',
+        background:'var(--rose-bg)',border:`1px solid ${C.rose}`,color:C.rose,padding:'10px 18px',
+        borderRadius:'var(--radius-md)',fontFamily:F.b,fontSize:13,zIndex:500}}>{err}</div>}
+      <ThemeToggle pref={pref} setPref={setPref}/>
+    </>;
+  }
+  if(loading||!rows){
+    return<div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100dvh',gap:12}}>
+      <div style={{width:36,height:36,border:'3px solid var(--s3)',borderTopColor:C.amber,borderRadius:'50%',animation:'spin .8s linear infinite'}}/>
+      <div style={{color:'var(--dim)',fontFamily:F.b}}>Parsing workbook…</div>
+    </div>;
+  }
+  return<>
+    <Dashboard rawRows={rows} rawArr={null} headers={headers} fileName={fileName}/>
+    <ThemeToggle pref={pref} setPref={setPref}/>
+  </>;
+}
+
+function ThemeToggle({pref,setPref}){
+  const opts=[['auto','◐'],['light','☀'],['dark','☾']];
+  return<div style={{position:'fixed',bottom:16,right:16,display:'flex',gap:4,padding:4,
+    background:'var(--glass-hi)',backdropFilter:'blur(20px)',borderRadius:'var(--radius-pill)',
+    border:'1px solid var(--bdrHi)',boxShadow:'var(--shadow-md)',zIndex:600}}>
+    {opts.map(([v,ic])=>(
+      <button key={v} onClick={()=>setPref(v)} title={v} style={{
+        width:30,height:30,borderRadius:'50%',border:'none',cursor:'pointer',fontSize:14,
+        background:pref===v?C.amber:'transparent',color:pref===v?'#1a1200':'var(--dim)'}}>{ic}</button>
+    ))}
+  </div>;
+}
+
+const root=ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
+checkReady();
+</script>
+</body>
+</html>
