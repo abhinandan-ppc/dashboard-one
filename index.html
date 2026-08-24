@@ -921,6 +921,7 @@ function broadcastToFrame(msg){
 }
 
 function removeInjectedFrameControls(){
+  cancelPendingFrameMounts();
   try{
     if(pageFrame && pageFrame.__hubHeaderObserver){
       pageFrame.__hubHeaderObserver.disconnect();
@@ -934,10 +935,8 @@ function removeInjectedFrameControls(){
         el.style.removeProperty('display');
         el.removeAttribute('data-hub-hidden-control');
       });
-      var node = doc.getElementById('hubFrameHeaderControls');
-      if(node) node.remove();
-      var panelNode = doc.getElementById('hubFrameUserPanel');
-      if(panelNode) panelNode.remove();
+      doc.querySelectorAll('#hubFrameHeaderControls, [data-hub-controls="true"]').forEach(function(el){ el.remove(); });
+      doc.querySelectorAll('#hubFrameUserPanel').forEach(function(el){ el.remove(); });
     }
   }catch(e){}
 }
@@ -1039,18 +1038,35 @@ function isRakePlannerFrame(doc){
   return false;
 }
 
+function cancelPendingFrameMounts(){
+  try{
+    if(pageFrame && pageFrame.__hubMountTimers){
+      pageFrame.__hubMountTimers.forEach(function(t){
+        if(t.type === 'raf') cancelAnimationFrame(t.id); else clearTimeout(t.id);
+      });
+      pageFrame.__hubMountTimers = [];
+    }
+  }catch(e){}
+}
+
 function installFrameHeaderControls(){
   try{
     if(!pageFrame || !pageFrame.contentWindow) return;
     var doc = pageFrame.contentWindow.document;
     if(!doc || !doc.body) return;
 
+    // Cancel any deferred mount() calls still pending from a previous
+    // install on this same page load — overlapping 'load' + postMessage
+    // triggers could otherwise pile up redundant scheduled mounts.
+    cancelPendingFrameMounts();
+    pageFrame.__hubMountTimers = [];
+
     var mount = function(){
         try{
-          var existing = doc.getElementById('hubFrameHeaderControls');
-          if(existing) existing.remove();
-          var existingPanel = doc.getElementById('hubFrameUserPanel');
-          if(existingPanel) existingPanel.remove();
+          // Remove every previously-injected copy, not just the first match —
+          // belt-and-suspenders against any duplicate ending up in the DOM.
+          doc.querySelectorAll('#hubFrameHeaderControls, [data-hub-controls="true"]').forEach(function(el){ el.remove(); });
+          doc.querySelectorAll('#hubFrameUserPanel').forEach(function(el){ el.remove(); });
 
           var rakeFrame = isRakePlannerFrame(doc);
           var rakeSlot = rakeFrame ? doc.getElementById('hubFrameHeaderSlot') : null;
@@ -1336,8 +1352,8 @@ function installFrameHeaderControls(){
     };
 
     mount();
-    requestAnimationFrame(mount);
-    setTimeout(mount, 250);
+    pageFrame.__hubMountTimers.push({ type: 'raf', id: requestAnimationFrame(mount) });
+    pageFrame.__hubMountTimers.push({ type: 'timeout', id: setTimeout(mount, 250) });
 
     if(pageFrame.__hubHeaderObserver){
       pageFrame.__hubHeaderObserver.disconnect();

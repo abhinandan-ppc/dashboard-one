@@ -113,7 +113,7 @@ a { color: var(--primary); }
       <datalist id="knownEmails"></datalist>
       <button type="submit" class="btn primary">Add &amp; approve</button>
     </form>
-    <div class="sub" style="margin-top:8px">Grants access immediately, even before they ever sign in. Suggestions are drawn from people already in this registry — not a full directory lookup.</div>
+    <div class="sub" style="margin-top:8px">Grants access immediately, even before they ever sign in. Suggestions include people already in this registry, plus your Workspace directory if it's connected.</div>
   </div>
 
   <div class="stat-row" id="statRow" style="display:none">
@@ -298,14 +298,55 @@ function render(){
   }).join('');
 }
 
+// Live Workspace directory search (if configured server-side) layers extra
+// <option>s from your org directory on top of the known-emails datalist, so
+// typing a name/email suggests people who've never logged in before too.
+// Silently degrades to just known emails if directory search isn't set up.
+var directoryNames = {};
+var directoryTimer = null;
+var directorySeq = 0;
+
+function mergeDirectoryOptions(results){
+  var datalist = document.getElementById('knownEmails');
+  if(!datalist) return;
+  var existingValues = Array.from(datalist.querySelectorAll('option')).map(function(o){ return o.value.toLowerCase(); });
+  results.forEach(function(r){
+    if(!r.email) return;
+    directoryNames[r.email.toLowerCase()] = r.name || '';
+    if(existingValues.indexOf(r.email.toLowerCase()) === -1){
+      var opt = document.createElement('option');
+      opt.value = r.email;
+      if(r.name) opt.label = r.name + ' — ' + r.email;
+      datalist.appendChild(opt);
+    }
+  });
+}
+
+document.getElementById('addUserEmail').addEventListener('input', function(e){
+  var q = e.target.value.trim();
+  if(directoryTimer) clearTimeout(directoryTimer);
+  if(q.length < 2) return;
+  var mySeq = ++directorySeq;
+  directoryTimer = setTimeout(async function(){
+    try {
+      var res = await api('/api/admin/directory?q=' + encodeURIComponent(q));
+      if(mySeq !== directorySeq) return; // a newer keystroke superseded this search
+      if(res.results && res.results.length) mergeDirectoryOptions(res.results);
+    } catch(err) {
+      // Not configured or a transient error — known-email suggestions still work.
+    }
+  }, 250);
+});
+
 document.getElementById('addUserForm').addEventListener('submit', async function(e){
   e.preventDefault();
   var emailInput = document.getElementById('addUserEmail');
   var nameInput = document.getElementById('addUserName');
   var email = emailInput.value.trim();
   if(!email) return;
+  var name = nameInput.value.trim() || directoryNames[email.toLowerCase()] || '';
   try {
-    var res = await api('/api/admin/users', { method: 'POST', body: JSON.stringify({ action: 'add', email: email, name: nameInput.value.trim() }) });
+    var res = await api('/api/admin/users', { method: 'POST', body: JSON.stringify({ action: 'add', email: email, name: name }) });
     if(res.user) registry.users[email.toLowerCase()] = res.user;
     emailInput.value = '';
     nameInput.value = '';
