@@ -1,5 +1,5 @@
 import { verifySession, readCookie } from './api/_session.js';
-import { resolveAccess, DEV_HOSTS } from './api/_acl.js';
+import { resolveAccess, DEV_HOSTS, CHILD_PAGE_PARENTS } from './api/_acl.js';
 
 // The root page and index.html render unauthenticated too — they show their
 // own login box and call /api/auth/me client-side. Every other page (the
@@ -75,7 +75,8 @@ export default async function middleware(req) {
       }
     }
 
-    const allowed = !!(user && user.status === 'approved' && (user.allPages || (user.pages || []).includes(path)));
+    const grantPath = CHILD_PAGE_PARENTS[path] || path;
+    const allowed = !!(user && user.status === 'approved' && (user.allPages || (user.pages || []).includes(grantPath)));
     if (!allowed) {
       return denyPage('Access pending', "Your account is registered but doesn't have access to this page yet. Ask the administrator to approve it.");
     }

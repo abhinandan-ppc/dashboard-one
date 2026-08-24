@@ -65,15 +65,25 @@ export const DEV_HOSTS = (process.env.DEV_HOSTS || 'pmppc-dev.vercel.app')
 
 // Known tool pages users can be granted access to. Admins can also grant
 // access to arbitrary custom paths (e.g. cards added with a one-off path).
+//
+// "SMS Heat Planner Daily.html" and "SMS Heat Planner Monthly.html" are not
+// listed here — they're just the two tabs SMS-Heat-Planner.html loads in
+// iframes internally, never opened directly. See CHILD_PAGE_PARENTS below.
 export const KNOWN_PAGES = [
   'PM-Yard.html',
   'Plate-Tagging-Tool.html',
   'Rake-Planner.html',
-  'SMS Heat Planner Daily.html',
-  'SMS Heat Planner Monthly.html',
   'SMS-Heat-Planner.html',
   'VDO-Generator.html',
 ];
+
+// Pages that are sub-resources of another page rather than standalone tools.
+// Granting the parent page implicitly grants these too, so middleware
+// doesn't block the iframe tab a user is already allowed to open.
+export const CHILD_PAGE_PARENTS = {
+  'SMS Heat Planner Daily.html': 'SMS-Heat-Planner.html',
+  'SMS Heat Planner Monthly.html': 'SMS-Heat-Planner.html',
+};
 
 // The env-configured admin(s). This list is the irrevocable safety net —
 // these accounts can never be demoted or blocked through the UI, so access
@@ -143,20 +153,4 @@ export async function recordLogin({ email, name, picture, domain }) {
     };
   }
   await saveRegistry(registry);
-}
-
-export async function checkAccess(email, pagePath) {
-  if (isAdmin(email)) return true;
-  const registry = await getRegistry();
-  const user = registry.users[String(email).toLowerCase()];
-  if (!user || user.status !== 'approved') return false;
-  if (user.allPages) return true;
-  return (user.pages || []).includes(pagePath);
-}
-
-export async function checkDevAccess(email) {
-  if (isAdmin(email)) return true;
-  const registry = await getRegistry();
-  const user = registry.users[String(email).toLowerCase()];
-  return !!(user && user.status === 'approved' && user.devAccess);
 }
