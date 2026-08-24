@@ -97,7 +97,6 @@ a { color: var(--primary); }
     </div>
     <div class="hd-actions">
       <button class="btn" id="refreshBtn">Refresh</button>
-      <a class="btn primary" href="/">Back to Hub</a>
     </div>
   </div>
 
@@ -121,6 +120,24 @@ a { color: var(--primary); }
     <div class="stat"><div class="num" id="statPending">0</div><div class="lbl">Pending</div></div>
     <div class="stat"><div class="num" id="statApproved">0</div><div class="lbl">Approved</div></div>
     <div class="stat"><div class="num" id="statBlocked">0</div><div class="lbl">Blocked</div></div>
+  </div>
+
+  <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <input type="search" id="searchInput" placeholder="Search by name or email&hellip;"
+      style="flex:1;min-width:200px;padding:9px 14px;border-radius:999px;border:var(--glass-border);background:var(--input-bg);color:var(--tx);font-size:13px">
+    <select id="statusFilter" style="padding:9px 14px;border-radius:999px;border:var(--glass-border);background:var(--input-bg);color:var(--tx);font-size:13px">
+      <option value="">All statuses</option>
+      <option value="pending">Pending</option>
+      <option value="approved">Approved</option>
+      <option value="blocked">Blocked</option>
+      <option value="admin">Admins</option>
+    </select>
+    <select id="pageFilter" style="padding:9px 14px;border-radius:999px;border:var(--glass-border);background:var(--input-bg);color:var(--tx);font-size:13px">
+      <option value="">Any page access</option>
+      <option value="__all__">Has "all pages"</option>
+      <option value="__dev__">Has dev preview access</option>
+    </select>
+    <span class="sub" id="filterCount"></span>
   </div>
 
   <div id="usersHost" class="users">
@@ -266,6 +283,40 @@ function renderCard(email){
   node.replaceWith(wrapper.firstElementChild);
 }
 
+function populatePageFilterOptions(){
+  var select = document.getElementById('pageFilter');
+  if(!select) return;
+  var current = select.value;
+  var pages = KNOWN_PAGES.slice();
+  Object.keys(registry.users || {}).forEach(function(e){
+    (registry.users[e].pages || []).forEach(function(p){ if(pages.indexOf(p) === -1) pages.push(p); });
+  });
+  var head = '<option value="">Any page access</option><option value="__all__">Has "all pages"</option><option value="__dev__">Has dev preview access</option>';
+  select.innerHTML = head + pages.map(function(p){ return '<option value="' + esc(p) + '">' + esc(p) + '</option>'; }).join('');
+  if(pages.indexOf(current) !== -1 || current === '__all__' || current === '__dev__') select.value = current;
+}
+
+function matchesFilters(email, user){
+  var search = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+  var status = document.getElementById('statusFilter').value;
+  var pageF = document.getElementById('pageFilter').value;
+
+  if(search){
+    var hay = (email + ' ' + (user.name || '')).toLowerCase();
+    if(hay.indexOf(search) === -1) return false;
+  }
+  if(status){
+    if(status === 'admin'){ if(user.role !== 'admin') return false; }
+    else if((user.status || 'pending') !== status) return false;
+  }
+  if(pageF){
+    if(pageF === '__all__'){ if(!user.allPages) return false; }
+    else if(pageF === '__dev__'){ if(!user.devAccess) return false; }
+    else if(!user.allPages && (user.pages || []).indexOf(pageF) === -1) return false;
+  }
+  return true;
+}
+
 function render(){
   KNOWN_PAGES = registry.knownPages || [];
   var users = registry.users || {};
@@ -286,13 +337,24 @@ function render(){
 
   var datalist = document.getElementById('knownEmails');
   if(datalist) datalist.innerHTML = emails.map(function(e){ return '<option value="' + esc(e) + '">'; }).join('');
+  populatePageFilterOptions();
 
   var host = document.getElementById('usersHost');
+  var countEl = document.getElementById('filterCount');
   if(!emails.length){
+    if(countEl) countEl.textContent = '';
     host.innerHTML = '<div class="empty">No one has logged in yet, and no one has been added manually. Add someone above, or wait for them to sign in with an allowed Google account — either way they\'ll show up here to manage.</div>';
     return;
   }
-  host.innerHTML = emails.map(function(e){
+
+  var visibleEmails = emails.filter(function(e){ return matchesFilters(e, users[e]); });
+  if(countEl) countEl.textContent = visibleEmails.length + ' of ' + emails.length + ' shown';
+
+  if(!visibleEmails.length){
+    host.innerHTML = '<div class="empty">No users match this search/filter.</div>';
+    return;
+  }
+  host.innerHTML = visibleEmails.map(function(e){
     var u = Object.assign({ _email: e }, users[e]);
     return userCard(u);
   }).join('');
@@ -456,6 +518,10 @@ document.getElementById('usersHost').addEventListener('change', function(e){
     return renderCard(email);
   }
 });
+
+document.getElementById('searchInput').addEventListener('input', render);
+document.getElementById('statusFilter').addEventListener('change', render);
+document.getElementById('pageFilter').addEventListener('change', render);
 
 loadMe();
 refresh();
