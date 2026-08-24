@@ -103,6 +103,19 @@ a { color: var(--primary); }
 
   <div id="bannerHost"></div>
 
+  <div class="panel">
+    <h2>Add a user manually</h2>
+    <form id="addUserForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input type="email" id="addUserEmail" list="knownEmails" placeholder="name@jindalsteel.in" required
+        style="flex:1;min-width:220px;padding:9px 14px;border-radius:999px;border:var(--glass-border);background:var(--input-bg);color:var(--tx);font-size:13px">
+      <input type="text" id="addUserName" placeholder="Display name (optional)"
+        style="flex:1;min-width:180px;padding:9px 14px;border-radius:999px;border:var(--glass-border);background:var(--input-bg);color:var(--tx);font-size:13px">
+      <datalist id="knownEmails"></datalist>
+      <button type="submit" class="btn primary">Add &amp; approve</button>
+    </form>
+    <div class="sub" style="margin-top:8px">Grants access immediately, even before they ever sign in. Suggestions are drawn from people already in this registry — not a full directory lookup.</div>
+  </div>
+
   <div class="stat-row" id="statRow" style="display:none">
     <div class="stat"><div class="num" id="statTotal">0</div><div class="lbl">Total users</div></div>
     <div class="stat"><div class="num" id="statPending">0</div><div class="lbl">Pending</div></div>
@@ -170,7 +183,7 @@ function userCard(user){
           '<div>' +
             '<div class="user-name">' + esc(user.name || email) + '</div>' +
             '<div class="user-email">' + esc(email) + '</div>' +
-            '<div class="user-meta">First seen ' + esc(fmtDate(user.firstLogin)) + ' &middot; Last login ' + esc(fmtDate(user.lastLogin)) + '</div>' +
+            '<div class="user-meta">' + (user.lastLogin ? ('First seen ' + esc(fmtDate(user.firstLogin)) + ' &middot; Last login ' + esc(fmtDate(user.lastLogin))) : 'Added manually &middot; never logged in yet') + '</div>' +
           '</div>' +
         '</div>' +
         '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
@@ -219,9 +232,12 @@ function render(){
   document.getElementById('statApproved').textContent = approved;
   document.getElementById('statBlocked').textContent = blocked;
 
+  var datalist = document.getElementById('knownEmails');
+  if(datalist) datalist.innerHTML = emails.map(function(e){ return '<option value="' + esc(e) + '">'; }).join('');
+
   var host = document.getElementById('usersHost');
   if(!emails.length){
-    host.innerHTML = '<div class="empty">No one has logged in yet. Once someone signs in with an allowed Google account, they\'ll show up here as "pending" and you can approve their access.</div>';
+    host.innerHTML = '<div class="empty">No one has logged in yet, and no one has been added manually. Add someone above, or wait for them to sign in with an allowed Google account — either way they\'ll show up here to manage.</div>';
     return;
   }
   host.innerHTML = emails.map(function(e){
@@ -229,6 +245,24 @@ function render(){
     return userCard(u);
   }).join('');
 }
+
+document.getElementById('addUserForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  var emailInput = document.getElementById('addUserEmail');
+  var nameInput = document.getElementById('addUserName');
+  var email = emailInput.value.trim();
+  if(!email) return;
+  try {
+    var res = await api('/api/admin/users', { method: 'POST', body: JSON.stringify({ action: 'add', email: email, name: nameInput.value.trim() }) });
+    if(res.user) registry.users[email.toLowerCase()] = res.user;
+    emailInput.value = '';
+    nameInput.value = '';
+    clearBanner();
+    render();
+  } catch(err) {
+    banner('Could not add user: ' + err.message, true);
+  }
+});
 
 async function refresh(){
   clearBanner();

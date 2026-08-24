@@ -48,6 +48,26 @@ export default async function handler(req) {
         return json({ ok: true });
       }
 
+      if (action === 'add') {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: 'not a valid email address' }, 400);
+        if (!user) {
+          user = registry.users[email] = {
+            name: (typeof body.name === 'string' && body.name.trim()) || email,
+            picture: '',
+            domain: email.split('@')[1] || '',
+            status: 'approved',
+            pages: [],
+            allPages: false,
+            devAccess: false,
+            firstLogin: null,
+            lastLogin: null,
+            addedManually: true,
+          };
+        }
+        await saveRegistry(registry);
+        return json({ ok: true, user: registry.users[email] });
+      }
+
       if (!user) return json({ error: 'user not found' }, 404);
 
       switch (action) {

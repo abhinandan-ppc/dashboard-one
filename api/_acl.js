@@ -103,6 +103,7 @@ export async function recordLogin({ email, name, picture, domain }) {
     existing.name = name || existing.name;
     existing.picture = picture || existing.picture;
     existing.domain = domain || existing.domain;
+    if (!existing.firstLogin) existing.firstLogin = now;
     existing.lastLogin = now;
   } else {
     registry.users[lower] = {
