@@ -70,6 +70,7 @@ export const DEV_HOSTS = (process.env.DEV_HOSTS || 'pmppc-dev.vercel.app')
 // listed here — they're just the two tabs SMS-Heat-Planner.html loads in
 // iframes internally, never opened directly. See CHILD_PAGE_PARENTS below.
 export const KNOWN_PAGES = [
+  'Order-Status-Report.html',
   'PM-Yard.html',
   'Plate-Tagging-Tool.html',
   'Rake-Planner.html',
