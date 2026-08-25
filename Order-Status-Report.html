@@ -145,7 +145,7 @@ thead tr th:last-child{border-radius:0 var(--radius-xs) 0 0}
    reliably takes effect, matching VDO-Generator's .filterpop class. An inline `style` background/
    backdrop-filter has the highest CSS specificity and was overriding/short-circuiting the blur in
    this environment; a real stylesheet rule on a className does not have that problem. */
-.m3-popover{background:var(--glass-hi);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);}
+.m3-popover{background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);}
 /* Defensive: ensure nothing globally forces Leaflet's SVG circle markers to black — each marker
    sets its own fill/stroke inline via Leaflet's path options, but guard against any stray
    `svg *{fill:...}` / `path{fill:...}` rule elsewhere overriding .leaflet-interactive shapes. */
