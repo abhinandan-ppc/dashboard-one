@@ -153,7 +153,7 @@ thead tr th:last-child{border-radius:0 var(--radius-xs) 0 0}
    real CSS classes (not inline gridTemplateColumns) so a @media rule can actually win — an inline
    style property always beats a media-query-scoped class rule at the same specificity. */
 .grid-donut-cust,.grid-map-metrics{display:grid;gap:16px;margin-bottom:18px;align-items:stretch}
-.grid-donut-cust{grid-template-columns:320px 1fr}
+.grid-donut-cust{grid-template-columns:320px 1fr;align-items:start}
 .grid-map-metrics{grid-template-columns:1.4fr 1fr}
 @media (max-width:900px){
   .grid-donut-cust,.grid-map-metrics{grid-template-columns:1fr}
@@ -244,6 +244,22 @@ function useThemeManager(){
     document.documentElement.setAttribute('data-theme',effective);
     localStorage.setItem('jspl-osr-theme',pref);
   },[effective,pref]);
+  // Sync with the hub's global theme toggle (the Home/Refresh/Theme/User controls mounted into
+  // #hubFrameHeaderSlot) — this page had no standalone theme toggle nor any listener for the
+  // hub's postMessage({type:'theme',...}), so switching theme from the hub never had any effect
+  // here. Mirrors Rake-Planner's handleHubMessage/window.__hub_handle_theme convention.
+  useEffect(()=>{
+    window.__hub_handle_theme=value=>{ if(value==='dark'||value==='light'||value==='auto')setPref(value); };
+    const onMsg=e=>{
+      const d=e.data;
+      if(d&&d.type==='theme'&&d.value)window.__hub_handle_theme(d.value);
+    };
+    window.addEventListener('message',onMsg);
+    if(window.parent&&window.parent!==window){
+      try{window.parent.postMessage({type:'ready'},'*');}catch(e){}
+    }
+    return()=>{window.removeEventListener('message',onMsg);delete window.__hub_handle_theme;};
+  },[]);
   return{pref,setPref,effective};
 }
 const F={h:"'DM Sans',sans-serif",b:"'DM Sans',sans-serif",m:"'DM Mono',monospace"};
@@ -1562,7 +1578,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
           </span>
         )))}
         <button onClick={clearChartFilters} style={{marginLeft:'auto',padding:'6px 14px',borderRadius:'var(--radius-sm)',
-          border:'1.5px solid #7a1a1a',background:'#3a0f0f',color:'#f0a0a0',fontFamily:F.h,fontSize:11,
+          border:`1.5px solid ${C.rose}`,background:'var(--rose-bg)',color:C.rose,fontFamily:F.h,fontSize:11,
           fontWeight:700,cursor:'pointer',textTransform:'uppercase'}}>Clear cross-filters</button>
       </>:<span style={{fontFamily:F.b,fontSize:11.5,color:'var(--mute)'}}>
         No cross-filters active — click a chart, table row, rake chip, or map marker to filter by it.
@@ -1661,7 +1677,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       </div>
 
       <div className="glass-card" style={{padding:'16px 18px',overflow:'hidden',display:'flex',flexDirection:'column',
-        height:'100%',maxHeight:360,boxShadow:'var(--shadow-sm)',borderRadius:'var(--radius-lg)'}}>
+        height:640,boxShadow:'var(--shadow-sm)',borderRadius:'var(--radius-lg)'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:8}}>
           <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--text)'}}>Customer-wise Order Status</div>
           <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
@@ -1735,7 +1751,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
                 background:rakeChip===m?'var(--violet-bg)':'var(--s2)',color:rakeChip===m?C.violet:'var(--dim)'}}>{m}</button>
             ))}
             {rakeChip&&<button onClick={()=>setRakeChip(null)} style={{padding:'5px 11px',
-              borderRadius:'var(--radius-pill)',border:'1.5px solid #7a1a1a',background:'#3a0f0f',color:'#f0a0a0',
+              borderRadius:'var(--radius-pill)',border:`1.5px solid ${C.rose}`,background:'var(--rose-bg)',color:C.rose,
               fontFamily:F.h,fontSize:11,fontWeight:700,cursor:'pointer'}}>✕ Clear</button>}
           </div>
         </div>
