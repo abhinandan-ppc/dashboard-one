@@ -819,15 +819,33 @@ const DRILL_COLS=[
 ];
 const tdDrillNum={...td0,fontFamily:F.m,textAlign:'right',whiteSpace:'nowrap'};
 
-/* Matches Rake-Planner's DrillPanel <th> exactly: sticky lives on the <thead>
-   (position:'sticky',top:0,zIndex:2), and background+backdrop-filter go directly inline on each
-   <th> — not a wrapper div, not a shared class, not on <thead>. */
+/* Sticky lives on the <thead> (position:'sticky',top:0,zIndex:2). Two stacked blur layers: the
+   inline background+backdrop-filter directly on the <th> (matches Rake-Planner's DrillPanel), plus
+   a second independent .m3-popover <div> layer underneath the text — compounding into a stronger,
+   more opaque frost than either layer alone. */
 function GlassTh({children,onClick,title,align='left',color}){
-  return<th onClick={onClick} title={title} style={{padding:'9px 12px',fontSize:10.5,
-    fontFamily:F.b,letterSpacing:'.06em',textTransform:'uppercase',color:color||'var(--mute)',fontWeight:600,
+  return<th onClick={onClick} title={title} style={{padding:0,fontSize:10.5,
+    fontFamily:F.b,letterSpacing:'.06em',textTransform:'uppercase',color:color||'var(--mute)',fontWeight:800,
     whiteSpace:'nowrap',userSelect:'none',textAlign:align,boxShadow:'0 1px 0 var(--bdrHi)',
     background:'var(--glass-hi)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
-    cursor:onClick?'pointer':'default'}}>{children}</th>;
+    cursor:onClick?'pointer':'default',position:'relative'}}>
+    <div className="m3-popover" style={{position:'absolute',inset:0}}/>
+    <div style={{position:'relative',padding:'9px 12px'}}>{children}</div>
+  </th>;
+}
+
+/* Frozen Grand Total row cell — same double-blur treatment as GlassTh, used inside a
+   <tfoot style={{position:'sticky',bottom:0,zIndex:2}}> so totals stay visible while scrolling
+   and regardless of pagination (totals are always computed off the full filtered set, not the
+   current page). */
+function GlassTotalTd({children,align='left'}){
+  return<td style={{padding:0,fontFamily:F.m,fontWeight:800,textAlign:align,
+    borderTop:'2px solid var(--bdrHi)',color:'var(--text)',
+    background:'var(--glass-hi)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
+    position:'relative'}}>
+    <div className="m3-popover" style={{position:'absolute',inset:0}}/>
+    <div style={{position:'relative',padding:'9px 12px'}}>{children}</div>
+  </td>;
 }
 
 function KpiDrillPanel({rows,metric,label,onClose}){
@@ -847,6 +865,12 @@ function KpiDrillPanel({rows,metric,label,onClose}){
   const total=sorted.reduce((s,r)=>s+metric.getter(r),0);
   const pages=Math.max(1,Math.ceil(sorted.length/PAGE));
   const paged=sorted.slice(pg*PAGE,(pg+1)*PAGE);
+  // Grand-total row — summed across every filtered/sorted row, not just the current page.
+  const colTotals=useMemo(()=>{
+    const t={};
+    DRILL_COLS.forEach(c=>{ t[c.key]=sorted.reduce((s,r)=>s+c.get(r),0); });
+    return t;
+  },[sorted]);
 
   useEffect(()=>{
     const handle=dragRef.current;
@@ -926,6 +950,16 @@ function KpiDrillPanel({rows,metric,label,onClose}){
           ))}
           {!paged.length&&<tr><td colSpan={3+DRILL_COLS.length} style={{...td0,textAlign:'center',color:'var(--mute)'}}>No matching orders</td></tr>}
         </tbody>
+        {/* Frozen to the bottom of the scroll area — sums every filtered/sorted row, not just the
+            current page, so it stays accurate and visible regardless of pagination/scroll. */}
+        <tfoot style={{position:'sticky',bottom:0,zIndex:2}}><tr>
+          <GlassTotalTd>GRAND TOTAL</GlassTotalTd>
+          <GlassTotalTd/>
+          <GlassTotalTd/>
+          {DRILL_COLS.map(c=>(
+            <GlassTotalTd key={c.key} align="right">{fmt(colTotals[c.key])}</GlassTotalTd>
+          ))}
+        </tr></tfoot>
       </table>
     </div>
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 20px',
@@ -1509,23 +1543,31 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     </div>
 
     {/* ═══ Active cross-filter chip row (chart-click filters — separate from dropdown filters above) ═══ */}
-    {activeChartFilterCount>0&&<div style={{...card,padding:'10px 16px',marginBottom:18,display:'flex',
+    {/* Always rendered (never conditionally mounted) with a stable minHeight, even with zero
+        active filters — toggling this in/out of the DOM on every chart click was exactly what
+        made the page appear to "jump": everything below it (KPI panel, donut, tables) shifted up
+        or down by this box's height each time, even though scroll position itself didn't move. */}
+    <div style={{...card,padding:'10px 16px',marginBottom:18,display:'flex',minHeight:44,
       gap:8,flexWrap:'wrap',alignItems:'center'}}>
-      <span style={{fontFamily:F.h,fontSize:11,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--mute)'}}>
-        Active cross-filters: {activeChartFilterCount}
-      </span>
-      {Object.entries(chartFilters).map(([field,set])=>[...set].map(v=>(
-        <span key={field+':'+v} onClick={()=>toggleChartFilter(field,v)} style={{cursor:'pointer',
-          padding:'4px 10px',borderRadius:'var(--radius-pill)',fontSize:11.5,fontFamily:F.b,fontWeight:600,
-          border:`1.5px solid ${C.violet}`,background:'var(--violet-bg)',color:C.violet,
-          display:'inline-flex',alignItems:'center',gap:6}}>
-          {field}: {String(v)||'(blank)'} <b>✕</b>
+      {activeChartFilterCount>0?<>
+        <span style={{fontFamily:F.h,fontSize:11,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--mute)'}}>
+          Active cross-filters: {activeChartFilterCount}
         </span>
-      )))}
-      <button onClick={clearChartFilters} style={{marginLeft:'auto',padding:'6px 14px',borderRadius:'var(--radius-sm)',
-        border:'1.5px solid #7a1a1a',background:'#3a0f0f',color:'#f0a0a0',fontFamily:F.h,fontSize:11,
-        fontWeight:700,cursor:'pointer',textTransform:'uppercase'}}>Clear cross-filters</button>
-    </div>}
+        {Object.entries(chartFilters).map(([field,set])=>[...set].map(v=>(
+          <span key={field+':'+v} onClick={()=>toggleChartFilter(field,v)} style={{cursor:'pointer',
+            padding:'4px 10px',borderRadius:'var(--radius-pill)',fontSize:11.5,fontFamily:F.b,fontWeight:600,
+            border:`1.5px solid ${C.violet}`,background:'var(--violet-bg)',color:C.violet,
+            display:'inline-flex',alignItems:'center',gap:6}}>
+            {field}: {String(v)||'(blank)'} <b>✕</b>
+          </span>
+        )))}
+        <button onClick={clearChartFilters} style={{marginLeft:'auto',padding:'6px 14px',borderRadius:'var(--radius-sm)',
+          border:'1.5px solid #7a1a1a',background:'#3a0f0f',color:'#f0a0a0',fontFamily:F.h,fontSize:11,
+          fontWeight:700,cursor:'pointer',textTransform:'uppercase'}}>Clear cross-filters</button>
+      </>:<span style={{fontFamily:F.b,fontSize:11.5,color:'var(--mute)'}}>
+        No cross-filters active — click a chart, table row, rake chip, or map marker to filter by it.
+      </span>}
+    </div>
 
     {/* ═══ PANEL 2: REVERSE-FLOW ORDER PIPELINE ═══ */}
     <div style={{...card,padding:'18px 20px',marginBottom:18}}>
@@ -1543,7 +1585,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
             style={{flex:1,minWidth:0,height:128,display:'flex',flexDirection:'column',cursor:'pointer',
             gap:7,padding:'12px 14px',borderRadius:'var(--radius-md)',background:'var(--amber-bg)',
             border:`1px solid var(--bdrHi)`,borderTop:`3px solid ${C.jsplGold}`}}>
-            <div style={{fontFamily:F.h,fontSize:14,letterSpacing:'.03em',textTransform:'uppercase',color:'var(--mute)',whiteSpace:'nowrap'}}>Order Qty_Live</div>
+            <div style={{fontFamily:F.h,fontSize:14,fontWeight:800,letterSpacing:'.03em',textTransform:'uppercase',color:'var(--text)',whiteSpace:'nowrap'}}>Order Qty_Live</div>
             <div style={{fontFamily:F.m,fontSize:18,fontWeight:700,color:'var(--text)',whiteSpace:'nowrap'}}>{fmt(kpi.orderQtyLive)}</div>
             <div style={{height:5,borderRadius:3,background:'var(--s3)',overflow:'hidden'}}>
               <div style={{height:'100%',width:'100%',background:C.jsplGold,borderRadius:3}}/>
@@ -1570,7 +1612,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
                     style={{flex:1,minWidth:0,height:128,display:'flex',flexDirection:'column',cursor:'pointer',
                     gap:7,padding:'12px 13px',borderRadius:'var(--radius-md)',background:'var(--s1)',
                     border:`1px solid var(--bdr)`,borderTop:`3px solid ${s.color}`}}>
-                    <div style={{fontFamily:F.h,fontSize:14,letterSpacing:'.03em',textTransform:'uppercase',color:'var(--mute)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.label}</div>
+                    <div style={{fontFamily:F.h,fontSize:14,fontWeight:800,letterSpacing:'.03em',textTransform:'uppercase',color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.label}</div>
                     <div style={{fontFamily:F.m,fontSize:18,fontWeight:700,color:'var(--text)',whiteSpace:'nowrap'}}>{fmt(s.value)}</div>
                     <div style={{height:5,borderRadius:3,background:'var(--s3)',overflow:'hidden'}}>
                       <div style={{height:'100%',width:Math.min(100,p)+'%',background:s.color,borderRadius:3}}/>
@@ -1658,13 +1700,15 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
                   <td style={{...td0,fontFamily:F.m,background:`${C._amber}${Math.round(Math.min(1,o.btp/custMaxHeat)*40+6).toString(16).padStart(2,'0')}`}}>{fmt(o.btp)}</td>
                 </tr>;
               })}
-              <tr>
-                <td style={{...td0,fontWeight:800,borderTop:'2px solid var(--bdrHi)'}}>GRAND TOTAL</td>
-                {['ordQty','btb','fg','wip','plateStock','btr','slabStock','btc','issued','btp'].map(k=>(
-                  <td key={k} style={{...td0,fontFamily:F.m,fontWeight:800,borderTop:'2px solid var(--bdrHi)'}}>{fmt(custTotal[k])}</td>
-                ))}
-              </tr>
             </tbody>
+            {/* Frozen to the bottom of the scroll area — always visible regardless of scroll
+                position or which page is showing, since custTotal sums the full filtered set. */}
+            <tfoot style={{position:'sticky',bottom:0,zIndex:2}}><tr>
+              <GlassTotalTd>GRAND TOTAL</GlassTotalTd>
+              {['ordQty','btb','fg','wip','plateStock','btr','slabStock','btc','issued','btp'].map(k=>(
+                <GlassTotalTd key={k} align="left">{fmt(custTotal[k])}</GlassTotalTd>
+              ))}
+            </tr></tfoot>
           </table>
         </div>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:12,fontSize:12}}>
