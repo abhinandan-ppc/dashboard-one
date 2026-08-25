@@ -76,7 +76,7 @@ canvas { display: block; touch-action: none; outline: none; }
 
 /* ─── HEADER ─── */
 header {
-  position: absolute; top: 8px; left: 8px; right: 8px; min-height: 50px;
+  position: absolute; top: 8px; left: 16px; right: 16px; min-height: 50px;
   border: var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
   display: flex; align-items: center; justify-content: space-between; z-index: 100;
   padding: 4px 20px; pointer-events: auto; gap: 16px;
@@ -530,7 +530,7 @@ aside.collapsed .left-toggle {
 
 /* Mobile Devices */
 @media (max-width: 768px) {
-  header { padding: 12px 10px; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  header { padding: 12px 10px; gap: 8px; justify-content: center; flex-wrap: wrap; left: 10px; right: 10px; }
   
   /* Row 1: Brand - Full Width & Centered */
   .brand { order: 1; width: 100%; justify-content: center; margin: 0; }

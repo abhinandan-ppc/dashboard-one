@@ -1555,6 +1555,7 @@ document.getElementById("resetBtn").addEventListener("click", function(){
     saveItems(items); render();
     // notify iframe (if any) that a reset happened
     try{ if(pageFrame && pageFrame.contentWindow) pageFrame.contentWindow.postMessage({type:'reset'}, '*'); }catch(e){}
+    try{ fetchAndCacheEBTP(true); }catch(e){}
   }
 });
 

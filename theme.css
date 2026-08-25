@@ -260,7 +260,7 @@ input::placeholder{color:var(--mute);opacity:1}
 
 .fetch-status{
   position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-  width:min(420px,92vw);z-index:65;
+  width:min(420px,92vw);z-index:250;
   background:var(--glass-hi);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   border:1px solid var(--glass-border);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-lg);padding:14px 18px;

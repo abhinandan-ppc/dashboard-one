@@ -1400,10 +1400,11 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       <div id="hubFrameHeaderSlot" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}/>
     </div>
     </div>
-    {/* Spacer reserving the fixed header's visual footprint in the flex flow below */}
-    <div style={{height:126}}/>
+    {/* Spacer reserving the fixed header's visual footprint in the flex flow below
+        (20px outer top padding + 64px minHeight, both border-box — see the header above) */}
+    <div style={{height:84}}/>
     <div className="glass-card" style={{padding:'12px 16px',marginBottom:18,display:'flex',gap:10,flexWrap:'wrap',
-      position:'relative',zIndex:200,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-sm)'}}>
+      position:'relative',zIndex:40,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-sm)'}}>
       <MultiSelect label="Release Status" options={relStaOptions} selected={relStaSel} onChange={setRelStaSel}/>
       <MultiSelect label="VAG Status" options={vagOptions} selected={vagSel} onChange={setVagSel}/>
       <MultiSelect label="Supply Condition" options={HTC_ORDER} selected={htcSel} onChange={setHtcSel}/>
