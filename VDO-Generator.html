@@ -202,6 +202,14 @@ tr:hover td{background:var(--input-hover)}
 </div>
 <p class="sub">Upload an EBTP export → FI(2)-Released + past promise-date orders are scored, PPC-remarked, and dumped to Excel. Runs fully offline.</p>
 <p class="status" id="status">Waiting for file…</p>
+<div class="fetch-status" id="fetchStatus" style="display:none;position:static;transform:none;width:100%;margin:12px 0;box-sizing:border-box">
+  <div class="fetch-status-head">
+    <div class="fetch-status-spinner"></div>
+    <div class="fetch-status-label" id="fetchStatusLabel">Fetching EBTP data…</div>
+  </div>
+  <div class="loader-track"><div class="loader-bar" id="fetchStatusBar"></div></div>
+  <div class="fetch-status-log" id="fetchStatusLog"></div>
+</div>
 
 <div class="panel" id="controls" style="display:none"><h2>1 · Options &amp; Filters</h2>
 <div class="row">
@@ -502,19 +510,145 @@ function previewSkeleton(){
   return '<table class="skeleton-table"><tbody>'+Array.from({length:6}).map(()=>row).join('')+'</tbody></table>';
 }
 
-/* ── Online EBTP (shared hub cache) ──
-   EBTP is now fetched once by the hub (index.html) and cached in
-   localStorage — this page just reads that shared cache instead of
-   hitting the network itself. */
-const EBTP_CACHE_KEY="jspl-ebtp-cache-v1";
+/* ── Online EBTP: shared hub cache (IndexedDB) + fallback fetch ──
+   EBTP is fetched once by the hub (index.html) and shared via IndexedDB
+   (same DB/store/key contract as index.html — localStorage's ~5-10MB
+   quota is too small for this CSV). If the hub's cache doesn't show up
+   in time, this page fetches EBTP itself. */
+const EBTP_SHEET_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vQEKS6uq6epbkSmpv548hSG63WVUiFwKLXctpeM3G8NMeXJ_ZJaTCuFj95n4gTRuhchM_T4q_kp5_au/pub?gid=0&single=true&output=csv";
+const EBTP_DB_NAME='jspl-ebtp-shared-db',EBTP_DB_STORE='cache',EBTP_DB_KEY='latest';
+function openEbtpDb(){
+  return new Promise(resolve=>{
+    try{
+      if(!window.indexedDB){resolve(null);return;}
+      const req=indexedDB.open(EBTP_DB_NAME,1);
+      req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(EBTP_DB_STORE))db.createObjectStore(EBTP_DB_STORE);};
+      req.onsuccess=()=>resolve(req.result);
+      req.onerror=()=>resolve(null);
+    }catch(e){resolve(null);}
+  });
+}
 function readHubEbtpCache(){
-  try{
-    const raw=localStorage.getItem(EBTP_CACHE_KEY);
-    if(!raw)return null;
-    const parsed=JSON.parse(raw);
-    if(!parsed||!parsed.csvText)return null;
-    return parsed;
-  }catch(e){return null;}
+  return openEbtpDb().then(db=>{
+    if(!db)return null;
+    return new Promise(resolve=>{
+      try{
+        const tx=db.transaction(EBTP_DB_STORE,'readonly');
+        const req=tx.objectStore(EBTP_DB_STORE).get(EBTP_DB_KEY);
+        req.onsuccess=()=>{try{db.close();}catch(e){}resolve(req.result||null);};
+        req.onerror=()=>{try{db.close();}catch(e){}resolve(null);};
+      }catch(e){try{db.close();}catch(_){}resolve(null);}
+    });
+  }).catch(()=>null);
+}
+function writeHubEbtpCache(csvText,rowCount){
+  return openEbtpDb().then(db=>{
+    if(!db)return false;
+    return new Promise(resolve=>{
+      try{
+        const tx=db.transaction(EBTP_DB_STORE,'readwrite');
+        tx.objectStore(EBTP_DB_STORE).put({csvText,fetchedAt:Date.now(),rowCount},EBTP_DB_KEY);
+        tx.oncomplete=()=>{try{db.close();}catch(e){}resolve(true);};
+        tx.onerror=()=>{try{db.close();}catch(e){}resolve(false);};
+      }catch(e){try{db.close();}catch(_){}resolve(false);}
+    });
+  }).catch(()=>false);
+}
+function tryXHR(url,attempts=5,timeoutMs=4000){
+  const attempt=n=>new Promise((res,rej)=>{
+    const x=new XMLHttpRequest();
+    x.open('GET',url,true);
+    x.timeout=timeoutMs;
+    x.onload=()=>x.status>=200&&x.status<300?res(x.responseText):rej(new Error('XHR '+x.status+' (try '+n+'/'+attempts+')'));
+    x.onerror=()=>rej(new Error('XHR network error (try '+n+'/'+attempts+')'));
+    x.ontimeout=()=>rej(new Error('XHR timeout (try '+n+'/'+attempts+')'));
+    x.send();
+  }).catch(e=>{
+    if(n>=attempts)throw e;
+    return new Promise(r=>setTimeout(r,250)).then(()=>attempt(n+1));
+  });
+  return attempt(1);
+}
+function tryIframe(url){
+  return new Promise((res,rej)=>{
+    const iframe=document.createElement('iframe');
+    iframe.style.cssText='position:fixed;width:1px;height:1px;top:-999px;left:-999px;opacity:0;';
+    iframe.sandbox='allow-same-origin';
+    const t=setTimeout(()=>{try{document.body.removeChild(iframe);}catch(e){}rej(new Error('iframe timeout'));},12000);
+    iframe.onload=()=>{
+      clearTimeout(t);
+      try{
+        const txt=iframe.contentDocument?.body?.innerText||iframe.contentDocument?.documentElement?.innerText||'';
+        document.body.removeChild(iframe);
+        txt.includes(',')&&txt.length>50?res(txt):rej(new Error('iframe: no csv'));
+      }catch(e){try{document.body.removeChild(iframe);}catch(_){}rej(e);}
+    };
+    iframe.onerror=()=>{clearTimeout(t);try{document.body.removeChild(iframe);}catch(e){}rej(new Error('iframe error'));};
+    document.body.appendChild(iframe);
+    iframe.src=url;
+  });
+}
+function tryFetch(proxyUrl,json){
+  return fetch(proxyUrl,{cache:'no-store',mode:'cors',credentials:'omit'})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);
+      return json?r.json().then(d=>{const t=d?.contents||d?.data||'';if(!t)throw new Error('empty');return t;}):r.text();
+    });
+}
+function tryApiProxy(){
+  return fetch('/api/ebtp-proxy',{cache:'no-store',credentials:'same-origin'})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
+}
+function fetchStatusShow(phase){
+  $('#fetchStatus').style.display='flex';
+  $('#fetchStatusLabel').textContent=phase==='parsing'?'Parsing data…':'Fetching EBTP data…';
+  $('#fetchStatusBar').classList.toggle('phase-parsing',phase==='parsing');
+}
+function fetchStatusLog(msg){
+  const log=$('#fetchStatusLog');
+  const line=document.createElement('div');
+  line.textContent=msg;
+  log.appendChild(line);
+  while(log.children.length>6) log.removeChild(log.firstChild);
+  log.scrollTop=log.scrollHeight;
+}
+function fetchStatusHide(){
+  $('#fetchStatus').style.display='none';
+  $('#fetchStatusLog').innerHTML='';
+}
+async function fetchEbtpDirectly(){
+  fetchStatusShow('fetching');
+  const enc=encodeURIComponent(EBTP_SHEET_URL);
+  const strats=[
+    {n:'api-proxy',      f:()=>tryApiProxy()},
+    {n:'XHR',            f:()=>tryXHR(EBTP_SHEET_URL)},
+    {n:'Iframe',         f:()=>tryIframe(EBTP_SHEET_URL)},
+    {n:'corsproxy.io',   f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
+    {n:'codetabs',       f:()=>tryFetch('https://api.codetabs.com/v1/proxy?quest='+enc,false)},
+    {n:'allorigins/raw', f:()=>tryFetch('https://api.allorigins.win/raw?url='+enc,false)},
+    {n:'allorigins/get', f:()=>tryFetch('https://api.allorigins.win/get?url='+enc,true)},
+    {n:'thingproxy',     f:()=>tryFetch('https://thingproxy.freeboard.io/fetch/'+EBTP_SHEET_URL,false)},
+    {n:'jsonp.afeld.me', f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
+  ];
+  const errs=[];
+  for(const{n,f}of strats){
+    fetchStatusLog('→ Trying '+n+'…');
+    try{
+      const text=await f();
+      if(!text||text.length<50)throw new Error('empty');
+      if(!text.split('\n')[0].includes(','))throw new Error('not CSV');
+      fetchStatusLog('✓ '+n+' succeeded');
+      fetchStatusShow('parsing');
+      const rowCount=text.split('\n').filter(l=>l.trim()).length-1;
+      writeHubEbtpCache(text,rowCount);
+      fetchStatusHide();
+      return text;
+    }catch(e){
+      const msg=n+': '+(e.name==='AbortError'?'timeout':e.message);
+      errs.push(msg);fetchStatusLog('✗ '+msg);
+    }
+  }
+  fetchStatusHide();
+  throw new Error('All '+strats.length+' fetch methods failed — '+errs.join(' · '));
 }
 
 function setOnlineFetching(on,label){
@@ -545,34 +679,33 @@ function handleCSV(text,label){
 async function fetchOnlineEBTP(){
   setOnlineFetching(true,'Reading hub cache…');
   $('#preview').innerHTML=previewSkeleton();
-  const cached=readHubEbtpCache();
+  const cached=await readHubEbtpCache();
   if(cached&&cached.csvText){
     handleCSV(cached.csvText,'Online EBTP (hub cache)');
     setOnlineFetching(false);
     return;
   }
-  // No cache yet — this button doesn't fetch independently, it just asks
-  // the hub to (the hub owns the only real "refresh EBTP" action) and
-  // waits for the cache to land. force:false — don't bypass a fresh
-  // cache if one shows up between our check above and the hub's own.
   const inFrame=window.parent!==window;
-  if(!inFrame){
-    $('#preview').innerHTML='';
-    $('#status').textContent='This tool has no hub to fetch from when opened standalone. Open it from the JSPL hub, or upload the .xlsx manually.';
-    setOnlineFetching(false);
-    return;
-  }
-  try{window.parent.postMessage({type:'request-ebtp-fetch',force:false},'*');}catch(e){}
-  for(let i=0;i<150;i++){
+  if(inFrame){try{window.parent.postMessage({type:'request-ebtp-fetch',force:false},'*');}catch(e){}}
+  for(let i=0;i<(inFrame?15:0);i++){
     setOnlineFetching(true,'Waiting for hub cache…');
     await new Promise(r=>setTimeout(r,600));
-    const c=readHubEbtpCache();
+    const c=await readHubEbtpCache();
     if(c&&c.csvText){ handleCSV(c.csvText,'Online EBTP (hub cache)'); setOnlineFetching(false); return; }
   }
-  $('#preview').innerHTML='';
-  $('#status').textContent='No cached EBTP data from the hub yet after 90s. Open this tool from the JSPL hub, or upload the .xlsx manually.';
-  setOnlineFetching(false);
+  // Hub cache never showed up — fetch it ourselves.
+  setOnlineFetching(true,'Fetching EBTP directly…');
+  try{
+    const text=await fetchEbtpDirectly();
+    handleCSV(text,'Online EBTP (direct fetch)');
+    setOnlineFetching(false);
+  }catch(e){
+    $('#preview').innerHTML='';
+    $('#status').textContent=e.message+'. Upload the .xlsx manually.';
+    setOnlineFetching(false);
+  }
 }
+
 
 function handleFile(file){
   setUploading(true);
@@ -1098,6 +1231,10 @@ window.addEventListener('DOMContentLoaded',()=>{
   $('#uploadBtn').addEventListener('click',()=>fi.click());
   fi.addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0]);});
   $('#onlineBtn').addEventListener('click',fetchOnlineEBTP);
+  // Auto-load EBTP on open (hub cache, falling back to a direct fetch) so
+  // this tool doesn't require an explicit click before it has data —
+  // unless the user is already mid-upload of their own file.
+  if(!RAW) fetchOnlineEBTP();
   // whole page stays a drop target even though the visible drop-zone moved into the header
   let dragDepth=0;
   ['dragover','dragenter'].forEach(ev=>document.body.addEventListener(ev,e=>{

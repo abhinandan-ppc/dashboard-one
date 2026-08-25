@@ -1712,23 +1712,72 @@ function tryApiProxy(){
   });
 }
 
+// ── Shared cache storage: IndexedDB, not localStorage ──
+// localStorage quota is ~5-10MB PER ORIGIN, shared with every other key any
+// page on this domain has ever written — an EBTP export with 200+ columns
+// routinely exceeds that alone, and did even after clearing legacy keys.
+// IndexedDB quota is a large fraction of free disk space (typically
+// hundreds of MB+), and — same-origin — is just as readable from every
+// dashboard iframe as localStorage was. A tiny localStorage flag
+// (EBTP_CACHE_KEY) is kept ONLY so a page can synchronously check whether
+// a fetch has ever completed, without waiting on an IndexedDB round-trip.
+var EBTP_DB_NAME = 'jspl-ebtp-shared-db';
+var EBTP_DB_STORE = 'cache';
+var EBTP_DB_KEY = 'latest';
+
+function openEbtpDb(){
+  return new Promise(function(resolve){
+    try{
+      if(!window.indexedDB){ resolve(null); return; }
+      var req = indexedDB.open(EBTP_DB_NAME, 1);
+      req.onupgradeneeded = function(){
+        var db = req.result;
+        if(!db.objectStoreNames.contains(EBTP_DB_STORE)) db.createObjectStore(EBTP_DB_STORE);
+      };
+      req.onsuccess = function(){ resolve(req.result); };
+      req.onerror = function(){ resolve(null); };
+    }catch(e){ resolve(null); }
+  });
+}
 function readEbtpCache(){
-  try{
-    var raw = localStorage.getItem(EBTP_CACHE_KEY);
-    if(!raw) return null;
-    var parsed = JSON.parse(raw);
-    if(!parsed || !parsed.csvText) return null;
-    return parsed;
-  }catch(e){ return null; }
+  return openEbtpDb().then(function(db){
+    if(!db) return null;
+    return new Promise(function(resolve){
+      try{
+        var tx = db.transaction(EBTP_DB_STORE, 'readonly');
+        var store = tx.objectStore(EBTP_DB_STORE);
+        var req = store.get(EBTP_DB_KEY);
+        req.onsuccess = function(){ try{ db.close(); }catch(e){} resolve(req.result || null); };
+        req.onerror = function(){ try{ db.close(); }catch(e){} resolve(null); };
+      }catch(e){ try{ db.close(); }catch(_){} resolve(null); }
+    });
+  }).catch(function(){ return null; });
+}
+function writeEbtpCache(csvText, rowCount){
+  var record = { csvText: csvText, fetchedAt: Date.now(), rowCount: rowCount };
+  return openEbtpDb().then(function(db){
+    if(!db) return false;
+    return new Promise(function(resolve){
+      try{
+        var tx = db.transaction(EBTP_DB_STORE, 'readwrite');
+        var store = tx.objectStore(EBTP_DB_STORE);
+        store.put(record, EBTP_DB_KEY);
+        tx.oncomplete = function(){
+          try{ db.close(); }catch(e){}
+          try{ localStorage.setItem(EBTP_CACHE_KEY, JSON.stringify({ fetchedAt: record.fetchedAt, rowCount: rowCount })); }catch(e){}
+          resolve(true);
+        };
+        tx.onerror = function(){ try{ db.close(); }catch(e){} resolve(false); };
+      }catch(e){ try{ db.close(); }catch(_){} resolve(false); }
+    });
+  }).catch(function(){ return false; });
 }
 
 // Legacy per-page localStorage caches from before EBTP fetching was
 // centralized here. Rake-Planner in particular used to persist BOTH the
 // raw CSV and a full JSON dump of every parsed row into localStorage on
-// every load — many MB, competing for the same origin-wide quota this
-// shared cache needs. Purged on every hub load so stale copies (from
-// browsers that already hit this before the fix shipped) don't keep
-// blocking the write.
+// every load. Purged on every hub load so stale copies (from browsers
+// that already hit this before the IndexedDB migration) free up space.
 var LEGACY_EBTP_LOCALSTORAGE_KEYS = [
   'jspl-rake-planner-live-csv-cache',
   'jspl-rake-planner-session-state-cache',
@@ -1737,27 +1786,6 @@ function clearLegacyEbtpCaches(){
   LEGACY_EBTP_LOCALSTORAGE_KEYS.forEach(function(k){
     try{ localStorage.removeItem(k); }catch(e){}
   });
-}
-
-function writeEbtpCache(csvText, rowCount){
-  var payload = JSON.stringify({ csvText: csvText, fetchedAt: Date.now(), rowCount: rowCount });
-  try{
-    localStorage.setItem(EBTP_CACHE_KEY, payload);
-    return true;
-  }catch(e){
-    // Likely QuotaExceededError — reclaim space from legacy caches and our
-    // own previous entry, then retry once before giving up.
-    console.warn('EBTP cache write failed, clearing legacy caches and retrying:', e);
-    clearLegacyEbtpCaches();
-    try{ localStorage.removeItem(EBTP_CACHE_KEY); }catch(e2){}
-    try{
-      localStorage.setItem(EBTP_CACHE_KEY, payload);
-      return true;
-    }catch(e3){
-      console.error('EBTP cache write failed even after clearing legacy caches (CSV is', Math.round(csvText.length / 1024), 'KB):', e3);
-      return false;
-    }
-  }
 }
 
 function fetchStatusShow(phase){
@@ -1787,11 +1815,7 @@ function fetchStatusHide(){
 var ebtpFetchInFlight = null;
 function fetchAndCacheEBTP(force){
   if(ebtpFetchInFlight) return ebtpFetchInFlight;
-  clearLegacyEbtpCaches(); // reclaim quota from pre-centralization per-page caches on every hub load
-  var cached = readEbtpCache();
-  if(cached && !force) return Promise.resolve({ ok: true, cached: true, fetchedAt: cached.fetchedAt });
-
-  fetchStatusShow('fetching');
+  clearLegacyEbtpCaches(); // reclaim quota from pre-centralization per-page localStorage caches
   var enc = encodeURIComponent(EBTP_SHEET_URL);
   var strats = [
     { n: 'api-proxy',      f: function(){ return tryApiProxy(); } },
@@ -1806,6 +1830,10 @@ function fetchAndCacheEBTP(force){
   ];
 
   ebtpFetchInFlight = (async function(){
+    var cached = await readEbtpCache();
+    if(cached && !force) { ebtpFetchInFlight = null; return { ok: true, cached: true, fetchedAt: cached.fetchedAt }; }
+
+    fetchStatusShow('fetching');
     var errs = [];
     for(var i = 0; i < strats.length; i++){
       var n = strats[i].n, f = strats[i].f;
@@ -1818,12 +1846,12 @@ function fetchAndCacheEBTP(force){
         fetchStatusShow('parsing');
         var rowCount = text.split('\n').filter(function(l){ return l.trim(); }).length - 1;
         fetchStatusLog('Validated ' + Math.max(0, rowCount).toLocaleString() + ' rows');
-        var cached = writeEbtpCache(text, rowCount);
-        if(!cached){
-          fetchStatusLog('✗ Cache write failed (storage full?) — dashboards will fetch on their own');
+        var wrote = await writeEbtpCache(text, rowCount);
+        if(!wrote){
+          fetchStatusLog('✗ Cache write failed — dashboards will fetch on their own');
           setTimeout(fetchStatusHide, 3000);
           ebtpFetchInFlight = null;
-          return { ok: false, error: 'localStorage write failed' };
+          return { ok: false, error: 'IndexedDB write failed' };
         }
         fetchStatusLog('✓ Cached for all dashboards');
         setTimeout(fetchStatusHide, 900);

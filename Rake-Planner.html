@@ -4206,19 +4206,127 @@ function FilterPanel({allR,allS,allO,allM,allWagon,allHTC,allRem,allCust,
 }
 
 /* ═══════════════════ UPLOAD SCREEN ═══════════════════ */
-/* EBTP is now fetched once by the hub (index.html) and cached in
-   localStorage — every dashboard just reads that shared cache instead
-   of hitting the network itself. See index.html's "CENTRAL EBTP FETCH
-   + CACHE" script for the fetch chain and cache-key contract. */
-const EBTP_CACHE_KEY="jspl-ebtp-cache-v1";
+/* EBTP is fetched once by the hub (index.html) and shared via IndexedDB
+   (same DB/store/key contract as index.html — localStorage's ~5-10MB
+   quota is too small for this CSV). If the hub's cache doesn't show up
+   in time (opened standalone, hub fetch failed, etc.) this page falls
+   back to fetching EBTP itself, using the same strategy chain + status
+   UI as the hub. */
+const EBTP_SHEET_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vQEKS6uq6epbkSmpv548hSG63WVUiFwKLXctpeM3G8NMeXJ_ZJaTCuFj95n4gTRuhchM_T4q_kp5_au/pub?gid=0&single=true&output=csv";
+const EBTP_DB_NAME='jspl-ebtp-shared-db',EBTP_DB_STORE='cache',EBTP_DB_KEY='latest';
+function openEbtpDb(){
+  return new Promise(resolve=>{
+    try{
+      if(!window.indexedDB){resolve(null);return;}
+      const req=indexedDB.open(EBTP_DB_NAME,1);
+      req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains(EBTP_DB_STORE))db.createObjectStore(EBTP_DB_STORE);};
+      req.onsuccess=()=>resolve(req.result);
+      req.onerror=()=>resolve(null);
+    }catch(e){resolve(null);}
+  });
+}
 function readHubEbtpCache(){
-  try{
-    const raw=localStorage.getItem(EBTP_CACHE_KEY);
-    if(!raw)return null;
-    const parsed=JSON.parse(raw);
-    if(!parsed||!parsed.csvText)return null;
-    return parsed;
-  }catch(e){return null;}
+  return openEbtpDb().then(db=>{
+    if(!db)return null;
+    return new Promise(resolve=>{
+      try{
+        const tx=db.transaction(EBTP_DB_STORE,'readonly');
+        const req=tx.objectStore(EBTP_DB_STORE).get(EBTP_DB_KEY);
+        req.onsuccess=()=>{try{db.close();}catch(e){}resolve(req.result||null);};
+        req.onerror=()=>{try{db.close();}catch(e){}resolve(null);};
+      }catch(e){try{db.close();}catch(_){}resolve(null);}
+    });
+  }).catch(()=>null);
+}
+function writeHubEbtpCache(csvText,rowCount){
+  return openEbtpDb().then(db=>{
+    if(!db)return false;
+    return new Promise(resolve=>{
+      try{
+        const tx=db.transaction(EBTP_DB_STORE,'readwrite');
+        tx.objectStore(EBTP_DB_STORE).put({csvText,fetchedAt:Date.now(),rowCount},EBTP_DB_KEY);
+        tx.oncomplete=()=>{try{db.close();}catch(e){}resolve(true);};
+        tx.onerror=()=>{try{db.close();}catch(e){}resolve(false);};
+      }catch(e){try{db.close();}catch(_){}resolve(false);}
+    });
+  }).catch(()=>false);
+}
+
+/* ── Fallback fetch chain — only used when the hub's cache isn't ready ── */
+function tryXHR(url,attempts=5,timeoutMs=4000){
+  const attempt=n=>new Promise((res,rej)=>{
+    const x=new XMLHttpRequest();
+    x.open('GET',url,true);
+    x.timeout=timeoutMs;
+    x.onload=()=>x.status>=200&&x.status<300?res(x.responseText):rej(new Error('XHR '+x.status+' (try '+n+'/'+attempts+')'));
+    x.onerror=()=>rej(new Error('XHR network error (try '+n+'/'+attempts+')'));
+    x.ontimeout=()=>rej(new Error('XHR timeout (try '+n+'/'+attempts+')'));
+    x.send();
+  }).catch(e=>{
+    if(n>=attempts)throw e;
+    return new Promise(r=>setTimeout(r,250)).then(()=>attempt(n+1));
+  });
+  return attempt(1);
+}
+function tryIframe(url){
+  return new Promise((res,rej)=>{
+    const iframe=document.createElement('iframe');
+    iframe.style.cssText='position:fixed;width:1px;height:1px;top:-999px;left:-999px;opacity:0;';
+    iframe.sandbox='allow-same-origin';
+    const t=setTimeout(()=>{try{document.body.removeChild(iframe);}catch(e){}rej(new Error('iframe timeout'));},12000);
+    iframe.onload=()=>{
+      clearTimeout(t);
+      try{
+        const txt=iframe.contentDocument?.body?.innerText||iframe.contentDocument?.documentElement?.innerText||'';
+        document.body.removeChild(iframe);
+        txt.includes(',')&&txt.length>50?res(txt):rej(new Error('iframe: no csv'));
+      }catch(e){try{document.body.removeChild(iframe);}catch(_){}rej(e);}
+    };
+    iframe.onerror=()=>{clearTimeout(t);try{document.body.removeChild(iframe);}catch(e){}rej(new Error('iframe error'));};
+    document.body.appendChild(iframe);
+    iframe.src=url;
+  });
+}
+function tryFetch(proxyUrl,json){
+  return fetch(proxyUrl,{cache:'no-store',mode:'cors',credentials:'omit'})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);
+      return json?r.json().then(d=>{const t=d?.contents||d?.data||'';if(!t)throw new Error('empty');return t;}):r.text();
+    });
+}
+function tryApiProxy(){
+  return fetch('/api/ebtp-proxy',{cache:'no-store',credentials:'same-origin'})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
+}
+async function fetchEbtpDirectly(onStep){
+  const enc=encodeURIComponent(EBTP_SHEET_URL);
+  const strats=[
+    {n:'api-proxy',      f:()=>tryApiProxy()},
+    {n:'XHR',            f:()=>tryXHR(EBTP_SHEET_URL)},
+    {n:'Iframe',         f:()=>tryIframe(EBTP_SHEET_URL)},
+    {n:'corsproxy.io',   f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
+    {n:'codetabs',       f:()=>tryFetch('https://api.codetabs.com/v1/proxy?quest='+enc,false)},
+    {n:'allorigins/raw', f:()=>tryFetch('https://api.allorigins.win/raw?url='+enc,false)},
+    {n:'allorigins/get', f:()=>tryFetch('https://api.allorigins.win/get?url='+enc,true)},
+    {n:'thingproxy',     f:()=>tryFetch('https://thingproxy.freeboard.io/fetch/'+EBTP_SHEET_URL,false)},
+    {n:'jsonp.afeld.me', f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
+  ];
+  const errs=[];
+  for(const{n,f}of strats){
+    onStep&&onStep('→ Trying '+n+'…');
+    try{
+      const text=await f();
+      if(!text||text.length<50)throw new Error('empty');
+      if(!text.split('\n')[0].includes(','))throw new Error('not CSV');
+      onStep&&onStep('✓ '+n+' succeeded');
+      const rowCount=text.split('\n').filter(l=>l.trim()).length-1;
+      writeHubEbtpCache(text,rowCount); // share with the hub + other open dashboards too
+      return text;
+    }catch(e){
+      const msg=n+': '+(e.name==='AbortError'?'timeout':e.message);
+      errs.push(msg);onStep&&onStep('✗ '+msg);
+    }
+  }
+  throw new Error('All '+strats.length+' fetch methods failed — '+errs.join(' · '));
 }
 
 
@@ -4256,6 +4364,9 @@ function App(){
   const restoredLiveSession=useRef(false);
   const autoOnlineFetchStarted=useRef(false);
   const[onlineFetchErr,setOnlineFetchErr]=useState('');
+  const[fetchPhase,setFetchPhase]=useState(''); // ''|'fetching'|'parsing'
+  const[fetchLog,setFetchLog]=useState([]);
+  const logStep=useCallback(msg=>setFetchLog(l=>[...l.slice(-19),msg]),[]);
 
   // Update C and force re-render when effective theme changes
   useEffect(()=>{
@@ -4581,35 +4692,49 @@ function App(){
   },[cacheBooting,rows.length,loading,parseCSV]);
 
   // Pull EBTP from the hub's shared cache (see index.html) instead of
-  // fetching it ourselves. The hub fetches once per visit and pushes
-  // 'ebtp-cache-updated' on refresh; we just poll+listen and re-parse.
+  // fetching it ourselves, when possible. If the hub's cache doesn't show
+  // up within a short grace window (opened standalone, hub fetch failed,
+  // etc.) fall back to fetching EBTP directly, with the same status UI.
   useEffect(()=>{
     if(cacheBooting||autoOnlineFetchStarted.current||rows.length)return;
     autoOnlineFetchStarted.current=true;
-    setLoading(true); // show the skeleton immediately instead of a blank screen while we poll
+    setLoading(true); // show the skeleton immediately instead of a blank screen while we wait/fetch
     const inFrame=window.parent!==window;
     if(inFrame){try{window.parent.postMessage({type:'request-ebtp-fetch'},'*');}catch(e){}}
     let cancelled=false,tries=0;
-    const poll=()=>{
+    const GRACE_TRIES=inFrame?15:0; // ~9s waiting for the hub before self-fetching; skip entirely if standalone
+    const poll=async()=>{
       if(cancelled)return;
-      const cached=readHubEbtpCache();
+      const cached=await readHubEbtpCache();
+      if(cancelled)return;
       if(cached&&cached.csvText){parseCSV(cached.csvText);return;}
       tries++;
-      if(!inFrame){setLoading(false);setOnlineFetchErr('No cached EBTP data — this tool has no hub to fetch from when opened standalone. Open it from the JSPL hub, or upload the EBTP .xlsx file.');return;}
-      if(tries>150){setLoading(false);setOnlineFetchErr('No cached EBTP data from the hub yet after 90s. Reopen this tool from the JSPL hub, or upload the EBTP .xlsx file.');return;}
-      setTimeout(poll,600);
+      if(tries<=GRACE_TRIES){setTimeout(poll,600);return;}
+      // Grace window elapsed (or no hub at all) — fetch it ourselves.
+      setFetchPhase('fetching');setFetchLog([]);
+      logStep(inFrame?'Hub cache not ready — fetching EBTP directly…':'No hub — fetching EBTP directly…');
+      try{
+        const text=await fetchEbtpDirectly(logStep);
+        if(cancelled)return;
+        setFetchPhase('');
+        parseCSV(text);
+      }catch(e){
+        if(cancelled)return;
+        setFetchPhase('');setLoading(false);
+        setOnlineFetchErr(e.message+'. Upload the EBTP .xlsx file instead.');
+      }
     };
     poll();
     return()=>{cancelled=true;};
     // Deliberately NOT depending on `loading`: this effect calls setLoading(true)
     // itself, and including it would re-run (and cancel) the poll on that very
     // change. autoOnlineFetchStarted.current is the sole re-entry guard.
-  },[cacheBooting,rows.length,parseCSV]);
+  },[cacheBooting,rows.length,parseCSV,logStep]);
 
   useEffect(()=>{
-    const onMsg=e=>{
+    const onMsg=async e=>{
       if(e.data&&e.data.type==='ebtp-cache-updated'){
-        const cached=readHubEbtpCache();
+        const cached=await readHubEbtpCache();
         if(cached&&cached.csvText)parseCSV(cached.csvText);
       }
     };
@@ -4620,6 +4745,22 @@ function App(){
   const floatingHeaderSlot=
     <div id="hubFrameHeaderSlot" style={{position:'fixed',top:14,right:16,zIndex:60,
       display:'flex',gap:8,alignItems:'center'}}/>;
+
+  const fetchStatusOverlay=fetchPhase&&
+    <div className="fetch-status">
+      <div className="fetch-status-head">
+        <div className="fetch-status-spinner"/>
+        <div className="fetch-status-label">
+          {fetchPhase==='fetching'?'Fetching EBTP data…':'Parsing data…'}
+        </div>
+      </div>
+      <div className="loader-track">
+        <div className={`loader-bar${fetchPhase==='parsing'?' phase-parsing':''}`}/>
+      </div>
+      <div className="fetch-status-log">
+        {fetchLog.slice(-6).map((l,i)=><div key={i}>{l}</div>)}
+      </div>
+    </div>;
 
   if(cacheBooting&&!rows.length&&!loading)return(
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',
@@ -4665,6 +4806,7 @@ function App(){
   if(loading)return(
     <div style={{height:'100dvh',overflow:'auto',background:'var(--bg)',padding:'28px clamp(16px,4vw,40px)'}}>
       {floatingHeaderSlot}
+      {fetchStatusOverlay}
       <div style={{fontFamily:F.b,color:'var(--dim)',fontSize:13,letterSpacing:'.02em',marginBottom:16}}>
         Parsing & mapping orders…
       </div>
