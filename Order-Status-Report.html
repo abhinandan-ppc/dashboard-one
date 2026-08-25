@@ -40,6 +40,7 @@ html,body,#root{min-height:100%;height:100%}
   --glass:rgba(30,41,59,.65);
   --glass-card:rgba(30,41,59,.55);
   --glass-hi:rgba(30,41,59,.92);
+  --glass-50:rgba(30,41,59,.5);
   --glass-border:rgba(255,255,255,.1);
   --glass-border-hi:rgba(255,255,255,.18);
   --shadow-xs:0 1px 2px rgba(0,0,0,.3);
@@ -78,6 +79,7 @@ html,body,#root{min-height:100%;height:100%}
   --glass:rgba(255,255,255,.72);
   --glass-card:rgba(255,255,255,.80);
   --glass-hi:rgba(255,255,255,.98);
+  --glass-50:rgba(255,255,255,.5);
   --glass-border:rgba(0,0,0,.10);
   --glass-border-hi:rgba(0,0,0,.18);
   --shadow-xs:0 1px 3px rgba(0,0,0,.08);
@@ -146,7 +148,7 @@ thead tr th:last-child{border-radius:0 var(--radius-xs) 0 0}
    reliably takes effect, matching VDO-Generator's .filterpop class. An inline `style` background/
    backdrop-filter has the highest CSS specificity and was overriding/short-circuiting the blur in
    this environment; a real stylesheet rule on a className does not have that problem. */
-.m3-popover{background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);}
+.m3-popover{background:var(--glass-50);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);}
 /* Responsive: two-column panels collapse to a single stacked column below tablet width. Defined as
    real CSS classes (not inline gridTemplateColumns) so a @media rule can actually win — an inline
    style property always beats a media-query-scoped class rule at the same specificity. */
@@ -821,17 +823,15 @@ const tdDrillNum={...td0,fontFamily:F.m,textAlign:'right',whiteSpace:'nowrap'};
    not on each <th>. Uses the .m3-popover CSS class (not an inline background/backdrop-filter) for
    the same reason the dropdowns do — see .m3-popover's comment. */
 function GlassTh({children,onClick,title,align='left',color}){
-  // backdrop-filter does not render on native <th>/<td> table-cell boxes in this environment
-  // (confirmed: the exact same .m3-popover class blurs fine on a plain <div> popover but not here)
-  // — regardless of inline vs class, sticky vs static. The <th> stays a bare, unstyled cell purely
-  // for table layout/sticky-positioning purposes; the actual glass surface is a genuine <div> child
-  // filling it, which is not a table cell and blurs correctly.
-  return<th onClick={onClick} title={title} style={{padding:0,border:'none'}}>
-    <div className="m3-popover" style={{padding:'9px 12px',fontSize:10.5,
-      fontFamily:F.b,letterSpacing:'.06em',textTransform:'uppercase',color:color||'var(--mute)',fontWeight:600,
-      whiteSpace:'nowrap',userSelect:'none',textAlign:align,boxShadow:'0 1px 0 var(--bdrHi)',
-      cursor:onClick?'pointer':'default'}}>{children}</div>
-  </th>;
+  // No per-cell background/blur here — each <th> having its own independent .m3-popover surface
+  // made every column look like a separately-tinted box (blur sampling different content behind
+  // each cell, visible seams at the column borders). The header now shares ONE glass surface
+  // across the whole row, applied once on the <thead> itself (see <thead className="m3-popover">
+  // at the usage sites) instead of once per cell.
+  return<th onClick={onClick} title={title} style={{padding:'9px 12px',fontSize:10.5,
+    fontFamily:F.b,letterSpacing:'.06em',textTransform:'uppercase',color:color||'var(--mute)',fontWeight:600,
+    whiteSpace:'nowrap',userSelect:'none',textAlign:align,boxShadow:'0 1px 0 var(--bdrHi)',
+    cursor:onClick?'pointer':'default'}}>{children}</th>;
 }
 
 function KpiDrillPanel({rows,metric,label,onClose}){
@@ -909,7 +909,7 @@ function KpiDrillPanel({rows,metric,label,onClose}){
           <col style={{width:220}}/><col style={{width:130}}/><col style={{width:130}}/>
           {DRILL_COLS.map(c=>(<col key={c.key} style={{width:100}}/>))}
         </colgroup>
-        <thead style={{position:'sticky',top:0,zIndex:2}}><tr>
+        <thead className="m3-popover" style={{position:'sticky',top:0,zIndex:2}}><tr>
           <GlassTh>Sold To Party</GlassTh>
           <GlassTh>Ext Grade</GlassTh>
           <GlassTh>City</GlassTh>
@@ -1636,7 +1636,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         </div>
         <div style={{overflow:'auto',flex:1,minHeight:0}}>
           <table style={{width:'100%',fontSize:12.5}}>
-            <thead style={{position:'sticky',top:0,zIndex:2}}><tr>
+            <thead className="m3-popover" style={{position:'sticky',top:0,zIndex:2}}><tr>
               <GlassTh>Sold To Party</GlassTh>
               {sortHeader('Ord Qty','Order Qty')}
               <GlassTh title="Bal to Book ≈ Bal To Deliver" onClick={()=>setCustSort(s=>({key:'BTB',dir:s.key==='BTB'&&s.dir==='desc'?'asc':'desc'}))}>BTB ⓘ</GlassTh>
