@@ -875,121 +875,6 @@ function KpiDrillPanel({rows,metric,label,onClose}){
   </div>;
 }
 
-/* ═══════════════════ UPLOAD SCREEN ═══════════════════ */
-function UploadScreen({onFile,onCSV,autoFetchEnabled=true}){
-  const[drag,setDrag]=useState(false);
-  const[fetching,setFetching]=useState(false);
-  const[fetchErr,setFetchErr]=useState('');
-  const[fetchStatus,setFetchStatus]=useState('');
-  const ref=useRef();
-  const autoFetchStarted=useRef(false);
-
-  const fetchOnline=async()=>{
-    setFetching(true);setFetchErr('');setFetchStatus('');
-    const enc=encodeURIComponent(EBTP_SHEET_URL);
-    const strats=[
-      {n:'XHR',           f:()=>tryXHR(EBTP_SHEET_URL)},
-      {n:'Iframe',        f:()=>tryIframe(EBTP_SHEET_URL)},
-      {n:'corsproxy.io',  f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
-      {n:'allorigins/raw',f:()=>tryFetch('https://api.allorigins.win/raw?url='+enc,false)},
-      {n:'allorigins/get',f:()=>tryFetch('https://api.allorigins.win/get?url='+enc,true)},
-      {n:'jsonp.afeld.me',f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
-    ];
-    let lastErr='All methods blocked';
-    for(const{n,f}of strats){
-      setFetchStatus('Trying '+n+'…');
-      try{
-        const text=await f();
-        if(!text||text.length<50)throw new Error('empty');
-        if(!text.split('\n')[0].includes(','))throw new Error('not CSV');
-        setFetchStatus('✓ '+n+' succeeded · Parsing…');
-        await new Promise(r=>setTimeout(r,200));
-        onCSV(text);setFetchStatus('');setFetching(false);return;
-      }catch(e){lastErr=n+': '+(e.name==='AbortError'?'timeout':e.message);}
-    }
-    setFetchErr(lastErr+'. Download the sheet as .xlsx and upload it above.');
-    setFetchStatus('');setFetching(false);
-  };
-
-  // Auto-run the live fetch once on mount — was wired up as a prop/ref but never actually invoked,
-  // so the "Fetch Live EBTP Data" button previously required a manual click every load.
-  useEffect(()=>{
-    if(!autoFetchEnabled||autoFetchStarted.current)return;
-    autoFetchStarted.current=true;
-    fetchOnline();
-  },[autoFetchEnabled]);
-
-  // Deliberately no flex/alignItems "centering container" here — a flex column with
-  // alignItems:'center' sizes each child to fit-content, so a maxWidth'd child narrower than its
-  // sibling (the paragraph vs the h1) rendered off-center within that shrunk box. Plain block flow
-  // + textAlign:'center' + margin:'0 auto' centers directly against the full screen width instead.
-  return<div style={{width:'100%',minHeight:'100dvh',boxSizing:'border-box',textAlign:'center',
-    padding:'32px 20px',background:'var(--bg)'}}>
-    <div style={{fontFamily:F.h,fontWeight:900,fontSize:22,letterSpacing:'.04em',color:C.jsplGold}}>Jindal Steel Angul</div>
-    <div style={{width:100,height:1.5,margin:'16px auto 0',background:'linear-gradient(90deg,transparent,var(--bdrHi),transparent)'}}/>
-    <div style={{fontSize:12,fontFamily:F.h,letterSpacing:'.22em',textTransform:'uppercase',
-      color:'var(--mute)',marginTop:20}}>Jindal Steel Plate Mill</div>
-    <h1 style={{fontFamily:F.h,fontSize:`clamp(28px,6vw,54px)`,fontWeight:800,
-      color:'var(--text)',letterSpacing:'.03em',textTransform:'uppercase',margin:'12px 0 0',
-      animation:'glow 3s ease-in-out infinite'}}>Order Status Report</h1>
-    <p style={{fontFamily:F.b,fontSize:15,color:'var(--dim)',margin:'14px auto 0',maxWidth:460,lineHeight:1.7}}>
-      Upload the daily EBTP file (sheet <b>WS</b>) for KPI tracking, customer &amp; rake-mode
-      breakdowns, supply-condition analysis and geographic order distribution.
-    </p>
-    <div onClick={()=>ref.current.click()}
-      onDragOver={e=>{e.preventDefault();setDrag(true)}}
-      onDragLeave={()=>setDrag(false)}
-      onDrop={e=>{e.preventDefault();setDrag(false);onFile(e.dataTransfer.files[0])}}
-      style={{width:`min(500px,92vw)`,margin:'28px auto 0',padding:'56px 40px',
-        border:`2px dashed ${drag?C.amber:'var(--bdrHi)'}`,
-        borderRadius:'var(--radius-xl)',cursor:'pointer',transition:'all .22s ease',
-        background:drag?'var(--amber-bg)':'var(--s1)',
-        boxShadow:drag?`var(--shadow-xl),0 0 48px ${C._amber}40`:'var(--shadow-md)'}}>
-      <div style={{fontSize:64,marginBottom:18,transform:drag?'scale(1.1)':'scale(1)',
-        filter:drag?`drop-shadow(0 0 20px ${C._amber}80)`:'none'}}>📊</div>
-      <div style={{fontFamily:F.h,fontSize:26,fontWeight:800,color:drag?C.amber:'var(--text)',
-        letterSpacing:'.04em',textTransform:'uppercase',marginBottom:10}}>
-        {drag?'Drop to Analyse':'Upload EBTP File'}
-      </div>
-      <div style={{fontFamily:F.b,fontSize:14,color:'var(--dim)'}}>Drag &amp; drop or click to browse</div>
-      <div style={{marginTop:20,fontFamily:F.m,fontSize:11,color:'var(--mute)',padding:'7px 16px',
-        background:'var(--s2)',borderRadius:'var(--radius-sm)',display:'inline-block',border:'1px solid var(--bdr)'}}>
-        EBTP-DD.MM.YYYY.xlsx · Sheet: WS
-      </div>
-    </div>
-    <input ref={ref} type="file" accept=".xlsx,.xls" style={{display:'none'}}
-      onChange={e=>e.target.files[0]&&onFile(e.target.files[0])}/>
-    <div style={{width:'min(500px,92vw)',margin:'20px auto 0',borderRadius:'var(--radius-lg)',
-      border:`1px solid ${fetching?C.sky:'var(--bdrHi)'}`,background:'var(--s1)',boxShadow:'var(--shadow-sm)',overflow:'hidden'}}>
-      <div style={{padding:'14px 20px',display:'flex',alignItems:'center',gap:12}}>
-        <div style={{width:28,height:28,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',
-          fontSize:20,lineHeight:1}}>☁️</div>
-        <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',gap:2,justifyContent:'center'}}>
-          <div style={{fontFamily:F.h,fontSize:13,fontWeight:700,color:'var(--text)',letterSpacing:'.06em',
-            textTransform:'uppercase',lineHeight:1.3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>Fetch Live EBTP Data</div>
-          <div style={{fontFamily:F.b,fontSize:11,color:'var(--mute)',lineHeight:1.3,
-            whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-            {fetching?(fetchStatus||'…'):'Google Sheet · XHR → iframe → 4 proxies'}
-          </div>
-        </div>
-        <button onClick={fetchOnline} disabled={fetching} style={{
-          padding:'9px 16px',borderRadius:'var(--radius-sm)',cursor:fetching?'wait':'pointer',flexShrink:0,
-          display:'flex',alignItems:'center',justifyContent:'center',maxWidth:170,overflow:'hidden',
-          background:fetching?'var(--s3)':`${C._sky}20`,border:`1.5px solid ${fetching?C.sky:'var(--bdrHi)'}`,
-          color:fetching?C.sky:'var(--dim)',fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.08em',
-          textTransform:'uppercase'}}>
-          {fetching?<span style={{display:'inline-flex',alignItems:'center',gap:7,minWidth:0}}>
-            <span style={{width:14,height:14,flexShrink:0,border:`2px solid ${C._sky}40`,borderTopColor:C.sky,
-              borderRadius:'50%',animation:'spin .7s linear infinite',display:'inline-block'}}/>
-            <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{fetchStatus||'Connecting…'}</span>
-            </span>:'⟳ Fetch Now'}
-        </button>
-      </div>
-      {fetchErr&&<div style={{padding:'10px 20px 14px',fontFamily:F.b,fontSize:12,color:C.rose,
-        borderTop:'1px solid var(--bdr)',lineHeight:1.7,background:'var(--rose-bg)'}}>⚠ {fetchErr}</div>}
-    </div>
-  </div>;
-}
 
 /* ═══════════════════ ROW PROCESSING ═══════════════════ */
 function buildRows(headers,dataRows){
@@ -1744,6 +1629,8 @@ function App(){
   const[fileName,setFileName]=useState('');
   const[loading,setLoading]=useState(false);
   const[err,setErr]=useState('');
+  const autoOnlineFetchStarted=useRef(false);
+  const fileRef=useRef();
 
   const parseFile=useCallback(f=>{
     setLoading(true);setErr('');
@@ -1779,13 +1666,63 @@ function App(){
     var _s=document.getElementById('load-status');if(_s)_s.style.display='none';
   },[]);
 
+  useEffect(()=>{
+    if(autoOnlineFetchStarted.current||rows||loading)return;
+    autoOnlineFetchStarted.current=true;
+    (async()=>{
+      setLoading(true);setErr('');
+      const enc=encodeURIComponent(EBTP_SHEET_URL);
+      const strats=[
+        {n:'XHR',           f:()=>tryXHR(EBTP_SHEET_URL)},
+        {n:'Iframe',        f:()=>tryIframe(EBTP_SHEET_URL)},
+        {n:'corsproxy.io',  f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
+        {n:'allorigins/raw',f:()=>tryFetch('https://api.allorigins.win/raw?url='+enc,false)},
+        {n:'allorigins/get',f:()=>tryFetch('https://api.allorigins.win/get?url='+enc,true)},
+        {n:'jsonp.afeld.me',f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
+      ];
+      let lastErr='All methods blocked';
+      for(const{n,f}of strats){
+        try{
+          const text=await f();
+          if(!text||text.length<50)throw new Error('empty');
+          if(!text.split('\n')[0].includes(','))throw new Error('not CSV');
+          parseCSV(text);
+          return;
+        }catch(e){lastErr=n+': '+(e.name==='AbortError'?'timeout':e.message);}
+      }
+      setLoading(false);
+      setErr(lastErr+'. Upload the EBTP .xlsx file instead.');
+    })();
+  },[rows,loading,parseCSV]);
+
   if(!rows&&!loading){
-    return<>
-      <UploadScreen onFile={parseFile} onCSV={parseCSV}/>
-      {err&&<div style={{position:'fixed',bottom:20,left:'50%',transform:'translateX(-50%)',
-        background:'var(--rose-bg)',border:`1px solid ${C.rose}`,color:C.rose,padding:'10px 18px',
-        borderRadius:'var(--radius-md)',fontFamily:F.b,fontSize:13,zIndex:500}}>{err}</div>}
-    </>;
+    return<div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+      minHeight:'100dvh',gap:20,padding:'32px 20px',background:'var(--bg)'}}>
+      {err?<>
+        <div style={{fontFamily:F.h,fontSize:14,fontWeight:700,color:C.rose,
+          letterSpacing:'.04em',textTransform:'uppercase',textAlign:'center',maxWidth:460}}>
+          ⚠ Live EBTP fetch failed
+        </div>
+        <div style={{fontFamily:F.b,fontSize:13,color:'var(--dim)',textAlign:'center',
+          maxWidth:460,lineHeight:1.7}}>{err}</div>
+        <div style={{display:'flex',gap:10}}>
+          <button onClick={()=>{autoOnlineFetchStarted.current=false;setErr('');}}
+            style={{padding:'9px 20px',borderRadius:'var(--radius-sm)',cursor:'pointer',
+              background:`${C._sky}20`,border:'1.5px solid var(--bdrHi)',color:'var(--dim)',
+              fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase'}}>
+            ⟳ Retry
+          </button>
+          <button onClick={()=>fileRef.current.click()}
+            style={{padding:'9px 20px',borderRadius:'var(--radius-sm)',cursor:'pointer',
+              background:'var(--s2)',border:'1.5px solid var(--bdrHi)',color:'var(--dim)',
+              fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase'}}>
+            Upload File
+          </button>
+        </div>
+        <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:'none'}}
+          onChange={e=>e.target.files[0]&&parseFile(e.target.files[0])}/>
+      </>:null}
+    </div>;
   }
   if(loading||!rows){
     return<div style={{padding:'24px 20px',maxWidth:1400,margin:'0 auto'}}>

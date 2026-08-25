@@ -4243,168 +4243,6 @@ function tryFetch(proxyUrl,json){
 }
 
 
-function UploadScreen({onFile,onCSV,autoFetchEnabled=true}){
-  const[drag,setDrag]=useState(false);
-  const[fetching,setFetching]=useState(false);
-  const[fetchErr,setFetchErr]=useState('');
-  const[fetchStatus,setFetchStatus]=useState('');
-  const ref=useRef();
-  const autoFetchStarted=useRef(false);
-  const{mob}=useBreakpoint();
-
-  const fetchOnline=async()=>{
-    setFetching(true);setFetchErr('');setFetchStatus('');
-    const enc=encodeURIComponent(EBTP_SHEET_URL);
-    const strats=[
-      {n:'XHR',          f:()=>tryXHR(EBTP_SHEET_URL)},
-      {n:'Iframe',        f:()=>tryIframe(EBTP_SHEET_URL)},
-      {n:'corsproxy.io',  f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
-      {n:'allorigins/raw',f:()=>tryFetch('https://api.allorigins.win/raw?url='+enc,false)},
-      {n:'allorigins/get',f:()=>tryFetch('https://api.allorigins.win/get?url='+enc,true)},
-      {n:'jsonp.afeld.me', f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
-    ];
-    let lastErr='All methods blocked';
-    for(const{n,f}of strats){
-      setFetchStatus('Trying '+n+'…');
-      try{
-        const text=await f();
-        if(!text||text.length<50)throw new Error('empty');
-        if(!text.split('\n')[0].includes(','))throw new Error('not CSV');
-        setFetchStatus('✓ '+n+' succeeded · Parsing…');
-        await new Promise(r=>setTimeout(r,200));
-        onCSV(text);setFetchStatus('');setFetching(false);return;
-      }catch(e){lastErr=n+': '+(e.name==='AbortError'?'timeout':e.message);}
-    }
-  setFetchErr(lastErr+'. Download the sheet as .xlsx and upload it above.');
-  setFetchStatus('');setFetching(false);
-};
-
-  useEffect(()=>{
-    if(!autoFetchEnabled||autoFetchStarted.current)return;
-    autoFetchStarted.current=true;
-    fetchOnline();
-  },[autoFetchEnabled]);
-
-  const feats=[
-    ['🗺️','City Mapping','160+ cities + ML siding dictionary'],
-    ['📊','Pivot Analysis','Region › Siding drill-down'],
-    ['🚂','Rake Predictor','FG→WIP→BTR · 2850 MT'],
-    ['🚛','Transport Plan','Forward/reverse optimizer'],
-    ['📥','Excel Export','Full DD format · per-rake'],
-  ];
-  return<div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-    minHeight:'100dvh',gap:28,padding:'32px 20px',background:'var(--bg)'}}>
-
-    <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:16,textAlign:'center'}}>
-      <JSPLBadge compact={false}/>
-      <div style={{width:100,height:1.5,background:'linear-gradient(90deg,transparent,var(--bdrHi),transparent)'}}/>
-      <div>
-        <div style={{fontSize:12,fontFamily:F.h,letterSpacing:'.22em',textTransform:'uppercase',
-          color:'var(--mute)',marginBottom:12}}>Angul Plate Mill · Operations Planning</div>
-        <h1 style={{fontFamily:F.h,fontSize:`clamp(30px,6vw,58px)`,fontWeight:800,
-          color:'var(--text)',letterSpacing:'.03em',textTransform:'uppercase',margin:0,
-          animation:'glow 3s ease-in-out infinite'}}>
-          Rake Planner
-        </h1>
-        <p style={{fontFamily:F.b,fontSize:15,color:'var(--dim)',marginTop:14,maxWidth:460,
-          lineHeight:1.7}}>
-          Upload your daily EBTP file for automatic city mapping, pivot analysis,
-          rake prediction &amp; drill-down exports.
-        </p>
-      </div>
-    </div>
-
-    {/* Drop Zone — M3 elevated card */}
-    <div onClick={()=>ref.current.click()}
-      onDragOver={e=>{e.preventDefault();setDrag(true)}}
-      onDragLeave={()=>setDrag(false)}
-      onDrop={e=>{e.preventDefault();setDrag(false);onFile(e.dataTransfer.files[0])}}
-      style={{width:`min(500px,92vw)`,padding:'56px 40px',
-        border:`2px dashed ${drag?C.amber:'var(--bdrHi)'}`,
-        borderRadius:'var(--radius-xl)',cursor:'pointer',
-        textAlign:'center',transition:'all .22s ease',
-        background:drag?'var(--amber-bg)':'var(--s1)',
-        boxShadow:drag?`var(--shadow-xl),0 0 48px ${C._amber}40`:'var(--shadow-md)'}}>
-      <div style={{fontSize:64,marginBottom:18,transition:'transform .2s',
-        transform:drag?'scale(1.1)':'scale(1)',filter:drag?`drop-shadow(0 0 20px ${C._amber}80)`:'none'}}>
-        📊
-      </div>
-      <div style={{fontFamily:F.h,fontSize:26,fontWeight:800,
-        color:drag?C.amber:'var(--text)',letterSpacing:'.04em',textTransform:'uppercase',
-        marginBottom:10,transition:'color .2s'}}>
-        {drag?'Drop to Analyse':'Upload EBTP File'}
-      </div>
-      <div style={{fontFamily:F.b,fontSize:14,color:'var(--dim)'}}>Drag &amp; drop or click to browse</div>
-      <div style={{marginTop:20,fontFamily:F.m,fontSize:11,color:'var(--mute)',padding:'7px 16px',
-        background:'var(--s2)',borderRadius:'var(--radius-sm)',display:'inline-block',
-        border:'1px solid var(--bdr)'}}>
-        EBTP-DD_MM_YYYY.xlsx · Sheet: WS
-      </div>
-    </div>
-
-    {/* Online fetch panel */}
-    <div style={{width:'min(500px,92vw)',borderRadius:'var(--radius-lg)',
-      border:`1px solid ${fetching?C.sky:'var(--bdrHi)'}`,
-      background:'var(--s1)',boxShadow:'var(--shadow-sm)',overflow:'hidden',
-      transition:'border-color .2s'}}>
-      <div style={{padding:'14px 20px',display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',rowGap:8}}>
-        <div style={{fontSize:22,flexShrink:0}}>☁️</div>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontFamily:F.h,fontSize:13,fontWeight:700,color:'var(--text)',
-            letterSpacing:'.06em',textTransform:'uppercase'}}>Fetch Live EBTP Data</div>
-          <div style={{fontFamily:F.b,fontSize:11,color:'var(--mute)',marginTop:2}}>
-            {fetching?(fetchStatus||'…'):'Google Sheet · XHR → iframe → 4 proxies · reads to column HL'}
-          </div>
-        </div>
-        <button onClick={fetchOnline} disabled={fetching} style={{
-          padding:'9px 20px',borderRadius:'var(--radius-sm)',
-          cursor:fetching?'wait':'pointer',flexShrink:0,
-          background:fetching?'var(--s3)':`${C._sky}20`,
-          border:`1.5px solid ${fetching?C.sky:'var(--bdrHi)'}`,
-          color:fetching?C.sky:'var(--dim)',
-          fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.08em',
-          textTransform:'uppercase',transition:'all .18s ease',
-          boxShadow:fetching?`0 0 16px ${C._sky}30`:'none'}}>
-          {fetching
-            ?<span style={{display:'inline-flex',alignItems:'center',gap:7}}>
-               <span style={{width:14,height:14,border:`2px solid ${C._sky}40`,
-                 borderTopColor:C.sky,borderRadius:'50%',
-                 animation:'spin .7s linear infinite',display:'inline-block'}}/>
-               {fetchStatus||'Connecting…'}
-             </span>
-            :'⟳ Fetch Now'}
-        </button>
-      </div>
-      {fetchErr&&<div style={{padding:'10px 20px 14px',fontFamily:F.b,fontSize:12,
-        color:C.rose,borderTop:'1px solid var(--bdr)',lineHeight:1.7,
-        background:'var(--rose-bg)'}}>
-        ⚠ {fetchErr}
-      </div>}
-    </div>
-
-    {/* Feature Cards */}
-    <div style={{display:'flex',gap:12,flexWrap:'wrap',justifyContent:'center',maxWidth:900}}>
-      {feats.map(([ic,ttl,sub])=>(
-        <div key={ttl} style={{...card,padding:'16px 18px',textAlign:'center',
-          width:mob?'calc(50% - 6px)':165,
-          cursor:'default',boxShadow:'var(--shadow-xs)'}}
-          onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-4px)';e.currentTarget.style.boxShadow='var(--shadow-lg)'}}
-          onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='var(--shadow-xs)'}}>
-          <div style={{fontSize:28,marginBottom:10}}>{ic}</div>
-          <div style={{fontFamily:F.h,fontSize:13,fontWeight:700,color:'var(--text)',
-            textTransform:'uppercase',letterSpacing:'.05em',marginBottom:4}}>{ttl}</div>
-          <div style={{fontFamily:F.b,fontSize:12,color:'var(--dim)',lineHeight:1.55}}>{sub}</div>
-        </div>
-      ))}
-    </div>
-
-    <div style={{fontSize:12,color:'var(--mute)',textAlign:'center',lineHeight:1.9}}>
-      Self-contained · Works offline after fonts load · All data stays on your device
-    </div>
-    <input ref={ref} type="file" accept=".xlsx,.xls" style={{display:'none'}}
-      onChange={e=>e.target.files[0]&&onFile(e.target.files[0])}/>
-  </div>;
-}
 
 /* ═══════════════════ MAIN APP ═══════════════════ */
 /* ═══════════════════ THEME TOGGLE ═══════════════════ */
@@ -4436,10 +4274,9 @@ function App(){
   const[themeKey,setThemeKey]=useState(0); // forces re-render when theme changes
   const initialSessionState=useMemo(()=>readPlannerSessionState(),[]);
   const[cacheBooting,setCacheBooting]=useState(()=>!initialSessionState);
-  const[hasLiveSessionCache,setHasLiveSessionCache]=useState(()=>{
-    return !!readSessionLikeCache(LIVE_FETCH_SESSION_KEY,LIVE_FETCH_LOCAL_KEY)||!!initialSessionState;
-  });
   const restoredLiveSession=useRef(false);
+  const autoOnlineFetchStarted=useRef(false);
+  const[onlineFetchErr,setOnlineFetchErr]=useState('');
 
   // Update C and force re-render when effective theme changes
   useEffect(()=>{
@@ -4763,7 +4600,36 @@ function App(){
       removeSessionLikeCache(LIVE_FETCH_SESSION_KEY,LIVE_FETCH_LOCAL_KEY);
     }
   },[cacheBooting,rows.length,loading,parseCSV]);
-  
+
+  useEffect(()=>{
+    if(cacheBooting||autoOnlineFetchStarted.current||rows.length||loading)return;
+    autoOnlineFetchStarted.current=true;
+    (async()=>{
+      setLoading(true);setOnlineFetchErr('');
+      const enc=encodeURIComponent(EBTP_SHEET_URL);
+      const strats=[
+        {n:'XHR',           f:()=>tryXHR(EBTP_SHEET_URL)},
+        {n:'Iframe',        f:()=>tryIframe(EBTP_SHEET_URL)},
+        {n:'corsproxy.io',  f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
+        {n:'allorigins/raw',f:()=>tryFetch('https://api.allorigins.win/raw?url='+enc,false)},
+        {n:'allorigins/get',f:()=>tryFetch('https://api.allorigins.win/get?url='+enc,true)},
+        {n:'jsonp.afeld.me',f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
+      ];
+      let lastErr='All methods blocked';
+      for(const{n,f}of strats){
+        try{
+          const text=await f();
+          if(!text||text.length<50)throw new Error('empty');
+          if(!text.split('\n')[0].includes(','))throw new Error('not CSV');
+          parseCSV(text);
+          return;
+        }catch(e){lastErr=n+': '+(e.name==='AbortError'?'timeout':e.message);}
+      }
+      setLoading(false);
+      setOnlineFetchErr(lastErr+'. Upload the EBTP .xlsx file instead.');
+    })();
+  },[cacheBooting,rows.length,loading,parseCSV]);
+
   if(cacheBooting&&!rows.length&&!loading)return(
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',
       flexDirection:'column',gap:20,background:'var(--bg)'}}>
@@ -4774,7 +4640,35 @@ function App(){
       </div>
     </div>
   );
-  if(!rows.length&&!loading)return<UploadScreen onFile={parseFile} onCSV={parseCSV} autoFetchEnabled={!hasLiveSessionCache}/>;
+  if(!rows.length&&!loading)return(
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+      minHeight:'100dvh',gap:20,padding:'32px 20px',background:'var(--bg)'}}>
+      {onlineFetchErr?<>
+        <div style={{fontFamily:F.h,fontSize:14,fontWeight:700,color:C.rose,
+          letterSpacing:'.04em',textTransform:'uppercase',textAlign:'center',maxWidth:460}}>
+          ⚠ Live EBTP fetch failed
+        </div>
+        <div style={{fontFamily:F.b,fontSize:13,color:'var(--dim)',textAlign:'center',
+          maxWidth:460,lineHeight:1.7}}>{onlineFetchErr}</div>
+        <div style={{display:'flex',gap:10}}>
+          <button onClick={()=>{autoOnlineFetchStarted.current=false;setOnlineFetchErr('');}}
+            style={{padding:'9px 20px',borderRadius:'var(--radius-sm)',cursor:'pointer',
+              background:`${C._sky}20`,border:`1.5px solid var(--bdrHi)`,color:'var(--dim)',
+              fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase'}}>
+            ⟳ Retry
+          </button>
+          <button onClick={()=>document.getElementById('rakePlannerFallbackFile').click()}
+            style={{padding:'9px 20px',borderRadius:'var(--radius-sm)',cursor:'pointer',
+              background:'var(--s2)',border:`1.5px solid var(--bdrHi)`,color:'var(--dim)',
+              fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase'}}>
+            Upload File
+          </button>
+        </div>
+        <input id="rakePlannerFallbackFile" type="file" accept=".xlsx,.xls" style={{display:'none'}}
+          onChange={e=>e.target.files[0]&&parseFile(e.target.files[0])}/>
+      </>:null}
+    </div>
+  );
   if(loading)return(
     <div style={{height:'100dvh',overflow:'auto',background:'var(--bg)',padding:'28px clamp(16px,4vw,40px)'}}>
       <div style={{fontFamily:F.b,color:'var(--dim)',fontSize:13,letterSpacing:'.02em',marginBottom:16}}>
