@@ -148,7 +148,7 @@ thead tr th:last-child{border-radius:0 var(--radius-xs) 0 0}
    reliably takes effect, matching VDO-Generator's .filterpop class. An inline `style` background/
    backdrop-filter has the highest CSS specificity and was overriding/short-circuiting the blur in
    this environment; a real stylesheet rule on a className does not have that problem. */
-.m3-popover{background:var(--glass-50);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);}
+.m3-popover{background:var(--glass-50);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);}
 /* Responsive: two-column panels collapse to a single stacked column below tablet width. Defined as
    real CSS classes (not inline gridTemplateColumns) so a @media rule can actually win — an inline
    style property always beats a media-query-scoped class rule at the same specificity. */
@@ -879,8 +879,11 @@ function KpiDrillPanel({rows,metric,label,onClose}){
     return()=>{handle.removeEventListener('mousedown',onDown);handle.removeEventListener('touchstart',onDown);};
   },[]);
 
+  // Solid (non-glass) panel background on purpose — a blurred panel sitting directly behind the
+  // sticky <thead>'s own backdrop-filter neutralized the header's blur (nested backdrop-filter
+  // layers don't compose reliably here). Flat background = the header is the only filtered layer.
   return<div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:500,
-    background:'var(--glass-hi)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
+    background:'var(--s0)',
     borderTop:'1px solid var(--glass-border-hi)',boxShadow:'var(--shadow-xl)',
     display:'flex',flexDirection:'column',height:panelH,minHeight:240,
     borderRadius:'20px 20px 0 0',animation:'fadeUp .22s ease',userSelect:'none'}}>
@@ -1548,7 +1551,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
             style={{flex:1,minWidth:0,height:120,display:'flex',flexDirection:'column',cursor:'pointer',
             gap:7,padding:'12px 14px',borderRadius:'var(--radius-md)',background:'var(--amber-bg)',
             border:`1px solid var(--bdrHi)`,borderTop:`3px solid ${C.jsplGold}`}}>
-            <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--mute)',whiteSpace:'nowrap'}}>Order Qty_Live</div>
+            <div style={{fontFamily:F.h,fontSize:11.5,letterSpacing:'.05em',textTransform:'uppercase',color:'var(--mute)',whiteSpace:'nowrap'}}>Order Qty_Live</div>
             <div style={{fontFamily:F.m,fontSize:18,fontWeight:700,color:'var(--text)',whiteSpace:'nowrap'}}>{fmt(kpi.orderQtyLive)}</div>
             <div style={{height:5,borderRadius:3,background:'var(--s3)',overflow:'hidden'}}>
               <div style={{height:'100%',width:'100%',background:C.jsplGold,borderRadius:3}}/>
@@ -1575,7 +1578,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
                     style={{flex:1,minWidth:0,height:120,display:'flex',flexDirection:'column',cursor:'pointer',
                     gap:7,padding:'12px 13px',borderRadius:'var(--radius-md)',background:'var(--s1)',
                     border:`1px solid var(--bdr)`,borderTop:`3px solid ${s.color}`}}>
-                    <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--mute)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.label}</div>
+                    <div style={{fontFamily:F.h,fontSize:11.5,letterSpacing:'.05em',textTransform:'uppercase',color:'var(--mute)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.label}</div>
                     <div style={{fontFamily:F.m,fontSize:18,fontWeight:700,color:'var(--text)',whiteSpace:'nowrap'}}>{fmt(s.value)}</div>
                     <div style={{height:5,borderRadius:3,background:'var(--s3)',overflow:'hidden'}}>
                       <div style={{height:'100%',width:Math.min(100,p)+'%',background:s.color,borderRadius:3}}/>
@@ -1623,8 +1626,13 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         </div>
       </div>
 
-      <div className="glass-card" style={{padding:'16px 18px',overflow:'hidden',display:'flex',flexDirection:'column',
-        height:'100%',maxHeight:360,boxShadow:'var(--shadow-sm)',borderRadius:'var(--radius-lg)'}}>
+      {/* Plain (non-glass) panel background on purpose — this panel's own backdrop-filter, sitting
+          directly behind the sticky <thead>'s backdrop-filter, was neutralizing the header's blur
+          (nested backdrop-filter layers don't compose reliably here). A flat background lets the
+          header be the only filtered layer, so it actually blurs the rows scrolling underneath it. */}
+      <div style={{padding:'16px 18px',overflow:'hidden',display:'flex',flexDirection:'column',
+        height:'100%',maxHeight:360,background:'var(--s1)',border:'1px solid var(--glass-border)',
+        boxShadow:'var(--shadow-sm)',borderRadius:'var(--radius-lg)'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:8}}>
           <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--text)'}}>Customer-wise Order Status</div>
           <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
