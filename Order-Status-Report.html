@@ -1467,9 +1467,12 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         <div>EBTP loaded: <b style={{color:'var(--text)'}}>{ebtpDateLabel}</b></div>
       </div>
 
-      {/* Nav/action button cluster — matches the pill-button container used in the other dashboards' header bars */}
-      <div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,padding:4,borderRadius:'var(--radius-pill)',
-        background:'var(--s2)',border:'1px solid var(--bdr)'}}>
+      {/* Nav/action button cluster — id="hubFrameHeaderSlot" is the mount point the hub (index.html /
+          findFrameHeaderMount) looks for first; without it, the hub falls back to floating its Home/
+          Refresh/Theme/User controls fixed at top-right, which is what was overlapping this bar. With
+          the slot present, the hub appends its controls as a normal flex child right here instead. */}
+      <div id="hubFrameHeaderSlot" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,padding:4,
+        borderRadius:'var(--radius-pill)',background:'var(--s2)',border:'1px solid var(--bdr)'}}>
         <button onClick={()=>setReleasedOnly(v=>!v)} style={{height:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
           border:`1.5px solid ${releasedOnly?C.sky:'transparent'}`,background:releasedOnly?'var(--sky-bg)':'transparent',
           color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:12,fontWeight:700,cursor:'pointer',
