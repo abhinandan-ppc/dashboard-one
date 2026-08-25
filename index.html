@@ -1208,7 +1208,10 @@ function installFrameHeaderControls(){
         }
 
         homeBtn.addEventListener('click', function(){ document.getElementById('homeBtn').click(); });
-        resetBtn.addEventListener('click', function(){ broadcastToFrame({type:'reset'}); });
+        resetBtn.addEventListener('click', function(){
+          broadcastToFrame({type:'reset'});
+          try{ fetchAndCacheEBTP(true); }catch(e){} // force a fresh EBTP fetch; broadcasts 'ebtp-cache-updated' to the open dashboard on success
+        });
         themeBtn.addEventListener('click', function(){
           var themeToggle = document.getElementById('themeToggle');
           if(themeToggle) themeToggle.click();
@@ -1590,6 +1593,9 @@ setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
     if(stageEl) stageEl.style.display = '';
     if(loginWrap) loginWrap.style.display = 'none';
     if(userMenu) userMenu.style.display = 'none';
+    // fetchAndCacheEBTP() is defined in a <script> further down the page —
+    // defer to the next tick so that script has finished executing first.
+    setTimeout(function(){ try{ fetchAndCacheEBTP(); }catch(e){} }, 0);
     return;
   }
 
@@ -1610,6 +1616,7 @@ setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
       saveItems(items);
       render();
     }
+    try{ fetchAndCacheEBTP(); }catch(e){}
   }).catch(function(){
     if(stageEl) stageEl.style.display = 'none';
     if(loginWrap) loginWrap.style.display = 'flex';
@@ -1628,6 +1635,166 @@ setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
     });
   }
 })();
+</script>
+
+<div class="fetch-status" id="fetchStatus" style="display:none">
+  <div class="fetch-status-head">
+    <div class="fetch-status-spinner"></div>
+    <div class="fetch-status-label" id="fetchStatusLabel">Fetching EBTP data…</div>
+  </div>
+  <div class="loader-track"><div class="loader-bar" id="fetchStatusBar"></div></div>
+  <div class="fetch-status-log" id="fetchStatusLog"></div>
+</div>
+<script>
+/* ═══════════════════ CENTRAL EBTP FETCH + CACHE ═══════════════════
+   Fetched once here in the hub and cached in localStorage (shared,
+   same-origin, across every dashboard iframe) so opening a tool never
+   re-triggers its own network fetch — it just reads the cache. */
+"use strict";
+var EBTP_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQEKS6uq6epbkSmpv548hSG63WVUiFwKLXctpeM3G8NMeXJ_ZJaTCuFj95n4gTRuhchM_T4q_kp5_au/pub?gid=0&single=true&output=csv";
+var EBTP_CACHE_KEY = "jspl-ebtp-cache-v1";
+
+function tryXHR(url, attempts, timeoutMs){
+  attempts = attempts || 5; timeoutMs = timeoutMs || 4000;
+  function attempt(n){
+    return new Promise(function(res, rej){
+      var x = new XMLHttpRequest();
+      x.open('GET', url, true);
+      x.timeout = timeoutMs;
+      x.onload = function(){ x.status >= 200 && x.status < 300 ? res(x.responseText) : rej(new Error('XHR ' + x.status + ' (try ' + n + '/' + attempts + ')')); };
+      x.onerror = function(){ rej(new Error('XHR network error (try ' + n + '/' + attempts + ')')); };
+      x.ontimeout = function(){ rej(new Error('XHR timeout (try ' + n + '/' + attempts + ')')); };
+      x.send();
+    }).catch(function(e){
+      if(n >= attempts) throw e;
+      return new Promise(function(r){ setTimeout(r, 250); }).then(function(){ return attempt(n + 1); });
+    });
+  }
+  return attempt(1);
+}
+function tryIframeFetch(url){
+  return new Promise(function(res, rej){
+    var iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;width:1px;height:1px;top:-999px;left:-999px;opacity:0;';
+    iframe.sandbox = 'allow-same-origin';
+    var t = setTimeout(function(){ try{ document.body.removeChild(iframe); }catch(e){} rej(new Error('iframe timeout')); }, 12000);
+    iframe.onload = function(){
+      clearTimeout(t);
+      try{
+        var doc = iframe.contentDocument;
+        var txt = (doc && doc.body && doc.body.innerText) || (doc && doc.documentElement && doc.documentElement.innerText) || '';
+        document.body.removeChild(iframe);
+        (txt.indexOf(',') !== -1 && txt.length > 50) ? res(txt) : rej(new Error('iframe: no csv'));
+      }catch(e){ try{ document.body.removeChild(iframe); }catch(_){} rej(e); }
+    };
+    iframe.onerror = function(){ clearTimeout(t); try{ document.body.removeChild(iframe); }catch(e){} rej(new Error('iframe error')); };
+    document.body.appendChild(iframe);
+    iframe.src = url;
+  });
+}
+function tryProxyFetch(proxyUrl, json){
+  return fetch(proxyUrl, { cache: 'no-store', mode: 'cors', credentials: 'omit' }).then(function(r){
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    return json ? r.json().then(function(d){ var t = (d && (d.contents || d.data)) || ''; if(!t) throw new Error('empty'); return t; }) : r.text();
+  });
+}
+function tryApiProxy(){
+  return fetch('/api/ebtp-proxy', { cache: 'no-store', credentials: 'same-origin' }).then(function(r){
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    return r.text();
+  });
+}
+
+function readEbtpCache(){
+  try{
+    var raw = localStorage.getItem(EBTP_CACHE_KEY);
+    if(!raw) return null;
+    var parsed = JSON.parse(raw);
+    if(!parsed || !parsed.csvText) return null;
+    return parsed;
+  }catch(e){ return null; }
+}
+function writeEbtpCache(csvText, rowCount){
+  try{
+    localStorage.setItem(EBTP_CACHE_KEY, JSON.stringify({ csvText: csvText, fetchedAt: Date.now(), rowCount: rowCount }));
+  }catch(e){}
+}
+
+function fetchStatusShow(phase){
+  var el = document.getElementById('fetchStatus');
+  if(el) el.style.display = 'flex';
+  var lbl = document.getElementById('fetchStatusLabel');
+  if(lbl) lbl.textContent = phase === 'parsing' ? 'Validating EBTP data…' : 'Fetching EBTP data…';
+  var bar = document.getElementById('fetchStatusBar');
+  if(bar) bar.classList.toggle('phase-parsing', phase === 'parsing');
+}
+function fetchStatusLog(msg){
+  var log = document.getElementById('fetchStatusLog');
+  if(!log) return;
+  var line = document.createElement('div');
+  line.textContent = msg;
+  log.appendChild(line);
+  while(log.children.length > 6) log.removeChild(log.firstChild);
+  log.scrollTop = log.scrollHeight;
+}
+function fetchStatusHide(){
+  var el = document.getElementById('fetchStatus');
+  if(el) el.style.display = 'none';
+  var log = document.getElementById('fetchStatusLog');
+  if(log) log.innerHTML = '';
+}
+
+var ebtpFetchInFlight = null;
+function fetchAndCacheEBTP(force){
+  if(ebtpFetchInFlight) return ebtpFetchInFlight;
+  var cached = readEbtpCache();
+  if(cached && !force) return Promise.resolve({ ok: true, cached: true, fetchedAt: cached.fetchedAt });
+
+  fetchStatusShow('fetching');
+  var enc = encodeURIComponent(EBTP_SHEET_URL);
+  var strats = [
+    { n: 'api-proxy',      f: function(){ return tryApiProxy(); } },
+    { n: 'XHR',            f: function(){ return tryXHR(EBTP_SHEET_URL); } },
+    { n: 'Iframe',         f: function(){ return tryIframeFetch(EBTP_SHEET_URL); } },
+    { n: 'corsproxy.io',   f: function(){ return tryProxyFetch('https://corsproxy.io/?' + enc, false); } },
+    { n: 'codetabs',       f: function(){ return tryProxyFetch('https://api.codetabs.com/v1/proxy?quest=' + enc, false); } },
+    { n: 'allorigins/raw', f: function(){ return tryProxyFetch('https://api.allorigins.win/raw?url=' + enc, false); } },
+    { n: 'allorigins/get', f: function(){ return tryProxyFetch('https://api.allorigins.win/get?url=' + enc, true); } },
+    { n: 'thingproxy',     f: function(){ return tryProxyFetch('https://thingproxy.freeboard.io/fetch/' + EBTP_SHEET_URL, false); } },
+    { n: 'jsonp.afeld.me', f: function(){ return tryProxyFetch('https://jsonp.afeld.me/?url=' + enc, false); } },
+  ];
+
+  ebtpFetchInFlight = (async function(){
+    var errs = [];
+    for(var i = 0; i < strats.length; i++){
+      var n = strats[i].n, f = strats[i].f;
+      fetchStatusLog('→ Trying ' + n + '…');
+      try{
+        var text = await f();
+        if(!text || text.length < 50) throw new Error('empty');
+        if(text.split('\n')[0].indexOf(',') === -1) throw new Error('not CSV');
+        fetchStatusLog('✓ ' + n + ' succeeded');
+        fetchStatusShow('parsing');
+        var rowCount = text.split('\n').filter(function(l){ return l.trim(); }).length - 1;
+        fetchStatusLog('Validated ' + Math.max(0, rowCount).toLocaleString() + ' rows');
+        writeEbtpCache(text, rowCount);
+        fetchStatusLog('✓ Cached for all dashboards');
+        setTimeout(fetchStatusHide, 900);
+        try{ broadcastToFrame({ type: 'ebtp-cache-updated', fetchedAt: Date.now(), rowCount: rowCount }); }catch(e){}
+        ebtpFetchInFlight = null;
+        return { ok: true, rowCount: rowCount, fetchedAt: Date.now() };
+      }catch(e){
+        var msg = n + ': ' + (e.name === 'AbortError' ? 'timeout' : e.message);
+        errs.push(msg); fetchStatusLog('✗ ' + msg);
+      }
+    }
+    fetchStatusLog('✗ All ' + strats.length + ' methods failed');
+    setTimeout(fetchStatusHide, 2500);
+    ebtpFetchInFlight = null;
+    return { ok: false, error: errs.join(' · ') };
+  })();
+  return ebtpFetchInFlight;
+}
 </script>
 
 </body>

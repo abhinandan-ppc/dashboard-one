@@ -4193,63 +4193,19 @@ function FilterPanel({allR,allS,allO,allM,allWagon,allHTC,allRem,allCust,
 }
 
 /* ═══════════════════ UPLOAD SCREEN ═══════════════════ */
-const EBTP_SHEET_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vQEKS6uq6epbkSmpv548hSG63WVUiFwKLXctpeM3G8NMeXJ_ZJaTCuFj95n4gTRuhchM_T4q_kp5_au/pub?gid=0&single=true&output=csv";
-
-/* ── Live fetch strategy ────────────────────────────────────────────
-   Google Sheets published CSV blocked by CORS when opened from file://.
-   We try 6 methods in parallel-with-timeout race:
-   1. XMLHttpRequest (no-cors bypass in some WebViews)
-   2. Iframe body-text extraction
-   3. corsproxy.io raw proxy
-   4. allorigins /raw proxy
-   5. allorigins /get JSON wrapper
-   6. Script-tag injection (JSONP-style, reads as text via blob URL)
-   ──────────────────────────────────────────────────────────────────── */
-function tryXHR(url,attempts=5,timeoutMs=4000){
-  const attempt=n=>new Promise((res,rej)=>{
-    const x=new XMLHttpRequest();
-    x.open('GET',url,true);
-    x.timeout=timeoutMs;
-    x.onload=()=>x.status>=200&&x.status<300?res(x.responseText):rej(new Error('XHR '+x.status+' (try '+n+'/'+attempts+')'));
-    x.onerror=()=>rej(new Error('XHR network error (try '+n+'/'+attempts+')'));
-    x.ontimeout=()=>rej(new Error('XHR timeout (try '+n+'/'+attempts+')'));
-    x.send();
-  }).catch(e=>{
-    if(n>=attempts)throw e;
-    return new Promise(r=>setTimeout(r,250)).then(()=>attempt(n+1));
-  });
-  return attempt(1);
-}
-function tryIframe(url){
-  return new Promise((res,rej)=>{
-    const iframe=document.createElement('iframe');
-    iframe.style.cssText='position:fixed;width:1px;height:1px;top:-999px;left:-999px;opacity:0;';
-    iframe.sandbox='allow-same-origin';
-    const t=setTimeout(()=>{try{document.body.removeChild(iframe);}catch(e){}rej(new Error('iframe timeout'));},12000);
-    iframe.onload=()=>{
-      clearTimeout(t);
-      try{
-        const txt=iframe.contentDocument?.body?.innerText||iframe.contentDocument?.documentElement?.innerText||'';
-        document.body.removeChild(iframe);
-        txt.includes(',')&&txt.length>50?res(txt):rej(new Error('iframe: no csv'));
-      }catch(e){try{document.body.removeChild(iframe);}catch(_){}rej(e);}
-    };
-    iframe.onerror=()=>{clearTimeout(t);try{document.body.removeChild(iframe);}catch(e){}rej(new Error('iframe error'));};
-    document.body.appendChild(iframe);
-    iframe.src=url;
-  });
-}
-function tryFetch(proxyUrl,json){
-  return fetch(proxyUrl,{cache:'no-store',mode:'cors',credentials:'omit'})
-    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);
-      return json?r.json().then(d=>{const t=d?.contents||d?.data||'';if(!t)throw new Error('empty');return t;}):r.text();
-    });
-}
-function tryApiProxy(){
-  // Same-origin — must send the hub session cookie so middleware doesn't
-  // redirect to /api/auth/login (a cross-origin hop fetch can't follow).
-  return fetch('/api/ebtp-proxy',{cache:'no-store',credentials:'same-origin'})
-    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
+/* EBTP is now fetched once by the hub (index.html) and cached in
+   localStorage — every dashboard just reads that shared cache instead
+   of hitting the network itself. See index.html's "CENTRAL EBTP FETCH
+   + CACHE" script for the fetch chain and cache-key contract. */
+const EBTP_CACHE_KEY="jspl-ebtp-cache-v1";
+function readHubEbtpCache(){
+  try{
+    const raw=localStorage.getItem(EBTP_CACHE_KEY);
+    if(!raw)return null;
+    const parsed=JSON.parse(raw);
+    if(!parsed||!parsed.csvText)return null;
+    return parsed;
+  }catch(e){return null;}
 }
 
 
@@ -4287,9 +4243,6 @@ function App(){
   const restoredLiveSession=useRef(false);
   const autoOnlineFetchStarted=useRef(false);
   const[onlineFetchErr,setOnlineFetchErr]=useState('');
-  const[fetchPhase,setFetchPhase]=useState(''); // ''|'fetching'|'parsing'
-  const[fetchLog,setFetchLog]=useState([]);
-  const logStep=useCallback(msg=>setFetchLog(l=>[...l.slice(-19),msg]),[]);
 
   // Update C and force re-render when effective theme changes
   useEffect(()=>{
@@ -4311,7 +4264,7 @@ function App(){
     window.__hub_handle_reset = function(){
       clearAllPlannerCache();
       restoredLiveSession.current=false;
-      setHasLiveSessionCache(false);
+      autoOnlineFetchStarted.current=false;
       setRows([]);
       setFileName('');
       setFileDate(null);
@@ -4541,11 +4494,11 @@ function App(){
     setExcHold,setExcDummy,setSelCust,clearAll,actCnt};
 
   const parseCSV=useCallback(csvText=>{
-      setLoading(true);setFetchPhase('parsing');logStep('Parsing '+csvText.length.toLocaleString()+' bytes of CSV…');
+      setLoading(true);
       setTimeout(()=>{
         try{
         const lines=csvText.split('\n').filter(l=>l.trim());
-        if(!lines.length){setLoading(false);setFetchPhase('');return;}
+        if(!lines.length){setLoading(false);return;}
         // CSV-aware column split
         const splitCSV=line=>{
           const c=[];let cur='',inQ=false;
@@ -4593,11 +4546,10 @@ function App(){
         setSelM(new Set(allModes.filter(m=>{const mu=String(m).toUpperCase();return !mu.startsWith('HOLD')&&!mu.includes('PT');})));
         const _allC2=[...new Set(processed.map(r=>r['Sold To Party Name']).filter(Boolean))];
         setSelCust(new Set(_allC2.filter(c=>!isDefaultExclCust(c))));
-        logStep('✓ Parsed '+processed.length.toLocaleString()+' rows');
-      }catch(e){console.error('CSV parse:',e);logStep('✗ Parse failed: '+e.message);}
-      setLoading(false);setFetchPhase('');
+      }catch(e){console.error('CSV parse:',e);}
+      setLoading(false);
       },50);
-    },[logStep]);
+    },[]);
 
   useEffect(()=>{
     if(cacheBooting||restoredLiveSession.current||rows.length||loading)return;
@@ -4615,58 +4567,35 @@ function App(){
     }
   },[cacheBooting,rows.length,loading,parseCSV]);
 
+  // Pull EBTP from the hub's shared cache (see index.html) instead of
+  // fetching it ourselves. The hub fetches once per visit and pushes
+  // 'ebtp-cache-updated' on refresh; we just poll+listen and re-parse.
   useEffect(()=>{
     if(cacheBooting||autoOnlineFetchStarted.current||rows.length||loading)return;
     autoOnlineFetchStarted.current=true;
-    (async()=>{
-      setLoading(true);setOnlineFetchErr('');setFetchPhase('fetching');setFetchLog([]);
-      const enc=encodeURIComponent(EBTP_SHEET_URL);
-      const strats=[
-        {n:'api-proxy',      f:()=>tryApiProxy()},
-        {n:'XHR',            f:()=>tryXHR(EBTP_SHEET_URL)},
-        {n:'Iframe',         f:()=>tryIframe(EBTP_SHEET_URL)},
-        {n:'corsproxy.io',   f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
-        {n:'codetabs',       f:()=>tryFetch('https://api.codetabs.com/v1/proxy?quest='+enc,false)},
-        {n:'allorigins/raw', f:()=>tryFetch('https://api.allorigins.win/raw?url='+enc,false)},
-        {n:'allorigins/get', f:()=>tryFetch('https://api.allorigins.win/get?url='+enc,true)},
-        {n:'thingproxy',     f:()=>tryFetch('https://thingproxy.freeboard.io/fetch/'+EBTP_SHEET_URL,false)},
-        {n:'jsonp.afeld.me', f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
-      ];
-      const errs=[];
-      for(const{n,f}of strats){
-        logStep('→ Trying '+n+'…');
-        try{
-          const text=await f();
-          if(!text||text.length<50)throw new Error('empty');
-          if(!text.split('\n')[0].includes(','))throw new Error('not CSV');
-          logStep('✓ '+n+' succeeded');
-          parseCSV(text);
-          return;
-        }catch(e){
-          const msg=n+': '+(e.name==='AbortError'?'timeout':e.message);
-          errs.push(msg);logStep('✗ '+msg);
-        }
-      }
-      setLoading(false);setFetchPhase('');
-      setOnlineFetchErr('All '+strats.length+' fetch methods failed — '+errs.join(' · ')+'. Upload the EBTP .xlsx file instead.');
-    })();
-  },[cacheBooting,rows.length,loading,parseCSV,logStep]);
+    let cancelled=false,tries=0;
+    const poll=()=>{
+      if(cancelled)return;
+      const cached=readHubEbtpCache();
+      if(cached&&cached.csvText){parseCSV(cached.csvText);return;}
+      tries++;
+      if(tries>40){setOnlineFetchErr('No cached EBTP data from the hub yet. Reopen this tool from the JSPL hub, or upload the EBTP .xlsx file.');return;}
+      setTimeout(poll,500);
+    };
+    poll();
+    return()=>{cancelled=true;};
+  },[cacheBooting,rows.length,loading,parseCSV]);
 
-  const fetchStatusOverlay=fetchPhase&&
-    <div className="fetch-status">
-      <div className="fetch-status-head">
-        <div className="fetch-status-spinner"/>
-        <div className="fetch-status-label">
-          {fetchPhase==='fetching'?'Fetching EBTP data…':'Parsing data…'}
-        </div>
-      </div>
-      <div className="loader-track">
-        <div className={`loader-bar${fetchPhase==='parsing'?' phase-parsing':''}`}/>
-      </div>
-      <div className="fetch-status-log">
-        {fetchLog.slice(-6).map((l,i)=><div key={i}>{l}</div>)}
-      </div>
-    </div>;
+  useEffect(()=>{
+    const onMsg=e=>{
+      if(e.data&&e.data.type==='ebtp-cache-updated'){
+        const cached=readHubEbtpCache();
+        if(cached&&cached.csvText)parseCSV(cached.csvText);
+      }
+    };
+    window.addEventListener('message',onMsg);
+    return()=>window.removeEventListener('message',onMsg);
+  },[parseCSV]);
 
   const floatingHeaderSlot=
     <div id="hubFrameHeaderSlot" style={{position:'fixed',top:14,right:16,zIndex:60,
@@ -4716,7 +4645,6 @@ function App(){
   if(loading)return(
     <div style={{height:'100dvh',overflow:'auto',background:'var(--bg)',padding:'28px clamp(16px,4vw,40px)'}}>
       {floatingHeaderSlot}
-      {fetchStatusOverlay}
       <div style={{fontFamily:F.b,color:'var(--dim)',fontSize:13,letterSpacing:'.02em',marginBottom:16}}>
         Parsing & mapping orders…
       </div>
