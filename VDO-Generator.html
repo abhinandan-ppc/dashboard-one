@@ -497,6 +497,11 @@ function setUploading(on){
   $('#uploadSpinner').classList.toggle('on', on);
 }
 
+function previewSkeleton(){
+  const row='<tr>'+Array.from({length:5}).map(()=>'<td><div class="skeleton skeleton-text"></div></td>').join('')+'</tr>';
+  return '<table class="skeleton-table"><tbody>'+Array.from({length:6}).map(()=>row).join('')+'</tbody></table>';
+}
+
 /* ── Online EBTP fetch (same published Google Sheet as Rake-Planner) ── */
 const EBTP_SHEET_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vQEKS6uq6epbkSmpv548hSG63WVUiFwKLXctpeM3G8NMeXJ_ZJaTCuFj95n4gTRuhchM_T4q_kp5_au/pub?gid=0&single=true&output=csv";
 
@@ -549,6 +554,7 @@ function handleCSV(text,label){
   const ws=wb.Sheets[sn];
   const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
   RAW={headers:rows[0],rows:rows};
+  $('#preview').innerHTML='';
   $('#status').textContent='Loaded online EBTP — '+(rows.length-1)+' rows. Set options and Generate.';
   $('#controls').style.display='block'; $('#runbtn').disabled=false;
   const snapshot=todayStr();
@@ -563,6 +569,7 @@ function handleCSV(text,label){
 
 async function fetchOnlineEBTP(){
   setOnlineFetching(true);
+  $('#preview').innerHTML=previewSkeleton();
   const enc=encodeURIComponent(EBTP_SHEET_URL);
   const strats=[
     {n:'XHR',           f:()=>tryXHR(EBTP_SHEET_URL)},
@@ -585,6 +592,7 @@ async function fetchOnlineEBTP(){
       return;
     }catch(e){lastErr=n+': '+(e.name==='AbortError'?'timeout':e.message);}
   }
+  $('#preview').innerHTML='';
   $('#status').textContent='Online EBTP refresh failed: '+lastErr+'. Upload the .xlsx manually instead.';
   setOnlineFetching(false);
 }
@@ -592,6 +600,7 @@ async function fetchOnlineEBTP(){
 function handleFile(file){
   setUploading(true);
   $('#status').textContent='Reading workbook…';
+  $('#preview').innerHTML=previewSkeleton();
   const fr=new FileReader();
   fr.onload=e=>{
     try{
@@ -600,6 +609,7 @@ function handleFile(file){
       const ws=wb.Sheets[sn];
       const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
       RAW={headers:rows[0],rows:rows};
+      $('#preview').innerHTML='';
       $('#status').textContent='Loaded "'+sn+'" — '+(rows.length-1)+' rows. Set options and Generate.';
       $('#controls').style.display='block'; $('#runbtn').disabled=false;
       const detected=parseDateFromName(file.name);
@@ -611,10 +621,10 @@ function handleFile(file){
       $('#fSnapshot').textContent=' · EBTP as of '+fmtBadgeDate(snapshot);
       $('#fileBadge').style.display='inline-flex';
       buildPartyList();
-    }catch(err){$('#status').textContent='Error reading file: '+err.message;}
+    }catch(err){$('#preview').innerHTML=''; $('#status').textContent='Error reading file: '+err.message;}
     finally{ setUploading(false); }
   };
-  fr.onerror=()=>{ $('#status').textContent='Error reading file.'; setUploading(false); };
+  fr.onerror=()=>{ $('#preview').innerHTML=''; $('#status').textContent='Error reading file.'; setUploading(false); };
   fr.readAsArrayBuffer(file);
 }
 

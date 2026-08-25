@@ -72,6 +72,8 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 }
 .frame-box.on { display: block; }
 .frame-box iframe { width: 100%; height: 100%; border: none; display: block; background: var(--bg-color); }
+.frame-skeleton { position: absolute; inset: 0; padding: 20px; z-index: 1; background: var(--bg-color); }
+.frame-skeleton.done { display: none; }
 
 @media (max-width: 768px) {
   .top-wrapper { padding: 8px 12px; }
@@ -116,9 +118,11 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 
 <div class="frame-stage">
   <div class="frame-box on" id="box-daily">
+    <div class="frame-skeleton" id="skel-daily"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-block" style="height:60px;margin-bottom:12px"></div><div class="skeleton skeleton-block" style="height:220px"></div></div>
     <iframe id="frame-daily" src="SMS Heat Planner Daily.html" title="SMS Heat Planner Daily" loading="eager"></iframe>
   </div>
   <div class="frame-box" id="box-monthly">
+    <div class="frame-skeleton" id="skel-monthly"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-block" style="height:60px;margin-bottom:12px"></div><div class="skeleton skeleton-block" style="height:220px"></div></div>
     <iframe id="frame-monthly" title="SMS Heat Planner Monthly" data-src="SMS Heat Planner Monthly.html"></iframe>
   </div>
 </div>
@@ -130,6 +134,10 @@ var boxes = { daily: document.getElementById('box-daily'), monthly: document.get
 var dailyFrame = document.getElementById('frame-daily');
 var monthlyFrame = document.getElementById('frame-monthly');
 var monthlyLoaded = false;
+var skelDaily = document.getElementById('skel-daily');
+var skelMonthly = document.getElementById('skel-monthly');
+dailyFrame.addEventListener('load', function(){ skelDaily.classList.add('done'); });
+monthlyFrame.addEventListener('load', function(){ skelMonthly.classList.add('done'); });
 
 tabs.addEventListener('click', function(e){
   var btn = e.target.closest('button[data-view]');

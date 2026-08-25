@@ -4776,13 +4776,21 @@ function App(){
   );
   if(!rows.length&&!loading)return<UploadScreen onFile={parseFile} onCSV={parseCSV} autoFetchEnabled={!hasLiveSessionCache}/>;
   if(loading)return(
-    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',
-      flexDirection:'column',gap:20,background:'var(--bg)'}}>
-      <div style={{width:52,height:52,border:'3px solid var(--bdr)',
-        borderTopColor:C.amber,borderRadius:'50%',animation:'spin .7s linear infinite'}}/>
-      <div style={{fontFamily:F.b,color:'var(--dim)',fontSize:15,letterSpacing:'.02em'}}>
+    <div style={{height:'100dvh',overflow:'auto',background:'var(--bg)',padding:'28px clamp(16px,4vw,40px)'}}>
+      <div style={{fontFamily:F.b,color:'var(--dim)',fontSize:13,letterSpacing:'.02em',marginBottom:16}}>
         Parsing & mapping orders…
       </div>
+      <div className="skeleton skeleton-title"/>
+      <div className="skeleton-row">
+        <div className="skeleton skeleton-circle"/>
+        <div style={{flex:1}}>
+          <div className="skeleton skeleton-text medium"/>
+          <div className="skeleton skeleton-text short"/>
+        </div>
+      </div>
+      <div className="skeleton skeleton-block" style={{marginBottom:12}}/>
+      <div className="skeleton skeleton-block" style={{marginBottom:12}}/>
+      <div className="skeleton skeleton-card"/>
     </div>
   );
 

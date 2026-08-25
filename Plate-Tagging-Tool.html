@@ -930,9 +930,25 @@ document.getElementById('gmOptCross').addEventListener('click',()=>setGradeMode(
 
 let RESULT=null;
 let DASH_CHARTS=[];
+function skeletonTable(nCols,nRows){
+  const cols=Array(nCols).fill('<td><div class="skeleton skeleton-text"></div></td>').join('');
+  const rows=Array(nRows).fill('<tr>'+cols+'</tr>').join('');
+  return `<div class="tw"><table class="skeleton-table"><tbody>${rows}</tbody></table></div>`;
+}
+function showResultsSkeleton(){
+  const results=document.getElementById('results');
+  results.classList.add('show');
+  const kpis=document.getElementById('kpis');
+  if(kpis) kpis.innerHTML=Array(6).fill('<div class="kpi"><div class="skeleton skeleton-title" style="width:60%"></div><div class="skeleton skeleton-text short" style="margin-top:8px"></div></div>').join('');
+  ['tab-tags','tab-cov','tab-idle','tab-nim','tab-cross'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.innerHTML=skeletonTable(8,8);
+  });
+}
 function execute(){
   if(!mapComplete()){ alert('Please map all required plate-stock columns (marked *).'); return; }
   const btn=document.getElementById('runBtn'); btn.disabled=true; btn.textContent='Processing…';
+  showResultsSkeleton();
   setTimeout(()=>{
     const gmRows=GRADE_MATRIX.map(r=>({'Order Grade':r[0],'FG Thickness (MM) Min':r[1],'FG Thickness (MM) Max':r[2],'Target Attribute':r[3],'Priority':r[4]}));
     if(TAG_MODE==='cross'){

@@ -1575,7 +1575,7 @@ window.renderProdMix = function(ap) {
     html += '</tbody></table></div></div>';
   }
 
-    el.innerHTML = html || '<p style="padding:20px;color:var(--tm)">Loading product mix data...</p>';
+    el.innerHTML = html || '<div style="padding:20px"><div class="skeleton skeleton-title"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text medium"></div><div class="skeleton skeleton-text short"></div></div>';
   } catch(err) {
     el.innerHTML = '<div style="padding:20px;color:red;font-family:monospace;font-size:12px"><b>renderProdMix error:</b><br>' + err.message + '</div>';
   }
@@ -2058,7 +2058,7 @@ window.renderFlow = function() {
   }
   
   if (currentFlowView === 'sankey') {
-     $('flowCanvas').innerHTML = '<div style="width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--radius-m); border:var(--glass-border); box-shadow:var(--glass-shadow); background:var(--input-bg); backdrop-filter:blur(10px);"><div id="sankey_chart" style="min-width:800px; height:650px; padding:20px;"></div></div>';
+     $('flowCanvas').innerHTML = '<div style="width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--radius-m); border:var(--glass-border); box-shadow:var(--glass-shadow); background:var(--input-bg); backdrop-filter:blur(10px);"><div id="sankey_chart" style="min-width:800px; height:650px; padding:20px;"><div class="skeleton skeleton-block" style="height:100%"></div></div></div>';
      if(typeof google !== 'undefined' && google.visualization && google.visualization.Sankey) {
          window.renderSankey();
      } else {

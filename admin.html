@@ -111,7 +111,7 @@ a { color: var(--primary); }
   <div class="hd">
     <div>
       <h1>User &amp; Access Management</h1>
-      <div class="sub" id="signedInAs">Loading&hellip;</div>
+      <div class="sub" id="signedInAs"><span class="skeleton skeleton-text" style="display:inline-block;width:180px;height:12px;vertical-align:middle;margin:0"></span></div>
     </div>
   </div>
 
@@ -162,7 +162,11 @@ a { color: var(--primary); }
   </div>
 
   <div id="usersHost" class="users">
-    <div class="empty">Loading users&hellip;</div>
+    <div class="skeleton-row"><div class="skeleton skeleton-circle"></div><div style="flex:1"><div class="skeleton skeleton-text medium"></div><div class="skeleton skeleton-text short"></div></div></div>
+    <div class="skeleton-row"><div class="skeleton skeleton-circle"></div><div style="flex:1"><div class="skeleton skeleton-text medium"></div><div class="skeleton skeleton-text short"></div></div></div>
+    <div class="skeleton-row"><div class="skeleton skeleton-circle"></div><div style="flex:1"><div class="skeleton skeleton-text medium"></div><div class="skeleton skeleton-text short"></div></div></div>
+    <div class="skeleton-row"><div class="skeleton skeleton-circle"></div><div style="flex:1"><div class="skeleton skeleton-text medium"></div><div class="skeleton skeleton-text short"></div></div></div>
+    <div class="skeleton-row"><div class="skeleton skeleton-circle"></div><div style="flex:1"><div class="skeleton skeleton-text medium"></div><div class="skeleton skeleton-text short"></div></div></div>
   </div>
 </div>
 
@@ -178,6 +182,11 @@ function banner(msg, isError){
   host.innerHTML = '<div class="banner' + (isError ? ' error' : '') + '">' + esc(msg) + '</div>';
 }
 function clearBanner(){ document.getElementById('bannerHost').innerHTML = ''; }
+
+function usersSkeleton(){
+  var row = '<div class="skeleton-row"><div class="skeleton skeleton-circle"></div><div style="flex:1"><div class="skeleton skeleton-text medium"></div><div class="skeleton skeleton-text short"></div></div></div>';
+  return row + row + row + row + row;
+}
 
 async function api(path, opts){
   var res = await fetch(path, Object.assign({ credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } }, opts || {}));
@@ -490,7 +499,7 @@ document.getElementById('addUserForm').addEventListener('submit', async function
 
 async function refresh(){
   clearBanner();
-  document.getElementById('usersHost').innerHTML = '<div class="empty">Loading users&hellip;</div>';
+  document.getElementById('usersHost').innerHTML = usersSkeleton();
   try {
     registry = await api('/api/admin/users');
     render();

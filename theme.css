@@ -207,3 +207,41 @@ input::placeholder{color:var(--mute);opacity:1}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
 @keyframes glow{0%,100%{opacity:.9}50%{opacity:1}}
+
+/* ══════════════════════════════════════════════════════════
+   SKELETON LOADING — shared shimmer system
+   Use while data (EBTP sheets, XLSX parses, API/chart fetches)
+   is being loaded, in place of "Loading…" text or bare spinners.
+   ══════════════════════════════════════════════════════════ */
+@keyframes skeleton-shimmer{
+  0%{background-position:-200% 0}
+  100%{background-position:200% 0}
+}
+.skeleton{
+  position:relative;
+  overflow:hidden;
+  border-radius:var(--radius-sm);
+  background:linear-gradient(90deg,var(--s1) 25%,var(--s2) 37%,var(--s1) 63%);
+  background-size:400% 100%;
+  animation:skeleton-shimmer 1.4s ease-in-out infinite;
+  pointer-events:none;
+}
+.skeleton-text{height:14px;width:100%;margin:6px 0;border-radius:var(--radius-xs)}
+.skeleton-text.short{width:40%}
+.skeleton-text.medium{width:65%}
+.skeleton-title{height:20px;width:45%;margin-bottom:12px;border-radius:var(--radius-xs)}
+.skeleton-block{width:100%;height:80px;border-radius:var(--radius-md)}
+.skeleton-card{
+  width:100%;height:110px;border-radius:var(--radius-lg);
+  border:1px solid var(--glass-border);
+}
+.skeleton-circle{border-radius:50%;width:40px;height:40px;flex-shrink:0}
+.skeleton-row{display:flex;align-items:center;gap:12px;padding:10px 0}
+
+/* Skeleton table — mimics a data-grid while rows are still loading */
+.skeleton-table{width:100%;border-collapse:collapse}
+.skeleton-table td{padding:8px 12px;border-bottom:1px solid var(--bdr)}
+
+/* Wrapper that fades the skeleton out once real content is ready */
+.skeleton-wrap{transition:opacity .25s ease}
+.skeleton-wrap.is-loaded{display:none}

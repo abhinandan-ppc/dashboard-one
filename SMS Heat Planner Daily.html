@@ -1665,6 +1665,7 @@ el("tabBar").addEventListener("click", e=>{
   });
   if(b.getAttribute("data-tab")==="flow") { window.animFrames = 10; requestAnimationFrame(animLoop); }
   if(b.getAttribute("data-tab")==="sankey" && currentResult) {
+      var sd=el("sankey_div"); if(sd) sd.innerHTML='<div class="skeleton skeleton-block" style="height:100%"></div>';
       setTimeout(()=> { drawSankey(currentResult); }, 50); // slight delay ensures div is rendered
   }
 });

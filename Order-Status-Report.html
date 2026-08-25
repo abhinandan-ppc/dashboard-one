@@ -1788,9 +1788,22 @@ function App(){
     </>;
   }
   if(loading||!rows){
-    return<div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100dvh',gap:12}}>
-      <div style={{width:36,height:36,border:'3px solid var(--s3)',borderTopColor:C.amber,borderRadius:'50%',animation:'spin .8s linear infinite'}}/>
-      <div style={{color:'var(--dim)',fontFamily:F.b}}>Parsing workbook…</div>
+    return<div style={{padding:'24px 20px',maxWidth:1400,margin:'0 auto'}}>
+      <div className="skeleton skeleton-title" style={{maxWidth:280}}/>
+      <div className="skeleton-row" style={{gap:16,marginBottom:20}}>
+        {[0,1,2,3,4].map(i=><div key={i} className="skeleton skeleton-card" style={{flex:1}}/>)}
+      </div>
+      <table className="skeleton-table">
+        <tbody>
+          {[0,1,2,3,4,5,6,7].map(r=>(
+            <tr key={r}>
+              {[0,1,2,3,4,5].map(c=>(
+                <td key={c}><div className={`skeleton skeleton-text${c===0?' short':''}`}/></td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>;
   }
   return<Dashboard rawRows={rows} rawArr={null} headers={headers} fileName={fileName}/>;
