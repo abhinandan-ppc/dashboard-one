@@ -1362,12 +1362,17 @@ function installFrameHeaderControls(){
       pageFrame.__hubHeaderObserver = new pageFrame.contentWindow.MutationObserver(function(){
         try{
           var existingControls = doc.getElementById('hubFrameHeaderControls');
-          var rakeSlot = doc.getElementById('hubFrameHeaderSlot');
+          var slotEl = doc.getElementById('hubFrameHeaderSlot');
           if(!existingControls){
             mount();
             return;
           }
-          if(isRakePlannerFrame(doc) && rakeSlot && existingControls.parentNode !== rakeSlot){
+          // Re-mount into #hubFrameHeaderSlot whenever it exists but the controls aren't inside it
+          // yet — not just for Rake Planner. A page whose own header (and slot) only renders after
+          // an async load (e.g. Order Status Report's EBTP fetch) won't have the slot in the DOM
+          // during the initial ~250ms mount attempts on iframe 'load', so the controls fall back to
+          // floating fixed position first; once the slot later appears, this observer catches it.
+          if(slotEl && existingControls.parentNode !== slotEl){
             mount();
           }
         }catch(e){}
