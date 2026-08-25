@@ -551,16 +551,26 @@ async function fetchOnlineEBTP(){
     setOnlineFetching(false);
     return;
   }
-  // Hub hasn't cached anything yet (e.g. this tool was opened directly,
-  // or the hub's own fetch is still in flight) — wait briefly for it.
-  for(let i=0;i<16;i++){
+  // No cache yet — this button doesn't fetch independently, it just asks
+  // the hub to (the hub owns the only real "refresh EBTP" action) and
+  // waits for the cache to land. force:false — don't bypass a fresh
+  // cache if one shows up between our check above and the hub's own.
+  const inFrame=window.parent!==window;
+  if(!inFrame){
+    $('#preview').innerHTML='';
+    $('#status').textContent='This tool has no hub to fetch from when opened standalone. Open it from the JSPL hub, or upload the .xlsx manually.';
+    setOnlineFetching(false);
+    return;
+  }
+  try{window.parent.postMessage({type:'request-ebtp-fetch',force:false},'*');}catch(e){}
+  for(let i=0;i<150;i++){
     setOnlineFetching(true,'Waiting for hub cache…');
-    await new Promise(r=>setTimeout(r,500));
+    await new Promise(r=>setTimeout(r,600));
     const c=readHubEbtpCache();
     if(c&&c.csvText){ handleCSV(c.csvText,'Online EBTP (hub cache)'); setOnlineFetching(false); return; }
   }
   $('#preview').innerHTML='';
-  $('#status').textContent='No cached EBTP data from the hub yet. Open this tool from the JSPL hub, or upload the .xlsx manually.';
+  $('#status').textContent='No cached EBTP data from the hub yet after 90s. Open this tool from the JSPL hub, or upload the .xlsx manually.';
   setOnlineFetching(false);
 }
 

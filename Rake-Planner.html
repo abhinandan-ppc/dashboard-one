@@ -4573,14 +4573,17 @@ function App(){
   useEffect(()=>{
     if(cacheBooting||autoOnlineFetchStarted.current||rows.length||loading)return;
     autoOnlineFetchStarted.current=true;
+    const inFrame=window.parent!==window;
+    if(inFrame){try{window.parent.postMessage({type:'request-ebtp-fetch'},'*');}catch(e){}}
     let cancelled=false,tries=0;
     const poll=()=>{
       if(cancelled)return;
       const cached=readHubEbtpCache();
       if(cached&&cached.csvText){parseCSV(cached.csvText);return;}
       tries++;
-      if(tries>40){setOnlineFetchErr('No cached EBTP data from the hub yet. Reopen this tool from the JSPL hub, or upload the EBTP .xlsx file.');return;}
-      setTimeout(poll,500);
+      if(!inFrame){setOnlineFetchErr('No cached EBTP data — this tool has no hub to fetch from when opened standalone. Open it from the JSPL hub, or upload the EBTP .xlsx file.');return;}
+      if(tries>150){setOnlineFetchErr('No cached EBTP data from the hub yet after 90s. Reopen this tool from the JSPL hub, or upload the EBTP .xlsx file.');return;}
+      setTimeout(poll,600);
     };
     poll();
     return()=>{cancelled=true;};

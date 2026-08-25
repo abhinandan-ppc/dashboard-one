@@ -1390,6 +1390,13 @@ window.addEventListener('message', function(e){
     if(e.source === pageFrame.contentWindow && e.data && e.data.type === 'ready'){
       installFrameHeaderControls();
     }
+    // Any dashboard iframe can ask the hub to (re)fetch EBTP — e.g. when it
+    // finds no cache yet, or when its own "refresh" button is clicked.
+    // fetchAndCacheEBTP() is idempotent: a no-op if already cached (unless
+    // force), and shares one in-flight promise if already fetching.
+    if(e.data && e.data.type === 'request-ebtp-fetch'){
+      try{ fetchAndCacheEBTP(!!e.data.force); }catch(err){}
+    }
   }catch(err){}
 });
 
