@@ -25,10 +25,10 @@ body {
 }
 button { font: inherit; cursor: pointer; border: none; outline: none; }
 
-.top-wrapper { flex-shrink: 0; padding: 12px 24px; }
+.top-wrapper { flex-shrink: 0; padding: 12px 24px; position: sticky; top: 0; z-index: 50; }
 .top-bar {
   background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-  padding: 12px 20px; border-radius: var(--radius-m); border: var(--glass-border); box-shadow: var(--glass-shadow);
+  padding: 12px 20px; border-radius: var(--radius-lg); border: var(--glass-border); box-shadow: var(--shadow-md);
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px;
 }
 .top-l { display: flex; align-items: center; gap: 14px; min-width: 0; justify-self: start; }

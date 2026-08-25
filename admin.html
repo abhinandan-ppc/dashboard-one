@@ -48,8 +48,25 @@ input, select { font: inherit; color: inherit; }
 a { color: var(--primary); }
 
 .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 80px; }
-.hd { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
-.hd h1 { font-size: 20px; font-weight: 800; margin: 0; }
+.top-wrapper { margin-bottom: 22px; position: sticky; top: 0; z-index: 50; }
+.top-bar {
+  background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  padding: 12px 20px; border-radius: var(--radius-lg); border: var(--glass-border); box-shadow: var(--shadow-md);
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.jspl-badge { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.jspl-mark {
+  width: 40px; height: 40px; border-radius: var(--radius-md); flex-shrink: 0;
+  background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Sans', sans-serif; font-weight: 900; font-size: 11px; letter-spacing: .04em;
+}
+.jspl-brand-text { line-height: 1; }
+.jspl-brand-l1 { font-family: 'DM Sans', sans-serif; font-weight: 900; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--tx); }
+.jspl-brand-l2 { font-size: 9px; color: var(--tm); letter-spacing: .05em; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
+.jspl-divider { width: 1px; height: 28px; background: var(--br); flex-shrink: 0; }
+.hd { display: flex; align-items: center; flex: 1; min-width: 0; }
+.hd h1 { font-size: 17px; font-weight: 800; margin: 0; }
 .hd .sub { font-size: 12.5px; color: var(--tm); margin-top: 4px; }
 .hd-actions { display: flex; align-items: center; gap: 10px; }
 .btn { padding: 9px 16px; border-radius: var(--radius-pill); font-weight: 700; font-size: 13px; background: var(--input-bg); color: var(--tx); border: var(--glass-border); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
@@ -108,10 +125,23 @@ a { color: var(--primary); }
 </head>
 <body>
 <div class="wrap">
-  <div class="hd">
-    <div>
-      <h1>User &amp; Access Management</h1>
-      <div class="sub" id="signedInAs"><span class="skeleton skeleton-text" style="display:inline-block;width:180px;height:12px;vertical-align:middle;margin:0"></span></div>
+  <div class="top-wrapper">
+    <div class="top-bar">
+      <div class="jspl-badge">
+        <div class="jspl-mark">JSPL</div>
+        <div class="jspl-brand-text">
+          <div class="jspl-brand-l1">Jindal Steel</div>
+          <div class="jspl-brand-l2">Angul &middot; Plate Mill</div>
+        </div>
+      </div>
+      <div class="jspl-divider"></div>
+      <div class="hd">
+        <div>
+          <h1>User &amp; Access Management</h1>
+          <div class="sub" id="signedInAs"><span class="skeleton skeleton-text" style="display:inline-block;width:180px;height:12px;vertical-align:middle;margin:0"></span></div>
+        </div>
+      </div>
+      <div id="hubFrameHeaderSlot" style="display:flex;gap:8px;align-items:center;flex-shrink:0"></div>
     </div>
   </div>
 

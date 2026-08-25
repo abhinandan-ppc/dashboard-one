@@ -1363,7 +1363,8 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
   return<div style={{padding:'20px 24px 60px',width:'100%',maxWidth:'none',boxSizing:'border-box'}}>
     {/* ═══ HEADER ═══ */}
     <div className="glass-card" style={{padding:'12px 20px',marginBottom:18,display:'flex',flexWrap:'wrap',
-      alignItems:'center',gap:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-sm)'}}>
+      alignItems:'center',gap:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
+      position:'sticky',top:0,zIndex:50}}>
       <JSPLBadge/>
       <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0}}/>
       <div style={{flexShrink:0}}>

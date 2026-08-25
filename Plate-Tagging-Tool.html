@@ -91,8 +91,9 @@ button{cursor:pointer;border:none;outline:none;background:none}
 .wrap{max-width:min(1720px,calc(100vw - 40px));margin:0 auto;padding:28px 20px 72px}
 header{
   display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px;
-  background:var(--surface);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
-  border:var(--glass-border);border-radius:var(--radius-l);box-shadow:var(--glass-shadow);
+  background:var(--glass);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
+  border:var(--glass-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);
+  position:sticky;top:0;z-index:50;
 }
 .header-brand{display:flex;align-items:center;gap:16px;min-width:0;flex-wrap:wrap}
 .jspl-badge{display:flex;align-items:center;gap:8px;flex-shrink:0}
