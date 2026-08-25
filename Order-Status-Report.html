@@ -435,19 +435,93 @@ function stashDupCols(obj,row){
 }
 
 /* ═══════════════════ CHIP / MULTISELECT DROPDOWN (pattern reused from Rake-Planner) ═══════════════════ */
-function MultiSelect({label,options,selected,onChange,width}){
-  const[open,setOpen]=useState(false);
-  const ref=useRef();
+const SLICER_W=170;
+// backdrop-filter kept as a bonus (harmless if it renders, free upgrade if it doesn't), but the
+// background itself is deliberately near-opaque and computed from C.isDark rather than a CSS
+// var() — var(--glass-hi) plus blur was rendering as a near-fully-transparent box in this
+// environment (crisp unblurred text bled straight through), so this no longer depends on either
+// backdrop-filter or CSS custom-property resolution to look right.
+function glassPopover(){
+  return{background:C.isDark?'rgba(13,18,30,.97)':'rgba(255,255,255,.97)',
+    backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)'};
+}
+
+/* Popup position, computed off the trigger button's real screen rect. Dropdowns render through a
+   ReactDOM.createPortal to document.body as position:fixed — nesting them inside the normal DOM
+   (inside a scrolling/blurred card ancestor) is what silently breaks backdrop-filter; rendering at
+   the body root, exactly like Rake-Planner's usePortalPos/MultiSel, is what actually blurs. */
+function usePortalPos(open,btnRef){
+  const[pos,setPos]=useState(null);
+  const calc=useCallback(()=>{
+    if(!btnRef.current)return;
+    const r=btnRef.current.getBoundingClientRect();
+    const spaceBelow=window.innerHeight-r.bottom;
+    const spaceAbove=r.top;
+    const openUp=spaceBelow<260&&spaceAbove>spaceBelow;
+    setPos({top:openUp?undefined:r.bottom+4,bottom:openUp?window.innerHeight-r.top+4:undefined,
+      left:r.left,width:Math.max(r.width,220),maxH:Math.max(160,Math.min(320,openUp?spaceAbove-16:spaceBelow-16))});
+  },[]);
   useEffect(()=>{
-    const h=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};
+    if(open){calc();}
+    if(!open){setPos(null);return;}
+    window.addEventListener('scroll',calc,true);
+    window.addEventListener('resize',calc);
+    return()=>{window.removeEventListener('scroll',calc);window.removeEventListener('resize',calc);};
+  },[open,calc]);
+  return pos;
+}
+
+function MultiSelect({label,options,selected,onChange,width=SLICER_W}){
+  const[open,setOpen]=useState(false);
+  const[srch,setSrch]=useState('');
+  const ref=useRef();const btnRef=useRef();
+  const pos=usePortalPos(open,btnRef);
+  useEffect(()=>{
+    const h=e=>{if(ref.current&&!ref.current.contains(e.target)&&!btnRef.current?.contains(e.target)){setOpen(false);setSrch('');}};
     document.addEventListener('mousedown',h);
     return()=>document.removeEventListener('mousedown',h);
   },[]);
+  const sortedOptions=useMemo(()=>[...options].sort((a,b)=>String(a).localeCompare(String(b),undefined,{sensitivity:'base'})),[options]);
+  const shownOptions=useMemo(()=>{
+    if(!srch.trim())return sortedOptions;
+    const s=srch.trim().toLowerCase();
+    return sortedOptions.filter(o=>String(o||'').toLowerCase().includes(s));
+  },[sortedOptions,srch]);
   const allSel=options.length>0&&options.every(o=>selected.has(o));
   const toggle=o=>{ const s=new Set(selected); s.has(o)?s.delete(o):s.add(o); onChange(s); };
   const toggleAll=()=>{ onChange(allSel?new Set():new Set(options)); };
-  return<div ref={ref} style={{position:'relative',width:width||170}}>
-    <button onClick={()=>setOpen(v=>!v)} style={{...inp,textAlign:'left',cursor:'pointer',
+  const dropdown=open&&pos&&ReactDOM.createPortal(
+    <div ref={ref} style={{position:'fixed',top:pos.top,bottom:pos.bottom,left:pos.left,width:pos.width,
+      zIndex:9999,...glassPopover(),border:'1px solid var(--glass-border-hi)',borderRadius:'var(--radius-md)',
+      overflow:'hidden',boxShadow:'var(--shadow-lg)',display:'flex',flexDirection:'column',
+      animation:'fadeUp .14s cubic-bezier(.2,0,.4,1)'}}>
+      <div style={{padding:8,borderBottom:'1px solid var(--bdr)',flexShrink:0}}>
+        <input autoFocus value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search…"
+          onClick={e=>e.stopPropagation()} style={{...inp,padding:'6px 10px',fontSize:12}}/>
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:8,padding:'5px 10px',borderBottom:'1px solid var(--bdr)',
+        flexShrink:0,fontSize:11}}>
+        <span onClick={toggleAll} style={{color:C.sky,fontWeight:700,cursor:'pointer'}}>{allSel?'Deselect all':'Select all'}</span>
+        <span style={{color:'var(--bdrHi)'}}>·</span>
+        <span onClick={()=>selected.size&&onChange(new Set())} style={{color:selected.size?C.rose:'var(--mute)',
+          fontWeight:700,cursor:selected.size?'pointer':'default'}}>Clear</span>
+        <span style={{marginLeft:'auto',color:'var(--mute)',fontFamily:F.m,fontSize:10.5}}>{selected.size}/{options.length}</span>
+      </div>
+      <div style={{maxHeight:pos.maxH,overflowY:'auto'}}>
+        {shownOptions.map(o=>(
+          <div key={String(o)} onClick={()=>toggle(o)} style={{padding:'7px 12px',fontSize:12.5,
+            cursor:'pointer',display:'flex',alignItems:'center',gap:8,color:'var(--text)',
+            background:selected.has(o)?'var(--amber-bg)':'transparent'}}>
+            <span style={{width:14,height:14,borderRadius:4,border:`1.5px solid ${selected.has(o)?C.amber:'var(--bdrHi)'}`,
+              background:selected.has(o)?C.amber:'transparent',flexShrink:0}}/>
+            <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{String(o)||'(blank)'}</span>
+          </div>
+        ))}
+        {!shownOptions.length&&<div style={{padding:'10px 12px',fontSize:12,color:'var(--mute)'}}>{options.length?'No matches':'No options'}</div>}
+      </div>
+    </div>,document.body);
+  return<div style={{position:'relative',width}}>
+    <button ref={btnRef} onClick={()=>setOpen(v=>!v)} style={{...inp,textAlign:'left',cursor:'pointer',
       display:'flex',justifyContent:'space-between',alignItems:'center',gap:6,
       borderColor:open?'var(--amber)':'var(--bdrHi)'}}>
       <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:12.5,color:'var(--text)'}}>
@@ -455,29 +529,152 @@ function MultiSelect({label,options,selected,onChange,width}){
       </span>
       <span style={{color:'var(--mute)',fontSize:10}}>{open?'▲':'▼'}</span>
     </button>
-    {open&&<div className="portal-dropdown" style={{position:'absolute',top:'calc(100% + 4px)',left:0,
-      background:'var(--glass-hi)',backdropFilter:'blur(20px)',zIndex:400,width:Math.max(width||170,220),
-      maxHeight:280,overflowY:'auto'}}>
-      <div onClick={toggleAll} style={{padding:'8px 12px',fontSize:12,fontWeight:700,color:C.sky,
-        cursor:'pointer',borderBottom:'1px solid var(--bdr)'}}>{allSel?'Clear All':'Select All'}</div>
-      {options.map(o=>(
-        <div key={String(o)} onClick={()=>toggle(o)} style={{padding:'7px 12px',fontSize:12.5,
-          cursor:'pointer',display:'flex',alignItems:'center',gap:8,color:'var(--text)',
-          background:selected.has(o)?'var(--amber-bg)':'transparent'}}>
-          <span style={{width:14,height:14,borderRadius:4,border:`1.5px solid ${selected.has(o)?C.amber:'var(--bdrHi)'}`,
-            background:selected.has(o)?C.amber:'transparent',flexShrink:0}}/>
-          <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{String(o)||'(blank)'}</span>
-        </div>
-      ))}
-      {!options.length&&<div style={{padding:'10px 12px',fontSize:12,color:'var(--mute)'}}>No options</div>}
-    </div>}
+    {dropdown}
+  </div>;
+}
+
+/* ═══════════════════ EXCEL-STYLE DATE TREE SLICER (Year › Month › Day) ═══════════════════ */
+function DateTreeSelect({label,rows,selected,onChange,latestDate,width=SLICER_W}){
+  const[open,setOpen]=useState(false);
+  const[srch,setSrch]=useState('');
+  const[expanded,setExpanded]=useState(()=>new Set());
+  const[pending,setPending]=useState(null);
+  const ref=useRef();const btnRef=useRef();
+  const pos=usePortalPos(open,btnRef);
+
+  useEffect(()=>{
+    const h=e=>{if(ref.current&&!ref.current.contains(e.target)&&!btnRef.current?.contains(e.target)){setOpen(false);setSrch('');}};
+    document.addEventListener('mousedown',h);
+    return()=>document.removeEventListener('mousedown',h);
+  },[]);
+
+  const tree=useMemo(()=>{
+    const t={};
+    rows.forEach(r=>{
+      const d=r._soDate;
+      const y=d?d.getFullYear():'(Blanks)';
+      const mIdx=d?d.getMonth():-1;
+      const mName=d?d.toLocaleDateString('en-GB',{month:'long'}):'';
+      const day=d?d.getDate():'(blank)';
+      const leaf=d?d.toISOString().slice(0,10):'__blank__';
+      t[y]=t[y]||{};
+      t[y][mIdx]=t[y][mIdx]||{name:mName,days:{}};
+      t[y][mIdx].days[day]=leaf;
+    });
+    return t;
+  },[rows]);
+
+  const allLeaves=useMemo(()=>{
+    const out=[];
+    Object.values(tree).forEach(months=>Object.values(months).forEach(mo=>out.push(...Object.values(mo.days))));
+    return out;
+  },[tree]);
+
+  useEffect(()=>{ if(open)setPending(new Set(selected.size?selected:allLeaves)); },[open]);
+
+  const years=Object.keys(tree).sort((a,b)=>a==='(Blanks)'?1:b==='(Blanks)'?-1:b-a);
+  const leavesOfMonth=(y,mk)=>Object.values(tree[y][mk].days);
+  const leavesOfYear=y=>Object.keys(tree[y]).flatMap(mk=>leavesOfMonth(y,mk));
+  const toggleExpand=k=>setExpanded(s=>{const n=new Set(s);n.has(k)?n.delete(k):n.add(k);return n;});
+  const toggleLeaf=leaf=>setPending(p=>{const n=new Set(p);n.has(leaf)?n.delete(leaf):n.add(leaf);return n;});
+  const toggleMonth=(y,mk)=>{
+    const leaves=leavesOfMonth(y,mk), allOn=leaves.every(l=>pending.has(l));
+    setPending(p=>{const n=new Set(p);leaves.forEach(l=>allOn?n.delete(l):n.add(l));return n;});
+  };
+  const toggleYear=y=>{
+    const leaves=leavesOfYear(y), allOn=leaves.every(l=>pending.has(l));
+    setPending(p=>{const n=new Set(p);leaves.forEach(l=>allOn?n.delete(l):n.add(l));return n;});
+  };
+  const commit=()=>{ onChange(!pending||pending.size===allLeaves.length?new Set():new Set(pending)); setOpen(false); };
+  const cancel=()=>{ setOpen(false); setSrch(''); };
+  const q=srch.trim().toLowerCase();
+
+  const dropdown=open&&pending&&pos&&ReactDOM.createPortal(
+    <div ref={ref} style={{position:'fixed',top:pos.top,bottom:pos.bottom,left:pos.left,width:Math.max(pos.width,240),
+      zIndex:9999,...glassPopover(),border:'1px solid var(--glass-border-hi)',borderRadius:'var(--radius-md)',
+      overflow:'hidden',boxShadow:'var(--shadow-lg)',display:'flex',flexDirection:'column',
+      animation:'fadeUp .14s cubic-bezier(.2,0,.4,1)'}}>
+      <div style={{padding:8,borderBottom:'1px solid var(--bdr)',flexShrink:0}}>
+        <input autoFocus value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Search year or month…"
+          onClick={e=>e.stopPropagation()} style={{...inp,padding:'6px 10px',fontSize:12}}/>
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:8,padding:'5px 10px',borderBottom:'1px solid var(--bdr)',
+        flexShrink:0,fontSize:11}}>
+        <span onClick={()=>setPending(new Set(allLeaves))} style={{color:C.sky,fontWeight:700,cursor:'pointer'}}>Select all</span>
+        <span style={{color:'var(--bdrHi)'}}>·</span>
+        <span onClick={()=>pending.size&&setPending(new Set())} style={{color:pending.size?C.rose:'var(--mute)',
+          fontWeight:700,cursor:pending.size?'pointer':'default'}}>Clear</span>
+        <span style={{marginLeft:'auto',color:'var(--mute)',fontFamily:F.m,fontSize:10.5}}>{pending.size}/{allLeaves.length}</span>
+      </div>
+      <div style={{maxHeight:pos.maxH,overflowY:'auto'}}>
+        {years.map(y=>{
+          const monthKeys=Object.keys(tree[y]).sort((a,b)=>a-b);
+          if(q&&!String(y).toLowerCase().includes(q)&&!monthKeys.some(mk=>tree[y][mk].name.toLowerCase().includes(q)))return null;
+          const yLeaves=leavesOfYear(y);
+          const yOn=yLeaves.every(l=>pending.has(l)), yInd=!yOn&&yLeaves.some(l=>pending.has(l));
+          const yKey='y'+y, yExp=expanded.has(yKey)||!!q;
+          return<div key={y}>
+            <div style={{display:'flex',alignItems:'center',gap:6,padding:'6px 10px'}}>
+              <span onClick={()=>toggleExpand(yKey)} style={{color:'var(--mute)',fontSize:10,width:12,textAlign:'center',cursor:'pointer'}}>{yExp?'▾':'▸'}</span>
+              <label style={{display:'flex',alignItems:'center',gap:8,flex:1,cursor:'pointer'}} onClick={()=>toggleYear(y)}>
+                <input type="checkbox" readOnly checked={yOn} ref={el=>{if(el)el.indeterminate=yInd;}} style={{accentColor:C.amber}}/>
+                <span style={{fontSize:12.5,fontWeight:700,color:'var(--text)'}}>{y}</span>
+              </label>
+            </div>
+            {yExp&&monthKeys.filter(mk=>!q||String(y).toLowerCase().includes(q)||tree[y][mk].name.toLowerCase().includes(q)).map(mk=>{
+              const mo=tree[y][mk];
+              const dayKeys=Object.keys(mo.days).sort((a,b)=>(''+a).localeCompare(''+b,undefined,{numeric:true}));
+              const mLeaves=Object.values(mo.days);
+              const mOn=mLeaves.every(l=>pending.has(l)), mInd=!mOn&&mLeaves.some(l=>pending.has(l));
+              const mKey='m'+y+'-'+mk, mExp=expanded.has(mKey)||!!q;
+              return<div key={mk}>
+                <div style={{display:'flex',alignItems:'center',gap:6,padding:'5px 10px 5px 26px'}}>
+                  <span onClick={()=>toggleExpand(mKey)} style={{color:'var(--mute)',fontSize:10,width:12,textAlign:'center',cursor:'pointer'}}>{mExp?'▾':'▸'}</span>
+                  <label style={{display:'flex',alignItems:'center',gap:8,flex:1,cursor:'pointer'}} onClick={()=>toggleMonth(y,mk)}>
+                    <input type="checkbox" readOnly checked={mOn} ref={el=>{if(el)el.indeterminate=mInd;}} style={{accentColor:C.amber}}/>
+                    <span style={{fontSize:12,color:'var(--text)'}}>{mo.name||'(blank)'}</span>
+                  </label>
+                </div>
+                {mExp&&dayKeys.map(dk=>{
+                  const leaf=mo.days[dk], on=pending.has(leaf);
+                  return<div key={dk} onClick={()=>toggleLeaf(leaf)} style={{display:'flex',alignItems:'center',gap:8,
+                    padding:'4px 10px 4px 46px',cursor:'pointer',fontSize:12}}>
+                    <input type="checkbox" readOnly checked={on} style={{accentColor:C.amber}}/>
+                    <span style={{color:'var(--text)'}}>{dk}{leaf===latestDate?' (latest)':''}</span>
+                  </div>;
+                })}
+              </div>;
+            })}
+          </div>;
+        })}
+      </div>
+      <div style={{display:'flex',justifyContent:'flex-end',gap:8,padding:'8px 10px',borderTop:'1px solid var(--bdr)',flexShrink:0}}>
+        <button onClick={cancel} style={{padding:'6px 12px',borderRadius:'var(--radius-sm)',border:'1px solid var(--bdrHi)',
+          background:'transparent',color:'var(--dim)',fontFamily:F.h,fontSize:11.5,fontWeight:700,cursor:'pointer'}}>Cancel</button>
+        <button onClick={commit} style={{padding:'6px 14px',borderRadius:'var(--radius-sm)',border:`1px solid ${C.amber}`,
+          background:'var(--amber-bg)',color:C.amber,fontFamily:F.h,fontSize:11.5,fontWeight:700,cursor:'pointer'}}>OK</button>
+      </div>
+    </div>,document.body);
+  return<div style={{position:'relative',width}}>
+    <button ref={btnRef} onClick={()=>setOpen(v=>!v)} style={{...inp,textAlign:'left',cursor:'pointer',
+      display:'flex',justifyContent:'space-between',alignItems:'center',gap:6,
+      borderColor:open?'var(--amber)':'var(--bdrHi)'}}>
+      <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:12.5,color:'var(--text)'}}>
+        {label}{selected.size?` (${selected.size})`:''}
+      </span>
+      <span style={{color:'var(--mute)',fontSize:10}}>{open?'▲':'▼'}</span>
+    </button>
+    {dropdown}
   </div>;
 }
 
 /* ═══════════════════ SVG DONUT CHART ═══════════════════ */
-function Donut({data,size=180,thickness=28,centerLabel,onSliceClick,activeLabels}){
+function Donut({data,size=180,thickness=28,centerLabel,onSliceClick,activeLabels,valueFmt}){
   const total=data.reduce((s,d)=>s+d.value,0)||1;
+  const vf=valueFmt||(v=>fmt(v,0));
   const R=size/2, r=R-thickness/2;
+  const wrapRef=useRef();
+  const[hover,setHover]=useState(null);
   let acc=0;
   const segs=data.map(d=>{
     const frac=d.value/total;
@@ -485,20 +682,40 @@ function Donut({data,size=180,thickness=28,centerLabel,onSliceClick,activeLabels
     acc+=frac;
     const x0=R+r*Math.cos(a0),y0=R+r*Math.sin(a0),x1=R+r*Math.cos(a1),y1=R+r*Math.sin(a1);
     const large=frac>0.5?1:0;
-    return{...d,frac,path:`M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`};
+    // A single SVG arc command can't describe a full 360° sweep (start/end angles coincide →
+    // zero-length path, ring vanishes) — happens whenever one bucket holds ~all of the filtered
+    // total. Draw those as two 180° half-arcs instead of one full-circle arc.
+    const path=frac>0.9995
+      ?`M ${R-r} ${R} A ${r} ${r} 0 1 1 ${R+r} ${R} A ${r} ${r} 0 1 1 ${R-r} ${R}`
+      :`M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`;
+    return{...d,frac,path};
   });
-  return<svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-    {segs.map((s,i)=>(
-      <path key={i} d={s.path} fill="none" stroke={s.color} strokeWidth={thickness} strokeLinecap="butt"
-        style={{cursor:onSliceClick?'pointer':'default',
-          opacity:(!activeLabels||!activeLabels.size||activeLabels.has(s.label))?1:0.35}}
-        onClick={onSliceClick?()=>onSliceClick(s.label):undefined}/>
-    ))}
-    <text x={R} y={R-6} textAnchor="middle" fontFamily={F.h} fontSize="10.5" fontWeight="800"
-      letterSpacing=".05em" fill="var(--mute)">{centerLabel}</text>
-    <text x={R} y={R+14} textAnchor="middle" fontFamily={F.m} fontSize="15" fontWeight="700"
-      fill="var(--text)">{fmt(total,0)}</text>
-  </svg>;
+  const onMove=(e,s)=>{
+    const box=wrapRef.current.getBoundingClientRect();
+    setHover({label:s.label,value:s.value,frac:s.frac,x:e.clientX-box.left,y:e.clientY-box.top});
+  };
+  return<div ref={wrapRef} style={{position:'relative',width:size,height:size}}>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {segs.map((s,i)=>(
+        <path key={i} d={s.path} fill="none" stroke={s.color} strokeWidth={thickness} strokeLinecap="butt"
+          style={{cursor:onSliceClick?'pointer':'default',transition:'opacity .15s',
+            opacity:(!activeLabels||!activeLabels.size||activeLabels.has(s.label))?1:0.35}}
+          onClick={onSliceClick?()=>onSliceClick(s.label):undefined}
+          onMouseMove={e=>onMove(e,s)} onMouseEnter={e=>onMove(e,s)} onMouseLeave={()=>setHover(null)}/>
+      ))}
+      <text x={R} y={R-6} textAnchor="middle" fontFamily={F.h} fontSize="10.5" fontWeight="800"
+        letterSpacing=".05em" fill="var(--mute)">{centerLabel}</text>
+      <text x={R} y={R+14} textAnchor="middle" fontFamily={F.m} fontSize="15" fontWeight="700"
+        fill="var(--text)">{vf(total)}</text>
+    </svg>
+    {hover&&<div style={{position:'absolute',left:hover.x,top:hover.y,transform:'translate(-50%,-115%)',
+      pointerEvents:'none',zIndex:20,padding:'6px 10px',borderRadius:'var(--radius-sm)',
+      background:'var(--glass-hi)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',
+      border:'1px solid var(--bdrHi)',boxShadow:'var(--shadow-md)',whiteSpace:'nowrap',
+      fontFamily:F.b,fontSize:11.5,color:'var(--text)'}}>
+      <b>{hover.label}</b>: <span style={{fontFamily:F.m}}>{vf(hover.value)}</span> ({(hover.frac*100).toFixed(1)}%)
+    </div>}
+  </div>;
 }
 
 /* ═══════════════════ SVG LINE CHART (multi-series with avg dashed lines) ═══════════════════ */
@@ -543,15 +760,156 @@ function StackedBar({label,onlineV,offlineV,onSegClick,activeSet}){
       <span style={{fontWeight:700,color:'var(--text)'}}>{label}</span>
       <span style={{fontFamily:F.m,color:'var(--mute)'}}>{fmt(onlineV+offlineV,0)} MT</span>
     </div>
-    <div style={{display:'flex',height:26,borderRadius:8,overflow:'hidden',border:'1px solid var(--bdr)'}}>
-      <div onClick={onSegClick?()=>onSegClick('ONLINE'):undefined}
-        style={{width:op+'%',background:C.sky,display:'flex',alignItems:'center',justifyContent:'center',
-        fontSize:10.5,fontFamily:F.m,color:'#fff',minWidth:op>4?undefined:0,cursor:onSegClick?'pointer':'default',
-        opacity:activeSet&&activeSet.size&&!onlineActive?0.35:1}}>{op>7?op.toFixed(0)+'%':''}</div>
-      <div onClick={onSegClick?()=>onSegClick('OFFLINE'):undefined}
-        style={{width:fp+'%',background:C.orange,display:'flex',alignItems:'center',justifyContent:'center',
-        fontSize:10.5,fontFamily:F.m,color:'#fff',minWidth:fp>4?undefined:0,cursor:onSegClick?'pointer':'default',
-        opacity:activeSet&&activeSet.size&&!offlineActive?0.35:1}}>{fp>7?fp.toFixed(0)+'%':''}</div>
+    <div style={{display:'flex',height:30,borderRadius:8,overflow:'hidden',border:'1px solid var(--bdr)'}}>
+      <div onClick={onSegClick?()=>onSegClick('ONLINE'):undefined} title={`Online: ${fmt(onlineV,0)} MT (${op.toFixed(1)}%)`}
+        style={{width:op+'%',background:C.sky,display:'flex',alignItems:'center',justifyContent:'center',gap:5,
+        overflow:'hidden',fontSize:10.5,fontFamily:F.m,color:'#fff',fontWeight:600,minWidth:op>4?undefined:0,
+        cursor:onSegClick?'pointer':'default',opacity:activeSet&&activeSet.size&&!onlineActive?0.35:1}}>
+        {op>16?`${op.toFixed(0)}% · ${fmt(onlineV,0)} MT`:op>7?op.toFixed(0)+'%':''}</div>
+      <div onClick={onSegClick?()=>onSegClick('OFFLINE'):undefined} title={`Offline: ${fmt(offlineV,0)} MT (${fp.toFixed(1)}%)`}
+        style={{width:fp+'%',background:C.orange,display:'flex',alignItems:'center',justifyContent:'center',gap:5,
+        overflow:'hidden',fontSize:10.5,fontFamily:F.m,color:'#fff',fontWeight:600,minWidth:fp>4?undefined:0,
+        cursor:onSegClick?'pointer':'default',opacity:activeSet&&activeSet.size&&!offlineActive?0.35:1}}>
+        {fp>16?`${fp.toFixed(0)}% · ${fmt(offlineV,0)} MT`:fp>7?fp.toFixed(0)+'%':''}</div>
+    </div>
+  </div>;
+}
+
+/* ═══════════════════ KPI FLOW-CARD DRILL-DOWN PANEL ═══════════════════ */
+/* Full Order Qty → BTP metric strip shown in every drill-down row — Order Qty_Live leftmost,
+   BTP rightmost (reverse of the KPI flow cards' BTP→Order Qty progression). */
+const DRILL_COLS=[
+  {key:'orderQtyLive',label:'Order Qty',get:r=>n2(parseFloat(r['Order Qty_Live']))},
+  {key:'billed',label:'Billed',get:r=>n2(parseFloat(r['Delivered']))},
+  {key:'balToBill',label:'Bal To Bill',get:r=>Math.max(0,n2(parseFloat(r['Bal To deliver'])))},
+  {key:'fgStock',label:'FG UR Stock',get:r=>n2(parseFloat(r['FG UR Stock']))},
+  {key:'wip',label:'WIP',get:r=>n2(r._WIP)},
+  {key:'plateStock',label:'Plate Stock',get:r=>n2(parseFloat(r['Plate Stock']))},
+  {key:'btr',label:'BTR',get:r=>Math.max(0,n2(r['_BTR']))},
+  {key:'slabStock',label:'Slab Stock',get:r=>n2(parseFloat(r['Slab Stock']))},
+  {key:'btc',label:'BTC',get:r=>Math.max(0,n2(parseFloat(r['BTC'])))},
+  {key:'issued',label:'Issued',get:r=>n2(parseFloat(r['ISSUED']))},
+  {key:'btp',label:'BTP',get:r=>Math.max(0,n2(parseFloat(r['BTP'])))},
+];
+const tdDrillNum={...td0,fontFamily:F.m,textAlign:'right',whiteSpace:'nowrap'};
+
+/* Sticky lives on the <thead> (see usage sites: <thead style={{position:'sticky',top:0,zIndex:2}}>),
+   not on each <th>. Background is the same near-opaque glassPopover() used by the dropdowns, so a
+   scrolled row never shows crisp unblurred text through the header even where backdrop-filter
+   itself doesn't render. */
+function GlassTh({children,onClick,title,align='left',color}){
+  return<th onClick={onClick} title={title} style={{...glassPopover(),padding:'9px 12px',fontSize:10.5,
+    fontFamily:F.b,letterSpacing:'.06em',textTransform:'uppercase',color:color||'var(--mute)',fontWeight:600,
+    whiteSpace:'nowrap',userSelect:'none',textAlign:align,boxShadow:'0 1px 0 var(--bdrHi)',
+    cursor:onClick?'pointer':'default'}}>{children}</th>;
+}
+
+function KpiDrillPanel({rows,metric,label,onClose}){
+  const[srch,setSrch]=useState('');
+  const[pg,setPg]=useState(0);
+  const[panelH,setPanelH]=useState('56vh');
+  const dragRef=useRef(null);
+  const PAGE=50;
+  const sorted=useMemo(()=>{
+    let src=rows;
+    if(srch){
+      const s=srch.trim().toLowerCase();
+      src=src.filter(r=>[r['Sold To Party Name'],r['Ext Grade'],r['Ship To Party City'],r['STO']].join(' ').toLowerCase().includes(s));
+    }
+    return[...src].sort((a,b)=>metric.getter(b)-metric.getter(a));
+  },[rows,srch,metric]);
+  const total=sorted.reduce((s,r)=>s+metric.getter(r),0);
+  const pages=Math.max(1,Math.ceil(sorted.length/PAGE));
+  const paged=sorted.slice(pg*PAGE,(pg+1)*PAGE);
+
+  useEffect(()=>{
+    const handle=dragRef.current;
+    if(!handle)return;
+    const onDown=e=>{
+      const startY=e.touches?e.touches[0].clientY:e.clientY;
+      const startH=handle.parentElement.getBoundingClientRect().height;
+      const onMove=e2=>{
+        const dy=(e2.touches?e2.touches[0].clientY:e2.clientY)-startY;
+        setPanelH(Math.max(240,Math.min(window.innerHeight*.92,startH-dy))+'px');
+      };
+      const onUp=()=>{
+        document.removeEventListener('mousemove',onMove);
+        document.removeEventListener('mouseup',onUp);
+        document.removeEventListener('touchmove',onMove);
+        document.removeEventListener('touchend',onUp);
+      };
+      document.addEventListener('mousemove',onMove,{passive:true});
+      document.addEventListener('mouseup',onUp);
+      document.addEventListener('touchmove',onMove,{passive:true});
+      document.addEventListener('touchend',onUp);
+      e.preventDefault();
+    };
+    handle.addEventListener('mousedown',onDown);
+    handle.addEventListener('touchstart',onDown,{passive:false});
+    return()=>{handle.removeEventListener('mousedown',onDown);handle.removeEventListener('touchstart',onDown);};
+  },[]);
+
+  return<div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:500,
+    background:'var(--glass-hi)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
+    borderTop:'1px solid var(--glass-border-hi)',boxShadow:'var(--shadow-xl)',
+    display:'flex',flexDirection:'column',height:panelH,minHeight:240,
+    borderRadius:'20px 20px 0 0',animation:'fadeUp .22s ease',userSelect:'none'}}>
+
+    {/* Drag handle */}
+    <div ref={dragRef} style={{flexShrink:0,height:18,display:'flex',alignItems:'center',
+      justifyContent:'center',cursor:'ns-resize',borderRadius:'20px 20px 0 0',touchAction:'none'}}>
+      <div style={{width:40,height:4,borderRadius:2,background:'var(--bdrHi)'}}/>
+    </div>
+
+    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 20px 14px',
+      borderBottom:'1px solid var(--bdr)',flexShrink:0,flexWrap:'wrap',gap:10}}>
+      <div>
+        <div style={{fontFamily:F.h,fontSize:14,fontWeight:800,letterSpacing:'.05em',textTransform:'uppercase',color:'var(--text)'}}>{label} — Drill-down</div>
+        <div style={{fontFamily:F.b,fontSize:11.5,color:'var(--mute)',marginTop:2}}>{fmt(sorted.length,0)} orders · Total {fmt(total)} MT</div>
+      </div>
+      <div style={{display:'flex',gap:8,alignItems:'center'}}>
+        <input placeholder="Search customer, grade, city…" value={srch} onChange={e=>{setSrch(e.target.value);setPg(0);}} style={{...inp,width:220}}/>
+        <button onClick={onClose} style={{padding:'7px 14px',borderRadius:'var(--radius-sm)',border:'1px solid var(--bdrHi)',
+          background:'var(--s2)',color:'var(--text)',fontFamily:F.h,fontSize:12,fontWeight:700,cursor:'pointer'}}>✕ Close</button>
+      </div>
+    </div>
+    <div style={{flex:1,overflow:'auto'}}>
+      <table style={{width:'100%',fontSize:12.5,borderCollapse:'collapse'}}>
+        <colgroup>
+          <col style={{width:220}}/><col style={{width:130}}/><col style={{width:130}}/>
+          {DRILL_COLS.map(c=>(<col key={c.key} style={{width:100}}/>))}
+        </colgroup>
+        <thead style={{position:'sticky',top:0,zIndex:2}}><tr>
+          <GlassTh>Sold To Party</GlassTh>
+          <GlassTh>Ext Grade</GlassTh>
+          <GlassTh>City</GlassTh>
+          {DRILL_COLS.map(c=>(
+            <GlassTh key={c.key} align="right" color={c.key===metric.key?C.amber:undefined}>{c.label}</GlassTh>
+          ))}
+        </tr></thead>
+        <tbody>
+          {paged.map((r,i)=>(
+            <tr key={i} style={{background:i%2?'transparent':'var(--s0)'}}>
+              <td style={{...td0,maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={r['Sold To Party Name']}>{r['Sold To Party Name']||'—'}</td>
+              <td style={{...td0,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{r['Ext Grade']||'—'}</td>
+              <td style={{...td0,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{r['Ship To Party City']||'—'}</td>
+              {DRILL_COLS.map(c=>(
+                <td key={c.key} style={{...tdDrillNum,fontWeight:c.key===metric.key?700:400,
+                  color:c.key===metric.key?C.amber:'var(--text)'}}>{fmt(c.get(r))}</td>
+              ))}
+            </tr>
+          ))}
+          {!paged.length&&<tr><td colSpan={3+DRILL_COLS.length} style={{...td0,textAlign:'center',color:'var(--mute)'}}>No matching orders</td></tr>}
+        </tbody>
+      </table>
+    </div>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 20px',
+      borderTop:'1px solid var(--bdr)',flexShrink:0,fontSize:12}}>
+      <span style={{color:'var(--mute)'}}>Page {pg+1} / {pages}</span>
+      <div style={{display:'flex',gap:6}}>
+        <button disabled={pg===0} onClick={()=>setPg(p=>Math.max(0,p-1))} style={{...inp,width:'auto',padding:'5px 12px',cursor:pg===0?'default':'pointer'}}>‹ Prev</button>
+        <button disabled={pg>=pages-1} onClick={()=>setPg(p=>Math.min(pages-1,p+1))} style={{...inp,width:'auto',padding:'5px 12px',cursor:pg>=pages-1?'default':'pointer'}}>Next ›</button>
+      </div>
     </div>
   </div>;
 }
@@ -591,6 +949,14 @@ function UploadScreen({onFile,onCSV,autoFetchEnabled=true}){
     setFetchErr(lastErr+'. Download the sheet as .xlsx and upload it above.');
     setFetchStatus('');setFetching(false);
   };
+
+  // Auto-run the live fetch once on mount — was wired up as a prop/ref but never actually invoked,
+  // so the "Fetch Live EBTP Data" button previously required a manual click every load.
+  useEffect(()=>{
+    if(!autoFetchEnabled||autoFetchStarted.current)return;
+    autoFetchStarted.current=true;
+    fetchOnline();
+  },[autoFetchEnabled]);
 
   return<div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
     minHeight:'100dvh',gap:28,padding:'32px 20px',background:'var(--bg)'}}>
@@ -635,16 +1001,18 @@ function UploadScreen({onFile,onCSV,autoFetchEnabled=true}){
     <div style={{width:'min(500px,92vw)',borderRadius:'var(--radius-lg)',
       border:`1px solid ${fetching?C.sky:'var(--bdrHi)'}`,background:'var(--s1)',boxShadow:'var(--shadow-sm)',overflow:'hidden'}}>
       <div style={{padding:'14px 20px',display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',rowGap:8}}>
-        <div style={{fontSize:22,flexShrink:0}}>☁️</div>
-        <div style={{flex:1,minWidth:0}}>
+        <div style={{width:28,height:28,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',
+          fontSize:20,lineHeight:1}}>☁️</div>
+        <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',gap:2,justifyContent:'center'}}>
           <div style={{fontFamily:F.h,fontSize:13,fontWeight:700,color:'var(--text)',
-            letterSpacing:'.06em',textTransform:'uppercase'}}>Fetch Live EBTP Data</div>
-          <div style={{fontFamily:F.b,fontSize:11,color:'var(--mute)',marginTop:2}}>
+            letterSpacing:'.06em',textTransform:'uppercase',lineHeight:1.3}}>Fetch Live EBTP Data</div>
+          <div style={{fontFamily:F.b,fontSize:11,color:'var(--mute)',lineHeight:1.3}}>
             {fetching?(fetchStatus||'…'):'Google Sheet · XHR → iframe → 4 proxies'}
           </div>
         </div>
         <button onClick={fetchOnline} disabled={fetching} style={{
           padding:'9px 20px',borderRadius:'var(--radius-sm)',cursor:fetching?'wait':'pointer',flexShrink:0,
+          display:'flex',alignItems:'center',justifyContent:'center',
           background:fetching?'var(--s3)':`${C._sky}20`,border:`1.5px solid ${fetching?C.sky:'var(--bdrHi)'}`,
           color:fetching?C.sky:'var(--dim)',fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.08em',
           textTransform:'uppercase'}}>
@@ -710,10 +1078,12 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
   const[rakeChip,setRakeChip]=useState(null);
   const[custPage,setCustPage]=useState(0);
   const[custSort,setCustSort]=useState({key:'Order Qty',dir:'desc'});
+  const[donutMetric,setDonutMetric]=useState('btr');
+  const[kpiDrill,setKpiDrill]=useState(null); // {key,label} — which KPI flow card's drill-down is open
   const[custSearch,setCustSearch]=useState('');
   const[segSel,setSegSel]=useState(new Set());
   const[gradeSegSel,setGradeSegSel]=useState(new Set());
-  const[dateSel,setDateSel]=useState('All');
+  const[dateSel,setDateSel]=useState(new Set()); // empty = All Dates
   const[lineSel,setLineSel]=useState(new Set());
   // Cross-filters set by clicking a chart/table/map element (donut slice, rake chip, customer row,
   // state bubble, bar segment). Keyed by field name → Set of selected values. Combined with the
@@ -749,25 +1119,36 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
 
   const modeOptions=useMemo(()=>[...new Set(rows.map(r=>r['_MODE_SIMPLE']).filter(Boolean))],[rows]);
   const rakeOptions=useMemo(()=>modeOptions.filter(m=>/^RAKE-/i.test(m)),[modeOptions]);
-  const relStaOptions=useMemo(()=>[...new Set(rows.map(r=>r['FI Rel Sta']).filter(Boolean))],[rows]);
-  const vagOptions=useMemo(()=>[...new Set(rows.map(r=>r['VAG Status']).filter(Boolean))],[rows]);
-  const intGradeOptions=useMemo(()=>[...new Set(rows.map(r=>r['Int Grade']).filter(Boolean))].sort(),[rows]);
-  const extGradeOptions=useMemo(()=>[...new Set(rows.map(r=>r['Ext Grade']).filter(Boolean))].sort(),[rows]);
-  const inspByOptions=useMemo(()=>[...new Set(rows.map(r=>r['Insp By']).filter(Boolean))],[rows]);
-  const segOptions=useMemo(()=>[...new Set(rows.map(r=>r['Region Name']).filter(Boolean))],[rows]);
-  const gradeSegOptions=useMemo(()=>[...new Set(rows.map(r=>r['MatGrp Desc']).filter(Boolean))],[rows]);
-  const lineOptions=useMemo(()=>[...new Set(rows.map(r=>String(r['Finishing Line']||'').trim().toUpperCase()).filter(Boolean))],[rows]);
-  const custOptions=useMemo(()=>[...new Set(rows.map(r=>r['Sold To Party Name']).filter(Boolean))].sort(),[rows]);
+  // Slicer option lists narrow to Released-only rows when that toggle is on, so every dropdown
+  // only ever offers values that actually exist within the current Released-Orders scope.
+  const baseRows=useMemo(()=>releasedOnly?rows.filter(isReleasedRow):rows,[rows,releasedOnly]);
+  // Normally lists every Remarks value present (all order states, not just released ones) — but
+  // baseRows itself narrows to released-only rows once the Released-Orders toggle is on, so in
+  // that state only the canonical released values (Captive/SBU Released/FI Released/FI Released(2))
+  // can appear here, automatically, without a second hard-coded filter.
+  const relStaOptions=useMemo(()=>{
+    const s=new Set();
+    baseRows.forEach(r=>{ if(r['Remarks'])s.add(String(r['Remarks']).trim()); });
+    return[...s];
+  },[baseRows]);
+  const vagOptions=useMemo(()=>[...new Set(baseRows.map(r=>r['VAG Status']).filter(Boolean))],[baseRows]);
+  const intGradeOptions=useMemo(()=>[...new Set(baseRows.map(r=>r['Int Grade']).filter(Boolean))].sort(),[baseRows]);
+  const extGradeOptions=useMemo(()=>[...new Set(baseRows.map(r=>r['Ext Grade']).filter(Boolean))].sort(),[baseRows]);
+  const inspByOptions=useMemo(()=>[...new Set(baseRows.map(r=>r['Insp By']).filter(Boolean))],[baseRows]);
+  const segOptions=useMemo(()=>[...new Set(baseRows.map(r=>r['Region Name']).filter(Boolean))],[baseRows]);
+  const gradeSegOptions=useMemo(()=>[...new Set(baseRows.map(r=>r['MatGrp Desc']).filter(Boolean))],[baseRows]);
+  const lineOptions=useMemo(()=>[...new Set(baseRows.map(r=>String(r['Finishing Line']||'').trim().toUpperCase()).filter(Boolean))],[baseRows]);
+  const custOptions=useMemo(()=>[...new Set(baseRows.map(r=>r['Sold To Party Name']).filter(Boolean))].sort(),[baseRows]);
   const dateOptions=useMemo(()=>{
     const s=new Set();
-    rows.forEach(r=>{ if(r._soDate) s.add(r._soDate.toISOString().slice(0,10)); });
+    baseRows.forEach(r=>{ if(r._soDate) s.add(r._soDate.toISOString().slice(0,10)); });
     return[...s].sort();
-  },[rows]);
+  },[baseRows]);
   const latestDate=dateOptions.length?dateOptions[dateOptions.length-1]:null;
 
   const filtered=useMemo(()=>{
     return rows.filter(r=>{
-      if(relStaSel.size&&!relStaSel.has(r['FI Rel Sta']))return false;
+      if(relStaSel.size&&!relStaSel.has(r['Remarks']))return false;
       if(vagSel.size&&!vagSel.has(r['VAG Status']))return false;
       if(htcSel.size&&!htcSel.has(r._HTC))return false;
       if(intGradeSel.size&&!intGradeSel.has(r['Int Grade']))return false;
@@ -777,7 +1158,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       if(rakeChip&&r['_MODE_SIMPLE']!==rakeChip)return false;
       if(segSel.size&&!segSel.has(r['Region Name']))return false;
       if(gradeSegSel.size&&!gradeSegSel.has(r['MatGrp Desc']))return false;
-      if(dateSel!=='All'&&(!r._soDate||r._soDate.toISOString().slice(0,10)!==dateSel))return false;
+      if(dateSel.size&&(!r._soDate||!dateSel.has(r._soDate.toISOString().slice(0,10))))return false;
       if(lineSel.size&&!lineSel.has(String(r['Finishing Line']||'').trim().toUpperCase()))return false;
       // ── cross-filters (chart-click filters), AND-combined across every active field ──
       for(const field in chartFilters){
@@ -789,73 +1170,91 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     });
   },[rows,relStaSel,vagSel,htcSel,intGradeSel,extGradeSel,inspBySel,releasedOnly,rakeChip,segSel,gradeSegSel,dateSel,lineSel,chartFilters]);
 
-  const anyFilterActive=relStaSel.size||vagSel.size||htcSel.size||intGradeSel.size||extGradeSel.size||inspBySel.size||releasedOnly||rakeChip||segSel.size||gradeSegSel.size||dateSel!=='All'||lineSel.size||activeChartFilterCount;
+  const anyFilterActive=relStaSel.size||vagSel.size||htcSel.size||intGradeSel.size||extGradeSel.size||inspBySel.size||releasedOnly||rakeChip||segSel.size||gradeSegSel.size||dateSel.size||lineSel.size||activeChartFilterCount;
   const clearAll=()=>{
     setRelStaSel(new Set());setVagSel(new Set());setHtcSel(new Set());setIntGradeSel(new Set());
     setExtGradeSel(new Set());setInspBySel(new Set());setReleasedOnly(false);setRakeChip(null);
-    setSegSel(new Set());setGradeSegSel(new Set());setDateSel('All');setLineSel(new Set());
+    setSegSel(new Set());setGradeSegSel(new Set());setDateSel(new Set());setLineSel(new Set());
     clearChartFilters();
   };
 
   /* ── KPIs ──
-     Re-assessed as a data analyst for an order→produce→stock→dispatch pipeline. The original 7
-     (Released, Delivered, Bal To Deliver, Produced, BTR, BTC, BTP) were mostly raw stage balances
-     with no ratio/context — BTR/BTC/BTP are three consecutive funnel stages shown as three
-     unrelated absolute numbers, redundant with the detailed Rake-Mode Summary / Supply-Condition
-     tables below that already break them out.
-     KEPT: Released Order Qty (order-book entry gate), Delivered (cumulative output), Bal To Deliver
-       (live backlog — the single most operationally urgent absolute number), BTR (the very next
-       bottleneck stage after backlog; BTC/BTP dropped as standalone cards, still visible in tables).
-     ADDED: Fulfillment % (Delivered/Order Qty) turns the raw Delivered balance into an actionable
-       ratio; Online Order Mix % surfaces channel health (rising offline mix usually signals
-       finishing-line capacity strain); Stock Cover Ratio ((Plate+Slab+FG stock) ÷ Bal To Deliver)
-       approximates how much of the backlog is already covered by stock on hand — a more useful
-       readiness signal than showing BTC/BTP as bare tonnages with no denominator. A true days-of-
-       cover or on-time-in-full metric would need a dispatch-rate time series / promise-date field
-       this single-snapshot file doesn't reliably carry, so the ratio form was used instead. */
+     Reworked into a reverse-flowing order-pipeline: instead of 7 unrelated stage balances, every
+     card is one stop on the order's journey from raw order book to cash-in-hand billing, each sized
+     and colored relative to Order Qty_Live (the total). Flow order (source of truth per business ask):
+     BTP → ISSUED → BTC → SLAB STOCK → BTR → WIP (Plate Stock − FG UR Stock) →
+     FG UR STOCK → BAL TO BILL (Bal To deliver) → BILLED (Delivered). "Reverse flowing" because each
+     stage's balance is a receding tail of the one before it — BTP (nothing done yet) is the largest,
+     BILLED (fully executed) the smallest — so the strip visually narrows left→right. */
   const kpi=useMemo(()=>{
-    let orderQtyAll=0,releasedQty=0,delivered=0,balToDeliver=0,produced=0,btr=0,btc=0,btp=0,
-        onlineQty=0,offlineQty=0,plateStock=0,slabStock=0,fgStock=0;
+    let orderQtyAll=0,orderQtyLive=0,releasedQty=0,delivered=0,balToDeliver=0,produced=0,btr=0,btc=0,btp=0,
+        issued=0,slabStock=0,onlineQty=0,offlineQty=0,plateStock=0,fgStock=0,wip=0;
     filtered.forEach(r=>{
       const oq=n2(parseFloat(r['Order Qty']));
       orderQtyAll+=oq;
+      orderQtyLive+=n2(parseFloat(r['Order Qty_Live']));
       if(isReleasedRow(r))releasedQty+=oq;
       delivered+=n2(parseFloat(r['Delivered']));
-      balToDeliver+=n2(parseFloat(r['Bal To deliver']));
+      balToDeliver+=Math.max(0,n2(parseFloat(r['Bal To deliver'])));
       produced+=n2(parseFloat(r['Produced']));
-      btr+=n2(r['_BTR']);
-      btc+=n2(parseFloat(r['BTC']));
-      btp+=n2(parseFloat(r['BTP']));
+      btr+=Math.max(0,n2(r['_BTR']));
+      btc+=Math.max(0,n2(parseFloat(r['BTC'])));
+      btp+=Math.max(0,n2(parseFloat(r['BTP'])));
+      issued+=n2(parseFloat(r['ISSUED']));
       plateStock+=n2(parseFloat(r['Plate Stock']));
       slabStock+=n2(parseFloat(r['Slab Stock']));
       fgStock+=n2(parseFloat(r['FG UR Stock']));
+      wip+=n2(r._WIP);
       const fl=String(r['Finishing Line']||'').trim().toUpperCase();
       if(fl==='ONLINE')onlineQty+=oq; else if(fl==='OFFLINE')offlineQty+=oq;
     });
-    return{orderQtyAll,releasedQty,delivered,balToDeliver,produced,btr,btc,btp,
-      onlineQty,offlineQty,plateStock,slabStock,fgStock};
+    return{orderQtyAll,orderQtyLive,releasedQty,delivered,balToDeliver,produced,btr,btc,btp,issued,
+      onlineQty,offlineQty,plateStock,slabStock,fgStock,wip};
   },[filtered]);
 
-  const fulfillmentPct=pct(kpi.delivered,kpi.orderQtyAll);
-  const onlineMixPct=pct(kpi.onlineQty,kpi.onlineQty+kpi.offlineQty);
-  const stockCoverRatio=kpi.balToDeliver?(kpi.plateStock+kpi.slabStock+kpi.fgStock)/kpi.balToDeliver:0;
-
-  const kpiCards=[
-    {label:'Released Order Qty',value:kpi.releasedQty,sub:'% of Total Order',pctVal:pct(kpi.releasedQty,kpi.orderQtyAll),color:C.sky},
-    {label:'Delivered',value:kpi.delivered,sub:'% of Total',pctVal:pct(kpi.delivered,kpi.orderQtyAll),color:C.rose},
-    {label:'Bal To Deliver',value:kpi.balToDeliver,sub:'% of Total',pctVal:pct(kpi.balToDeliver,kpi.orderQtyAll),color:C.rose},
-    {label:'Fulfillment %',value:fulfillmentPct,isRatio:true,unit:'%',sub:'Delivered ÷ Order Qty',pctVal:fulfillmentPct,color:C.green},
-    {label:'BTR',value:kpi.btr,sub:'% Bal to Deliver',pctVal:pct(kpi.btr,kpi.balToDeliver),color:C.rose},
-    {label:'Online Order Mix',value:onlineMixPct,isRatio:true,unit:'%',sub:'Online ÷ (Online+Offline) Qty',pctVal:onlineMixPct,color:C.sky},
-    {label:'Stock Cover Ratio',value:stockCoverRatio,isRatio:true,unit:'×',dp:2,sub:'(Plate+Slab+FG Stock) ÷ Bal To Deliver',pctVal:Math.min(100,stockCoverRatio*100),color:C.violet},
+  /* Each stage's % is taken against the NEXT stage up the fulfillment chain (not the grand total) —
+     per business ask, BTP/Issued read off BTC, BTC/Slab Stock read off BTR, BTR/WIP/FG read off
+     Bal To Bill, and Bal To Bill/Billed read off Order Qty_Live. Grouped + shown in reverse
+     (Billed → … → BTP) so the base of each group is visible right above its cards. */
+  const flowGroups=[
+    {baseKey:'orderQtyLive',baseLabel:'Order Qty_Live',baseValue:kpi.orderQtyLive,stages:[
+      {key:'billed',label:'Billed',value:kpi.delivered,color:C._green},
+      {key:'balToBill',label:'Bal To Bill',value:kpi.balToDeliver,color:C.violet},
+    ]},
+    {baseKey:'balToBill',baseLabel:'Bal To Bill',baseValue:kpi.balToDeliver,stages:[
+      {key:'fgStock',label:'FG UR Stock',value:kpi.fgStock,color:C.sky},
+      {key:'wip',label:'WIP',value:kpi.wip,color:C.teal},
+      {key:'btr',label:'BTR',value:kpi.btr,color:C.green},
+    ]},
+    {baseKey:'btr',baseLabel:'BTR',baseValue:kpi.btr,stages:[
+      {key:'slabStock',label:'Slab Stock',value:kpi.slabStock,color:C.jsplGold},
+      {key:'btc',label:'BTC',value:kpi.btc,color:C.amber},
+    ]},
+    {baseKey:'btc',baseLabel:'BTC',baseValue:kpi.btc,stages:[
+      {key:'issued',label:'Issued',value:kpi.issued,color:C.orange},
+      {key:'btp',label:'BTP',value:kpi.btp,color:C.rose},
+    ]},
   ];
 
   /* ── Supply condition donut ── */
+  const DONUT_METRICS=[
+    {key:'btp',label:'BTP',getter:r=>Math.max(0,n2(parseFloat(r['BTP'])))},
+    {key:'issued',label:'Issued',getter:r=>n2(parseFloat(r['ISSUED']))},
+    {key:'btc',label:'BTC',getter:r=>Math.max(0,n2(parseFloat(r['BTC'])))},
+    {key:'slabStock',label:'Slab Stock',getter:r=>n2(parseFloat(r['Slab Stock']))},
+    {key:'btr',label:'BTR',getter:r=>Math.max(0,n2(r['_BTR']))},
+    {key:'wip',label:'WIP',getter:r=>n2(r._WIP)},
+    {key:'fgStock',label:'FG UR Stock',getter:r=>n2(parseFloat(r['FG UR Stock']))},
+    {key:'balToBill',label:'Bal To Bill',getter:r=>Math.max(0,n2(parseFloat(r['Bal To deliver'])))},
+    {key:'billed',label:'Billed',getter:r=>n2(parseFloat(r['Delivered']))},
+    {key:'orderQtyLive',label:'Order Qty_Live',getter:r=>n2(parseFloat(r['Order Qty_Live']))},
+  ];
+  const donutMetricDef=DONUT_METRICS.find(m=>m.key===donutMetric)||DONUT_METRICS[4];
   const htcData=useMemo(()=>{
     const m={};HTC_ORDER.forEach(k=>m[k]=0);
-    filtered.forEach(r=>{ m[r._HTC]=(m[r._HTC]||0)+n2(parseFloat(r['Order Qty'])); });
+    filtered.forEach(r=>{ m[r._HTC]=(m[r._HTC]||0)+donutMetricDef.getter(r); });
     return HTC_ORDER.map(k=>({label:k,value:m[k]||0,color:HTC_COLORS[k]}));
-  },[filtered]);
+  },[filtered,donutMetricDef]);
   const htcTotal=htcData.reduce((s,d)=>s+d.value,0)||1;
 
   /* ── Customer table ── */
@@ -873,7 +1272,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       o.btr+=n2(r['_BTR']);
       o.slabStock+=n2(parseFloat(r['Slab Stock']));
       o.btc+=n2(parseFloat(r['BTC']));
-      o.issued+=n2(parseFloat(r['Casting plannned']));
+      o.issued+=n2(parseFloat(r['ISSUED']));
       o.btp+=n2(parseFloat(r['BTP']));
     });
     let arr=Object.values(m);
@@ -911,7 +1310,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       o.slabStock+=n2(parseFloat(r['Slab Stock']));
       o.noPlan+=n2(parseFloat(r['NO PLAN']));
       o.btc+=n2(parseFloat(r['BTC']));
-      o.issued+=n2(parseFloat(r['Casting plannned']));
+      o.issued+=n2(parseFloat(r['ISSUED']));
       o.btp+=n2(parseFloat(r['BTP']));
     });
     return Object.values(m).sort((a,b)=>b.orderQtyLive-a.orderQtyLive);
@@ -921,7 +1320,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     {key:'balToDeliver',label:'Bal To Deliver'},{key:'fg',label:'FG UR Stock'},
     {key:'wip',label:'WIP'},{key:'plateStock',label:'Plate Stock'},{key:'btr',label:'BTR'},
     {key:'slabStock',label:'Slab Stock'},{key:'noPlan',label:'NO PLAN'},{key:'btc',label:'BTC'},
-    {key:'issued',label:'Issued (Casting Planned)'},{key:'btp',label:'BTP'},
+    {key:'issued',label:'Issued'},{key:'btp',label:'BTP'},
   ];
   const modeMax=useMemo(()=>{
     const mx={};modeCols.forEach(c=>{mx[c.key]=Math.max(1,...modeRows.map(r=>r[c.key]));});
@@ -962,7 +1361,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       o.btr+=n2(r['_BTR']);
       o.btc+=n2(parseFloat(r['BTC']));
       o.btp+=n2(parseFloat(r['BTP']));
-      o.castingPlanned+=n2(parseFloat(r['Casting plannned']));
+      o.castingPlanned+=n2(parseFloat(r['ISSUED']));
     });
     return HTC_ORDER.map(k=>m[k]);
   },[filtered]);
@@ -978,7 +1377,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       b.orderQty[key]+=n2(parseFloat(r['Order Qty']));
       b.plateStock[key]+=n2(parseFloat(r['Plate Stock']));
       b.slabStock[key]+=n2(parseFloat(r['Slab Stock']));
-      b.issued[key]+=n2(parseFloat(r['Casting plannned']));
+      b.issued[key]+=n2(parseFloat(r['ISSUED']));
     });
     return b;
   },[filtered]);
@@ -1019,26 +1418,35 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
   },[stateAgg,C.isDark]);
 
   const sortHeader=(label,key)=>(
-    <th style={{...th0,cursor:'pointer'}} onClick={()=>setCustSort(s=>({key,dir:s.key===key&&s.dir==='desc'?'asc':'desc'}))}>
+    <GlassTh onClick={()=>setCustSort(s=>({key,dir:s.key===key&&s.dir==='desc'?'asc':'desc'}))}>
       {label}{custSort.key===key?(custSort.dir==='desc'?' ▼':' ▲'):''}
-    </th>
+    </GlassTh>
   );
+
+  const ebtpDateLabel=useMemo(()=>{
+    const m=String(fileName||'').match(/(\d{1,2})[.\-_](\d{1,2})[.\-_](\d{4})/);
+    if(m)return`${m[1].padStart(2,'0')}.${m[2].padStart(2,'0')}.${m[3]}`;
+    return latestDate||'—';
+  },[fileName,latestDate]);
 
   return<div style={{padding:'20px 24px 60px',maxWidth:1600,margin:'0 auto'}}>
     {/* ═══ HEADER ═══ */}
-    <div style={{...card,padding:'16px 22px',marginBottom:18,display:'flex',flexWrap:'wrap',
-      alignItems:'center',gap:14,justifyContent:'space-between'}}>
-      <div style={{display:'flex',alignItems:'center',gap:14}}>
-        <div style={{fontFamily:F.h,fontWeight:900,fontSize:16,letterSpacing:'.03em',color:C.jsplGold,whiteSpace:'nowrap'}}>Jindal Steel Angul</div>
-        <select value={dateSel} onChange={e=>setDateSel(e.target.value)}
-          style={{...inp,width:150}}>
-          <option value="All">All Dates</option>
-          {dateOptions.map(d=>(<option key={d} value={d}>{d}{d===latestDate?' (latest)':''}</option>))}
-        </select>
+    <div className="glass-card" style={{padding:'14px 22px',marginBottom:18,display:'flex',flexWrap:'wrap',
+      alignItems:'center',gap:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-sm)'}}>
+      <div style={{display:'flex',alignItems:'center',gap:12,flexShrink:0}}>
+        <div style={{fontFamily:F.h,fontWeight:900,fontSize:17,letterSpacing:'.04em',color:C.jsplGold,whiteSpace:'nowrap'}}>Jindal Steel Angul</div>
+        <div style={{width:1,height:26,background:'var(--bdr)'}}/>
+        <div style={{fontFamily:F.h,fontWeight:800,fontSize:14,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text)',whiteSpace:'nowrap'}}>Order Status Report</div>
       </div>
-      <h2 style={{fontFamily:F.h,fontSize:22,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase',
-        textAlign:'center',flex:'1 1 260px'}}>Order Status Report</h2>
-      <div style={{display:'flex',gap:8,alignItems:'center'}}>
+
+      <div style={{flex:1}}/>
+
+      <div style={{fontSize:11,fontFamily:F.m,color:'var(--mute)',textAlign:'right',lineHeight:1.6,flexShrink:0}}>
+        <div style={{color:'var(--dim)',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{fileName}</div>
+        <div>EBTP loaded: <b style={{color:'var(--text)'}}>{ebtpDateLabel}</b></div>
+      </div>
+
+      <div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}>
         <button onClick={()=>setReleasedOnly(v=>!v)} style={{padding:'8px 16px',borderRadius:'var(--radius-sm)',
           border:`1.5px solid ${releasedOnly?C.sky:'var(--bdrHi)'}`,background:releasedOnly?'var(--sky-bg)':'var(--s2)',
           color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:12,fontWeight:700,cursor:'pointer',textTransform:'uppercase'}}>
@@ -1051,16 +1459,18 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         </button>
       </div>
     </div>
-    <div style={{...card,padding:'12px 16px',marginBottom:18,display:'flex',gap:10,flexWrap:'wrap',position:'relative',zIndex:200}}>
+    <div className="glass-card" style={{padding:'12px 16px',marginBottom:18,display:'flex',gap:10,flexWrap:'wrap',
+      position:'relative',zIndex:200,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-sm)'}}>
       <MultiSelect label="Release Status" options={relStaOptions} selected={relStaSel} onChange={setRelStaSel}/>
       <MultiSelect label="VAG Status" options={vagOptions} selected={vagSel} onChange={setVagSel}/>
       <MultiSelect label="Supply Condition" options={HTC_ORDER} selected={htcSel} onChange={setHtcSel}/>
-      <MultiSelect label="Int Grade" options={intGradeOptions} selected={intGradeSel} onChange={setIntGradeSel} width={150}/>
-      <MultiSelect label="Ext Grade" options={extGradeOptions} selected={extGradeSel} onChange={setExtGradeSel} width={150}/>
+      <MultiSelect label="Int Grade" options={intGradeOptions} selected={intGradeSel} onChange={setIntGradeSel}/>
+      <MultiSelect label="Ext Grade" options={extGradeOptions} selected={extGradeSel} onChange={setExtGradeSel}/>
       <MultiSelect label="Insp By" options={inspByOptions} selected={inspBySel} onChange={setInspBySel}/>
-      <MultiSelect label="Line" options={lineOptions} selected={lineSel} onChange={setLineSel} width={130}/>
+      <MultiSelect label="Line" options={lineOptions} selected={lineSel} onChange={setLineSel}/>
+      <DateTreeSelect label="SO Date" rows={baseRows} selected={dateSel} onChange={setDateSel} latestDate={latestDate}/>
       <div style={{marginLeft:'auto',fontFamily:F.m,fontSize:11,color:'var(--mute)',alignSelf:'center'}}>
-        {fmt(filtered.length,0)} / {fmt(rows.length,0)} rows · {fileName}
+        {fmt(filtered.length,0)} / {fmt(rows.length,0)} rows
       </div>
     </div>
 
@@ -1083,59 +1493,101 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         fontWeight:700,cursor:'pointer',textTransform:'uppercase'}}>Clear cross-filters</button>
     </div>}
 
-    {/* ═══ PANEL 2: KPI CARDS ═══ */}
-    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))',gap:12,marginBottom:18,alignItems:'stretch'}}>
-      {kpiCards.map((k,i)=>(
-        <div key={k.label} className="card-lift" style={{...card,padding:'16px 18px',display:'flex',
-          flexDirection:'column',height:'100%'}}>
-          <div style={{fontFamily:F.h,fontSize:11,letterSpacing:'.08em',textTransform:'uppercase',color:'var(--mute)',marginBottom:8}}>{k.label}</div>
-          <div style={{fontFamily:F.m,fontSize:24,fontWeight:700,color:'var(--text)'}}>{k.isRatio?fmt(k.value,k.dp==null?1:k.dp)+k.unit:fmt(k.value)}</div>
-          <div style={{fontFamily:F.b,fontSize:11.5,color:k.color,marginTop:4,flex:1}}>{k.pctVal.toFixed(1)}% {k.sub}</div>
-          <div style={{height:5,borderRadius:3,background:'var(--s3)',marginTop:8,overflow:'hidden'}}>
-            <div style={{height:'100%',width:Math.min(100,k.pctVal)+'%',background:k.color,borderRadius:3}}/>
+    {/* ═══ PANEL 2: REVERSE-FLOW ORDER PIPELINE ═══ */}
+    <div style={{...card,padding:'18px 20px',marginBottom:18}}>
+      <div style={{fontFamily:F.h,fontSize:12,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase',color:'var(--mute)',marginBottom:14}}>
+        Order Fulfillment Flow <span style={{color:'var(--dim)',fontWeight:500,letterSpacing:0,textTransform:'none'}}>· Billed ← BTP</span>
+      </div>
+      <div style={{display:'flex',alignItems:'stretch',gap:8}}>
+        <div style={{display:'flex',flexDirection:'column',gap:8,flex:'0 0 auto',
+          background:'var(--s2)',border:'1px solid var(--bdr)',borderRadius:'var(--radius-md)',
+          padding:'10px 10px 8px'}}>
+          <div style={{alignSelf:'flex-start',padding:'3px 10px',borderRadius:'var(--radius-pill)',
+            background:'var(--s0)',border:'1px solid var(--bdrHi)',fontFamily:F.b,fontSize:10.5,
+            color:'var(--mute)',whiteSpace:'nowrap'}}>Grand Total</div>
+          <div className="card-lift" onClick={()=>setKpiDrill({key:'orderQtyLive',label:'Order Qty_Live'})}
+            style={{flex:1,minWidth:0,height:120,display:'flex',flexDirection:'column',cursor:'pointer',
+            gap:7,padding:'12px 14px',borderRadius:'var(--radius-md)',background:'var(--amber-bg)',
+            border:`1px solid var(--bdrHi)`,borderTop:`3px solid ${C.jsplGold}`}}>
+            <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--mute)',whiteSpace:'nowrap'}}>Order Qty_Live</div>
+            <div style={{fontFamily:F.m,fontSize:18,fontWeight:700,color:'var(--text)',whiteSpace:'nowrap'}}>{fmt(kpi.orderQtyLive)}</div>
+            <div style={{height:5,borderRadius:3,background:'var(--s3)',overflow:'hidden'}}>
+              <div style={{height:'100%',width:'100%',background:C.jsplGold,borderRadius:3}}/>
+            </div>
+            <div style={{fontFamily:F.b,fontSize:10,color:C.jsplGold,fontWeight:600,lineHeight:1.35,height:32,overflow:'hidden'}}>100% · base of all</div>
           </div>
         </div>
-      ))}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'center',
+          flex:'0 0 20px',color:'var(--mute)',fontSize:20,alignSelf:'center',marginTop:16}}>‹</div>
+        {flowGroups.map((g,gi)=>(
+          <React.Fragment key={g.baseKey}>
+            <div style={{display:'flex',flexDirection:'column',gap:8,flex:g.stages.length,minWidth:0,
+              background:'var(--s2)',border:'1px solid var(--bdr)',borderRadius:'var(--radius-md)',
+              padding:'10px 10px 8px'}}>
+              <div style={{alignSelf:'flex-start',padding:'3px 10px',borderRadius:'var(--radius-pill)',
+                background:'var(--s0)',border:'1px solid var(--bdrHi)',fontFamily:F.b,fontSize:10.5,
+                color:'var(--mute)',whiteSpace:'nowrap'}}>
+                % of <b style={{color:'var(--text)'}}>{g.baseLabel}</b> = <span style={{fontFamily:F.m,color:'var(--text)'}}>{fmt(g.baseValue)}</span>
+              </div>
+              <div style={{display:'flex',alignItems:'stretch',gap:8}}>
+                {g.stages.map((s,i)=>{
+                  const p=pct(s.value,g.baseValue);
+                  return<div key={s.key} className="card-lift" onClick={()=>setKpiDrill({key:s.key,label:s.label})}
+                    style={{flex:1,minWidth:0,height:120,display:'flex',flexDirection:'column',cursor:'pointer',
+                    gap:7,padding:'12px 13px',borderRadius:'var(--radius-md)',background:'var(--s1)',
+                    border:`1px solid var(--bdr)`,borderTop:`3px solid ${s.color}`}}>
+                    <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--mute)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.label}</div>
+                    <div style={{fontFamily:F.m,fontSize:18,fontWeight:700,color:'var(--text)',whiteSpace:'nowrap'}}>{fmt(s.value)}</div>
+                    <div style={{height:5,borderRadius:3,background:'var(--s3)',overflow:'hidden'}}>
+                      <div style={{height:'100%',width:Math.min(100,p)+'%',background:s.color,borderRadius:3}}/>
+                    </div>
+                    <div style={{fontFamily:F.b,fontSize:10,color:s.color,fontWeight:600,lineHeight:1.35,height:32,overflow:'hidden'}}>{p.toFixed(1)}% of {g.baseLabel}</div>
+                  </div>;
+                })}
+              </div>
+            </div>
+            {gi<flowGroups.length-1&&<div style={{display:'flex',alignItems:'center',justifyContent:'center',
+              flex:'0 0 20px',color:'var(--mute)',fontSize:20,alignSelf:'center',marginTop:16}}>‹</div>}
+          </React.Fragment>
+        ))}
+      </div>
     </div>
 
     {/* ═══ PANEL 3+4+5: Donut / Rake chips / Customer table ═══ */}
     <div style={{display:'grid',gridTemplateColumns:'320px 1fr',gap:16,marginBottom:18,alignItems:'stretch'}}>
-      <div style={{...card,padding:'20px',display:'flex',flexDirection:'column',gap:14,alignItems:'center',height:'100%'}}>
-        <div style={{fontFamily:F.h,fontSize:12,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase',color:'var(--mute)'}}>Supply Condition Split</div>
-        <Donut data={htcData} centerLabel="SUPPLY CONDITION"
+      <div className="glass-card" style={{padding:'14px 16px',display:'flex',flexDirection:'column',gap:8,
+        alignItems:'center',height:'100%',maxHeight:360,boxShadow:'var(--shadow-sm)',borderRadius:'var(--radius-lg)'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',gap:8}}>
+          <div style={{fontFamily:F.h,fontSize:11.5,fontWeight:800,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text)'}}>Supply Condition Split</div>
+          <select value={donutMetric} onChange={e=>setDonutMetric(e.target.value)} style={{
+            background:'var(--s2)',border:'1px solid var(--bdrHi)',borderRadius:'var(--radius-sm)',
+            color:'var(--text)',fontFamily:F.b,fontSize:11.5,fontWeight:600,padding:'4px 8px',
+            outline:'none',cursor:'pointer'}}>
+            {DONUT_METRICS.map(m=>(<option key={m.key} value={m.key}>{m.label}</option>))}
+          </select>
+        </div>
+        <Donut data={htcData} size={188} thickness={26} centerLabel={donutMetricDef.label.toUpperCase()}
           onSliceClick={l=>toggleChartFilter('supplyBucket',l)} activeLabels={chartFilters.supplyBucket}/>
-        <div style={{display:'flex',flexDirection:'column',gap:6,width:'100%'}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 10px',width:'100%'}}>
           {htcData.map(d=>{
             const active=chartFilters.supplyBucket&&chartFilters.supplyBucket.has(d.label);
             return<div key={d.label} onClick={()=>toggleChartFilter('supplyBucket',d.label)}
-              style={{display:'flex',alignItems:'center',gap:8,fontSize:12.5,cursor:'pointer',
-                padding:'2px 4px',borderRadius:6,background:active?'var(--violet-bg)':'transparent'}}>
-              <span style={{width:10,height:10,borderRadius:'50%',background:d.color,flexShrink:0}}/>
-              <span style={{flex:1,color:active?C.violet:'var(--text)',fontWeight:active?700:400}}>{d.label}</span>
-              <span style={{fontFamily:F.m,color:'var(--dim)'}}>{pct(d.value,htcTotal).toFixed(1)}%</span>
+              title={`${d.label}: ${fmt(d.value)} (${pct(d.value,htcTotal).toFixed(1)}%)`}
+              style={{display:'flex',alignItems:'center',gap:6,fontSize:11.5,cursor:'pointer',
+                padding:'3px 5px',borderRadius:6,background:active?'var(--violet-bg)':'transparent',minWidth:0}}>
+              <span style={{width:9,height:9,borderRadius:'50%',background:d.color,flexShrink:0}}/>
+              <span style={{flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
+                color:active?C.violet:'var(--text)',fontWeight:active?700:500}}>{d.label}</span>
+              <span style={{fontFamily:F.m,color:'var(--dim)',flexShrink:0}}>{pct(d.value,htcTotal).toFixed(1)}%</span>
             </div>;
           })}
         </div>
-        <div style={{width:'100%',borderTop:'1px solid var(--bdr)',paddingTop:12}}>
-          <div style={{fontFamily:F.h,fontSize:11,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',
-            color:'var(--mute)',marginBottom:8}}>RAKE Quick Filters</div>
-          <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
-            {rakeOptions.map(m=>(
-              <button key={m} onClick={()=>setRakeChip(v=>v===m?null:m)} style={{
-                padding:'5px 11px',borderRadius:'var(--radius-pill)',fontSize:11.5,fontFamily:F.b,fontWeight:600,
-                cursor:'pointer',border:`1.5px solid ${rakeChip===m?C.violet:'var(--bdrHi)'}`,
-                background:rakeChip===m?'var(--violet-bg)':'var(--s2)',color:rakeChip===m?C.violet:'var(--dim)'}}>{m}</button>
-            ))}
-          </div>
-          {rakeChip&&<button onClick={()=>setRakeChip(null)} style={{marginTop:8,width:'100%',padding:'6px 10px',
-            borderRadius:'var(--radius-sm)',border:'1.5px solid #7a1a1a',background:'#3a0f0f',color:'#f0a0a0',
-            fontFamily:F.h,fontSize:11,fontWeight:700,cursor:'pointer'}}>✕ Clear RAKE Filter</button>}
-        </div>
       </div>
 
-      <div style={{...card,padding:'18px',overflow:'hidden',display:'flex',flexDirection:'column',height:'100%'}}>
+      <div className="glass-card" style={{padding:'16px 18px',overflow:'hidden',display:'flex',flexDirection:'column',
+        height:'100%',maxHeight:360,boxShadow:'var(--shadow-sm)',borderRadius:'var(--radius-lg)'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:8}}>
-          <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase'}}>Customer-wise Order Status</div>
+          <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--text)'}}>Customer-wise Order Status</div>
           <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
             <MultiSelect label="Segment" options={segOptions} selected={segSel} onChange={setSegSel} width={140}/>
             <MultiSelect label="Grade Segment" options={gradeSegOptions} selected={gradeSegSel} onChange={setGradeSegSel} width={150}/>
@@ -1143,15 +1595,15 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
               style={{...inp,width:170}}/>
           </div>
         </div>
-        <div style={{overflowX:'auto'}}>
+        <div style={{overflow:'auto',flex:1,minHeight:0}}>
           <table style={{width:'100%',fontSize:12.5}}>
-            <thead><tr>
-              <th style={th0}>Sold To Party</th>
+            <thead style={{position:'sticky',top:0,zIndex:2}}><tr>
+              <GlassTh>Sold To Party</GlassTh>
               {sortHeader('Ord Qty','Order Qty')}
-              <th style={{...th0,cursor:'pointer'}} title="Bal to Book ≈ Bal To Deliver" onClick={()=>setCustSort(s=>({key:'BTB',dir:s.key==='BTB'&&s.dir==='desc'?'asc':'desc'}))}>BTB ⓘ</th>
+              <GlassTh title="Bal to Book ≈ Bal To Deliver" onClick={()=>setCustSort(s=>({key:'BTB',dir:s.key==='BTB'&&s.dir==='desc'?'asc':'desc'}))}>BTB ⓘ</GlassTh>
               {sortHeader('FG','FG')}{sortHeader('WIP','WIP')}{sortHeader('Plate Stock','Plate Stock')}
               {sortHeader('BTR','BTR')}{sortHeader('Slab Stock','Slab Stock')}{sortHeader('BTC','BTC')}
-              <th style={{...th0,cursor:'pointer'}} title="Sourced from Casting Planned (col 218), not the raw ISSUED column" onClick={()=>setCustSort(s=>({key:'Issued',dir:s.key==='Issued'&&s.dir==='desc'?'asc':'desc'}))}>Issued ⓘ</th>
+              <GlassTh title="Sourced from the ISSUED column (col 43)" onClick={()=>setCustSort(s=>({key:'Issued',dir:s.key==='Issued'&&s.dir==='desc'?'asc':'desc'}))}>Issued ⓘ</GlassTh>
               {sortHeader('BTP','BTP')}
             </tr></thead>
             <tbody>
@@ -1193,7 +1645,23 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
 
     {/* ═══ PANEL 6: Rake-mode summary ═══ */}
     <div style={{...card,padding:'18px',marginBottom:18,overflow:'hidden'}}>
-      <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',marginBottom:12}}>Rake-Mode Summary</div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12,marginBottom:12}}>
+        <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase'}}>Rake-Mode Summary</div>
+        <div style={{display:'flex',flexDirection:'column',gap:6,alignItems:'flex-end'}}>
+          <div style={{fontFamily:F.h,fontSize:10.5,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--mute)'}}>RAKE Quick Filters</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:6,justifyContent:'flex-end'}}>
+            {rakeOptions.map(m=>(
+              <button key={m} onClick={()=>setRakeChip(v=>v===m?null:m)} style={{
+                padding:'5px 11px',borderRadius:'var(--radius-pill)',fontSize:11.5,fontFamily:F.b,fontWeight:600,
+                cursor:'pointer',border:`1.5px solid ${rakeChip===m?C.violet:'var(--bdrHi)'}`,
+                background:rakeChip===m?'var(--violet-bg)':'var(--s2)',color:rakeChip===m?C.violet:'var(--dim)'}}>{m}</button>
+            ))}
+            {rakeChip&&<button onClick={()=>setRakeChip(null)} style={{padding:'5px 11px',
+              borderRadius:'var(--radius-pill)',border:'1.5px solid #7a1a1a',background:'#3a0f0f',color:'#f0a0a0',
+              fontFamily:F.h,fontSize:11,fontWeight:700,cursor:'pointer'}}>✕ Clear</button>}
+          </div>
+        </div>
+      </div>
       <div style={{overflowX:'auto'}}>
         <table style={{width:'100%',fontSize:12}}>
           <thead><tr>
@@ -1235,7 +1703,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
           <table style={{width:'100%',fontSize:12.5}}>
             <thead><tr>
               <th style={th0}>Supply Cond.</th><th style={th0}>Order Qty</th><th style={th0}>BTR</th>
-              <th style={th0}>BTC</th><th style={th0}>BTP</th><th style={th0}>Casting Planned</th>
+              <th style={th0}>BTC</th><th style={th0}>BTP</th><th style={th0}>Issued</th>
             </tr></thead>
             <tbody>
               {htcMetrics.map(h=>(
@@ -1262,15 +1730,15 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     </div>
 
     {/* ═══ PANEL 9: Online/Offline stacked bars ═══ */}
-    <div style={{...card,padding:'18px',marginBottom:18}}>
-      <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',marginBottom:14}}>
+    <div className="glass-card" style={{padding:'20px 22px',marginBottom:18,boxShadow:'var(--shadow-sm)',borderRadius:'var(--radius-lg)'}}>
+      <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',marginBottom:14,color:'var(--text)'}}>
         Online vs Offline — Finishing Line Split
       </div>
-      <div style={{display:'flex',gap:16,marginBottom:10,fontSize:11.5}}>
-        <span style={{display:'flex',alignItems:'center',gap:6}}><span style={{width:10,height:10,background:C.sky,borderRadius:3,display:'inline-block'}}/>ONLINE</span>
-        <span style={{display:'flex',alignItems:'center',gap:6}}><span style={{width:10,height:10,background:C.orange,borderRadius:3,display:'inline-block'}}/>OFFLINE</span>
+      <div style={{display:'flex',gap:16,marginBottom:12,fontSize:11.5,fontFamily:F.b,fontWeight:600}}>
+        <span style={{display:'flex',alignItems:'center',gap:6,color:'var(--text)'}}><span style={{width:10,height:10,background:C.sky,borderRadius:3,display:'inline-block'}}/>ONLINE</span>
+        <span style={{display:'flex',alignItems:'center',gap:6,color:'var(--text)'}}><span style={{width:10,height:10,background:C.orange,borderRadius:3,display:'inline-block'}}/>OFFLINE</span>
       </div>
-      <div style={{display:'flex',flexDirection:'column',gap:14}}>
+      <div style={{display:'flex',flexDirection:'column',gap:16}}>
         <StackedBar label="Total Order (Order Qty)" onlineV={onlineOffline.orderQty.online} offlineV={onlineOffline.orderQty.offline}
           onSegClick={v=>toggleChartFilter('finishingLine',v)} activeSet={chartFilters.finishingLine}/>
         <StackedBar label="Plate Stock" onlineV={onlineOffline.plateStock.online} offlineV={onlineOffline.plateStock.offline}
@@ -1282,6 +1750,9 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       </div>
     </div>
 
+    {kpiDrill&&<KpiDrillPanel rows={filtered}
+      metric={DONUT_METRICS.find(m=>m.key===kpiDrill.key)||DONUT_METRICS[0]}
+      label={kpiDrill.label} onClose={()=>setKpiDrill(null)}/>}
   </div>;
 }
 
@@ -1334,7 +1805,6 @@ function App(){
       {err&&<div style={{position:'fixed',bottom:20,left:'50%',transform:'translateX(-50%)',
         background:'var(--rose-bg)',border:`1px solid ${C.rose}`,color:C.rose,padding:'10px 18px',
         borderRadius:'var(--radius-md)',fontFamily:F.b,fontSize:13,zIndex:500}}>{err}</div>}
-      <ThemeToggle pref={pref} setPref={setPref}/>
     </>;
   }
   if(loading||!rows){
@@ -1343,10 +1813,7 @@ function App(){
       <div style={{color:'var(--dim)',fontFamily:F.b}}>Parsing workbook…</div>
     </div>;
   }
-  return<>
-    <Dashboard rawRows={rows} rawArr={null} headers={headers} fileName={fileName}/>
-    <ThemeToggle pref={pref} setPref={setPref}/>
-  </>;
+  return<Dashboard rawRows={rows} rawArr={null} headers={headers} fileName={fileName}/>;
 }
 
 function ThemeToggle({pref,setPref}){
