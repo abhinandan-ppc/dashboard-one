@@ -4742,9 +4742,28 @@ function App(){
     return()=>window.removeEventListener('message',onMsg);
   },[parseCSV]);
 
-  const floatingHeaderSlot=
-    <div id="hubFrameHeaderSlot" style={{position:'fixed',top:14,right:16,zIndex:60,
-      display:'flex',gap:8,alignItems:'center'}}/>;
+  // A real sticky header bar (matching the loaded dashboard's own top bar)
+  // shown during boot/loading/error states, instead of a floating overlay
+  // pill — so the hub's Home/Refresh/Theme/User controls always live in an
+  // actual header bar and the transition into the loaded dashboard (which
+  // has its own matching bar further down this file) is seamless, with no
+  // DOM-node handoff for the hub's MutationObserver to race.
+  const placeholderHeaderBar=
+    <div style={{height:62,display:'flex',alignItems:'center',gap:12,padding:'0 22px',
+      background:'var(--glass)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
+      borderBottom:'1px solid var(--glass-border)',flexShrink:0,
+      position:'sticky',top:0,zIndex:50,boxShadow:'var(--shadow-md)'}}>
+      <JSPLBadge/>
+      <div style={{width:1,height:30,background:'var(--bdr)',flexShrink:0}}/>
+      <div style={{fontFamily:F.h,fontWeight:800,color:'var(--text)',letterSpacing:'.06em',
+        textTransform:'uppercase',flexShrink:0,lineHeight:1.2}}>
+        <span style={{fontSize:17}}>Angul PlateMill</span>
+        <span style={{fontSize:12,color:'var(--dim)',marginLeft:8,fontWeight:400,
+          fontFamily:F.b,letterSpacing:'.02em'}}>Rake Planner</span>
+      </div>
+      <div style={{flex:1}}/>
+      <div id="hubFrameHeaderSlot" style={{display:'flex',alignItems:'center',gap:8,flexShrink:0,minHeight:34}}/>
+    </div>;
 
   const fetchStatusOverlay=fetchPhase&&
     <div className="fetch-status">
@@ -4763,64 +4782,70 @@ function App(){
     </div>;
 
   if(cacheBooting&&!rows.length&&!loading)return(
-    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',
-      flexDirection:'column',gap:20,background:'var(--bg)'}}>
-      {floatingHeaderSlot}
-      <div style={{width:52,height:52,border:'3px solid var(--bdr)',
-        borderTopColor:C.sky,borderRadius:'50%',animation:'spin .7s linear infinite'}}/>
-      <div style={{fontFamily:F.b,color:'var(--dim)',fontSize:15,letterSpacing:'.02em'}}>
-        Restoring cached planner…
+    <div style={{display:'flex',flexDirection:'column',height:'100dvh',background:'var(--bg)'}}>
+      {placeholderHeaderBar}
+      <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',
+        flexDirection:'column',gap:20}}>
+        <div style={{width:52,height:52,border:'3px solid var(--bdr)',
+          borderTopColor:C.sky,borderRadius:'50%',animation:'spin .7s linear infinite'}}/>
+        <div style={{fontFamily:F.b,color:'var(--dim)',fontSize:15,letterSpacing:'.02em'}}>
+          Restoring cached planner…
+        </div>
       </div>
     </div>
   );
   if(!rows.length&&!loading)return(
-    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-      minHeight:'100dvh',gap:20,padding:'32px 20px',background:'var(--bg)'}}>
-      {floatingHeaderSlot}
-      {onlineFetchErr?<>
-        <div style={{fontFamily:F.h,fontSize:14,fontWeight:700,color:C.rose,
-          letterSpacing:'.04em',textTransform:'uppercase',textAlign:'center',maxWidth:460}}>
-          ⚠ Live EBTP fetch failed
-        </div>
-        <div style={{fontFamily:F.b,fontSize:13,color:'var(--dim)',textAlign:'center',
-          maxWidth:460,lineHeight:1.7}}>{onlineFetchErr}</div>
-        <div style={{display:'flex',gap:10}}>
-          <button onClick={()=>{autoOnlineFetchStarted.current=false;setOnlineFetchErr('');}}
-            style={{padding:'9px 20px',borderRadius:'var(--radius-sm)',cursor:'pointer',
-              background:`${C._sky}20`,border:`1.5px solid var(--bdrHi)`,color:'var(--dim)',
-              fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase'}}>
-            ⟳ Retry
-          </button>
-          <button onClick={()=>document.getElementById('rakePlannerFallbackFile').click()}
-            style={{padding:'9px 20px',borderRadius:'var(--radius-sm)',cursor:'pointer',
-              background:'var(--s2)',border:`1.5px solid var(--bdrHi)`,color:'var(--dim)',
-              fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase'}}>
-            Upload File
-          </button>
-        </div>
-        <input id="rakePlannerFallbackFile" type="file" accept=".xlsx,.xls" style={{display:'none'}}
-          onChange={e=>e.target.files[0]&&parseFile(e.target.files[0])}/>
-      </>:null}
+    <div style={{display:'flex',flexDirection:'column',height:'100dvh',background:'var(--bg)'}}>
+      {placeholderHeaderBar}
+      <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+        gap:20,padding:'32px 20px',overflow:'auto'}}>
+        {onlineFetchErr?<>
+          <div style={{fontFamily:F.h,fontSize:14,fontWeight:700,color:C.rose,
+            letterSpacing:'.04em',textTransform:'uppercase',textAlign:'center',maxWidth:460}}>
+            ⚠ Live EBTP fetch failed
+          </div>
+          <div style={{fontFamily:F.b,fontSize:13,color:'var(--dim)',textAlign:'center',
+            maxWidth:460,lineHeight:1.7}}>{onlineFetchErr}</div>
+          <div style={{display:'flex',gap:10}}>
+            <button onClick={()=>{autoOnlineFetchStarted.current=false;setOnlineFetchErr('');}}
+              style={{padding:'9px 20px',borderRadius:'var(--radius-sm)',cursor:'pointer',
+                background:`${C._sky}20`,border:`1.5px solid var(--bdrHi)`,color:'var(--dim)',
+                fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase'}}>
+              ⟳ Retry
+            </button>
+            <button onClick={()=>document.getElementById('rakePlannerFallbackFile').click()}
+              style={{padding:'9px 20px',borderRadius:'var(--radius-sm)',cursor:'pointer',
+                background:'var(--s2)',border:`1.5px solid var(--bdrHi)`,color:'var(--dim)',
+                fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase'}}>
+              Upload File
+            </button>
+          </div>
+          <input id="rakePlannerFallbackFile" type="file" accept=".xlsx,.xls" style={{display:'none'}}
+            onChange={e=>e.target.files[0]&&parseFile(e.target.files[0])}/>
+        </>:null}
+      </div>
     </div>
   );
   if(loading)return(
-    <div style={{height:'100dvh',overflow:'auto',background:'var(--bg)',padding:'28px clamp(16px,4vw,40px)'}}>
-      {floatingHeaderSlot}
+    <div style={{display:'flex',flexDirection:'column',height:'100dvh',background:'var(--bg)'}}>
+      {placeholderHeaderBar}
       {fetchStatusOverlay}
-      <div style={{fontFamily:F.b,color:'var(--dim)',fontSize:13,letterSpacing:'.02em',marginBottom:16}}>
-        Parsing & mapping orders…
-      </div>
-      <div className="skeleton skeleton-title"/>
-      <div className="skeleton-row">
-        <div className="skeleton skeleton-circle"/>
-        <div style={{flex:1}}>
-          <div className="skeleton skeleton-text medium"/>
-          <div className="skeleton skeleton-text short"/>
+      <div style={{flex:1,overflow:'auto',padding:'28px clamp(16px,4vw,40px)'}}>
+        <div style={{fontFamily:F.b,color:'var(--dim)',fontSize:13,letterSpacing:'.02em',marginBottom:16}}>
+          Parsing & mapping orders…
         </div>
+        <div className="skeleton skeleton-title"/>
+        <div className="skeleton-row">
+          <div className="skeleton skeleton-circle"/>
+          <div style={{flex:1}}>
+            <div className="skeleton skeleton-text medium"/>
+            <div className="skeleton skeleton-text short"/>
+          </div>
+        </div>
+        <div className="skeleton skeleton-block" style={{marginBottom:12}}/>
+        <div className="skeleton skeleton-block" style={{marginBottom:12}}/>
+        <div className="skeleton skeleton-card"/>
       </div>
-      <div className="skeleton skeleton-block" style={{marginBottom:12}}/>
-      <div className="skeleton skeleton-block" style={{marginBottom:12}}/>
-      <div className="skeleton skeleton-card"/>
     </div>
   );
 

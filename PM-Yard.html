@@ -857,6 +857,12 @@ aside.collapsed .left-toggle {
   </div>
   </div>
   </div>
+  <!-- Mount point for the hub's injected Home/Refresh/Theme/User controls.
+       Scrollable + width-capped rather than wrapping to a new row, since a
+       taller header would shift the .panel{top:...} offsets used elsewhere
+       for the 3D canvas overlay. -->
+  <div id="hubFrameHeaderSlot" style="display:flex;gap:8px;align-items:center;flex-shrink:1;
+    overflow-x:auto;max-width:200px;scrollbar-width:thin;"></div>
 </header>
 
 <!-- Camera Toolbar -->

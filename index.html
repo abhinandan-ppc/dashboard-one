@@ -933,7 +933,14 @@ function removeInjectedFrameControls(){
 
 function findFrameHeaderMount(doc){
   if(!doc || !doc.body) return null;
-  var directMatch = doc.querySelector('#hubFrameHeaderSlot, header, .top-bar, .top-wrapper, .header, .app-header, nav, .h-actions, .hdr-r, .header-actions, .actions');
+  // An explicit #hubFrameHeaderSlot always wins, even when it's nested inside
+  // a <header> or .top-bar that would otherwise match first in document
+  // order (querySelector on a comma-list returns the first DOM match, and an
+  // ancestor <header> always precedes its own nested slot — silently
+  // defeating the page's explicit placement in favor of a generic fallback).
+  var explicitSlot = doc.getElementById('hubFrameHeaderSlot');
+  if(explicitSlot) return explicitSlot;
+  var directMatch = doc.querySelector('header, .top-bar, .top-wrapper, .header, .app-header, nav, .h-actions, .hdr-r, .header-actions, .actions');
   if(directMatch) return directMatch;
   try{
     var nodes = Array.from(doc.body.querySelectorAll('div, section, nav'));
