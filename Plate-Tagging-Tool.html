@@ -90,11 +90,13 @@ button,input,select{font:inherit}
 button{cursor:pointer;border:none;outline:none;background:none}
 .wrap{max-width:min(1720px,calc(100vw - 40px));margin:0 auto;padding:28px 20px 72px}
 header{
-  display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 20px;
+  display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px 20px;
+  min-height:64px;box-sizing:border-box;flex-wrap:wrap;
   background:var(--glass);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
   border:var(--glass-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);
   position:sticky;top:0;z-index:50;
 }
+@media(max-width:640px){header{padding:10px 14px;gap:10px}}
 .header-brand{display:flex;align-items:center;gap:16px;min-width:0;flex-wrap:wrap}
 .jspl-badge{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .jspl-logo{height:28px;width:auto;object-fit:contain;object-position:left center;flex-shrink:0;filter:drop-shadow(0 6px 14px rgba(2,6,23,.16))}

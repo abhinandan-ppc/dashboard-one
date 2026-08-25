@@ -27,6 +27,7 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 
 .top-wrapper { flex-shrink: 0; padding: 12px 24px; position: sticky; top: 0; z-index: 50; }
 .top-bar {
+  min-height: 64px; box-sizing: border-box;
   background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   padding: 12px 20px; border-radius: var(--radius-lg); border: var(--glass-border); box-shadow: var(--shadow-md);
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px;
