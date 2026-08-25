@@ -409,6 +409,7 @@ input { font: inherit; color: inherit; }
         <div class="user-panel" id="userPanel">
           <div class="user-panel-name" id="userName"></div>
           <div class="user-panel-domain" id="userDomain"></div>
+          <div class="user-panel-domain" id="userPanelEbtpDate" style="display:none"></div>
           <a class="user-panel-logout" id="adminLink" href="/admin.html" style="display:none;margin-top:6px">Admin: Users &amp; Access</a>
           <a class="user-panel-logout" href="/api/auth/logout">Log out</a>
         </div>
@@ -1648,9 +1649,24 @@ setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
       userPanel.style.top = (rect.bottom + 10) + 'px';
       userPanel.style.right = Math.max(16, (document.documentElement.clientWidth - rect.right)) + 'px';
     };
+    var updateUserPanelEbtpDate = function(){
+      var el = document.getElementById('userPanelEbtpDate');
+      if(!el || typeof readEbtpCache !== 'function') return;
+      readEbtpCache().then(function(cached){
+        if(cached && cached.fetchedAt){
+          el.textContent = 'EBTP loaded: ' + new Date(cached.fetchedAt).toLocaleString();
+          el.style.display = '';
+        } else {
+          el.style.display = 'none';
+        }
+      }).catch(function(){ el.style.display = 'none'; });
+    };
     userMenuBtn.addEventListener('click', function(e){
       e.stopPropagation();
-      if(!userPanel.classList.contains('open')) positionUserPanel();
+      if(!userPanel.classList.contains('open')){
+        positionUserPanel();
+        updateUserPanelEbtpDate();
+      }
       userPanel.classList.toggle('open');
     });
     window.addEventListener('resize', function(){
