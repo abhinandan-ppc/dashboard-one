@@ -576,6 +576,7 @@ async function fetchOnlineEBTP(){
   $('#preview').innerHTML=previewSkeleton();
   const enc=encodeURIComponent(EBTP_SHEET_URL);
   const strats=[
+    {n:'api-proxy',      f:()=>tryFetch('/api/ebtp-proxy',false)},
     {n:'XHR',            f:()=>tryXHR(EBTP_SHEET_URL)},
     {n:'Iframe',         f:()=>tryIframe(EBTP_SHEET_URL)},
     {n:'corsproxy.io',   f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
@@ -585,7 +586,7 @@ async function fetchOnlineEBTP(){
     {n:'thingproxy',     f:()=>tryFetch('https://thingproxy.freeboard.io/fetch/'+EBTP_SHEET_URL,false)},
     {n:'jsonp.afeld.me', f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
   ];
-  let lastErr='All methods blocked';
+  const errs=[];
   for(const{n,f}of strats){
     setOnlineFetching(true,'Trying '+n+'…');
     try{
@@ -596,10 +597,10 @@ async function fetchOnlineEBTP(){
       handleCSV(text,'Online EBTP ('+n+')');
       setOnlineFetching(false);
       return;
-    }catch(e){lastErr=n+': '+(e.name==='AbortError'?'timeout':e.message);}
+    }catch(e){errs.push(n+': '+(e.name==='AbortError'?'timeout':e.message));}
   }
   $('#preview').innerHTML='';
-  $('#status').textContent='Online EBTP refresh failed: '+lastErr+'. Upload the .xlsx manually instead.';
+  $('#status').textContent='Online EBTP refresh failed — '+errs.join(' · ')+'. Upload the .xlsx manually instead.';
   setOnlineFetching(false);
 }
 

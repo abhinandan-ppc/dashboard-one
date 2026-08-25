@@ -4612,6 +4612,7 @@ function App(){
       setLoading(true);setOnlineFetchErr('');
       const enc=encodeURIComponent(EBTP_SHEET_URL);
       const strats=[
+        {n:'api-proxy',      f:()=>tryFetch('/api/ebtp-proxy',false)},
         {n:'XHR',            f:()=>tryXHR(EBTP_SHEET_URL)},
         {n:'Iframe',         f:()=>tryIframe(EBTP_SHEET_URL)},
         {n:'corsproxy.io',   f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
@@ -4621,7 +4622,7 @@ function App(){
         {n:'thingproxy',     f:()=>tryFetch('https://thingproxy.freeboard.io/fetch/'+EBTP_SHEET_URL,false)},
         {n:'jsonp.afeld.me', f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
       ];
-      let lastErr='All methods blocked';
+      const errs=[];
       for(const{n,f}of strats){
         try{
           const text=await f();
@@ -4629,10 +4630,10 @@ function App(){
           if(!text.split('\n')[0].includes(','))throw new Error('not CSV');
           parseCSV(text);
           return;
-        }catch(e){lastErr=n+': '+(e.name==='AbortError'?'timeout':e.message);}
+        }catch(e){errs.push(n+': '+(e.name==='AbortError'?'timeout':e.message));}
       }
       setLoading(false);
-      setOnlineFetchErr(lastErr+'. Upload the EBTP .xlsx file instead.');
+      setOnlineFetchErr('All '+strats.length+' fetch methods failed — '+errs.join(' · ')+'. Upload the EBTP .xlsx file instead.');
     })();
   },[cacheBooting,rows.length,loading,parseCSV]);
 
