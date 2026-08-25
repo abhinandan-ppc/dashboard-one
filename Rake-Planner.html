@@ -4749,23 +4749,27 @@ function App(){
   // has its own matching bar further down this file) is seamless, with no
   // DOM-node handoff for the hub's MutationObserver to race.
   const placeholderHeaderBar=
-    <div style={{padding:mob?'8px 10px 0':'10px 16px 0',flexShrink:0}}>
-    <div style={{minHeight:64,display:'flex',alignItems:'center',gap:12,padding:`0 ${mob?14:22}px`,
-      background:'var(--glass)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
-      border:'1px solid var(--glass-border)',borderRadius:'var(--radius-lg)',boxSizing:'border-box',
-      position:'sticky',top:mob?8:10,zIndex:50,boxShadow:'var(--shadow-md)'}}>
-      <JSPLBadge/>
-      <div style={{width:1,height:30,background:'var(--bdr)',flexShrink:0}}/>
-      <div style={{fontFamily:F.h,fontWeight:800,color:'var(--text)',letterSpacing:'.06em',
-        textTransform:'uppercase',flexShrink:0,lineHeight:1.2}}>
-        <span style={{fontSize:17}}>Angul PlateMill</span>
-        <span style={{fontSize:12,color:'var(--dim)',marginLeft:8,fontWeight:400,
-          fontFamily:F.b,letterSpacing:'.02em'}}>Rake Planner</span>
+    <>
+    <div style={{position:'fixed',top:0,left:0,right:0,padding:mob?'8px 10px 0':'10px 16px 0',zIndex:50}}>
+      <div style={{minHeight:64,display:'flex',alignItems:'center',gap:12,padding:`0 ${mob?14:22}px`,
+        background:'var(--glass)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
+        border:'1px solid var(--glass-border)',borderRadius:'var(--radius-lg)',boxSizing:'border-box',
+        boxShadow:'var(--shadow-md)'}}>
+        <JSPLBadge/>
+        <div style={{width:1,height:30,background:'var(--bdr)',flexShrink:0}}/>
+        <div style={{fontFamily:F.h,fontWeight:800,color:'var(--text)',letterSpacing:'.06em',
+          textTransform:'uppercase',flexShrink:0,lineHeight:1.2}}>
+          <span style={{fontSize:17}}>Angul PlateMill</span>
+          <span style={{fontSize:12,color:'var(--dim)',marginLeft:8,fontWeight:400,
+            fontFamily:F.b,letterSpacing:'.02em'}}>Rake Planner</span>
+        </div>
+        <div style={{flex:1}}/>
+        <div id="hubFrameHeaderSlot" style={{display:'flex',alignItems:'center',gap:8,flexShrink:0,minHeight:34}}/>
       </div>
-      <div style={{flex:1}}/>
-      <div id="hubFrameHeaderSlot" style={{display:'flex',alignItems:'center',gap:8,flexShrink:0,minHeight:34}}/>
     </div>
-    </div>;
+    {/* Spacer reserving the fixed header's visual footprint in the flex flow below */}
+    <div style={{height:mob?72:74,flexShrink:0}}/>
+    </>;
 
   const fetchStatusOverlay=fetchPhase&&
     <div className="fetch-status">
@@ -4857,14 +4861,15 @@ function App(){
     fontFamily:F.b,fontSize:15,display:'flex',flexDirection:'column',
     paddingBottom:drill?(mob?0:'46vh'):0,transition:'padding .22s'}}>
 
-    {/* ── Top Bar (glassmorphic M3, floating — matches every other page's
-         header instead of the old edge-to-edge fixed bar) ── */}
-    <div style={{padding:mob?'8px 10px 0':'10px 16px 0',flexShrink:0}}>
+    {/* ── Top Bar (glassmorphic M3, floating — fixed positioning (not
+         sticky) guarantees it stays pinned regardless of this page's
+         nested independently-scrolling panes) ── */}
+    <div style={{position:'fixed',top:0,left:0,right:0,padding:mob?'8px 10px 0':'10px 16px 0',zIndex:50}}>
     <div style={{minHeight:64,display:'flex',alignItems:'center',gap:12,padding:`0 ${mob?14:22}px`,
       background:'var(--glass)',
       backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
       border:'1px solid var(--glass-border)',borderRadius:'var(--radius-lg)',boxSizing:'border-box',
-      position:'sticky',top:mob?8:10,zIndex:50,boxShadow:'var(--shadow-md)',transition:'box-shadow .2s'}}>
+      boxShadow:'var(--shadow-md)',transition:'box-shadow .2s'}}>
 
       {/* Hamburger on narrow */}
       {isNarrow&&<button onClick={()=>setSideOpen(o=>!o)} style={{
@@ -4959,6 +4964,8 @@ function App(){
           onChange={e=>e.target.files[0]&&parseFile(e.target.files[0])}/>
       </div>
     </div>
+    {/* Spacer reserving the fixed header's visual footprint in the flex flow below */}
+    <div style={{height:mob?72:74,flexShrink:0}}/>
 
     {/* ── Mobile Search + Theme ── */}
     {mob&&<div style={{padding:'10px 14px',background:'var(--s0)',

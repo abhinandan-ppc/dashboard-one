@@ -77,14 +77,14 @@ canvas { display: block; touch-action: none; outline: none; }
 
 /* ─── HEADER ─── */
 header {
-  position: absolute; top: 0; left: 0; right: 0; min-height: 50px;
-  border-bottom: var(--glass-border); box-shadow: var(--shadow-md);
+  position: absolute; top: 8px; left: 8px; right: 8px; min-height: 50px;
+  border: var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
   display: flex; align-items: center; justify-content: space-between; z-index: 100;
   padding: 4px 20px; pointer-events: auto; gap: 16px;
   background: transparent; /* Moved glass effect to ::before so dropdowns can blur the canvas */
 }
 header::before {
-  content: ''; position: absolute; inset: 0; z-index: -1;
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
 }
@@ -231,7 +231,7 @@ input[type=range] { flex: 1; accent-color: var(--md-sys-color-secondary); height
 .panel {
   background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   border-radius: var(--radius-m); border: var(--glass-border); box-shadow: var(--glass-shadow);
-  display: flex; flex-direction: column; position: absolute; top: 62px; z-index: 15;
+  display: flex; flex-direction: column; position: absolute; top: 70px; z-index: 15;
   transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
   overflow: visible !important;
 }
@@ -525,7 +525,7 @@ aside.collapsed .left-toggle {
   .kpi-pill { scroll-snap-align: start; flex-shrink: 0; }
   
   /* Push panels and their toggle buttons down to clear the 2-row header */
-  .panel { top: 135px; }
+  .panel { top: 143px; }
   .side-toggle-btn { top: 24px; }
 }
 
@@ -563,7 +563,7 @@ aside.collapsed .left-toggle {
   .kpi-group-title { font-size: 8px; }
 
   /* Accurately push side panels down further to clear the new 3-row header */
-  .panel { top: 175px !important; } 
+  .panel { top: 183px !important; }
   .side-toggle-btn { top: 12px; } 
   
   aside { width: calc(100% - 20px); left: 10px; bottom: 70px; max-height: calc(100vh - 250px); z-index: 50;}
@@ -576,8 +576,8 @@ aside.collapsed .left-toggle {
   .inspector.collapsed .right-toggle { left: -44px; width: 44px; height: 56px; border-radius: 12px 0 0 12px; font-size: 18px; display: flex !important; z-index: 999; pointer-events: auto; }
 
   .dropdown-panel { 
-    position: fixed !important; 
-    top: 170px !important; 
+    position: fixed !important;
+    top: 178px !important;
     left: 10px !important; 
     right: 10px !important; 
     width: calc(100vw - 20px) !important; /* Forces strict screen fit */
