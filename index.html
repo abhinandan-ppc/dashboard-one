@@ -395,7 +395,7 @@ input { font: inherit; color: inherit; }
       <button class="add-btn home-btn" id="homeBtn" type="button" title="Home" aria-label="Home">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path><path d="M9 21v-6h6v6"></path></svg>
       </button>
-      <button class="reset-link" id="resetBtn" type="button" title="Restore default pages" aria-label="Restore default pages">
+      <button class="reset-link" id="resetBtn" type="button" title="Refresh EBTP" aria-label="Refresh EBTP">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg>
       </button>
       <button class="theme-toggle" id="themeToggle" type="button" title="Toggle Dark Mode" aria-label="Toggle theme"></button>
@@ -1548,15 +1548,9 @@ itemForm.addEventListener("submit", function(e){
   saveItems(items); render(); closeModal();
 });
 
-/* ─── Reset to defaults ─── */
+/* ─── Refresh EBTP ─── */
 document.getElementById("resetBtn").addEventListener("click", function(){
-  if(confirm("Restore the default page list? Any custom pages you added will be removed.")){
-    items = DEFAULTS.slice();
-    saveItems(items); render();
-    // notify iframe (if any) that a reset happened
-    try{ if(pageFrame && pageFrame.contentWindow) pageFrame.contentWindow.postMessage({type:'reset'}, '*'); }catch(e){}
-    try{ fetchAndCacheEBTP(true); }catch(e){}
-  }
+  try{ fetchAndCacheEBTP(true); }catch(e){}
 });
 
 /* ─── Theme ─── */
@@ -1841,7 +1835,10 @@ function fetchStatusHide(){
 
 var ebtpFetchInFlight = null;
 function fetchAndCacheEBTP(force){
-  if(ebtpFetchInFlight) return ebtpFetchInFlight;
+  // A forced call (explicit user refresh) must never be silently swallowed by a
+  // stale/near-instant non-forced call that's already in flight or just resolved —
+  // only reuse the in-flight promise when this call isn't itself demanding a refetch.
+  if(ebtpFetchInFlight && !force) return ebtpFetchInFlight;
   clearLegacyEbtpCaches(); // reclaim quota from pre-centralization per-page localStorage caches
   var enc = encodeURIComponent(EBTP_SHEET_URL);
   var strats = [

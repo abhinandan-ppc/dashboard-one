@@ -1401,8 +1401,9 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     </div>
     </div>
     {/* Spacer reserving the fixed header's visual footprint in the flex flow below
-        (20px outer top padding + 64px minHeight, both border-box — see the header above) */}
-    <div style={{height:84}}/>
+        (20px outer top padding + 64px minHeight, both border-box, + 16px breathing room
+        before the next bar — see the header above) */}
+    <div style={{height:100}}/>
     <div className="glass-card" style={{padding:'12px 16px',marginBottom:18,display:'flex',gap:10,flexWrap:'wrap',
       position:'relative',zIndex:40,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-sm)'}}>
       <MultiSelect label="Release Status" options={relStaOptions} selected={relStaSel} onChange={setRelStaSel}/>
