@@ -1641,6 +1641,9 @@ function App(){
   const[err,setErr]=useState('');
   const autoOnlineFetchStarted=useRef(false);
   const fileRef=useRef();
+  const[fetchPhase,setFetchPhase]=useState(''); // ''|'fetching'|'parsing'
+  const[fetchLog,setFetchLog]=useState([]);
+  const logStep=useCallback(msg=>setFetchLog(l=>[...l.slice(-19),msg]),[]);
 
   const parseFile=useCallback(f=>{
     setLoading(true);setErr('');
@@ -1662,15 +1665,17 @@ function App(){
   },[]);
 
   const parseCSV=useCallback(text=>{
-    setLoading(true);setErr('');
+    setLoading(true);setErr('');setFetchPhase('parsing');logStep('Parsing '+text.length.toLocaleString()+' bytes of CSV…');
     try{
       const lines=text.split(/\r?\n/).filter(l=>l.length);
       const hdrs=splitCSV(lines[0]).map(h=>h.trim());
       const dataRows=lines.slice(1).map(l=>splitCSV(l));
       const processed=buildRows(hdrs,dataRows);
       setHeaders(hdrs);setRows(processed);setFileName('Live EBTP (Google Sheets)');setLoading(false);
-    }catch(ex){ setErr('Failed to parse CSV: '+ex.message); setLoading(false); }
-  },[]);
+      logStep('✓ Parsed '+processed.length.toLocaleString()+' rows');
+    }catch(ex){ setErr('Failed to parse CSV: '+ex.message); setLoading(false); logStep('✗ Parse failed: '+ex.message); }
+    setFetchPhase('');
+  },[logStep]);
 
   useEffect(()=>{
     var _s=document.getElementById('load-status');if(_s)_s.style.display='none';
@@ -1680,7 +1685,7 @@ function App(){
     if(autoOnlineFetchStarted.current||rows||loading)return;
     autoOnlineFetchStarted.current=true;
     (async()=>{
-      setLoading(true);setErr('');
+      setLoading(true);setErr('');setFetchPhase('fetching');setFetchLog([]);
       const enc=encodeURIComponent(EBTP_SHEET_URL);
       const strats=[
         {n:'api-proxy',      f:()=>tryApiProxy()},
@@ -1695,18 +1700,39 @@ function App(){
       ];
       const errs=[];
       for(const{n,f}of strats){
+        logStep('→ Trying '+n+'…');
         try{
           const text=await f();
           if(!text||text.length<50)throw new Error('empty');
           if(!text.split('\n')[0].includes(','))throw new Error('not CSV');
+          logStep('✓ '+n+' succeeded');
           parseCSV(text);
           return;
-        }catch(e){errs.push(n+': '+(e.name==='AbortError'?'timeout':e.message));}
+        }catch(e){
+          const msg=n+': '+(e.name==='AbortError'?'timeout':e.message);
+          errs.push(msg);logStep('✗ '+msg);
+        }
       }
-      setLoading(false);
+      setLoading(false);setFetchPhase('');
       setErr('All '+strats.length+' fetch methods failed — '+errs.join(' · ')+'. Upload the EBTP .xlsx file instead.');
     })();
-  },[rows,loading,parseCSV]);
+  },[rows,loading,parseCSV,logStep]);
+
+  const fetchStatusOverlay=fetchPhase&&
+    <div className="fetch-status">
+      <div className="fetch-status-head">
+        <div className="fetch-status-spinner"/>
+        <div className="fetch-status-label">
+          {fetchPhase==='fetching'?'Fetching EBTP data…':'Parsing data…'}
+        </div>
+      </div>
+      <div className="loader-track">
+        <div className={`loader-bar${fetchPhase==='parsing'?' phase-parsing':''}`}/>
+      </div>
+      <div className="fetch-status-log">
+        {fetchLog.slice(-6).map((l,i)=><div key={i}>{l}</div>)}
+      </div>
+    </div>;
 
   const floatingHeaderSlot=
     <div id="hubFrameHeaderSlot" style={{position:'fixed',top:14,right:16,zIndex:60,
@@ -1745,6 +1771,7 @@ function App(){
   if(loading||!rows){
     return<div style={{padding:'24px 20px',maxWidth:1400,margin:'0 auto'}}>
       {floatingHeaderSlot}
+      {fetchStatusOverlay}
       <div className="skeleton skeleton-title" style={{maxWidth:280}}/>
       <div className="skeleton-row" style={{gap:16,marginBottom:20}}>
         {[0,1,2,3,4].map(i=><div key={i} className="skeleton skeleton-card" style={{flex:1}}/>)}

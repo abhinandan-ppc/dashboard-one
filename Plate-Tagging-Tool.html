@@ -314,9 +314,21 @@ details b{color:var(--tx)}
         <div class="fname">Drop or click to choose .xlsx</div>
         <div class="status">Not loaded</div>
       </label>
+      <button type="button" id="ebtpOnlineBtn" style="margin-top:8px;width:100%;padding:8px 12px;
+        border-radius:var(--radius-sm);border:1px solid var(--bdrHi);background:var(--input-bg);
+        color:var(--tx);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+        cursor:pointer">⟳ Fetch Online EBTP</button>
       <input type="file" id="file-ebtp" accept=".xlsx,.xls">
       <div id="ebtpmap" class="pormap"></div>
     </div>
+  </div>
+  <div class="fetch-status" id="fetchStatus" style="display:none;position:static;transform:none;width:100%;margin-top:16px;box-sizing:border-box">
+    <div class="fetch-status-head">
+      <div class="fetch-status-spinner"></div>
+      <div class="fetch-status-label" id="fetchStatusLabel">Fetching EBTP data…</div>
+    </div>
+    <div class="loader-track"><div class="loader-bar" id="fetchStatusBar"></div></div>
+    <div class="fetch-status-log" id="fetchStatusLog"></div>
   </div>
 
   <div class="step">Step 2 · Run</div>
@@ -668,6 +680,137 @@ function detectMap(cols, fields){
     if(best&&bestScore>0){map[f.k]=best;used.add(best);}
   }
   return map;
+}
+
+/* ---------- online EBTP fetch (same published Google Sheet as Rake-Planner) ---------- */
+const EBTP_SHEET_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vQEKS6uq6epbkSmpv548hSG63WVUiFwKLXctpeM3G8NMeXJ_ZJaTCuFj95n4gTRuhchM_T4q_kp5_au/pub?gid=0&single=true&output=csv";
+function tryXHR(url,attempts=5,timeoutMs=4000){
+  const attempt=n=>new Promise((res,rej)=>{
+    const x=new XMLHttpRequest();
+    x.open('GET',url,true);
+    x.timeout=timeoutMs;
+    x.onload=()=>x.status>=200&&x.status<300?res(x.responseText):rej(new Error('XHR '+x.status+' (try '+n+'/'+attempts+')'));
+    x.onerror=()=>rej(new Error('XHR network error (try '+n+'/'+attempts+')'));
+    x.ontimeout=()=>rej(new Error('XHR timeout (try '+n+'/'+attempts+')'));
+    x.send();
+  }).catch(e=>{
+    if(n>=attempts)throw e;
+    return new Promise(r=>setTimeout(r,250)).then(()=>attempt(n+1));
+  });
+  return attempt(1);
+}
+function tryIframe(url){
+  return new Promise((res,rej)=>{
+    const iframe=document.createElement('iframe');
+    iframe.style.cssText='position:fixed;width:1px;height:1px;top:-999px;left:-999px;opacity:0;';
+    iframe.sandbox='allow-same-origin';
+    const t=setTimeout(()=>{try{document.body.removeChild(iframe);}catch(e){}rej(new Error('iframe timeout'));},12000);
+    iframe.onload=()=>{
+      clearTimeout(t);
+      try{
+        const txt=iframe.contentDocument?.body?.innerText||iframe.contentDocument?.documentElement?.innerText||'';
+        document.body.removeChild(iframe);
+        txt.includes(',')&&txt.length>50?res(txt):rej(new Error('iframe: no csv'));
+      }catch(e){try{document.body.removeChild(iframe);}catch(_){}rej(e);}
+    };
+    iframe.onerror=()=>{clearTimeout(t);try{document.body.removeChild(iframe);}catch(e){}rej(new Error('iframe error'));};
+    document.body.appendChild(iframe);
+    iframe.src=url;
+  });
+}
+function tryFetch(proxyUrl,json){
+  return fetch(proxyUrl,{cache:'no-store',mode:'cors',credentials:'omit'})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);
+      return json?r.json().then(d=>{const t=d?.contents||d?.data||'';if(!t)throw new Error('empty');return t;}):r.text();
+    });
+}
+function tryApiProxy(){
+  return fetch('/api/ebtp-proxy',{cache:'no-store',credentials:'same-origin'})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
+}
+function fetchStatusShow(phase){
+  document.getElementById('fetchStatus').style.display='flex';
+  document.getElementById('fetchStatusLabel').textContent=phase==='parsing'?'Parsing data…':'Fetching EBTP data…';
+  document.getElementById('fetchStatusBar').classList.toggle('phase-parsing',phase==='parsing');
+}
+function fetchStatusLog(msg){
+  const log=document.getElementById('fetchStatusLog');
+  const line=document.createElement('div');
+  line.textContent=msg;
+  log.appendChild(line);
+  while(log.children.length>6) log.removeChild(log.firstChild);
+  log.scrollTop=log.scrollHeight;
+}
+function fetchStatusHide(){
+  document.getElementById('fetchStatus').style.display='none';
+  document.getElementById('fetchStatusLog').innerHTML='';
+}
+async function fetchOnlineEbtp(){
+  const slot=document.getElementById('slot-ebtp');
+  const btn=document.getElementById('ebtpOnlineBtn');
+  btn.disabled=true;
+  fetchStatusShow('fetching');
+  const enc=encodeURIComponent(EBTP_SHEET_URL);
+  const strats=[
+    {n:'api-proxy',      f:()=>tryApiProxy()},
+    {n:'XHR',            f:()=>tryXHR(EBTP_SHEET_URL)},
+    {n:'Iframe',         f:()=>tryIframe(EBTP_SHEET_URL)},
+    {n:'corsproxy.io',   f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
+    {n:'codetabs',       f:()=>tryFetch('https://api.codetabs.com/v1/proxy?quest='+enc,false)},
+    {n:'allorigins/raw', f:()=>tryFetch('https://api.allorigins.win/raw?url='+enc,false)},
+    {n:'allorigins/get', f:()=>tryFetch('https://api.allorigins.win/get?url='+enc,true)},
+    {n:'thingproxy',     f:()=>tryFetch('https://thingproxy.freeboard.io/fetch/'+EBTP_SHEET_URL,false)},
+    {n:'jsonp.afeld.me', f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
+  ];
+  const errs=[];
+  let text=null;
+  for(const{n,f}of strats){
+    fetchStatusLog('→ Trying '+n+'…');
+    try{
+      text=await f();
+      if(!text||text.length<50)throw new Error('empty');
+      if(!text.split('\n')[0].includes(','))throw new Error('not CSV');
+      fetchStatusLog('✓ '+n+' succeeded');
+      break;
+    }catch(e){
+      const msg=n+': '+(e.name==='AbortError'?'timeout':e.message);
+      errs.push(msg);fetchStatusLog('✗ '+msg);text=null;
+    }
+  }
+  if(!text){
+    fetchStatusHide();
+    slot.classList.remove('ok');slot.classList.add('err');
+    slot.querySelector('.status').textContent='Online fetch failed — '+errs.join(' · ')+'. Upload the .xlsx instead.';
+    btn.disabled=false;
+    return;
+  }
+  fetchStatusShow('parsing');
+  fetchStatusLog('Parsing '+text.length.toLocaleString()+' bytes of CSV…');
+  await new Promise(r=>setTimeout(r,30)); // let the UI paint the phase switch before the sync parse work
+  try{
+    const wb=XLSX.read(text,{type:'string'});
+    const parsed=bestEbtpParse(wb);
+    if(!parsed||!parsed.rows.length){
+      slot.classList.remove('ok');slot.classList.add('err');
+      slot.querySelector('.status').textContent='Order-book columns not found in the online sheet.';
+      FILES.ebtp=null;
+      fetchStatusLog('✗ Order-book columns not found');
+    }else{
+      FILES.ebtp=parsed.rows;EBTP_COLS=parsed.cols;EBTPMAP=parsed.map;EBTP_RAW=parsed.raw;
+      slot.classList.remove('err');slot.classList.add('ok');
+      slot.querySelector('.fname').textContent='Live EBTP (Google Sheet)';
+      slot.querySelector('.status').textContent=`Sheet "${parsed.sheet}" · ${parsed.rows.length.toLocaleString()} rows · ${parsed.reqScore}/${parsed.reqN} required fields auto-mapped`;
+      renderEbtpMapping(parsed);
+      fetchStatusLog('✓ Parsed '+parsed.rows.length.toLocaleString()+' rows');
+    }
+    updateRun();
+  }catch(err){
+    slot.classList.add('err');
+    slot.querySelector('.status').textContent='Could not parse online data: '+err.message;
+    fetchStatusLog('✗ Parse failed: '+err.message);
+  }
+  fetchStatusHide();
+  btn.disabled=false;
 }
 
 /* ---------- file handling ---------- */
@@ -1495,6 +1638,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     slot.addEventListener('dragleave',()=>slot.classList.remove('drag'));
     slot.addEventListener('drop',e=>{e.preventDefault();slot.classList.remove('drag');if(e.dataTransfer.files[0])readFile(k,e.dataTransfer.files[0]);});
   }
+  document.getElementById('ebtpOnlineBtn').addEventListener('click',e=>{e.preventDefault();fetchOnlineEbtp();});
   document.getElementById('runBtn').addEventListener('click',execute);
   document.getElementById('dlBtn').addEventListener('click',download);
   document.getElementById('analysisReset').addEventListener('click',clearAnalysisDetail);

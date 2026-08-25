@@ -4287,6 +4287,9 @@ function App(){
   const restoredLiveSession=useRef(false);
   const autoOnlineFetchStarted=useRef(false);
   const[onlineFetchErr,setOnlineFetchErr]=useState('');
+  const[fetchPhase,setFetchPhase]=useState(''); // ''|'fetching'|'parsing'
+  const[fetchLog,setFetchLog]=useState([]);
+  const logStep=useCallback(msg=>setFetchLog(l=>[...l.slice(-19),msg]),[]);
 
   // Update C and force re-render when effective theme changes
   useEffect(()=>{
@@ -4538,11 +4541,11 @@ function App(){
     setExcHold,setExcDummy,setSelCust,clearAll,actCnt};
 
   const parseCSV=useCallback(csvText=>{
-      setLoading(true);
+      setLoading(true);setFetchPhase('parsing');logStep('Parsing '+csvText.length.toLocaleString()+' bytes of CSV…');
       setTimeout(()=>{
         try{
         const lines=csvText.split('\n').filter(l=>l.trim());
-        if(!lines.length){setLoading(false);return;}
+        if(!lines.length){setLoading(false);setFetchPhase('');return;}
         // CSV-aware column split
         const splitCSV=line=>{
           const c=[];let cur='',inQ=false;
@@ -4590,10 +4593,11 @@ function App(){
         setSelM(new Set(allModes.filter(m=>{const mu=String(m).toUpperCase();return !mu.startsWith('HOLD')&&!mu.includes('PT');})));
         const _allC2=[...new Set(processed.map(r=>r['Sold To Party Name']).filter(Boolean))];
         setSelCust(new Set(_allC2.filter(c=>!isDefaultExclCust(c))));
-      }catch(e){console.error('CSV parse:',e);}
-      setLoading(false);
+        logStep('✓ Parsed '+processed.length.toLocaleString()+' rows');
+      }catch(e){console.error('CSV parse:',e);logStep('✗ Parse failed: '+e.message);}
+      setLoading(false);setFetchPhase('');
       },50);
-    },[]);
+    },[logStep]);
 
   useEffect(()=>{
     if(cacheBooting||restoredLiveSession.current||rows.length||loading)return;
@@ -4615,7 +4619,7 @@ function App(){
     if(cacheBooting||autoOnlineFetchStarted.current||rows.length||loading)return;
     autoOnlineFetchStarted.current=true;
     (async()=>{
-      setLoading(true);setOnlineFetchErr('');
+      setLoading(true);setOnlineFetchErr('');setFetchPhase('fetching');setFetchLog([]);
       const enc=encodeURIComponent(EBTP_SHEET_URL);
       const strats=[
         {n:'api-proxy',      f:()=>tryApiProxy()},
@@ -4630,18 +4634,39 @@ function App(){
       ];
       const errs=[];
       for(const{n,f}of strats){
+        logStep('→ Trying '+n+'…');
         try{
           const text=await f();
           if(!text||text.length<50)throw new Error('empty');
           if(!text.split('\n')[0].includes(','))throw new Error('not CSV');
+          logStep('✓ '+n+' succeeded');
           parseCSV(text);
           return;
-        }catch(e){errs.push(n+': '+(e.name==='AbortError'?'timeout':e.message));}
+        }catch(e){
+          const msg=n+': '+(e.name==='AbortError'?'timeout':e.message);
+          errs.push(msg);logStep('✗ '+msg);
+        }
       }
-      setLoading(false);
+      setLoading(false);setFetchPhase('');
       setOnlineFetchErr('All '+strats.length+' fetch methods failed — '+errs.join(' · ')+'. Upload the EBTP .xlsx file instead.');
     })();
-  },[cacheBooting,rows.length,loading,parseCSV]);
+  },[cacheBooting,rows.length,loading,parseCSV,logStep]);
+
+  const fetchStatusOverlay=fetchPhase&&
+    <div className="fetch-status">
+      <div className="fetch-status-head">
+        <div className="fetch-status-spinner"/>
+        <div className="fetch-status-label">
+          {fetchPhase==='fetching'?'Fetching EBTP data…':'Parsing data…'}
+        </div>
+      </div>
+      <div className="loader-track">
+        <div className={`loader-bar${fetchPhase==='parsing'?' phase-parsing':''}`}/>
+      </div>
+      <div className="fetch-status-log">
+        {fetchLog.slice(-6).map((l,i)=><div key={i}>{l}</div>)}
+      </div>
+    </div>;
 
   const floatingHeaderSlot=
     <div id="hubFrameHeaderSlot" style={{position:'fixed',top:14,right:16,zIndex:60,
@@ -4691,6 +4716,7 @@ function App(){
   if(loading)return(
     <div style={{height:'100dvh',overflow:'auto',background:'var(--bg)',padding:'28px clamp(16px,4vw,40px)'}}>
       {floatingHeaderSlot}
+      {fetchStatusOverlay}
       <div style={{fontFamily:F.b,color:'var(--dim)',fontSize:13,letterSpacing:'.02em',marginBottom:16}}>
         Parsing & mapping orders…
       </div>

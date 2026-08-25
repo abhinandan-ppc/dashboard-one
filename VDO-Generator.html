@@ -202,6 +202,14 @@ tr:hover td{background:var(--input-hover)}
 </div>
 <p class="sub">Upload an EBTP export → FI(2)-Released + past promise-date orders are scored, PPC-remarked, and dumped to Excel. Runs fully offline.</p>
 <p class="status" id="status">Waiting for file…</p>
+<div class="fetch-status" id="fetchStatus" style="display:none;position:static;transform:none;width:100%;margin:12px 0;box-sizing:border-box">
+  <div class="fetch-status-head">
+    <div class="fetch-status-spinner"></div>
+    <div class="fetch-status-label" id="fetchStatusLabel">Fetching EBTP data…</div>
+  </div>
+  <div class="loader-track"><div class="loader-bar" id="fetchStatusBar"></div></div>
+  <div class="fetch-status-log" id="fetchStatusLog"></div>
+</div>
 
 <div class="panel" id="controls" style="display:none"><h2>1 · Options &amp; Filters</h2>
 <div class="row">
@@ -577,9 +585,28 @@ function handleCSV(text,label){
   buildPartyList();
 }
 
+function fetchStatusShow(phase){
+  $('#fetchStatus').style.display='flex';
+  $('#fetchStatusLabel').textContent=phase==='parsing'?'Parsing data…':'Fetching EBTP data…';
+  $('#fetchStatusBar').classList.toggle('phase-parsing',phase==='parsing');
+}
+function fetchStatusLog(msg){
+  const log=$('#fetchStatusLog');
+  const line=document.createElement('div');
+  line.textContent=msg;
+  log.appendChild(line);
+  while(log.children.length>6) log.removeChild(log.firstChild);
+  log.scrollTop=log.scrollHeight;
+}
+function fetchStatusHide(){
+  $('#fetchStatus').style.display='none';
+  $('#fetchStatusLog').innerHTML='';
+}
+
 async function fetchOnlineEBTP(){
   setOnlineFetching(true);
   $('#preview').innerHTML=previewSkeleton();
+  fetchStatusShow('fetching');
   const enc=encodeURIComponent(EBTP_SHEET_URL);
   const strats=[
     {n:'api-proxy',      f:()=>tryApiProxy()},
@@ -595,19 +622,30 @@ async function fetchOnlineEBTP(){
   const errs=[];
   for(const{n,f}of strats){
     setOnlineFetching(true,'Trying '+n+'…');
+    fetchStatusLog('→ Trying '+n+'…');
     try{
       const text=await f();
       if(!text||text.length<50)throw new Error('empty');
       if(!text.split('\n')[0].includes(','))throw new Error('not CSV');
+      fetchStatusLog('✓ '+n+' succeeded');
       setOnlineFetching(true,'✓ '+n+' — parsing…');
+      fetchStatusShow('parsing');
+      fetchStatusLog('Parsing '+text.length.toLocaleString()+' bytes of CSV…');
+      await new Promise(r=>setTimeout(r,30)); // let the UI paint the phase switch before the sync parse
       handleCSV(text,'Online EBTP ('+n+')');
+      fetchStatusLog('✓ Parsed OK');
       setOnlineFetching(false);
+      fetchStatusHide();
       return;
-    }catch(e){errs.push(n+': '+(e.name==='AbortError'?'timeout':e.message));}
+    }catch(e){
+      const msg=n+': '+(e.name==='AbortError'?'timeout':e.message);
+      errs.push(msg);fetchStatusLog('✗ '+msg);
+    }
   }
   $('#preview').innerHTML='';
   $('#status').textContent='Online EBTP refresh failed — '+errs.join(' · ')+'. Upload the .xlsx manually instead.';
   setOnlineFetching(false);
+  fetchStatusHide();
 }
 
 function handleFile(file){
