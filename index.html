@@ -1724,7 +1724,11 @@ function readEbtpCache(){
 function writeEbtpCache(csvText, rowCount){
   try{
     localStorage.setItem(EBTP_CACHE_KEY, JSON.stringify({ csvText: csvText, fetchedAt: Date.now(), rowCount: rowCount }));
-  }catch(e){}
+    return true;
+  }catch(e){
+    console.error('EBTP cache write failed (likely localStorage quota exceeded — CSV is', Math.round(csvText.length / 1024), 'KB):', e);
+    return false;
+  }
 }
 
 function fetchStatusShow(phase){
@@ -1784,7 +1788,13 @@ function fetchAndCacheEBTP(force){
         fetchStatusShow('parsing');
         var rowCount = text.split('\n').filter(function(l){ return l.trim(); }).length - 1;
         fetchStatusLog('Validated ' + Math.max(0, rowCount).toLocaleString() + ' rows');
-        writeEbtpCache(text, rowCount);
+        var cached = writeEbtpCache(text, rowCount);
+        if(!cached){
+          fetchStatusLog('✗ Cache write failed (storage full?) — dashboards will fetch on their own');
+          setTimeout(fetchStatusHide, 3000);
+          ebtpFetchInFlight = null;
+          return { ok: false, error: 'localStorage write failed' };
+        }
         fetchStatusLog('✓ Cached for all dashboards');
         setTimeout(fetchStatusHide, 900);
         try{ broadcastToFrame({ type: 'ebtp-cache-updated', fetchedAt: Date.now(), rowCount: rowCount }); }catch(e){}
