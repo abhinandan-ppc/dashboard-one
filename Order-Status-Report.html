@@ -879,11 +879,7 @@ function KpiDrillPanel({rows,metric,label,onClose}){
     return()=>{handle.removeEventListener('mousedown',onDown);handle.removeEventListener('touchstart',onDown);};
   },[]);
 
-  // Solid (non-glass) panel background on purpose — a blurred panel sitting directly behind the
-  // sticky <thead>'s own backdrop-filter neutralized the header's blur (nested backdrop-filter
-  // layers don't compose reliably here). Flat background = the header is the only filtered layer.
-  return<div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:500,
-    background:'var(--s0)',
+  return<div className="m3-popover" style={{position:'fixed',bottom:0,left:0,right:0,zIndex:500,
     borderTop:'1px solid var(--glass-border-hi)',boxShadow:'var(--shadow-xl)',
     display:'flex',flexDirection:'column',height:panelH,minHeight:240,
     borderRadius:'20px 20px 0 0',animation:'fadeUp .22s ease',userSelect:'none'}}>
@@ -894,8 +890,8 @@ function KpiDrillPanel({rows,metric,label,onClose}){
       <div style={{width:40,height:4,borderRadius:2,background:'var(--bdrHi)'}}/>
     </div>
 
-    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 20px 14px',
-      borderBottom:'1px solid var(--bdr)',flexShrink:0,flexWrap:'wrap',gap:10}}>
+    <div className="m3-popover" style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 20px 14px',
+      borderBottom:'1px solid var(--bdr)',flexShrink:0,flexWrap:'wrap',gap:10,position:'relative',zIndex:3}}>
       <div>
         <div style={{fontFamily:F.h,fontSize:14,fontWeight:800,letterSpacing:'.05em',textTransform:'uppercase',color:'var(--text)'}}>{label} — Drill-down</div>
         <div style={{fontFamily:F.b,fontSize:11.5,color:'var(--mute)',marginTop:2}}>{fmt(sorted.length,0)} orders · Total {fmt(total)} MT</div>
@@ -1548,10 +1544,10 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
             background:'var(--s0)',border:'1px solid var(--bdrHi)',fontFamily:F.b,fontSize:10.5,
             color:'var(--mute)',whiteSpace:'nowrap'}}>Grand Total</div>
           <div className="card-lift" onClick={()=>setKpiDrill({key:'orderQtyLive',label:'Order Qty_Live'})}
-            style={{flex:1,minWidth:0,height:120,display:'flex',flexDirection:'column',cursor:'pointer',
+            style={{flex:1,minWidth:0,height:128,display:'flex',flexDirection:'column',cursor:'pointer',
             gap:7,padding:'12px 14px',borderRadius:'var(--radius-md)',background:'var(--amber-bg)',
             border:`1px solid var(--bdrHi)`,borderTop:`3px solid ${C.jsplGold}`}}>
-            <div style={{fontFamily:F.h,fontSize:11.5,letterSpacing:'.05em',textTransform:'uppercase',color:'var(--mute)',whiteSpace:'nowrap'}}>Order Qty_Live</div>
+            <div style={{fontFamily:F.h,fontSize:14,letterSpacing:'.03em',textTransform:'uppercase',color:'var(--mute)',whiteSpace:'nowrap'}}>Order Qty_Live</div>
             <div style={{fontFamily:F.m,fontSize:18,fontWeight:700,color:'var(--text)',whiteSpace:'nowrap'}}>{fmt(kpi.orderQtyLive)}</div>
             <div style={{height:5,borderRadius:3,background:'var(--s3)',overflow:'hidden'}}>
               <div style={{height:'100%',width:'100%',background:C.jsplGold,borderRadius:3}}/>
@@ -1575,10 +1571,10 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
                 {g.stages.map((s,i)=>{
                   const p=pct(s.value,g.baseValue);
                   return<div key={s.key} className="card-lift" onClick={()=>setKpiDrill({key:s.key,label:s.label})}
-                    style={{flex:1,minWidth:0,height:120,display:'flex',flexDirection:'column',cursor:'pointer',
+                    style={{flex:1,minWidth:0,height:128,display:'flex',flexDirection:'column',cursor:'pointer',
                     gap:7,padding:'12px 13px',borderRadius:'var(--radius-md)',background:'var(--s1)',
                     border:`1px solid var(--bdr)`,borderTop:`3px solid ${s.color}`}}>
-                    <div style={{fontFamily:F.h,fontSize:11.5,letterSpacing:'.05em',textTransform:'uppercase',color:'var(--mute)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.label}</div>
+                    <div style={{fontFamily:F.h,fontSize:14,letterSpacing:'.03em',textTransform:'uppercase',color:'var(--mute)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.label}</div>
                     <div style={{fontFamily:F.m,fontSize:18,fontWeight:700,color:'var(--text)',whiteSpace:'nowrap'}}>{fmt(s.value)}</div>
                     <div style={{height:5,borderRadius:3,background:'var(--s3)',overflow:'hidden'}}>
                       <div style={{height:'100%',width:Math.min(100,p)+'%',background:s.color,borderRadius:3}}/>
@@ -1626,13 +1622,8 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         </div>
       </div>
 
-      {/* Plain (non-glass) panel background on purpose — this panel's own backdrop-filter, sitting
-          directly behind the sticky <thead>'s backdrop-filter, was neutralizing the header's blur
-          (nested backdrop-filter layers don't compose reliably here). A flat background lets the
-          header be the only filtered layer, so it actually blurs the rows scrolling underneath it. */}
-      <div style={{padding:'16px 18px',overflow:'hidden',display:'flex',flexDirection:'column',
-        height:'100%',maxHeight:360,background:'var(--s1)',border:'1px solid var(--glass-border)',
-        boxShadow:'var(--shadow-sm)',borderRadius:'var(--radius-lg)'}}>
+      <div className="glass-card" style={{padding:'16px 18px',overflow:'hidden',display:'flex',flexDirection:'column',
+        height:'100%',maxHeight:360,boxShadow:'var(--shadow-sm)',borderRadius:'var(--radius-lg)'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:8}}>
           <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--text)'}}>Customer-wise Order Status</div>
           <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
