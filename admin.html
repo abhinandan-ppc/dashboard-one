@@ -8,19 +8,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800;9..40,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css"/>
 <style>
 :root {
-  color-scheme: dark;
-  --bg-color: #f0f4f8; --glass-bg: rgba(255,255,255,0.7); --glass-bg-solid: rgba(255,255,255,0.95);
-  --glass-border: 1px solid rgba(0,0,0,0.08); --glass-shadow: 0 4px 24px rgba(0,0,0,0.06);
-  --tx: #1a1c1e; --tm: #44474e; --br: rgba(0,0,0,0.08); --input-bg: rgba(0,0,0,0.04);
+  /* --glass-border here is a full border shorthand (width+style+color), unlike
+     theme.css's color-only --glass-border, so it must stay locally defined. */
+  --glass-border: 1px solid rgba(0,0,0,0.08);
   --primary: #006493; --on-primary: #ffffff; --good: #15803d; --bad: #b91c1c; --warn: #b45309;
-  --radius-m: 14px; --radius-l: 20px; --radius-pill: 999px;
 }
 [data-theme="dark"] {
-  --bg-color: #0f172a; --glass-bg: rgba(30,41,59,0.65); --glass-bg-solid: rgba(15,23,42,0.97);
-  --glass-border: 1px solid rgba(255,255,255,0.1); --glass-shadow: 0 4px 24px rgba(0,0,0,0.3);
-  --tx: #f8fafc; --tm: #94a3b8; --br: rgba(255,255,255,0.1); --input-bg: rgba(255,255,255,0.06);
+  --glass-border: 1px solid rgba(255,255,255,0.1);
   --primary: #8dcdff; --on-primary: #00344f; --good: #4ade80; --bad: #f87171; --warn: #fbbf24;
 }
 * { box-sizing: border-box; }

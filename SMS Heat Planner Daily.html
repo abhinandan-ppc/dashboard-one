@@ -9,31 +9,22 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800;9..40,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css"/>
 <style>
 /* ─── MATERIAL 3 & GLASSMORPHISM DESIGN SYSTEM (From Monthly Planner) ─── */
 :root {
   /* Light Theme M3 Palette */
-  --md-sys-color-primary: #006493;
-  --md-sys-color-on-primary: #ffffff;
-  --md-sys-color-primary-container: #cbe6ff;
-  --md-sys-color-on-primary-container: #001e30;
-  
-  --md-sys-color-secondary: #0ea5e9;
   --md-sys-color-tertiary: #8b5cf6;
-  
+
   /* Backgrounds & Surfaces */
-  --bg-color: #f0f4f8;
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-bg-solid: rgba(255, 255, 255, 0.95);
   --glass-bg-hover: rgba(255, 255, 255, 0.9);
   --glass-border: 1px solid rgba(255, 255, 255, 0.8);
   --glass-border-heavy: 1px solid rgba(255, 255, 255, 1);
   --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
-  --glass-blur: blur(24px);
 
   /* Text & Lines */
-  --tx: #1a1c1e; 
-  --tm: #44474e; 
   --br: rgba(0,0,0,0.06);
   --input-bg: rgba(0,0,0,0.04);
   --input-hover: rgba(0,0,0,0.08);
@@ -51,7 +42,6 @@
   /* M3 Border Radii */
   --radius-xs: 6px;
   --radius-s: 12px;
-  --radius-m: 16px;
   --radius-l: 24px;
   --radius-xl: 32px;
   --radius-pill: 100px;
@@ -78,15 +68,8 @@
 }
 
 [data-theme="dark"] {
-  --md-sys-color-primary: #8dcdff;
-  --md-sys-color-on-primary: #00344f;
-  --md-sys-color-primary-container: #004b70;
-  --md-sys-color-on-primary-container: #cbe6ff;
-  
-  --md-sys-color-secondary: #38bdf8;
   --md-sys-color-tertiary: #a78bfa;
 
-  --bg-color: #0f172a;
   --glass-bg: rgba(30, 41, 59, 0.65);
   --glass-bg-solid: rgba(30, 41, 59, 0.95);
   --glass-bg-hover: rgba(30, 41, 59, 0.85);
@@ -94,8 +77,6 @@
   --glass-border-heavy: 1px solid rgba(255, 255, 255, 0.15);
   --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 
-  --tx: #f8fafc; 
-  --tm: #94a3b8; 
   --br: rgba(255,255,255,0.1);
   --input-bg: rgba(255,255,255,0.05);
   --input-hover: rgba(255,255,255,0.1);

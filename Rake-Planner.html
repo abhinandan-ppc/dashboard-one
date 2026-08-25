@@ -9,192 +9,24 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800;9..40,900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="theme.css"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body,#root{min-height:100%;height:100%}
 
-/* ══════════════════════════════════════════════
-   MATERIAL 3 DESIGN SYSTEM — JSPL Rake Planner
-   Dark theme: deep neutral surfaces, no neon
-   Light theme: white/grey tonal surfaces
-   ══════════════════════════════════════════════ */
-
-/* ── M3 Dark (default) ── */
-:root{
-  /* Surfaces — neutral grey-blue, no harsh contrast */
-  --bg:#0f172a;
-  --s0:rgba(22,30,48,.72);
-  --s1:rgba(30,41,59,.62);
-  --s2:rgba(36,49,70,.58);
-  --s3:rgba(44,58,82,.55);
-  --s4:rgba(52,68,94,.52);
-  --bdr:rgba(255,255,255,.1);
-  --bdrHi:rgba(255,255,255,.14);
-
-  /* Typography — warm white, readable at every size */
-  --text:#f8fafc;        /* body — off-white, not harsh */
-  --text-hi:#ffffff;     /* headings */
-  --dim:#94a3b8;         /* secondary labels */
-  --mute:#64748b;        /* placeholder, disabled */
-
-  /* M3 Accent palette — muted, not neon */
-  --amber:#d4923c;       --amber-bg:rgba(212,146,60,.12);
-  --sky:#5ba3d9;         --sky-bg:rgba(91,163,217,.1);
-  --green:#4caf7d;       --green-bg:rgba(76,175,125,.1);
-  --rose:#e07070;        --rose-bg:rgba(224,112,112,.1);
-  --violet:#9b87d4;
-  --orange:#d4793c;      --orange-bg:rgba(212,121,60,.1);
-  --teal:#3da8a0;
-
-  /* Glass */
-  --glass:rgba(30,41,59,.65);
-  --glass-card:rgba(30,41,59,.55);
-  --glass-hi:rgba(30,41,59,.92);
-  --glass-border:rgba(255,255,255,.1);
-  --glass-border-hi:rgba(255,255,255,.18);
-
-  /* Elevation shadows — true M3 tonal */
-  --shadow-xs:0 1px 2px rgba(0,0,0,.3);
-  --shadow-sm:0 2px 8px rgba(0,0,0,.35),0 1px 3px rgba(0,0,0,.2);
-  --shadow-md:0 4px 16px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.25);
-  --shadow-lg:0 10px 32px rgba(0,0,0,.55),0 4px 12px rgba(0,0,0,.3);
-  --shadow-xl:0 20px 56px rgba(0,0,0,.65),0 8px 20px rgba(0,0,0,.35);
-  --shadow-inset:inset 0 1px 0 rgba(255,255,255,.05);
-  --shadow-glow-amber:0 0 0 2px rgba(212,146,60,.25),0 3px 12px rgba(212,146,60,.15);
-
-  /* Radius */
-  --radius-xs:6px; --radius-sm:10px; --radius-md:16px;
-  --radius-lg:18px; --radius-xl:24px; --radius-pill:999px;
-
-  /* Composites */
-  --s1-80:rgba(30,41,59,.8); --s2-50:rgba(36,49,70,.5); --s2-80:rgba(36,49,70,.8);
-  --bdr-10:rgba(255,255,255,.04);
-  color-scheme:dark;
-}
-
-/* ── M3 Light — rich, high-contrast, fully readable ── */
-[data-theme="light"]{
-  --bg:#f0f4f8;
-  --s0:rgba(255,255,255,.95);
-  --s1:rgba(255,255,255,.88);
-  --s2:rgba(240,244,252,.85);
-  --s3:rgba(226,232,246,.80);
-  --s4:rgba(212,220,240,.76);
-  --bdr:rgba(0,0,0,.08);
-  --bdrHi:rgba(0,0,0,.18);
-
-  /* Typography — deep, readable on white */
-  --text:#1a1c1e;
-  --text-hi:#030712;
-  --dim:#44474e;
-  --mute:#6b7280;
-
-  /* Accent colours — vivid enough to read on white/light grey */
-  --amber:#b45309;       --amber-bg:rgba(180,83,9,.1);
-  --sky:#1d4ed8;         --sky-bg:rgba(29,78,216,.09);
-  --green:#15803d;       --green-bg:rgba(21,128,61,.09);
-  --rose:#b91c1c;        --rose-bg:rgba(185,28,28,.09);
-  --violet:#6d28d9;      --violet-bg:rgba(109,40,217,.09);
-  --orange:#c2410c;      --orange-bg:rgba(194,65,12,.09);
-  --teal:#0f766e;
-
-  --glass:rgba(255,255,255,.72);
-  --glass-card:rgba(255,255,255,.80);
-  --glass-hi:rgba(255,255,255,.98);
-  --glass-border:rgba(0,0,0,.10);
-  --glass-border-hi:rgba(0,0,0,.18);
-
-  --shadow-xs:0 1px 3px rgba(0,0,0,.08);
-  --shadow-sm:0 2px 8px rgba(0,0,0,.10),0 1px 3px rgba(0,0,0,.06);
-  --shadow-md:0 4px 16px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08);
-  --shadow-lg:0 10px 32px rgba(0,0,0,.16),0 4px 12px rgba(0,0,0,.10);
-  --shadow-xl:0 20px 56px rgba(0,0,0,.20),0 8px 20px rgba(0,0,0,.12);
-  --shadow-inset:inset 0 1px 0 rgba(255,255,255,.9);
-  --shadow-glow-amber:0 0 0 2px rgba(180,83,9,.25),0 3px 12px rgba(180,83,9,.15);
-
-  --s1-80:rgba(255,255,255,.88); --s2-50:rgba(240,244,252,.55); --s2-80:rgba(240,244,252,.85);
-  --bdr-10:rgba(0,0,0,.06);
-  color-scheme:light;
-}
-
-/* ── Body — DM Sans, proper line-height ── */
+/* ── Page-specific body tweaks (tokens/base surface/scrollbars/glass/leaflet/animations live in theme.css) ── */
 body{
-  background:var(--bg);
-  background-image:
-    radial-gradient(ellipse 70% 50% at 15% 10%, rgba(91,163,217,.07) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 70% at 85% 90%, rgba(76,175,125,.06) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(155,135,212,.04) 0%, transparent 70%);
-  background-attachment:fixed;
-  color:var(--text);
-  font-family:'DM Sans',system-ui,-apple-system,sans-serif;
   font-size:14px;
   line-height:1.5;
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
   overflow-x:hidden;
-  transition:background .3s,color .3s;
 }
 
-/* ── Typography scale ── */
-h1,h2,h3{font-family:'DM Sans',sans-serif;font-weight:700;color:var(--text-hi);line-height:1.2}
-
-/* ── Scrollbars ── */
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--bdrHi);border-radius:var(--radius-pill);transition:background .2s}
-::-webkit-scrollbar-thumb:hover{background:var(--sky)}
-
-select option{background:var(--s1);color:var(--text)}
-
-/* ── Animations ── */
-@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-@keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
-@keyframes slideIn{from{transform:translateX(-100%);opacity:0}to{transform:translateX(0);opacity:1}}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
-@keyframes glow{0%,100%{opacity:.9}50%{opacity:1}}
 @keyframes flowDash{to{stroke-dashoffset:-24}}
-
-/* ── M3 Glass ── */
-.m3-glass{
-  background:var(--glass);
-  backdrop-filter:blur(24px);
-  -webkit-backdrop-filter:blur(24px);
-  border:1px solid var(--glass-border);
-}
-.glass-card{
-  background:var(--glass-card);
-  backdrop-filter:blur(24px);
-  -webkit-backdrop-filter:blur(24px);
-  border:1px solid var(--glass-border);
-}
-
-/* ── Leaflet ── */
-.leaflet-tooltip{background:rgba(14,20,32,.92) !important;border:1px solid rgba(255,255,255,.14) !important;
-  color:#eceef4 !important;font-family:'DM Sans',system-ui,sans-serif !important;
-  font-size:13px !important;line-height:1.5 !important;border-radius:10px !important;
-  box-shadow:0 8px 32px rgba(0,0,0,.6) !important;padding:9px 13px !important;
-  backdrop-filter:blur(16px) !important;-webkit-backdrop-filter:blur(16px) !important;}
-[data-theme="light"] .leaflet-tooltip{background:rgba(255,255,255,.92) !important;border:1px solid rgba(0,0,0,.12) !important;color:#1a1e2a !important;}
-.leaflet-tooltip::before{border-top-color:var(--bdrHi) !important;border-bottom-color:var(--bdrHi) !important}
-.leaflet-container{background:var(--bg) !important;font-family:'DM Sans',sans-serif}
-.leaflet-control-zoom a{background:var(--s1) !important;color:var(--dim) !important;border-color:var(--bdrHi) !important}
-.leaflet-control-zoom a:hover{background:var(--s2) !important;color:var(--text) !important}
-.leaflet-control-attribution{background:var(--glass) !important;color:var(--mute) !important;font-size:10px !important;backdrop-filter:blur(8px) !important}
-.leaflet-control-attribution a{color:var(--sky) !important}
-
 .flow-trunk{animation:flowDash .8s linear infinite}
 .flow-spoke{animation:flowDash 1.4s linear infinite}
 
-/* ── Interaction states ── */
+/* ── Interaction states (page-specific !important override) ── */
 input:focus{outline:none;border-color:var(--amber) !important;box-shadow:var(--shadow-glow-amber);background:var(--s0);}
-button:focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
-input::placeholder{color:var(--mute);opacity:1}
-
-/* ── Card elevation ── */
-.card-lift{transition:transform .2s ease,box-shadow .2s ease}
-.card-lift:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
-.card-lift:active{transform:translateY(0);box-shadow:var(--shadow-md)}
 
 /* ── Table ── */
 table{border-collapse:collapse}
@@ -203,8 +35,6 @@ thead tr th:last-child{border-radius:0 var(--radius-xs) 0 0}
 
 /* ── Portal dropdown ── */
 .portal-dropdown{box-shadow:var(--shadow-lg);border-radius:var(--radius-md);border:1px solid var(--bdrHi);overflow:hidden;}
-.leaflet-div-icon{background:transparent !important;border:none !important}
-.leaflet-container *{font-family:'DM Sans',system-ui,sans-serif}
 </style>
 </head>
 <body>

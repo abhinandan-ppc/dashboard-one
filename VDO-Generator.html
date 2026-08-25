@@ -5,6 +5,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800;9..40,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css"/>
 <style>
 :root{
   color-scheme:light;
@@ -60,7 +61,6 @@ body{margin:0;min-height:100vh;background-color:var(--bg-color);color:var(--tx);
 .file-badge b{color:var(--md-sys-color-primary);font-weight:800;flex-shrink:0}
 .spinner{display:none;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;opacity:.85;animation:spin .7s linear infinite}
 .spinner.on{display:inline-block}
-@keyframes spin{to{transform:rotate(360deg)}}
 @media (max-width:900px){.file-badge{max-width:160px}.file-badge span{max-width:70px}}
 @media (max-width:720px){.top-bar{flex-direction:column;align-items:stretch}.hdr-r{justify-content:center;flex-wrap:wrap}.file-badge{max-width:none}}
 .sub{color:var(--tm);font-size:13px;margin:0 0 20px}
