@@ -348,6 +348,12 @@ function tryFetch(proxyUrl,json){
       return json?r.json().then(d=>{const t=d?.contents||d?.data||'';if(!t)throw new Error('empty');return t;}):r.text();
     });
 }
+function tryApiProxy(){
+  // Same-origin — must send the hub session cookie so middleware doesn't
+  // redirect to /api/auth/login (a cross-origin hop fetch can't follow).
+  return fetch('/api/ebtp-proxy',{cache:'no-store',credentials:'same-origin'})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
+}
 function splitCSV(line){
   const out=[];let cur='',q=false;
   for(let i=0;i<line.length;i++){const c=line[i];
@@ -1677,7 +1683,7 @@ function App(){
       setLoading(true);setErr('');
       const enc=encodeURIComponent(EBTP_SHEET_URL);
       const strats=[
-        {n:'api-proxy',      f:()=>tryFetch('/api/ebtp-proxy',false)},
+        {n:'api-proxy',      f:()=>tryApiProxy()},
         {n:'XHR',            f:()=>tryXHR(EBTP_SHEET_URL)},
         {n:'Iframe',         f:()=>tryIframe(EBTP_SHEET_URL)},
         {n:'corsproxy.io',   f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},

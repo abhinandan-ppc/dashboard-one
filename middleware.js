@@ -64,6 +64,13 @@ export default async function middleware(req) {
 
     if (admin) return; // admins (env-configured or promoted) have full access everywhere, including dev previews
 
+    if (path === 'api/ebtp-proxy') {
+      // Shared live-data proxy used by Rake-Planner, Order-Status-Report and
+      // VDO-Generator. Any authenticated user may call it — the page-level
+      // ACL below already gates access to those tools themselves.
+      return;
+    }
+
     if (isAdminArea) {
       return denyPage('Admins only', "This area is restricted to administrators.");
     }
