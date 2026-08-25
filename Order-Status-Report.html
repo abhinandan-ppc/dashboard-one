@@ -1467,25 +1467,24 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         <div>EBTP loaded: <b style={{color:'var(--text)'}}>{ebtpDateLabel}</b></div>
       </div>
 
-      {/* Nav/action button cluster — id="hubFrameHeaderSlot" is the mount point the hub (index.html /
-          findFrameHeaderMount) looks for first; without it, the hub falls back to floating its Home/
-          Refresh/Theme/User controls fixed at top-right, which is what was overlapping this bar. With
-          the slot present, the hub appends its controls as a normal flex child right here instead. */}
-      <div id="hubFrameHeaderSlot" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,padding:4,
-        borderRadius:'var(--radius-pill)',background:'var(--s2)',border:'1px solid var(--bdr)'}}>
-        <button onClick={()=>setReleasedOnly(v=>!v)} style={{height:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
-          border:`1.5px solid ${releasedOnly?C.sky:'transparent'}`,background:releasedOnly?'var(--sky-bg)':'transparent',
-          color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:12,fontWeight:700,cursor:'pointer',
-          textTransform:'uppercase',transition:'all .15s'}}>
-          {releasedOnly?'✓ ':''}Released Orders
-        </button>
-        <button onClick={clearAll} disabled={!anyFilterActive} style={{height:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
-          border:'1.5px solid transparent',background:'transparent',color:anyFilterActive?C.rose:'var(--mute)',
-          fontFamily:F.h,fontSize:12,fontWeight:700,cursor:anyFilterActive?'pointer':'default',textTransform:'uppercase',
-          transition:'all .15s'}}>
-          Clear Filters
-        </button>
-      </div>
+      <button onClick={()=>setReleasedOnly(v=>!v)} style={{height:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
+        border:`1.5px solid ${releasedOnly?C.sky:'var(--bdrHi)'}`,background:releasedOnly?'var(--sky-bg)':'var(--s2)',
+        color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:12,fontWeight:700,cursor:'pointer',
+        textTransform:'uppercase',transition:'all .15s',flexShrink:0}}>
+        {releasedOnly?'✓ ':''}Released Orders
+      </button>
+      <button onClick={clearAll} disabled={!anyFilterActive} style={{height:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
+        border:'1.5px solid var(--bdrHi)',background:'var(--s2)',color:anyFilterActive?C.rose:'var(--mute)',
+        fontFamily:F.h,fontSize:12,fontWeight:700,cursor:anyFilterActive?'pointer':'default',textTransform:'uppercase',
+        transition:'all .15s',flexShrink:0}}>
+        Clear Filters
+      </button>
+
+      {/* id="hubFrameHeaderSlot" is the mount point the hub (index.html / findFrameHeaderMount) looks
+          for first; without it, the hub falls back to floating its Home/Refresh/Theme/User controls
+          fixed at top-right. Left unstyled (no pill/background) so the hub's own 40x40 circular
+          buttons render at their native uniform size instead of inheriting a wrapper's chrome. */}
+      <div id="hubFrameHeaderSlot" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}/>
     </div>
     <div className="glass-card" style={{padding:'12px 16px',marginBottom:18,display:'flex',gap:10,flexWrap:'wrap',
       position:'relative',zIndex:200,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-sm)'}}>
