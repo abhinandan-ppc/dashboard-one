@@ -205,6 +205,11 @@ input { font: inherit; color: inherit; }
 .frame-box { position: absolute; inset: 0; border-radius: 0; overflow: hidden; border: none; box-shadow: none; background: var(--bg-color); }
 .frame-box.on { display: block; }
 .frame-box iframe { width: 100%; height: 100%; border: none; display: block; background: var(--bg-color); }
+.frame-skeleton { position: absolute; inset: 0; z-index: 2; background: var(--bg-color); overflow: hidden; opacity: 1; transition: opacity .25s ease; }
+.frame-skeleton.hidden { opacity: 0; pointer-events: none; }
+.frame-skeleton-inner { max-width: 1200px; margin: 0 auto; padding: 40px 32px; }
+.frame-skeleton .skeleton-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+@media (max-width: 768px) { .frame-skeleton .skeleton-row { grid-template-columns: repeat(2, 1fr); } }
 
 /* keep stage aligned to the same page gutters as the fixed header */
 .stage { width: 100%; max-width: none; margin: 0; padding: calc(var(--frame-top, 88px) + 28px) 24px 60px; }
@@ -410,6 +415,18 @@ input { font: inherit; color: inherit; }
 
 <div class="frame-stage" id="frameStage" style="display:none;">
   <div class="frame-box" id="frameBox">
+    <div class="frame-skeleton" id="frameSkeleton">
+      <div class="frame-skeleton-inner">
+        <div class="skeleton skeleton-title" style="width:220px"></div>
+        <div class="skeleton-row" style="margin:20px 0">
+          <div class="skeleton skeleton-card" style="height:90px"></div>
+          <div class="skeleton skeleton-card" style="height:90px"></div>
+          <div class="skeleton skeleton-card" style="height:90px"></div>
+          <div class="skeleton skeleton-card" style="height:90px"></div>
+        </div>
+        <div class="skeleton skeleton-block" style="height:340px"></div>
+      </div>
+    </div>
     <iframe id="pageFrame" src="" frameborder="0"></iframe>
   </div>
 </div>
@@ -1361,6 +1378,8 @@ function handleFrameLoad(){
   }catch(e){}
   installFrameHeaderControls();
   requestAnimationFrame(updateFrameTop);
+  var fs = document.getElementById('frameSkeleton');
+  if(fs) fs.classList.add('hidden');
 }
 
 pageFrame.addEventListener('load', handleFrameLoad);
@@ -1377,6 +1396,8 @@ function openInFrame(path, title){
   updateFrameTop();
   frameStage.style.display = 'block';
   frameBox.classList.add('on');
+  var fs = document.getElementById('frameSkeleton');
+  if(fs) fs.classList.remove('hidden');
   removeInjectedFrameControls();
   // hide the main top header when a page is opened in-frame
   var tw = document.querySelector('.top-wrapper');
