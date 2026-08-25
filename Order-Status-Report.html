@@ -308,16 +308,20 @@ function resolveGeo(city,sto){
 
 /* ═══════════════════ LIVE FETCH (reused verbatim from Rake-Planner) ═══════════════════ */
 const EBTP_SHEET_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vQEKS6uq6epbkSmpv548hSG63WVUiFwKLXctpeM3G8NMeXJ_ZJaTCuFj95n4gTRuhchM_T4q_kp5_au/pub?gid=0&single=true&output=csv";
-function tryXHR(url){
-  return new Promise((res,rej)=>{
+function tryXHR(url,attempts=5,timeoutMs=4000){
+  const attempt=n=>new Promise((res,rej)=>{
     const x=new XMLHttpRequest();
     x.open('GET',url,true);
-    x.timeout=10000;
-    x.onload=()=>x.status>=200&&x.status<300?res(x.responseText):rej(new Error('XHR '+x.status));
-    x.onerror=()=>rej(new Error('XHR error'));
-    x.ontimeout=()=>rej(new Error('XHR timeout'));
+    x.timeout=timeoutMs;
+    x.onload=()=>x.status>=200&&x.status<300?res(x.responseText):rej(new Error('XHR '+x.status+' (try '+n+'/'+attempts+')'));
+    x.onerror=()=>rej(new Error('XHR network error (try '+n+'/'+attempts+')'));
+    x.ontimeout=()=>rej(new Error('XHR timeout (try '+n+'/'+attempts+')'));
     x.send();
+  }).catch(e=>{
+    if(n>=attempts)throw e;
+    return new Promise(r=>setTimeout(r,250)).then(()=>attempt(n+1));
   });
+  return attempt(1);
 }
 function tryIframe(url){
   return new Promise((res,rej)=>{
@@ -1673,12 +1677,14 @@ function App(){
       setLoading(true);setErr('');
       const enc=encodeURIComponent(EBTP_SHEET_URL);
       const strats=[
-        {n:'XHR',           f:()=>tryXHR(EBTP_SHEET_URL)},
-        {n:'Iframe',        f:()=>tryIframe(EBTP_SHEET_URL)},
-        {n:'corsproxy.io',  f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
-        {n:'allorigins/raw',f:()=>tryFetch('https://api.allorigins.win/raw?url='+enc,false)},
-        {n:'allorigins/get',f:()=>tryFetch('https://api.allorigins.win/get?url='+enc,true)},
-        {n:'jsonp.afeld.me',f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
+        {n:'XHR',            f:()=>tryXHR(EBTP_SHEET_URL)},
+        {n:'Iframe',         f:()=>tryIframe(EBTP_SHEET_URL)},
+        {n:'corsproxy.io',   f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
+        {n:'codetabs',       f:()=>tryFetch('https://api.codetabs.com/v1/proxy?quest='+enc,false)},
+        {n:'allorigins/raw', f:()=>tryFetch('https://api.allorigins.win/raw?url='+enc,false)},
+        {n:'allorigins/get', f:()=>tryFetch('https://api.allorigins.win/get?url='+enc,true)},
+        {n:'thingproxy',     f:()=>tryFetch('https://thingproxy.freeboard.io/fetch/'+EBTP_SHEET_URL,false)},
+        {n:'jsonp.afeld.me', f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
       ];
       let lastErr='All methods blocked';
       for(const{n,f}of strats){
@@ -1695,9 +1701,14 @@ function App(){
     })();
   },[rows,loading,parseCSV]);
 
+  const floatingHeaderSlot=
+    <div id="hubFrameHeaderSlot" style={{position:'fixed',top:14,right:16,zIndex:60,
+      display:'flex',gap:8,alignItems:'center'}}/>;
+
   if(!rows&&!loading){
     return<div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
       minHeight:'100dvh',gap:20,padding:'32px 20px',background:'var(--bg)'}}>
+      {floatingHeaderSlot}
       {err?<>
         <div style={{fontFamily:F.h,fontSize:14,fontWeight:700,color:C.rose,
           letterSpacing:'.04em',textTransform:'uppercase',textAlign:'center',maxWidth:460}}>
@@ -1726,6 +1737,7 @@ function App(){
   }
   if(loading||!rows){
     return<div style={{padding:'24px 20px',maxWidth:1400,margin:'0 auto'}}>
+      {floatingHeaderSlot}
       <div className="skeleton skeleton-title" style={{maxWidth:280}}/>
       <div className="skeleton-row" style={{gap:16,marginBottom:20}}>
         {[0,1,2,3,4].map(i=><div key={i} className="skeleton skeleton-card" style={{flex:1}}/>)}

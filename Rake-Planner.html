@@ -4205,16 +4205,20 @@ const EBTP_SHEET_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vQEKS6uq6e
    5. allorigins /get JSON wrapper
    6. Script-tag injection (JSONP-style, reads as text via blob URL)
    ──────────────────────────────────────────────────────────────────── */
-function tryXHR(url){
-  return new Promise((res,rej)=>{
+function tryXHR(url,attempts=5,timeoutMs=4000){
+  const attempt=n=>new Promise((res,rej)=>{
     const x=new XMLHttpRequest();
     x.open('GET',url,true);
-    x.timeout=10000;
-    x.onload=()=>x.status>=200&&x.status<300?res(x.responseText):rej(new Error('XHR '+x.status));
-    x.onerror=()=>rej(new Error('XHR error'));
-    x.ontimeout=()=>rej(new Error('XHR timeout'));
+    x.timeout=timeoutMs;
+    x.onload=()=>x.status>=200&&x.status<300?res(x.responseText):rej(new Error('XHR '+x.status+' (try '+n+'/'+attempts+')'));
+    x.onerror=()=>rej(new Error('XHR network error (try '+n+'/'+attempts+')'));
+    x.ontimeout=()=>rej(new Error('XHR timeout (try '+n+'/'+attempts+')'));
     x.send();
+  }).catch(e=>{
+    if(n>=attempts)throw e;
+    return new Promise(r=>setTimeout(r,250)).then(()=>attempt(n+1));
   });
+  return attempt(1);
 }
 function tryIframe(url){
   return new Promise((res,rej)=>{
@@ -4608,12 +4612,14 @@ function App(){
       setLoading(true);setOnlineFetchErr('');
       const enc=encodeURIComponent(EBTP_SHEET_URL);
       const strats=[
-        {n:'XHR',           f:()=>tryXHR(EBTP_SHEET_URL)},
-        {n:'Iframe',        f:()=>tryIframe(EBTP_SHEET_URL)},
-        {n:'corsproxy.io',  f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
-        {n:'allorigins/raw',f:()=>tryFetch('https://api.allorigins.win/raw?url='+enc,false)},
-        {n:'allorigins/get',f:()=>tryFetch('https://api.allorigins.win/get?url='+enc,true)},
-        {n:'jsonp.afeld.me',f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
+        {n:'XHR',            f:()=>tryXHR(EBTP_SHEET_URL)},
+        {n:'Iframe',         f:()=>tryIframe(EBTP_SHEET_URL)},
+        {n:'corsproxy.io',   f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
+        {n:'codetabs',       f:()=>tryFetch('https://api.codetabs.com/v1/proxy?quest='+enc,false)},
+        {n:'allorigins/raw', f:()=>tryFetch('https://api.allorigins.win/raw?url='+enc,false)},
+        {n:'allorigins/get', f:()=>tryFetch('https://api.allorigins.win/get?url='+enc,true)},
+        {n:'thingproxy',     f:()=>tryFetch('https://thingproxy.freeboard.io/fetch/'+EBTP_SHEET_URL,false)},
+        {n:'jsonp.afeld.me', f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
       ];
       let lastErr='All methods blocked';
       for(const{n,f}of strats){
@@ -4630,9 +4636,14 @@ function App(){
     })();
   },[cacheBooting,rows.length,loading,parseCSV]);
 
+  const floatingHeaderSlot=
+    <div id="hubFrameHeaderSlot" style={{position:'fixed',top:14,right:16,zIndex:60,
+      display:'flex',gap:8,alignItems:'center'}}/>;
+
   if(cacheBooting&&!rows.length&&!loading)return(
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',
       flexDirection:'column',gap:20,background:'var(--bg)'}}>
+      {floatingHeaderSlot}
       <div style={{width:52,height:52,border:'3px solid var(--bdr)',
         borderTopColor:C.sky,borderRadius:'50%',animation:'spin .7s linear infinite'}}/>
       <div style={{fontFamily:F.b,color:'var(--dim)',fontSize:15,letterSpacing:'.02em'}}>
@@ -4643,6 +4654,7 @@ function App(){
   if(!rows.length&&!loading)return(
     <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
       minHeight:'100dvh',gap:20,padding:'32px 20px',background:'var(--bg)'}}>
+      {floatingHeaderSlot}
       {onlineFetchErr?<>
         <div style={{fontFamily:F.h,fontSize:14,fontWeight:700,color:C.rose,
           letterSpacing:'.04em',textTransform:'uppercase',textAlign:'center',maxWidth:460}}>
@@ -4671,6 +4683,7 @@ function App(){
   );
   if(loading)return(
     <div style={{height:'100dvh',overflow:'auto',background:'var(--bg)',padding:'28px clamp(16px,4vw,40px)'}}>
+      {floatingHeaderSlot}
       <div style={{fontFamily:F.b,color:'var(--dim)',fontSize:13,letterSpacing:'.02em',marginBottom:16}}>
         Parsing & mapping orders…
       </div>

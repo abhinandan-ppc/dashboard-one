@@ -1060,9 +1060,8 @@ function installFrameHeaderControls(){
 
           var rakeFrame = isRakePlannerFrame(doc);
           var rakeSlot = rakeFrame ? doc.getElementById('hubFrameHeaderSlot') : null;
-          if(rakeFrame && !rakeSlot) return;
 
-          var host = rakeSlot || findFrameHeaderMount(doc);
+          var host = rakeSlot || (rakeFrame ? null : findFrameHeaderMount(doc));
           var controls = doc.createElement('div');
           controls.id = 'hubFrameHeaderControls';
           controls.setAttribute('data-hub-controls', 'true');
