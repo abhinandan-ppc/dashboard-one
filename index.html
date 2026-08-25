@@ -1721,13 +1721,42 @@ function readEbtpCache(){
     return parsed;
   }catch(e){ return null; }
 }
+
+// Legacy per-page localStorage caches from before EBTP fetching was
+// centralized here. Rake-Planner in particular used to persist BOTH the
+// raw CSV and a full JSON dump of every parsed row into localStorage on
+// every load — many MB, competing for the same origin-wide quota this
+// shared cache needs. Purged on every hub load so stale copies (from
+// browsers that already hit this before the fix shipped) don't keep
+// blocking the write.
+var LEGACY_EBTP_LOCALSTORAGE_KEYS = [
+  'jspl-rake-planner-live-csv-cache',
+  'jspl-rake-planner-session-state-cache',
+];
+function clearLegacyEbtpCaches(){
+  LEGACY_EBTP_LOCALSTORAGE_KEYS.forEach(function(k){
+    try{ localStorage.removeItem(k); }catch(e){}
+  });
+}
+
 function writeEbtpCache(csvText, rowCount){
+  var payload = JSON.stringify({ csvText: csvText, fetchedAt: Date.now(), rowCount: rowCount });
   try{
-    localStorage.setItem(EBTP_CACHE_KEY, JSON.stringify({ csvText: csvText, fetchedAt: Date.now(), rowCount: rowCount }));
+    localStorage.setItem(EBTP_CACHE_KEY, payload);
     return true;
   }catch(e){
-    console.error('EBTP cache write failed (likely localStorage quota exceeded — CSV is', Math.round(csvText.length / 1024), 'KB):', e);
-    return false;
+    // Likely QuotaExceededError — reclaim space from legacy caches and our
+    // own previous entry, then retry once before giving up.
+    console.warn('EBTP cache write failed, clearing legacy caches and retrying:', e);
+    clearLegacyEbtpCaches();
+    try{ localStorage.removeItem(EBTP_CACHE_KEY); }catch(e2){}
+    try{
+      localStorage.setItem(EBTP_CACHE_KEY, payload);
+      return true;
+    }catch(e3){
+      console.error('EBTP cache write failed even after clearing legacy caches (CSV is', Math.round(csvText.length / 1024), 'KB):', e3);
+      return false;
+    }
   }
 }
 
@@ -1758,6 +1787,7 @@ function fetchStatusHide(){
 var ebtpFetchInFlight = null;
 function fetchAndCacheEBTP(force){
   if(ebtpFetchInFlight) return ebtpFetchInFlight;
+  clearLegacyEbtpCaches(); // reclaim quota from pre-centralization per-page caches on every hub load
   var cached = readEbtpCache();
   if(cached && !force) return Promise.resolve({ ok: true, cached: true, fetchedAt: cached.fetchedAt });
 

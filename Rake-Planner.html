@@ -157,6 +157,15 @@ const PLANNER_CACHE_DB='jspl-rake-planner-cache-db';
 const PLANNER_CACHE_STORE='planner-state';
 const PLANNER_CACHE_RECORD='latest';
 
+// One-time cleanup: these *_LOCAL_KEY entries used to hold the full raw CSV
+// and a JSON dump of every parsed row in localStorage, which competes with
+// the hub's shared EBTP cache (jspl-ebtp-cache-v1) for the same origin-wide
+// quota. writeSessionLikeCache() no longer writes them, but purge any
+// leftovers from before this fix (the hub does the same on its own load —
+// this covers opening this page standalone, without the hub ever running).
+try{localStorage.removeItem(LIVE_FETCH_LOCAL_KEY);}catch(e){}
+try{localStorage.removeItem(PLANNER_STATE_LOCAL_KEY);}catch(e){}
+
 function readSessionLikeCache(primaryKey,fallbackKey){
   try{
     const raw=sessionStorage.getItem(primaryKey);
@@ -169,8 +178,12 @@ function readSessionLikeCache(primaryKey,fallbackKey){
 }
 
 function writeSessionLikeCache(primaryKey,fallbackKey,value){
+  // sessionStorage only now — the localStorage fallback used to duplicate the
+  // full raw CSV + fully-parsed rows into localStorage on every load, which
+  // competes for the same origin-wide quota the hub's shared EBTP cache
+  // needs (jspl-ebtp-cache-v1). sessionStorage has its own separate quota
+  // and still survives reloads/reopens within the same tab.
   try{sessionStorage.setItem(primaryKey,value);}catch(e){}
-  try{localStorage.setItem(fallbackKey,value);}catch(e){}
 }
 
 function removeSessionLikeCache(primaryKey,fallbackKey){
