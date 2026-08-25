@@ -1000,26 +1000,28 @@ function UploadScreen({onFile,onCSV,autoFetchEnabled=true}){
       onChange={e=>e.target.files[0]&&onFile(e.target.files[0])}/>
     <div style={{width:'min(500px,92vw)',borderRadius:'var(--radius-lg)',
       border:`1px solid ${fetching?C.sky:'var(--bdrHi)'}`,background:'var(--s1)',boxShadow:'var(--shadow-sm)',overflow:'hidden'}}>
-      <div style={{padding:'14px 20px',display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',rowGap:8}}>
+      <div style={{padding:'14px 20px',display:'flex',alignItems:'center',gap:12}}>
         <div style={{width:28,height:28,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',
           fontSize:20,lineHeight:1}}>☁️</div>
         <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',gap:2,justifyContent:'center'}}>
-          <div style={{fontFamily:F.h,fontSize:13,fontWeight:700,color:'var(--text)',
-            letterSpacing:'.06em',textTransform:'uppercase',lineHeight:1.3}}>Fetch Live EBTP Data</div>
-          <div style={{fontFamily:F.b,fontSize:11,color:'var(--mute)',lineHeight:1.3}}>
+          <div style={{fontFamily:F.h,fontSize:13,fontWeight:700,color:'var(--text)',letterSpacing:'.06em',
+            textTransform:'uppercase',lineHeight:1.3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>Fetch Live EBTP Data</div>
+          <div style={{fontFamily:F.b,fontSize:11,color:'var(--mute)',lineHeight:1.3,
+            whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
             {fetching?(fetchStatus||'…'):'Google Sheet · XHR → iframe → 4 proxies'}
           </div>
         </div>
         <button onClick={fetchOnline} disabled={fetching} style={{
-          padding:'9px 20px',borderRadius:'var(--radius-sm)',cursor:fetching?'wait':'pointer',flexShrink:0,
-          display:'flex',alignItems:'center',justifyContent:'center',
+          padding:'9px 16px',borderRadius:'var(--radius-sm)',cursor:fetching?'wait':'pointer',flexShrink:0,
+          display:'flex',alignItems:'center',justifyContent:'center',maxWidth:170,overflow:'hidden',
           background:fetching?'var(--s3)':`${C._sky}20`,border:`1.5px solid ${fetching?C.sky:'var(--bdrHi)'}`,
           color:fetching?C.sky:'var(--dim)',fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.08em',
           textTransform:'uppercase'}}>
-          {fetching?<span style={{display:'inline-flex',alignItems:'center',gap:7}}>
-            <span style={{width:14,height:14,border:`2px solid ${C._sky}40`,borderTopColor:C.sky,
+          {fetching?<span style={{display:'inline-flex',alignItems:'center',gap:7,minWidth:0}}>
+            <span style={{width:14,height:14,flexShrink:0,border:`2px solid ${C._sky}40`,borderTopColor:C.sky,
               borderRadius:'50%',animation:'spin .7s linear infinite',display:'inline-block'}}/>
-            {fetchStatus||'Connecting…'}</span>:'⟳ Fetch Now'}
+            <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{fetchStatus||'Connecting…'}</span>
+            </span>:'⟳ Fetch Now'}
         </button>
       </div>
       {fetchErr&&<div style={{padding:'10px 20px 14px',fontFamily:F.b,fontSize:12,color:C.rose,
