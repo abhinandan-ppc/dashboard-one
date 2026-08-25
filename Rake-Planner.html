@@ -4750,7 +4750,7 @@ function App(){
   // DOM-node handoff for the hub's MutationObserver to race.
   const placeholderHeaderBar=
     <>
-    <div style={{position:'fixed',top:0,left:0,right:0,padding:mob?'8px 10px 0':'10px 16px 0',zIndex:50}}>
+    <div style={{position:'fixed',top:0,left:0,right:0,padding:mob?'8px 10px 0':'10px 22px 0',zIndex:50}}>
       <div style={{minHeight:64,display:'flex',alignItems:'center',gap:12,padding:`0 ${mob?14:22}px`,
         background:'var(--glass)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
         border:'1px solid var(--glass-border)',borderRadius:'var(--radius-lg)',boxSizing:'border-box',
@@ -4864,7 +4864,7 @@ function App(){
     {/* ── Top Bar (glassmorphic M3, floating — fixed positioning (not
          sticky) guarantees it stays pinned regardless of this page's
          nested independently-scrolling panes) ── */}
-    <div style={{position:'fixed',top:0,left:0,right:0,padding:mob?'8px 10px 0':'10px 16px 0',zIndex:50}}>
+    <div style={{position:'fixed',top:0,left:0,right:0,padding:mob?'8px 10px 0':'10px 22px 0',zIndex:50}}>
     <div style={{minHeight:64,display:'flex',alignItems:'center',gap:12,padding:`0 ${mob?14:22}px`,
       background:'var(--glass)',
       backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',

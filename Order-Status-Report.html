@@ -1360,11 +1360,12 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     return latestDate||'—';
   },[fileName,latestDate]);
 
-  return<div style={{padding:'20px 24px 60px',width:'100%',maxWidth:'none',boxSizing:'border-box'}}>
-    {/* ═══ HEADER ═══ */}
-    <div className="glass-card" style={{padding:'12px 20px',marginBottom:18,display:'flex',flexWrap:'wrap',
+  return<div style={{padding:'0 24px 60px',width:'100%',maxWidth:'none',boxSizing:'border-box'}}>
+    {/* ═══ HEADER (fixed, not sticky — floats in place regardless of ancestor scroll containers) ═══ */}
+    <div style={{position:'fixed',top:0,left:0,right:0,padding:'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
+    <div className="glass-card" style={{padding:'12px 20px',display:'flex',flexWrap:'wrap',
       alignItems:'center',gap:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
-      position:'sticky',top:0,zIndex:50,minHeight:64,boxSizing:'border-box'}}>
+      minHeight:64,boxSizing:'border-box'}}>
       <JSPLBadge/>
       <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0}}/>
       <div style={{flexShrink:0}}>
@@ -1398,6 +1399,9 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
           buttons render at their native uniform size instead of inheriting a wrapper's chrome. */}
       <div id="hubFrameHeaderSlot" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}/>
     </div>
+    </div>
+    {/* Spacer reserving the fixed header's visual footprint in the flex flow below */}
+    <div style={{height:126}}/>
     <div className="glass-card" style={{padding:'12px 16px',marginBottom:18,display:'flex',gap:10,flexWrap:'wrap',
       position:'relative',zIndex:200,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-sm)'}}>
       <MultiSelect label="Release Status" options={relStaOptions} selected={relStaSel} onChange={setRelStaSel}/>

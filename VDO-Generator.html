@@ -35,8 +35,9 @@ body{margin:0;min-height:100vh;background-color:var(--bg-color);color:var(--tx);
 ::-webkit-scrollbar{width:8px;height:8px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(150,150,150,.35);border-radius:10px}
-.wrap{width:100%;max-width:none;margin:0;padding:24px 24px 60px}
-.top-wrapper{margin-bottom:20px;position:sticky;top:0;z-index:50}
+.wrap{width:100%;max-width:none;margin:0;padding:0 24px 60px}
+.top-wrapper{position:fixed;top:0;left:0;right:0;z-index:50;padding:24px 24px 0;box-sizing:border-box}
+.header-spacer{height:134px}
 .top-bar{min-height:64px;background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);padding:12px 20px;border-radius:var(--radius-lg);border:var(--glass-border);box-shadow:var(--shadow-md);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;box-sizing:border-box}
 .top-l{display:flex;align-items:center;gap:14px;min-width:0}
 .top-l .eyebrow{font-size:11px;color:var(--tm);letter-spacing:.5px;text-transform:uppercase;font-weight:700}
@@ -200,6 +201,7 @@ tr:hover td{background:var(--input-hover)}
     </div>
   </div>
 </div>
+<div class="header-spacer"></div>
 <p class="sub">Upload an EBTP export → FI(2)-Released + past promise-date orders are scored, PPC-remarked, and dumped to Excel. Runs fully offline.</p>
 <p class="status" id="status">Waiting for file…</p>
 <div class="fetch-status" id="fetchStatus" style="display:none;position:static;transform:none;width:100%;margin:12px 0;box-sizing:border-box">
