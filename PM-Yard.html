@@ -539,11 +539,22 @@ aside.collapsed .left-toggle {
   .brand-text p { font-size: 9px; white-space: nowrap; }
   
   /* Row 2: Action Buttons - Full Width, Centered, Scrollable if needed */
-  .h-actions { 
+  .h-actions {
   display: flex; gap: 8px; align-items: center; justify-content: flex-end;
   padding: 4px 0; /* Added vertical padding to prevent animation clipping */
   flex-shrink: 0; background: transparent; border: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; margin-left: 0;
+  order: 2;
 }
+
+  /* Combine the hub-injected Home/Refresh/Theme/User controls into the same
+     button row as Analysis/Export/Upload/Settings, instead of their own row
+     above the branding. Same order as .h-actions so they sit on the same
+     flex line (wrapping together if space runs out); !important overrides
+     the element's inline max-width/overflow-x set for the desktop scroll cap. */
+  #hubFrameHeaderSlot {
+    order: 2 !important; max-width: none !important; overflow-x: visible !important;
+    flex-shrink: 0 !important;
+  }
 
 .btn { 
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; 
@@ -579,7 +590,7 @@ aside.collapsed .left-toggle {
 
   /* Accurately push side panels down further to clear the new 3-row header */
   .panel { top: 183px !important; }
-  .side-toggle-btn { top: 12px; } 
+  .side-toggle-btn { top: 50px; }
   
   aside { width: calc(100% - 20px); left: 10px; bottom: 70px; max-height: calc(100vh - 250px); z-index: 50;}
   .inspector { width: calc(100% - 20px); right: 10px; bottom: 70px; max-height: calc(100vh - 250px); z-index: 51;}

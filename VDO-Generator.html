@@ -151,7 +151,7 @@ tr:hover td{background:var(--input-hover)}
 }
 @media (max-width:720px){
   .wrap{padding:16px 12px 40px}
-  .top-wrapper{padding:14px 10px 0}
+  .top-wrapper{padding:14px 12px 0}
   .top-wrapper{position:sticky}
   .top-l{flex-wrap:wrap;row-gap:8px;justify-content:center;text-align:center}
   .hdr-r{gap:8px;row-gap:10px}
@@ -166,6 +166,12 @@ tr:hover td{background:var(--input-hover)}
   #sumCards{gap:10px}
   .tabs{flex-wrap:wrap;gap:8px}
   .btn,.btn.ghost{padding:11px 18px}
+  /* Icon-only header action buttons on mobile: these buttons already carry an
+     inline SVG icon plus a text label (span or bare text node), so we just
+     collapse the label via font-size:0 and re-square the button — no ::before
+     content-injection needed since the icon isn't an emoji glyph. */
+  .hdr-r #uploadBtn,.hdr-r #onlineBtn,.hdr-r #resetBtn{font-size:0;padding:0;width:40px;height:40px;justify-content:center;gap:0}
+  .hdr-r #uploadBtn svg,.hdr-r #onlineBtn svg,.hdr-r #resetBtn svg{width:18px;height:18px;flex-shrink:0}
 }
 @media (max-width:560px){
   #sumCards{grid-template-columns:1fr}

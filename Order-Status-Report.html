@@ -1393,7 +1393,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         On mobile it switches to sticky: sticky occupies real space in the flex flow, so the header's
         own footprint is exactly the spacer's job, structurally, without needing a matching pixel
         height guess for the taller wrapped/column mobile layout — see the spacer below.) ═══ */}
-    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 12px 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
+    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 0 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
     <div className="glass-card" style={{padding:mob?'10px 14px':'12px 20px',display:'flex',
       flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
       alignItems:mob?'stretch':'center',gap:mob?10:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
@@ -1414,7 +1414,8 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         <div>EBTP loaded: <b style={{color:'var(--text)'}}>{ebtpDateLabel}</b></div>
       </div>
 
-      <div style={{display:'flex',gap:10,flexWrap:'wrap',justifyContent:mob?'center':'flex-start'}}>
+      <div style={{display:'flex',gap:mob?12:10,flexWrap:'wrap',justifyContent:mob?'center':'flex-start',
+        alignItems:'center',width:mob?'100%':'auto',paddingTop:mob?8:0,borderTop:mob?'1px solid var(--bdr)':'none'}}>
       <button onClick={()=>setReleasedOnly(v=>!v)} style={{height:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
         border:`1.5px solid ${releasedOnly?C.sky:'var(--bdrHi)'}`,background:releasedOnly?'var(--sky-bg)':'var(--s2)',
         color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:12,fontWeight:700,cursor:'pointer',
@@ -1427,6 +1428,8 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         transition:'all .15s',flexShrink:0}}>
         Clear Filters
       </button>
+
+      {mob&&<div style={{width:1,height:24,background:'var(--bdr)',flexShrink:0}}/>}
 
       {/* id="hubFrameHeaderSlot" is the mount point the hub (index.html / findFrameHeaderMount) looks
           for first; without it, the hub falls back to floating its Home/Refresh/Theme/User controls
