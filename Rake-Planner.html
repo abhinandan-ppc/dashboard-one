@@ -1574,7 +1574,7 @@ function KCard({label,value,sub,accent,mob}){
 function JSPLBadge({compact}){
   return<div style={{display:'flex',alignItems:'center',gap:compact?4:8,flexShrink:0}}>
     <div style={{
-      width:compact?48:62,height:compact?22:28,flexShrink:0,
+      width:compact?36:62,height:compact?16:28,flexShrink:0,
       display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',
     }}>
       <img src={JINDAL_LOGO} alt="Jindal Steel"
@@ -4892,8 +4892,8 @@ function App(){
         <JSPLBadge compact={mob}/>
         <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0,display:mob?'none':'block'}}/>
         <div style={{flexShrink:mob?1:0,minWidth:0,flex:mob?'1 1 auto':'0 0 auto'}}>
-          <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:mob?'center':'left'}}>Rake Planning</div>
-          <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:mob?'center':'left',overflow:mob?'hidden':'visible',textOverflow:mob?'ellipsis':'clip'}}>Rake Planner</div>
+          <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:'left'}}>Rake Planning</div>
+          <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:'left',overflow:mob?'hidden':'visible',textOverflow:mob?'ellipsis':'clip'}}>Rake Planner</div>
         </div>
 
         {rows.length>0&&<button onClick={()=>setOvMap(true)}

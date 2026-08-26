@@ -172,7 +172,7 @@ const JINDAL_LOGO='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAABKCAMAAAD
 /* ═══════════════════ JSPL BRAND BADGE (copied from Rake-Planner) ═══════════════════ */
 function JSPLBadge({compact}){
   return<div style={{display:'flex',alignItems:'center',gap:compact?4:8,flexShrink:0}}>
-    <div style={{width:compact?48:62,height:compact?22:28,flexShrink:0,
+    <div style={{width:compact?36:62,height:compact?16:28,flexShrink:0,
       display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
       <img src={JINDAL_LOGO} alt="Jindal Steel"
         style={{width:'100%',height:'100%',objectFit:'contain',objectPosition:'left center'}}/>
@@ -1404,29 +1404,38 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
       alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
       minHeight:mob?'auto':64,boxSizing:'border-box'}}>
-      <div style={{display:'flex',alignItems:'center',gap:mob?8:14,justifyContent:mob?'space-between':'flex-start',flexWrap:mob?'nowrap':'wrap',width:mob?'100%':'auto'}}>
-        <div style={{display:'flex',alignItems:'center',gap:mob?8:14,flexWrap:'nowrap',minWidth:0,flex:mob?'1 1 auto':'0 0 auto'}}>
+      <div style={{display:'flex',alignItems:'center',gap:mob?8:14,justifyContent:'flex-start',flexWrap:mob?'wrap':'wrap',width:mob?'100%':'auto'}}>
+        <div style={{display:'flex',alignItems:'center',gap:mob?8:14,flexWrap:'nowrap',minWidth:0,flex:mob?'1 1 200px':'0 0 auto'}}>
         <JSPLBadge compact={mob}/>
         <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0,display:mob?'none':'block'}}/>
         <div style={{flexShrink:mob?1:0,minWidth:0,flex:mob?'1 1 auto':'0 0 auto'}}>
-          <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:mob?'center':'left'}}>Order Status</div>
-          <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:mob?'center':'left',overflow:mob?'hidden':'visible',textOverflow:mob?'ellipsis':'clip'}}>Order Status Report</div>
+          <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:'left'}}>Order Status</div>
+          <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:'left',overflow:mob?'hidden':'visible',textOverflow:mob?'ellipsis':'clip'}}>Order Status Report</div>
         </div>
         </div>
 
-        {mob&&<div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}>
-        <button onClick={()=>setReleasedOnly(v=>!v)} style={{height:34,padding:'0 12px',borderRadius:'var(--radius-pill)',
+        {mob&&<div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,marginLeft:'auto'}}>
+        <button onClick={()=>setReleasedOnly(v=>!v)} title="Released Orders" style={{height:34,width:34,padding:0,borderRadius:'var(--radius-pill)',
           border:`1.5px solid ${releasedOnly?C.sky:'var(--bdrHi)'}`,background:releasedOnly?'var(--sky-bg)':'var(--s2)',
-          color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:11,fontWeight:700,cursor:'pointer',
-          textTransform:'uppercase',transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}>
-          {releasedOnly?'✓ ':''}Released
+          color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:15,fontWeight:700,cursor:'pointer',
+          display:'flex',alignItems:'center',justifyContent:'center',
+          textTransform:'uppercase',transition:'all .15s',flexShrink:0}}>
+          {releasedOnly?'✓':'▢'}
         </button>
-        <button onClick={clearAll} disabled={!anyFilterActive} style={{height:34,padding:'0 12px',borderRadius:'var(--radius-pill)',
+        <button onClick={clearAll} disabled={!anyFilterActive} title="Clear Filters" style={{height:34,width:34,padding:0,borderRadius:'var(--radius-pill)',
           border:'1.5px solid var(--bdrHi)',background:'var(--s2)',color:anyFilterActive?C.rose:'var(--mute)',
-          fontFamily:F.h,fontSize:11,fontWeight:700,cursor:anyFilterActive?'pointer':'default',textTransform:'uppercase',
-          transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}>
-          Clear
+          fontFamily:F.h,fontSize:15,fontWeight:700,cursor:anyFilterActive?'pointer':'default',
+          display:'flex',alignItems:'center',justifyContent:'center',
+          textTransform:'uppercase',transition:'all .15s',flexShrink:0}}>
+          ✕
         </button>
+        </div>}
+
+        {mob&&<div style={{width:'100%',fontSize:11,fontFamily:F.m,color:'var(--mute)',textAlign:'left',lineHeight:1.5,
+          maxHeight:scrolled?0:32,opacity:scrolled?0:1,overflow:'hidden',
+          transition:'max-height .2s ease,opacity .2s ease'}}>
+          <div style={{color:'var(--dim)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{fileName}</div>
+          <div>EBTP loaded: <b style={{color:'var(--text)'}}>{ebtpDateLabel}</b></div>
         </div>}
       </div>
 

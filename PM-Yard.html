@@ -101,7 +101,7 @@ header::before {
   padding: 0; flex-shrink: 0; background: transparent; border: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
 }
 
-.brand-text h1 { font-size: 16px; font-weight: 800; color: var(--md-sys-color-secondary); letter-spacing: -0.2px; margin-bottom: 0; }
+.brand-text h1 { font-size: 16px; font-weight: 800; color: var(--tx); letter-spacing: -0.2px; margin-bottom: 0; }
 .brand-text p { font-size: 10px; color: var(--tm); letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; margin-top:-2px;}
 
 .jspl-badge { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
@@ -539,13 +539,14 @@ aside.collapsed .left-toggle {
 
 /* Mobile Devices */
 @media (max-width: 768px) {
-  header { padding: 12px; gap: 12px; justify-content: center; flex-wrap: wrap; left: 10px; right: 10px; }
-  
-  /* Row 1: Logo (left, fixed) + Title (centered, flex-grows) + this page's
+  header { padding: 12px; gap: 12px; justify-content: flex-start; flex-wrap: wrap; left: 10px; right: 10px; }
+
+  /* Row 1: Logo (left, fixed) + Title (left-aligned next to logo, flex-grows) + this page's
      own action buttons (right, fixed) — one non-wrapping row. */
   .brand { order: 1; width: auto; flex: 1 1 auto; min-width: 0; justify-content: flex-start; margin: 0; }
-  .brand-text { display: flex; flex-direction: column; align-items: center; flex: 1 1 auto; min-width: 0; }
+  .brand-text { display: flex; flex-direction: column; align-items: flex-start; flex: 1 1 auto; min-width: 0; }
   .brand-text h1 { font-size: 16px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .jspl-logo { width: 34px; height: 16px; }
   .brand-text p { font-size: 9px; white-space: nowrap; }
   /* Hide the JSPL brand text (name + plant line) on mobile; keep the logo
      image and this page's own title visible. */
