@@ -89,10 +89,10 @@ body{
 button,input,select{font:inherit}
 button{cursor:pointer;border:none;outline:none;background:none}
 :root{--page-side:24px}
-.wrap{max-width:min(1720px,calc(100vw - 40px));margin:0 auto;padding:0 var(--page-side) 72px}
+.wrap{max-width:min(1720px,calc(100vw - var(--page-side) * 2));margin:0 auto;padding:0 var(--page-side) 72px}
 .header-fixed{
   position:fixed;top:0;left:0;right:0;z-index:50;
-  max-width:min(1720px,calc(100vw - 40px));margin:0 auto;padding:28px var(--page-side) 0;box-sizing:border-box;
+  max-width:min(1720px,calc(100vw - var(--page-side) * 2));margin:0 auto;padding:28px var(--page-side) 0;box-sizing:border-box;
 }
 .header-spacer{height:108px}
 @media(min-width:641px) and (max-width:780px){
@@ -105,6 +105,12 @@ header{
   border:var(--glass-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);
 }
 #hubFrameHeaderSlot{display:flex;gap:8px;align-items:center;flex-shrink:0}
+/* Normalize the hub-injected Home/Refresh/Theme/User icon buttons to a
+   uniform 40x40 circle — without this the user-avatar icon in particular
+   can render larger/mismatched. !important wins over the buttons' own
+   inline style attributes. */
+#hubFrameHeaderSlot button{width:40px !important;height:40px !important;min-width:40px !important;min-height:40px !important;max-width:40px !important;max-height:40px !important;padding:0 !important;border-radius:999px !important;box-sizing:border-box !important}
+#hubFrameHeaderSlot button img{width:100% !important;height:100% !important;border-radius:50% !important;object-fit:cover !important}
 @media(max-width:640px){
 :root{--page-side:12px}
 .wrap{padding:0 var(--page-side) 56px}

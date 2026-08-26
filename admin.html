@@ -74,6 +74,12 @@ a { color: var(--primary); }
   #hubFrameHeaderSlot{justify-content:center;width:100%;border-top:1px solid var(--br);padding-top:12px}
 }
 .jspl-badge { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+/* Normalize the hub-injected Home/Refresh/Theme/User icon buttons to a
+   uniform 40x40 circle — without this the user-avatar icon in particular
+   can render larger/mismatched. !important wins over the buttons' own
+   inline style attributes. */
+#hubFrameHeaderSlot button { width: 40px !important; height: 40px !important; min-width: 40px !important; min-height: 40px !important; max-width: 40px !important; max-height: 40px !important; padding: 0 !important; border-radius: 999px !important; box-sizing: border-box !important; }
+#hubFrameHeaderSlot button img { width: 100% !important; height: 100% !important; border-radius: 50% !important; object-fit: cover !important; }
 .jspl-logo { width: 46px; height: 21px; object-fit: contain; object-position: left center; flex-shrink: 0; }
 .jspl-brand-text { line-height: 1; }
 .jspl-brand-l1 { font-family: 'DM Sans', sans-serif; font-weight: 900; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--tx); }

@@ -61,8 +61,8 @@ body{margin:0;min-height:100vh;background-color:var(--bg-color);color:var(--tx);
 #uploadBtn{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border-color:transparent;position:relative;margin-left:auto;flex-shrink:0}
 .hdr-r .upload-btn:hover{filter:brightness(1.08);background:var(--md-sys-color-primary)}
 .hdr-r .upload-btn:disabled{opacity:.7;cursor:default;transform:none}
-.file-badge{display:none;flex-direction:column;font-size:11px;font-family:var(--mono, monospace);color:var(--tm);line-height:1.5;text-align:right;flex-shrink:0;max-width:260px;overflow:hidden}
-.file-badge.scroll-hidden{display:none!important;margin:0!important}
+.file-badge{display:none;flex-direction:column;font-size:11px;font-family:var(--mono, monospace);color:var(--tm);line-height:1.5;text-align:right;flex-shrink:0;max-width:260px;overflow:hidden;max-height:60px;transition:max-height .22s ease,opacity .22s ease,margin-top .22s ease}
+.file-badge.scroll-hidden{max-height:0;opacity:0;margin-top:0;pointer-events:none}
 .file-badge #fname{color:var(--tm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .file-badge b{color:var(--tx);font-weight:800}
 .spinner{display:none;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;opacity:.85;animation:spin .7s linear infinite}
@@ -163,7 +163,7 @@ tr:hover td{background:var(--input-hover)}
   .wrap{padding:16px 12px 40px}
   .top-wrapper{padding:12px 0 0;margin-bottom:16px}
   .top-wrapper{position:sticky}
-  .top-bar{padding:12px;gap:12px}
+  .top-bar{padding:12px;gap:0}
   .top-l{gap:8px}
   .top-l .title-block{flex:1 1 auto;min-width:0;text-align:left}
   .jspl-logo{width:38px;height:17px}
@@ -195,7 +195,7 @@ tr:hover td{background:var(--input-hover)}
   .pager{justify-content:center;text-align:center}
   .filterpop{left:12px !important;right:12px !important;max-width:none;width:auto}
   .header-spacer{height:0}
-  .top-bar{padding:10px;gap:10px}
+  .top-bar{padding:10px;gap:0}
   .hdr-r button:not(#uploadBtn){min-height:44px}
   #uploadBtn{width:44px;height:44px;min-height:44px;max-height:44px;box-sizing:border-box}
   #themeToggle{width:44px;height:44px}

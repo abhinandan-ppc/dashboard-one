@@ -30,6 +30,14 @@ table{border-collapse:collapse}
 thead tr th:first-child{border-radius:var(--radius-xs) 0 0 0}
 thead tr th:last-child{border-radius:0 var(--radius-xs) 0 0}
 .portal-dropdown{box-shadow:var(--shadow-lg);border-radius:var(--radius-md);border:1px solid var(--bdrHi);overflow:hidden;}
+
+/* Normalize the hub-injected Home/Refresh/Theme/User icon buttons (mounted
+   into #hubFrameHeaderSlot with their own inline styles by the parent hub)
+   to a uniform 40x40 circle — without this the user-avatar icon in
+   particular can render larger/mismatched. !important wins over the
+   buttons' own inline style attributes. */
+#hubFrameHeaderSlot button{width:40px !important;height:40px !important;min-width:40px !important;min-height:40px !important;max-width:40px !important;max-height:40px !important;padding:0 !important;border-radius:999px !important;box-sizing:border-box !important;}
+#hubFrameHeaderSlot button img{width:100% !important;height:100% !important;border-radius:50% !important;object-fit:cover !important;}
 /* Glassy popover surface — as an actual CSS class (not an inline style prop) so backdrop-filter
    reliably takes effect, matching VDO-Generator's .filterpop class. An inline `style` background/
    backdrop-filter has the highest CSS specificity and was overriding/short-circuiting the blur in
@@ -1464,8 +1472,6 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
 
       <div style={{display:'flex',gap:mob?12:10,flexWrap:'wrap',justifyContent:mob?'center':'flex-start',
         alignItems:'center',width:mob?'100%':'auto',paddingTop:mob?8:0,borderTop:mob?'1px solid var(--bdr)':'none'}}>
-      {mob&&<div style={{width:1,height:24,background:'var(--bdr)',flexShrink:0}}/>}
-
       {/* id="hubFrameHeaderSlot" is the mount point the hub (index.html / findFrameHeaderMount) looks
           for first; without it, the hub falls back to floating its Home/Refresh/Theme/User controls
           fixed at top-right. Left unstyled (no pill/background) so the hub's own 40x40 circular

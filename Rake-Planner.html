@@ -35,6 +35,14 @@ thead tr th:last-child{border-radius:0 var(--radius-xs) 0 0}
 
 /* ── Portal dropdown ── */
 .portal-dropdown{box-shadow:var(--shadow-lg);border-radius:var(--radius-md);border:1px solid var(--bdrHi);overflow:hidden;}
+
+/* Normalize the hub-injected Home/Refresh/Theme/User icon buttons (mounted
+   into #hubFrameHeaderSlot with their own inline styles by the parent hub)
+   to a uniform 40x40 circle — without this the user-avatar icon in
+   particular can render larger/mismatched. !important wins over the
+   buttons' own inline style attributes. */
+#hubFrameHeaderSlot button{width:40px !important;height:40px !important;min-width:40px !important;min-height:40px !important;max-width:40px !important;max-height:40px !important;padding:0 !important;border-radius:999px !important;box-sizing:border-box !important;}
+#hubFrameHeaderSlot button img{width:100% !important;height:100% !important;border-radius:50% !important;object-fit:cover !important;}
 </style>
 </head>
 <body>
@@ -4957,8 +4965,6 @@ function App(){
         onMouseLeave={e=>{e.currentTarget.style.background='color-mix(in srgb,var(--amber) 12%,transparent)'}}>
         ↑ New File
       </button>}
-
-      {mob&&<div style={{width:1,height:24,background:'var(--bdr)',flexShrink:0}}/>}
 
       <div id="hubFrameHeaderSlot" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,justifyContent:mob?'center':'flex-start'}}/>
       </div>
