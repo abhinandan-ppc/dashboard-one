@@ -49,9 +49,14 @@ body{margin:0;min-height:100vh;background-color:var(--bg-color);color:var(--tx);
 .jspl-brand-l2{font-size:9px;color:var(--tm);letter-spacing:.05em;text-transform:uppercase;font-weight:700;margin-top:2px}
 .jspl-divider{width:1px;height:28px;background:var(--br);flex-shrink:0}
 .hdr-r{display:flex;align-items:center;gap:10px;flex-shrink:0}
-.hdr-r button{height:40px;padding:0 16px;display:inline-flex;align-items:center;gap:6px;border-radius:var(--radius-pill);font-size:13px;font-weight:700;background:var(--input-bg);color:var(--tx);border:var(--glass-border);cursor:pointer;transition:.15s;white-space:nowrap}
-.hdr-r button:hover{background:var(--input-hover);transform:translateY(-2px)}
-.hdr-r button svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hdr-r button,#uploadBtn{height:40px;padding:0 16px;display:inline-flex;align-items:center;gap:6px;border-radius:var(--radius-pill);font-size:13px;font-weight:700;background:var(--input-bg);color:var(--tx);border:var(--glass-border);cursor:pointer;transition:.15s;white-space:nowrap;box-sizing:border-box}
+.hdr-r button:hover,#uploadBtn:hover{background:var(--input-hover);transform:translateY(-2px)}
+.hdr-r button svg,#uploadBtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+/* Normalize the hub-injected Home/Refresh/Theme/User icon buttons (mounted
+   into #hubFrameHeaderSlot with their own inline styles by the parent hub)
+   to a uniform circular size — without this they render at whatever size
+   each one's own markup happens to carry, looking mismatched/distorted. */
+#hubFrameHeaderSlot button{width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;max-width:40px!important;max-height:40px!important;padding:0!important;border-radius:50%!important;box-sizing:border-box!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
 #themeToggle{width:40px;padding:0;border-radius:50%;justify-content:center}
 #uploadBtn{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border-color:transparent;position:relative;margin-left:auto;flex-shrink:0}
 .hdr-r .upload-btn:hover{filter:brightness(1.08);background:var(--md-sys-color-primary)}
@@ -65,8 +70,8 @@ body{margin:0;min-height:100vh;background-color:var(--bg-color);color:var(--tx);
 @media (max-width:720px){
   .top-bar{flex-wrap:wrap}
   .top-l{order:1;flex:1 1 auto;min-width:0;flex-wrap:nowrap}
-  .hdr-r{order:2;flex:1 1 100%;justify-content:center;margin-top:8px;border-top:1px solid var(--br);padding-top:8px}
-  .file-badge{order:3;flex:1 1 100%;text-align:left;max-width:none;margin-top:6px}
+  .file-badge{order:2;flex:1 1 100%;text-align:left;max-width:none;margin-top:6px}
+  .hdr-r{order:3;flex:1 1 100%;justify-content:center;margin-top:8px;border-top:1px solid var(--br);padding-top:8px}
 }
 .sub{color:var(--tm);font-size:13px;margin:0 0 20px}
 .panel{background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:var(--glass-border);border-radius:var(--radius-l);box-shadow:var(--glass-shadow);padding:20px 22px;margin-bottom:18px}
