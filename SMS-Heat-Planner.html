@@ -78,23 +78,34 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 
 @media (max-width: 768px) {
   .top-wrapper { padding: 8px 12px; }
-  .top-bar { display: flex; flex-direction: column; align-items: stretch; padding: 12px; gap: 12px; }
-  .top-l { justify-content: center; }
+  .top-bar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "logo actions" "tabs tabs";
+    align-items: center; padding: 12px; gap: 10px;
+  }
+  .top-l { grid-area: logo; justify-content: flex-start; min-width: 0; }
+  .top-l > div:last-child { flex: 1; min-width: 0; text-align: center; }
+  .top-l h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .jspl-brand-text { display: none; }
   .jspl-divider { display: none; }
-  .view-tabs { justify-content: stretch; }
+  .view-tabs { grid-area: tabs; justify-content: stretch; }
   .view-tabs button { flex: 1; }
-  .hdr-r { justify-content: center; }
+  .hdr-r { grid-area: actions; justify-content: flex-end; }
+  .reset-btn {
+    width: 34px; padding: 0; font-size: 0; gap: 0; justify-content: center;
+  }
+  .reset-btn::before { content: "🔄"; font-size: 15px; }
   .frame-stage { padding: 0 12px 12px; }
   .frame-box { inset: 0 12px 12px; }
 }
 @media (max-width: 480px) {
-  .top-bar { padding: 10px; gap: 10px; }
+  .top-bar { padding: 10px; gap: 8px; }
   .view-tabs { gap: 4px; padding: 3px; }
   .view-tabs button { padding: 10px 8px; font-size: 12px; }
   .hdr-r { gap: 8px; }
-  .theme-toggle, .reset-btn { height: 44px; }
-  .reset-btn { padding: 0 14px; }
+  .theme-toggle, .reset-btn { height: 40px; width: 40px; }
+  .reset-btn::before { font-size: 16px; }
 }
 </style>
 </head>

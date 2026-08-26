@@ -1404,39 +1404,57 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
       alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
       minHeight:mob?'auto':64,boxSizing:'border-box'}}>
-      <div style={{display:'flex',alignItems:'center',gap:14,justifyContent:mob?'center':'flex-start',flexWrap:'wrap'}}>
+      <div style={{display:'flex',alignItems:'center',gap:mob?8:14,justifyContent:mob?'space-between':'flex-start',flexWrap:mob?'nowrap':'wrap',width:mob?'100%':'auto'}}>
+        <div style={{display:'flex',alignItems:'center',gap:mob?8:14,flexWrap:'nowrap',minWidth:0,flex:mob?'1 1 auto':'0 0 auto'}}>
         <JSPLBadge compact={mob}/>
         <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0,display:mob?'none':'block'}}/>
-        <div style={{flexShrink:0}}>
+        <div style={{flexShrink:mob?1:0,minWidth:0,flex:mob?'1 1 auto':'0 0 auto'}}>
           <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:mob?'center':'left'}}>Order Status</div>
-          <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:mob?'center':'left'}}>Order Status Report</div>
+          <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:mob?'center':'left',overflow:mob?'hidden':'visible',textOverflow:mob?'ellipsis':'clip'}}>Order Status Report</div>
         </div>
+        </div>
+
+        {mob&&<div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}>
+        <button onClick={()=>setReleasedOnly(v=>!v)} style={{height:34,padding:'0 12px',borderRadius:'var(--radius-pill)',
+          border:`1.5px solid ${releasedOnly?C.sky:'var(--bdrHi)'}`,background:releasedOnly?'var(--sky-bg)':'var(--s2)',
+          color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:11,fontWeight:700,cursor:'pointer',
+          textTransform:'uppercase',transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}>
+          {releasedOnly?'✓ ':''}Released
+        </button>
+        <button onClick={clearAll} disabled={!anyFilterActive} style={{height:34,padding:'0 12px',borderRadius:'var(--radius-pill)',
+          border:'1.5px solid var(--bdrHi)',background:'var(--s2)',color:anyFilterActive?C.rose:'var(--mute)',
+          fontFamily:F.h,fontSize:11,fontWeight:700,cursor:anyFilterActive?'pointer':'default',textTransform:'uppercase',
+          transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}>
+          Clear
+        </button>
+        </div>}
       </div>
 
       {!mob&&<div style={{flex:1}}/>}
 
-      <div style={{fontSize:11,fontFamily:F.m,color:'var(--mute)',textAlign:mob?'center':'right',lineHeight:1.6,flexShrink:0,
-        maxHeight:mob&&scrolled?0:60,opacity:mob&&scrolled?0:1,overflow:'hidden',
-        transition:'max-height .2s ease,opacity .2s ease'}}>
-        <div style={{color:'var(--dim)',maxWidth:mob?'100%':220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{fileName}</div>
+      {!mob&&<div style={{fontSize:11,fontFamily:F.m,color:'var(--mute)',textAlign:'right',lineHeight:1.6,flexShrink:0}}>
+        <div style={{color:'var(--dim)',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{fileName}</div>
         <div>EBTP loaded: <b style={{color:'var(--text)'}}>{ebtpDateLabel}</b></div>
-      </div>
+      </div>}
 
-      <div style={{display:'flex',gap:mob?12:10,flexWrap:'wrap',justifyContent:mob?'center':'flex-start',
-        alignItems:'center',width:mob?'100%':'auto',paddingTop:mob?8:0,borderTop:mob?'1px solid var(--bdr)':'none'}}>
-      <button onClick={()=>setReleasedOnly(v=>!v)} style={{height:mob?42:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
+      {!mob&&<div style={{display:'flex',gap:10,flexWrap:'wrap',justifyContent:'flex-start',
+        alignItems:'center',width:'auto'}}>
+      <button onClick={()=>setReleasedOnly(v=>!v)} style={{height:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
         border:`1.5px solid ${releasedOnly?C.sky:'var(--bdrHi)'}`,background:releasedOnly?'var(--sky-bg)':'var(--s2)',
         color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:12,fontWeight:700,cursor:'pointer',
         textTransform:'uppercase',transition:'all .15s',flexShrink:0}}>
         {releasedOnly?'✓ ':''}Released Orders
       </button>
-      <button onClick={clearAll} disabled={!anyFilterActive} style={{height:mob?42:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
+      <button onClick={clearAll} disabled={!anyFilterActive} style={{height:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
         border:'1.5px solid var(--bdrHi)',background:'var(--s2)',color:anyFilterActive?C.rose:'var(--mute)',
         fontFamily:F.h,fontSize:12,fontWeight:700,cursor:anyFilterActive?'pointer':'default',textTransform:'uppercase',
         transition:'all .15s',flexShrink:0}}>
         Clear Filters
       </button>
+      </div>}
 
+      <div style={{display:'flex',gap:mob?12:10,flexWrap:'wrap',justifyContent:mob?'center':'flex-start',
+        alignItems:'center',width:mob?'100%':'auto',paddingTop:mob?8:0,borderTop:mob?'1px solid var(--bdr)':'none'}}>
       {mob&&<div style={{width:1,height:24,background:'var(--bdr)',flexShrink:0}}/>}
 
       {/* id="hubFrameHeaderSlot" is the mount point the hub (index.html / findFrameHeaderMount) looks

@@ -4872,7 +4872,7 @@ function App(){
       alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
       minHeight:mob?'auto':64,boxSizing:'border-box'}}>
 
-      <div style={{display:'flex',alignItems:'center',gap:14,justifyContent:mob?'center':'flex-start',flexWrap:'wrap'}}>
+      <div style={{display:'flex',alignItems:'center',gap:mob?8:14,justifyContent:'flex-start',flexWrap:mob?'nowrap':'wrap'}}>
       {/* Hamburger on narrow */}
       {isNarrow&&<button onClick={()=>setSideOpen(o=>!o)} style={{
         background:'transparent',border:'1px solid var(--bdr)',borderRadius:'var(--radius-sm)',
@@ -4891,32 +4891,32 @@ function App(){
 
         <JSPLBadge compact={mob}/>
         <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0,display:mob?'none':'block'}}/>
-        <div style={{flexShrink:0}}>
+        <div style={{flexShrink:mob?1:0,minWidth:0,flex:mob?'1 1 auto':'0 0 auto'}}>
           <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:mob?'center':'left'}}>Rake Planning</div>
-          <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:mob?'center':'left'}}>Rake Planner</div>
+          <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:mob?'center':'left',overflow:mob?'hidden':'visible',textOverflow:mob?'ellipsis':'clip'}}>Rake Planner</div>
         </div>
 
         {rows.length>0&&<button onClick={()=>setOvMap(true)}
           title="Siding Overview Map"
-          style={{height:mob?42:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
+          style={{height:mob?34:34,width:mob?34:'auto',padding:mob?0:'0 16px',borderRadius:'var(--radius-pill)',
             border:'1.5px solid rgba(20,184,166,.38)',background:'rgba(20,184,166,.12)',
-            color:'#14b8a6',fontFamily:F.h,fontSize:12,fontWeight:700,
+            color:'#14b8a6',fontFamily:F.h,fontSize:mob?15:12,fontWeight:700,
             textTransform:'uppercase',cursor:'pointer',
-            display:'flex',alignItems:'center',gap:5,transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}
+            display:'flex',alignItems:'center',justifyContent:'center',gap:5,transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}
           onMouseEnter={e=>e.currentTarget.style.background='rgba(20,184,166,.22)'}
           onMouseLeave={e=>e.currentTarget.style.background='rgba(20,184,166,.12)'}>
-          🗺 Overview
+          🗺{!mob&&' Overview'}
         </button>}
         <button onClick={()=>exportEBTPWithMapping(rows)}
           title="Export full EBTP raw file with _State, _Region, _Siding appended as last 3 columns"
-          style={{height:mob?42:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
+          style={{height:mob?34:34,width:mob?34:'auto',padding:mob?0:'0 16px',borderRadius:'var(--radius-pill)',
             border:'1.5px solid rgba(91,163,217,.35)',background:'rgba(91,163,217,.12)',
-            color:C.sky,fontFamily:F.h,fontSize:12,fontWeight:700,
+            color:C.sky,fontFamily:F.h,fontSize:mob?15:12,fontWeight:700,
             textTransform:'uppercase',cursor:'pointer',
-            display:'flex',alignItems:'center',gap:5,transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}
+            display:'flex',alignItems:'center',justifyContent:'center',gap:5,transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}
           onMouseEnter={e=>e.currentTarget.style.background='rgba(91,163,217,.22)'}
           onMouseLeave={e=>e.currentTarget.style.background='rgba(91,163,217,.12)'}>
-          ↓ EBTP+Map
+          ↓{!mob&&' EBTP+Map'}
         </button>
       </div>
 

@@ -63,7 +63,7 @@ body{margin:0;min-height:100vh;background-color:var(--bg-color);color:var(--tx);
 .spinner{display:none;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;opacity:.85;animation:spin .7s linear infinite}
 .spinner.on{display:inline-block}
 @media (max-width:900px){.file-badge{max-width:160px}.file-badge span{max-width:70px}}
-@media (max-width:720px){.top-bar{flex-direction:column;align-items:stretch}.hdr-r{justify-content:center;flex-wrap:wrap}.file-badge{max-width:none}}
+@media (max-width:720px){.top-bar{flex-wrap:wrap}.top-l{order:1;flex:1 1 auto;min-width:0;flex-wrap:nowrap}.hdr-r{order:2;justify-content:flex-end;flex-wrap:nowrap;flex-shrink:0}.file-badge{max-width:none;order:3;flex:1 1 100%;justify-content:center;margin-top:8px}}
 .sub{color:var(--tm);font-size:13px;margin:0 0 20px}
 .panel{background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:var(--glass-border);border-radius:var(--radius-l);box-shadow:var(--glass-shadow);padding:20px 22px;margin-bottom:18px}
 .panel h2{margin:0 0 14px;font-size:12.5px;text-transform:uppercase;letter-spacing:1.4px;color:var(--md-sys-color-primary);font-weight:800}
@@ -154,8 +154,10 @@ tr:hover td{background:var(--input-hover)}
   .top-wrapper{padding:12px 0 0;margin-bottom:16px}
   .top-wrapper{position:sticky}
   .top-bar{padding:12px;gap:12px}
-  .top-l{flex-wrap:wrap;row-gap:8px;justify-content:center;text-align:center}
-  .hdr-r{gap:8px;row-gap:10px;border-top:1px solid var(--br);padding-top:10px;margin-top:2px;width:100%;box-sizing:border-box}
+  .top-l{gap:8px}
+  .top-l .title-block{flex:1 1 auto;min-width:0;text-align:center}
+  .top-l .title-block .eyebrow,.top-l .title-block h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hdr-r{gap:8px}
   .header-spacer{height:0}
   .panel{padding:16px}
   .row{gap:14px}
@@ -186,7 +188,7 @@ tr:hover td{background:var(--input-hover)}
   .hdr-r button:not(#uploadBtn):not(#onlineBtn):not(#resetBtn){min-height:44px}
   .hdr-r #uploadBtn,.hdr-r #onlineBtn,.hdr-r #resetBtn{width:44px;height:44px;min-height:44px;max-height:44px;box-sizing:border-box}
   #themeToggle{width:44px;height:44px}
-  .hdr-r{justify-content:center;gap:10px 8px}
+  .hdr-r{justify-content:flex-end;gap:10px 8px}
   #dist{gap:10px}
   .panel{margin-bottom:14px}
   .panel h2{margin-bottom:12px}
@@ -204,7 +206,7 @@ tr:hover td{background:var(--input-hover)}
         </div>
       </div>
       <div class="jspl-divider"></div>
-      <div>
+      <div class="title-block">
         <div class="eyebrow">Value of Delayed Orders</div>
         <h1>VDO Generator</h1>
       </div>
