@@ -27,7 +27,7 @@
   --br:rgba(15,23,42,.08);
   --input-bg:rgba(15,23,42,.05);
   --input-hover:rgba(15,23,42,.09);
-  --acc:#006493;
+  --acc:var(--md-sys-color-primary);
   --acc2:#0f3d5c;
   --grn:#16a34a;
   --yel:#d97706;
@@ -60,7 +60,7 @@
   --br:rgba(255,255,255,.1);
   --input-bg:rgba(255,255,255,.06);
   --input-hover:rgba(255,255,255,.1);
-  --acc:#8dcdff;
+  --acc:var(--md-sys-color-primary);
   --acc2:#cbe6ff;
   --grn:#4ade80;
   --yel:#fbbf24;
@@ -195,7 +195,7 @@ h1{font-size:20px;margin:0;letter-spacing:-.2px;font-weight:800;color:var(--tx)}
 .pormap-panel.open{display:block}
 .pormap-panel::-webkit-scrollbar{width:8px}
 .pormap-panel::-webkit-scrollbar-track{background:transparent}
-.pormap-panel::-webkit-scrollbar-thumb{background:var(--input-hover);border-radius:99px}
+.pormap-panel::-webkit-scrollbar-thumb{background:var(--input-hover);border-radius:var(--radius-pill)}
 .pormap-panel .mapgrid{margin-top:2px;padding-right:6px}
 @keyframes mapPop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 .pormap-panel .maphd{font-size:12.5px;font-weight:700;margin-bottom:14px}
@@ -206,7 +206,7 @@ h1{font-size:20px;margin:0;letter-spacing:-.2px;font-weight:800;color:var(--tx)}
 .maprow.req span{color:var(--tx)}
 .maprow select{
   width:100%;min-width:0;box-sizing:border-box;
-  background:var(--input-bg);color:var(--tx);border:var(--glass-border);border-radius:12px;padding:8px 10px;font-size:12.5px;
+  background:var(--input-bg);color:var(--tx);border:var(--glass-border);border-radius:var(--radius-s);padding:8px 10px;font-size:12.5px;
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);text-overflow:ellipsis
 }
 .maprow select:focus{outline:none;border-color:rgba(141,205,255,.55);box-shadow:0 0 0 3px rgba(141,205,255,.12)}
@@ -253,7 +253,7 @@ button{
 .chartbody{position:relative;height:208px}
 .chartbody canvas{width:100% !important;height:100% !important}
 .dashnote{
-  margin:10px 0 4px;padding:10px 14px;border-radius:var(--radius-m);background:rgba(255,255,255,.04);
+  margin:10px 0 4px;padding:10px 14px;border-radius:var(--radius-m);background:var(--surface-soft);
   border:var(--glass-border);color:var(--tm);font-size:12px
 }
 .dashtools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -276,7 +276,7 @@ button{
   background:transparent;border:none;color:var(--tm);padding:10px 16px;font-size:13px;font-weight:700;border-radius:999px;
   border-bottom:2px solid transparent
 }
-.tabbtn:hover{color:var(--tx);background:rgba(255,255,255,.05)}
+.tabbtn:hover{color:var(--tx);background:var(--surface-soft)}
 .tabbtn.active{color:var(--tx);background:rgba(141,205,255,.16);border-bottom-color:transparent;box-shadow:inset 0 0 0 1px rgba(141,205,255,.18)}
 .tabpane{display:none}
 .tabpane.show{display:block}
@@ -287,14 +287,14 @@ button{
 table{border-collapse:collapse;width:100%;font-size:12px}
 th{
   position:sticky;top:0;background:var(--table-head-bg);color:var(--tm);text-align:left;padding:10px 11px;font-weight:700;
-  white-space:nowrap;border-bottom:1px solid rgba(255,255,255,.08);font-size:11px;text-transform:uppercase;letter-spacing:.4px;
+  white-space:nowrap;border-bottom:1px solid var(--br);font-size:11px;text-transform:uppercase;letter-spacing:.4px;
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)
 }
-td{padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap;color:var(--table-row-text)}
+td{padding:8px 11px;border-bottom:1px solid var(--br);white-space:nowrap;color:var(--table-row-text)}
 td.num{font-family:var(--mono);text-align:right}
 tr.hi td{background:rgba(251,146,60,.12)} tr.red td{background:rgba(248,113,113,.16)}
 tr.grn td{background:rgba(74,222,128,.12)} tr.yel td{background:rgba(251,191,36,.11)}
-tbody tr:hover td{background:rgba(255,255,255,.035)}
+tbody tr:hover td{background:var(--surface-soft)}
 .more{padding:10px 12px;color:var(--tm);font-size:11.5px;background:var(--surface)}
 .muted{color:var(--tm)}
 details{

@@ -95,8 +95,8 @@ body, html {
 /* ─── SCROLLBARS ─── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(150,150,150,0.3); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(150,150,150,0.6); }
+::-webkit-scrollbar-thumb { background: var(--bdrHi); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--sky); }
 
 div.google-visualization-tooltip { border: none !important; box-shadow: none !important; background: transparent !important; }
 
@@ -217,7 +217,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 .cmg-lbl { font-size: 11px; font-weight: 700; color: var(--tx); white-space: nowrap; display: flex; align-items: center; gap:4px; }
 .cap-micro-grid-wrap::-webkit-scrollbar { height: 6px; }
 .cap-micro-grid-wrap::-webkit-scrollbar-track { background: var(--input-bg); border-radius: 10px; }
-.cap-micro-grid-wrap::-webkit-scrollbar-thumb { background: rgba(150,150,150,0.4); border-radius: 10px; }
+.cap-micro-grid-wrap::-webkit-scrollbar-thumb { background: var(--bdrHi); border-radius: 10px; }
 
 /* ─── COLLAPSIBLES (Individual M3 Cards) ─── */
 .coll-panel { width: 100%; box-sizing: border-box; border-radius: var(--radius-m); overflow: hidden; background: var(--glass-bg); border: var(--glass-border); box-shadow: var(--glass-shadow); flex-shrink: 0; }
@@ -231,8 +231,8 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 
 .coll-b::-webkit-scrollbar { width: 4px; }
 .coll-b::-webkit-scrollbar-track { background: transparent; }
-.coll-b::-webkit-scrollbar-thumb { background: rgba(150,150,150,0.3); border-radius: 4px; }
-.coll-b::-webkit-scrollbar-thumb:hover { background: rgba(150,150,150,0.6); }
+.coll-b::-webkit-scrollbar-thumb { background: var(--bdrHi); border-radius: 4px; }
+.coll-b::-webkit-scrollbar-thumb:hover { background: var(--sky); }
 
 /* ─── TABS & CONTENT ─── */
 .tabs-hdr { display: flex; gap: 8px; border-bottom: 1px solid var(--br); padding: 12px 24px; background: var(--input-bg); overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-l) var(--radius-l) 0 0; }

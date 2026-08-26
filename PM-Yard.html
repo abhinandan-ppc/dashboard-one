@@ -12,57 +12,14 @@
 
 <style>
 /* ─── MATERIAL 3 & GLASSMORPHISM DESIGN SYSTEM ─── */
+/* Tokens are inherited from theme.css's :root (dark defaults) and
+   [data-theme="light"] blocks. Only PM-Yard-specific structural
+   overrides remain here: theme.css's --glass-border is a bare color,
+   but this page consumes it as a full `border:` shorthand in many
+   places, so a distinct shorthand token is defined once and reused
+   for both themes via the canonical color var. */
 :root {
-  --md-sys-color-primary: #006493;
-  --md-sys-color-on-primary: #ffffff;
-  --md-sys-color-primary-container: #cbe6ff;
-  --md-sys-color-on-primary-container: #001e30;
-  --md-sys-color-secondary: #0ea5e9;
-  
-  --bg-color: #f0f4f8;
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-bg-solid: rgba(255, 255, 255, 0.95);
-  --glass-bg-hover: rgba(255, 255, 255, 0.9);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.8);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  --glass-blur: blur(24px);
-
-  --tx: #1a1c1e; 
-  --tm: #44474e; 
-  --br: rgba(0,0,0,0.06);
-  --input-bg: rgba(0,0,0,0.04);
-  --input-hover: rgba(0,0,0,0.08);
-
-  --radius-xs: 6px; --radius-s: 12px; --radius-m: 16px; --radius-lg: 18px; --radius-pill: 100px;
-  --shadow-md: var(--glass-shadow);
-  --text: var(--tx); --dim: var(--tm); --mute: var(--tm);
-  --bdr: var(--br); --bdrHi: rgba(0,0,0,0.18);
-  --s2: var(--input-bg);
-}
-
-[data-theme="dark"] {
-  --md-sys-color-primary: #8dcdff;
-  --md-sys-color-on-primary: #00344f;
-  --md-sys-color-primary-container: #004b70;
-  --md-sys-color-on-primary-container: #cbe6ff;
-  --md-sys-color-secondary: #38bdf8;
-
-  --bg-color: #0f172a;
-  --glass-bg: rgba(15, 23, 42, 0.65);
-  --glass-bg-solid: rgba(15, 23, 42, 0.98);
-  --glass-bg-hover: rgba(30, 41, 59, 0.85);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.08);
-  --glass-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-
-  --tx: #f8fafc; 
-  --tm: #94a3b8; 
-  --br: rgba(255,255,255,0.1);
-  --input-bg: rgba(255,255,255,0.04);
-  --input-hover: rgba(255,255,255,0.08);
-
-  --text: var(--tx); --dim: var(--tm); --mute: var(--tm);
-  --bdr: var(--br); --bdrHi: rgba(255,255,255,0.14);
-  --s2: var(--input-bg);
+  --glass-border-rule: 1px solid var(--glass-border);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -85,7 +42,7 @@ canvas { display: block; touch-action: none; outline: none; }
 /* ─── HEADER ─── */
 header {
   position: absolute; top: 20px; left: 24px; right: 24px; min-height: 64px;
-  border: var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
+  border: var(--glass-border-rule); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
   display: flex; align-items: center; justify-content: space-between; z-index: 100;
   padding: 12px 20px; pointer-events: auto; gap: 14px;
   background: transparent; /* Moved glass effect to ::before so dropdowns can blur the canvas */
@@ -143,7 +100,7 @@ header::before {
 .dropdown-panel {
   position: absolute; top: calc(100% + 12px); right: 0; width: 380px;
   background: var(--glass-bg) !important;
-  border: var(--glass-border); border-radius: var(--radius-m);
+  border: var(--glass-border-rule); border-radius: var(--radius-m);
   
   /* Force the blur effect */
   backdrop-filter: var(--glass-blur) !important; 
@@ -238,7 +195,7 @@ input[type=range] { flex: 1; accent-color: var(--md-sys-color-secondary); height
 /* ─── SIDEBARS ─── */
 .panel {
   background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-  border-radius: var(--radius-m); border: var(--glass-border); box-shadow: var(--glass-shadow);
+  border-radius: var(--radius-m); border: var(--glass-border-rule); box-shadow: var(--glass-shadow);
   display: flex; flex-direction: column; position: absolute; top: var(--panel-top, 96px); z-index: 15;
   transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
   overflow: visible !important;
@@ -255,7 +212,7 @@ aside.collapsed { transform: translateX(calc(-100% - 24px)); }
 
 /* SIDEBAR TOGGLE BUTTONS */
 .side-toggle-btn {
-  position: absolute; top: 12px; width: 32px; height: 32px; background: var(--glass-bg-solid); border: var(--glass-border);
+  position: absolute; top: 12px; width: 32px; height: 32px; background: var(--glass-bg-solid); border: var(--glass-border-rule);
   color: var(--tx); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
   font-size: 12px; z-index: 25; box-shadow: var(--glass-shadow); transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
@@ -343,7 +300,7 @@ aside.collapsed .left-toggle {
 .toolbar {
   position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
   background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-  border: var(--glass-border); border-radius: var(--radius-pill); padding: 6px;
+  border: var(--glass-border-rule); border-radius: var(--radius-pill); padding: 6px;
   display: flex; gap: 4px; z-index: 15; box-shadow: var(--glass-shadow);
 }
 .tbtn { font-family: inherit; font-size: 11.5px; font-weight: 800; color: var(--tm); background: transparent; border: none; border-radius: var(--radius-pill); padding: 10px 18px; cursor: pointer; transition: 0.2s; }
@@ -363,7 +320,7 @@ aside.collapsed .left-toggle {
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border: var(--glass-border);
+  border: var(--glass-border-rule);
   border-radius: 50%;
   box-shadow: var(--glass-shadow);
   display: flex;
@@ -422,12 +379,12 @@ aside.collapsed .left-toggle {
   font-size: 11px; font-weight: 800; color: var(--tx); 
   background: var(--glass-bg); 
   backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); 
-  border: var(--glass-border); border-radius: var(--radius-pill); 
+  border: var(--glass-border-rule); border-radius: var(--radius-pill); 
   padding: 8px 24px; pointer-events: none; display: flex; gap: 16px; z-index: 10; 
   box-shadow: var(--glass-shadow); 
 }
 .hint b { color: var(--md-sys-color-secondary); }
-.tooltip { position: absolute; pointer-events: none; z-index: 30; background: var(--glass-bg-solid); border: var(--glass-border); border-radius: var(--radius-s); padding: 10px 14px; font-size: 12px; font-weight: 600; display: none; white-space: nowrap; box-shadow: var(--glass-shadow); color: var(--tx);}
+.tooltip { position: absolute; pointer-events: none; z-index: 30; background: var(--glass-bg-solid); border: var(--glass-border-rule); border-radius: var(--radius-s); padding: 10px 14px; font-size: 12px; font-weight: 600; display: none; white-space: nowrap; box-shadow: var(--glass-shadow); color: var(--tx);}
 .tooltip.show { display: block; }
 .tooltip b { font-size: 14px; font-weight: 900; color: var(--md-sys-color-secondary); display: block; margin-bottom: 2px; }
 .tooltip .tl { color: var(--tm); font-size: 10px; text-transform: uppercase; font-weight: 800; margin-bottom: 6px; display: block;}
@@ -481,7 +438,7 @@ aside.collapsed .left-toggle {
   transition: all 0.2s ease; border: 1px solid transparent;
 }
 
-.kpi-group:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--br); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+.kpi-group:hover { background: var(--input-hover); border-color: var(--br); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
 .kpi-group:active { transform: translateY(0); }
 
 .kpi-group-title { font-size: 9px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; line-height: 1; }
@@ -573,7 +530,7 @@ aside.collapsed .left-toggle {
 
 .btn { 
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; 
-  padding: 0 16px; border: var(--glass-border); border-radius: var(--radius-pill); 
+  padding: 0 16px; border: var(--glass-border-rule); border-radius: var(--radius-pill); 
   font-size: 12px; font-weight: 800; cursor: pointer; transition: all 0.2s; 
   outline: none; background: var(--input-bg); color: var(--tx); box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   height: 32px; box-sizing: border-box; font-family: inherit; white-space: nowrap; margin: 0;
@@ -5072,7 +5029,7 @@ function showToast(msg) {
   if (!t) { 
     t = document.createElement('div'); 
     t.id = 'toast'; 
-    t.style.cssText = 'position:fixed; bottom:122px; left:50%; transform:translateX(-50%); background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); color:var(--tx); font-weight:800; border:var(--glass-border); border-radius:var(--radius-pill); padding:10px 20px; font-size:12.5px; z-index:1000; transition:.3s ease; pointer-events:none; box-shadow:var(--glass-shadow); white-space:nowrap;'; 
+    t.style.cssText = 'position:fixed; bottom:122px; left:50%; transform:translateX(-50%); background:var(--glass-bg); backdrop-filter:var(--glass-blur); -webkit-backdrop-filter:var(--glass-blur); color:var(--tx); font-weight:800; border:var(--glass-border-rule); border-radius:var(--radius-pill); padding:10px 20px; font-size:12.5px; z-index:1000; transition:.3s ease; pointer-events:none; box-shadow:var(--glass-shadow); white-space:nowrap;'; 
     document.body.appendChild(t); 
   }
   t.textContent = msg; 

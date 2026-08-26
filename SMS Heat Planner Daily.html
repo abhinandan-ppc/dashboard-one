@@ -133,8 +133,8 @@ button, select { font: inherit; cursor: pointer; transition: all 0.2s; border: n
 /* ─── SCROLLBARS ─── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(150,150,150,0.3); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(150,150,150,0.6); }
+::-webkit-scrollbar-thumb { background: var(--bdrHi); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--sky); }
 
 /* ---- PREVENT WIDOW BLOWOUTS ON MOBILE ---- */
 .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; display: block; border-radius: var(--radius-m); border: var(--glass-border); background: var(--input-bg);}
@@ -284,7 +284,7 @@ tr:hover td { background: var(--stripe-hover); }
 .flow-zoom-layer { position: absolute; top:0; left:0; width: 1800px; height: 1100px; transform-origin: 0 0; transition: transform 0.1s ease-out; }
 
 /* Disabled Dock Area */
-.dock-area { position: absolute; top: 840px; left: 40px; right: 40px; height: 160px; border: 2px dashed rgba(150,150,150,0.3); border-radius: var(--radius-m); pointer-events: none; z-index: 1; }
+.dock-area { position: absolute; top: 840px; left: 40px; right: 40px; height: 160px; border: 2px dashed var(--bdrHi); border-radius: var(--radius-m); pointer-events: none; z-index: 1; }
 .dock-title { position: absolute; top: -12px; left: 24px; background: var(--glass-bg); padding: 4px 12px; font-size: 11px; font-weight: 800; color: var(--tm); letter-spacing: 0.5px; text-transform: uppercase; border-radius: var(--radius-pill); border: var(--glass-border);}
 
 /* Glassmorphism Nodes */
@@ -309,7 +309,7 @@ tr:hover td { background: var(--stripe-hover); }
     transform: translateY(-2px);
 }
 
-.fc-node.disabled { opacity: 0.5; filter: grayscale(0.8); z-index: 2; box-shadow: none; border: 2px dashed rgba(150,150,150,0.4); background: var(--input-bg);}
+.fc-node.disabled { opacity: 0.5; filter: grayscale(0.8); z-index: 2; box-shadow: none; border: 2px dashed var(--bdrHi); background: var(--input-bg);}
 .fc-node.disabled:hover { opacity: 0.9; filter: grayscale(0); transform: translateY(-2px); z-index: 30;}
 
 .fc-node.bottleneck { animation: pulseError 2s infinite; border-color: var(--error); }

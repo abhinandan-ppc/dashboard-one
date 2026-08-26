@@ -1844,7 +1844,7 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding}){
             </tr>;
           })}
           {/* Grand Total row */}
-          <tr style={{background:'rgba(255,255,255,.05)',borderTop:'2px solid var(--bdrHi)'}}>
+          <tr style={{background:'var(--s2)',borderTop:'2px solid var(--bdrHi)'}}>
             <td style={{...td0,fontSize:13,fontWeight:800,color:C.amber,
               letterSpacing:'.06em',textTransform:'uppercase',borderBottom:'none'}}>◈ Grand Total</td>
             {[
@@ -2019,7 +2019,7 @@ function PivotTable({data,onDrill,onRegionExport,activeCell,remarksLbl}){
             ];
           })}
           {/* Grand Total row — uniform font size, only bold weight differs */}
-          <tr style={{background:'rgba(255,255,255,.05)',borderTop:'2px solid var(--bdrHi)'}}>
+          <tr style={{background:'var(--s2)',borderTop:'2px solid var(--bdrHi)'}}>
             <td colSpan={2} style={{...td0,fontSize:13,fontWeight:800,color:C.amber,
               letterSpacing:'.06em',textTransform:'uppercase',borderBottom:'none'}}>◈ Grand Total</td>
             {[
@@ -3843,7 +3843,7 @@ function DrillPanel({rows,info,onClose,mob}){
 
     {/* Header */}
     <div style={{display:'flex',alignItems:'center',gap:8,padding:'9px 16px',flexShrink:0,
-      flexWrap:'wrap',rowGap:6,borderBottom:'1px solid rgba(255,255,255,.08)',
+      flexWrap:'wrap',rowGap:6,borderBottom:'1px solid var(--bdr)',
       background:'var(--s1)'}}>
       <span style={{fontFamily:F.h,fontSize:15,fontWeight:800,color:C.amber,letterSpacing:'.06em',textTransform:'uppercase',flexShrink:0}}>
         ⬡ Order Details
@@ -3901,9 +3901,9 @@ function DrillPanel({rows,info,onClose,mob}){
         ↓ Excel
       </button>
       <button onClick={onClose} style={{
-        background:'transparent',border:'1px solid rgba(255,255,255,.12)',borderRadius:'var(--radius-xs)',
+        background:'transparent',border:'1px solid var(--bdrHi)',borderRadius:'var(--radius-xs)',
         color:'var(--dim)',padding:'7px 12px',cursor:'pointer',fontSize:13,flexShrink:0,transition:'all .15s'}}
-        onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,.06)';e.currentTarget.style.color='var(--text)'}}
+        onMouseEnter={e=>{e.currentTarget.style.background='var(--s2)';e.currentTarget.style.color='var(--text)'}}
         onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='var(--dim)'}}>
         ✕ Close
       </button>
