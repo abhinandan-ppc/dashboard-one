@@ -110,7 +110,11 @@ a { color: var(--primary); }
 
 .users { display: flex; flex-direction: column; gap: 14px; }
 .user-card { background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--glass-shadow); padding: 18px 20px; }
-.user-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.user-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; cursor: pointer; }
+.expand-chevron { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; color: var(--tm); transition: transform 0.2s ease; flex-shrink: 0; }
+.user-card.expanded .expand-chevron { transform: rotate(180deg); }
+.user-access-collapsible { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.25s ease, opacity 0.2s ease; }
+.user-card.expanded .user-access-collapsible { max-height: 2000px; opacity: 1; }
 .user-id { display: flex; align-items: center; gap: 12px; }
 .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--input-bg); flex-shrink: 0; }
 .user-name { font-weight: 800; font-size: 14px; }
@@ -249,6 +253,29 @@ a { color: var(--primary); }
 </div>
 
 <script>
+// ─── Theme: sync with the hub, same convention every other page uses ───
+// (this page previously had no theme JS at all — data-theme="dark" was a
+// static attribute that never changed, so switching to light theme from
+// the hub silently had no effect here.)
+function setTheme(theme){
+  var t = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem('jspl-hub-theme', t); } catch(e){}
+}
+window.__hub_handle_theme = function(themeValue){
+  var normalized = String(themeValue || '').toLowerCase();
+  if(normalized === 'light' || normalized === 'dark') setTheme(normalized);
+};
+window.addEventListener('message', function(e){
+  var d = e.data;
+  if(d && d.type === 'theme' && d.value) setTheme(d.value);
+});
+(function(){
+  var stored = null;
+  try { stored = localStorage.getItem('jspl-hub-theme'); } catch(e){}
+  setTheme(stored || 'dark');
+})();
+
 var KNOWN_PAGES = [];
 var DEV_HOSTS_NOTE = 'Users granted "dev preview" can open the pmppc-dev.vercel.app deployment (or whatever host is set via DEV_HOSTS).';
 
@@ -362,9 +389,11 @@ function userCard(user){
       '</div>'
     );
 
+  var isExpanded = expandedUsers.has(email);
+
   return (
-    '<div class="user-card" data-email="' + esc(email) + '">' +
-      '<div class="user-top">' +
+    '<div class="user-card' + (isExpanded ? ' expanded' : '') + '" data-email="' + esc(email) + '">' +
+      '<div class="user-top" data-action="toggle-expand">' +
         '<div class="user-id">' +
           '<img class="avatar" src="' + esc(user.picture || '') + '" onerror="this.style.visibility=\'hidden\'">' +
           '<div>' +
@@ -384,10 +413,13 @@ function userCard(user){
               : '<button type="button" class="mini-btn" data-action="make-admin">Make admin</button>') +
             '<button type="button" class="mini-btn bad" data-action="delete">Remove</button>' +
           '</div>' +
+          '<span class="expand-chevron" aria-hidden="true">&#9662;</span>' +
         '</div>' +
       '</div>' +
-      '<div class="divider"></div>' +
-      accessSection +
+      '<div class="user-access-collapsible">' +
+        '<div class="divider"></div>' +
+        accessSection +
+      '</div>' +
     '</div>'
   );
 }
@@ -441,6 +473,7 @@ var statusFilterDd = initDropdown('statusFilterDd', function(){ render(); });
 var pageFilterDd = initDropdown('pageFilterDd', function(){ render(); });
 
 var registry = {};
+var expandedUsers = new Set();
 
 function renderCard(email){
   var users = registry.users || {};
@@ -640,6 +673,11 @@ document.getElementById('usersHost').addEventListener('click', function(e){
   var actionBtn = e.target.closest('[data-action]');
   if(actionBtn){
     var action = actionBtn.getAttribute('data-action');
+    if(action === 'toggle-expand'){
+      if(expandedUsers.has(email)) expandedUsers.delete(email); else expandedUsers.add(email);
+      card.classList.toggle('expanded', expandedUsers.has(email));
+      return;
+    }
     if(action === 'approve') return mutate(email, { action: 'approve' });
     if(action === 'pending') return mutate(email, { action: 'pending' });
     if(action === 'block') return mutate(email, { action: 'block' });
