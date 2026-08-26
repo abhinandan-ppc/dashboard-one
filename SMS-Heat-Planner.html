@@ -7,7 +7,7 @@
 <link rel="icon" type="image/png" href="favicon.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="theme.css"/>
 <style>
 :root { --glass-border-rule: 1px solid var(--glass-border); }
@@ -29,9 +29,9 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
   position: relative; min-height: 64px; box-sizing: border-box;
   background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   padding: 12px 20px; border-radius: var(--radius-lg); border: var(--glass-border-rule); box-shadow: var(--shadow-md);
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;
 }
-.top-l { display: flex; align-items: center; gap: 14px; min-width: 0; justify-self: start; }
+.top-l { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .top-l .eyebrow { font-size: 10px; color: var(--tm); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; }
 .top-l h1 { font-size: 17px; font-weight: 800; color: var(--tx); letter-spacing: -0.01em; margin: 0; white-space: nowrap; }
 
@@ -42,7 +42,7 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 .jspl-brand-l2 { font-size: 9px; color: var(--tm); letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
 .jspl-divider { width: 1px; height: 28px; background: var(--br); flex-shrink: 0; }
 
-.view-tabs { display: flex; gap: 6px; background: var(--input-bg); padding: 4px; border-radius: var(--radius-pill); border: var(--glass-border-rule); justify-self: center; }
+.view-tabs { display: flex; gap: 6px; background: var(--input-bg); padding: 4px; border-radius: var(--radius-pill); border: var(--glass-border-rule); }
 .view-tabs button {
   padding: 9px 20px; font-size: 13px; font-weight: 700; border-radius: var(--radius-pill);
   background: transparent; color: var(--tm); transition: all 0.2s; white-space: nowrap;
@@ -50,7 +50,8 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 .view-tabs button:hover { color: var(--tx); background: var(--input-hover); }
 .view-tabs button.on { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 
-.hdr-r { display: flex; align-items: center; gap: 10px; flex-shrink: 0; justify-self: end; }
+.hdr-r { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+#hubFrameHeaderSlot { display: flex; align-items: center; justify-content: center; gap: 8px; flex-basis: 100%; border-top: 1px solid var(--br); padding-top: 10px; margin-top: 2px; }
 .theme-toggle {
   height: 34px; width: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
   border-radius: var(--radius-pill); font-size: 15px; background: var(--input-bg); color: var(--tx); border: 1.5px solid var(--br);
@@ -77,21 +78,19 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 
 @media (max-width: 768px) {
   .top-wrapper { padding: 8px 12px; }
-  .top-bar {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    grid-template-areas: "logo actions" "tabs tabs";
-    align-items: center; padding: 12px; gap: 10px;
-  }
-  .top-l { grid-area: logo; justify-content: flex-start; min-width: 0; }
+  .top-bar { align-items: center; padding: 12px; gap: 10px; }
+  .top-l { flex: 1 1 auto; justify-content: flex-start; min-width: 0; }
   .top-l > div:last-child { flex: 1; min-width: 0; text-align: left; }
   .top-l h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .jspl-brand-text { display: none; }
   .jspl-divider { display: none; }
   .jspl-logo { width: 34px; height: 16px; }
-  .view-tabs { grid-area: tabs; justify-content: stretch; }
-  .view-tabs button { flex: 1; }
-  .hdr-r { grid-area: actions; justify-content: flex-end; }
+  .hdr-r { flex-shrink: 0; }
+  .view-tabs button {
+    padding: 0; width: 34px; height: 34px; font-size: 0; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .view-tabs button[data-view="daily"]::before { content: "📆"; font-size: 15px; }
+  .view-tabs button[data-view="monthly"]::before { content: "🗓️"; font-size: 15px; }
   .reset-btn {
     width: 34px; padding: 0; font-size: 0; gap: 0; justify-content: center;
   }
@@ -102,9 +101,9 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 @media (max-width: 480px) {
   .top-bar { padding: 10px; gap: 8px; }
   .view-tabs { gap: 4px; padding: 3px; }
-  .view-tabs button { padding: 10px 8px; font-size: 12px; }
+  .view-tabs button { width: 40px; height: 40px; }
   .hdr-r { gap: 8px; }
-  .theme-toggle, .reset-btn { height: 40px; width: 40px; }
+  .reset-btn { height: 40px; width: 40px; }
   .reset-btn::before { font-size: 16px; }
 }
 </style>
@@ -127,14 +126,14 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
         <h1>SMS Heat Planner</h1>
       </div>
     </div>
+    <div class="hdr-r">
     <nav class="view-tabs" id="viewTabs">
       <button data-view="daily" class="on" type="button">📆 Daily Planner</button>
       <button data-view="monthly" type="button">🗓️ Monthly Planner</button>
     </nav>
-    <div class="hdr-r">
       <button class="reset-btn" id="resetAllBtn" type="button">🔄 Reset</button>
-      <button class="theme-toggle" id="themeToggle" type="button" title="Toggle Dark Mode">🌙</button>
     </div>
+    <div id="hubFrameHeaderSlot"></div>
   </div>
 </div>
 
@@ -190,7 +189,7 @@ function sendTheme(frame, theme){
 }
 function broadcastTheme(){
   var theme = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-  themeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+  if(themeBtn) themeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
   sendTheme(dailyFrame, theme);
   sendTheme(monthlyFrame, theme);
 }
@@ -208,7 +207,7 @@ window.__hub_handle_theme = function(themeValue){
   }
 };
 
-themeBtn.addEventListener('click', function(){
+if(themeBtn) themeBtn.addEventListener('click', function(){
   setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
 });
 

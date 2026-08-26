@@ -7,7 +7,7 @@
 <link rel="icon" type="image/png" href="favicon.png"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="theme.css"/>
 
 <style>
@@ -51,7 +51,10 @@ header {
 header::before {
   content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
   background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  /* Stronger than the shared --glass-blur: this header floats over a busy,
+     high-contrast 3D warehouse scene, and the site-wide blur amount reads
+     as barely-there against it. */
+  backdrop-filter: blur(28px) saturate(140%); -webkit-backdrop-filter: blur(28px) saturate(140%);
 }
 .brand { 
   display: flex; align-items: center; gap: 12px; 
