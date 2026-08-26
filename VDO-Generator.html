@@ -172,6 +172,7 @@ tr:hover td{background:var(--input-hover)}
      content-injection needed since the icon isn't an emoji glyph. */
   .hdr-r #uploadBtn,.hdr-r #onlineBtn,.hdr-r #resetBtn{font-size:0;padding:0;width:40px;height:40px;justify-content:center;gap:0}
   .hdr-r #uploadBtn svg,.hdr-r #onlineBtn svg,.hdr-r #resetBtn svg{width:18px;height:18px;flex-shrink:0}
+  .sub,#status.status{display:none}
 }
 @media (max-width:560px){
   #sumCards{grid-template-columns:1fr}
@@ -179,7 +180,8 @@ tr:hover td{background:var(--input-hover)}
   .pager{justify-content:center;text-align:center}
   .filterpop{left:12px !important;right:12px !important;max-width:none;width:auto}
   .header-spacer{height:0}
-  .hdr-r button{min-height:44px}
+  .hdr-r button:not(#uploadBtn):not(#onlineBtn):not(#resetBtn){min-height:44px}
+  .hdr-r #uploadBtn,.hdr-r #onlineBtn,.hdr-r #resetBtn{min-height:40px;max-height:40px;box-sizing:border-box}
   .hdr-r{justify-content:center;gap:10px 8px}
   #dist{gap:10px}
   .panel{margin-bottom:14px}

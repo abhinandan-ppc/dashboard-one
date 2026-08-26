@@ -583,8 +583,26 @@ aside.collapsed .left-toggle {
   #btn-upload-dd::before { content: "\1F4E4"; }
   #btn-ctrl::before { content: "\2699\FE0F"; }
 
+  /* Normalize the hub-injected Home/Refresh EBTP/Theme/User icon buttons
+     (mounted into #hubFrameHeaderSlot with inline styles by the parent hub)
+     to match the 40x40 circular toolbar icon buttons above, so every header
+     button renders at the same fixed size on this row. !important is needed
+     to win over the buttons' own inline style attributes. */
+  #hubFrameHeaderSlot button {
+    width: 40px !important; height: 40px !important; min-width: 40px !important;
+    padding: 0 !important; border-radius: 999px !important; box-sizing: border-box !important;
+  }
+
   /* Row 3: KPIs */
-  .kpi-dashboard { order: 3; flex-basis: 100%; margin-top: 4px; padding: 0 0 8px 0; }
+  .kpi-dashboard {
+    order: 3; flex-basis: 100%; margin-top: 4px; padding: 0 0 8px 0;
+    overflow-x: auto !important; -webkit-overflow-scrolling: touch;
+  }
+  /* Prevent stat groups from being squeezed to fit — let them keep their
+     natural width and scroll horizontally instead (default flex-shrink:1
+     was squishing text illegibly on narrow screens). */
+  .kpi-group { flex-shrink: 0; }
+  .kpi-stat { flex-shrink: 0; }
   .kpi-stat .val { font-size: 13px; }
   .kpi-group-title { font-size: 8px; }
 

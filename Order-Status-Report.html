@@ -1027,6 +1027,12 @@ function isReleasedRow(r){
 /* ═══════════════════ MAIN DASHBOARD ═══════════════════ */
 function Dashboard({rawRows,rawArr,headers,fileName}){
   const{mob}=useBreakpoint();
+  const[scrolled,setScrolled]=useState(false);
+  useEffect(()=>{
+    const h=()=>setScrolled(window.scrollY>20);
+    window.addEventListener('scroll',h,{passive:true});
+    return()=>window.removeEventListener('scroll',h);
+  },[]);
   const[relStaSel,setRelStaSel]=useState(new Set());
   const[vagSel,setVagSel]=useState(new Set());
   const[htcSel,setHtcSel]=useState(new Set());
@@ -1409,7 +1415,9 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
 
       {!mob&&<div style={{flex:1}}/>}
 
-      <div style={{fontSize:11,fontFamily:F.m,color:'var(--mute)',textAlign:mob?'center':'right',lineHeight:1.6,flexShrink:0}}>
+      <div style={{fontSize:11,fontFamily:F.m,color:'var(--mute)',textAlign:mob?'center':'right',lineHeight:1.6,flexShrink:0,
+        maxHeight:mob&&scrolled?0:60,opacity:mob&&scrolled?0:1,overflow:'hidden',
+        transition:'max-height .2s ease,opacity .2s ease'}}>
         <div style={{color:'var(--dim)',maxWidth:mob?'100%':220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{fileName}</div>
         <div>EBTP loaded: <b style={{color:'var(--text)'}}>{ebtpDateLabel}</b></div>
       </div>
@@ -1445,7 +1453,9 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         position:sticky there, so it already occupies its own space in the document flow — an
         additional spacer would just double the gap. */}
     <div style={{height:mob?0:100}}/>
-    <div className="glass-card" style={{padding:'12px 16px',marginBottom:18,display:'flex',gap:10,flexWrap:'wrap',
+    <div className="glass-card" style={mob?{padding:'12px 16px',marginBottom:18,display:'grid',
+      gridTemplateColumns:'1fr 1fr',gap:10,position:'relative',zIndex:40,borderRadius:'var(--radius-lg)',
+      boxShadow:'var(--shadow-sm)'}:{padding:'12px 16px',marginBottom:18,display:'flex',gap:10,flexWrap:'wrap',
       position:'relative',zIndex:40,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-sm)'}}>
       <MultiSelect label="Release Status" options={relStaOptions} selected={relStaSel} onChange={setRelStaSel}/>
       <MultiSelect label="VAG Status" options={vagOptions} selected={vagSel} onChange={setVagSel}/>
@@ -1455,7 +1465,8 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       <MultiSelect label="Insp By" options={inspByOptions} selected={inspBySel} onChange={setInspBySel}/>
       <MultiSelect label="Line" options={lineOptions} selected={lineSel} onChange={setLineSel}/>
       <DateTreeSelect label="SO Date" rows={baseRows} selected={dateSel} onChange={setDateSel} latestDate={latestDate}/>
-      <div style={{marginLeft:'auto',fontFamily:F.m,fontSize:11,color:'var(--mute)',alignSelf:'center'}}>
+      <div style={{marginLeft:mob?0:'auto',gridColumn:mob?'1 / -1':'auto',textAlign:mob?'center':'left',
+        fontFamily:F.m,fontSize:11,color:'var(--mute)',alignSelf:'center'}}>
         {fmt(filtered.length,0)} / {fmt(rows.length,0)} rows
       </div>
     </div>

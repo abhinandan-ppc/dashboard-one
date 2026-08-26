@@ -4871,6 +4871,7 @@ function App(){
       border:'1px solid var(--glass-border)',borderRadius:'var(--radius-lg)',boxSizing:'border-box',
       boxShadow:'var(--shadow-md)',transition:'box-shadow .2s'}}>
 
+      <div style={mob?{display:'flex',alignItems:'center',gap:8,width:'100%',flexWrap:'nowrap'}:{display:'contents'}}>
       {/* Hamburger on narrow */}
       {isNarrow&&<button onClick={()=>setSideOpen(o=>!o)} style={{
         background:'transparent',border:'1px solid var(--bdr)',borderRadius:'var(--radius-sm)',
@@ -4891,9 +4892,11 @@ function App(){
       <div style={{width:1,height:30,background:'var(--bdr)',flexShrink:0}}/>
 
       <div style={{fontFamily:F.h,fontWeight:800,color:'var(--text)',letterSpacing:'.06em',
-        textTransform:'uppercase',flexShrink:0,lineHeight:1.2}}>
+        textTransform:'uppercase',flexShrink:mob?1:0,minWidth:mob?0:undefined,
+        overflow:mob?'hidden':undefined,lineHeight:1.2}}>
         {mob
-          ?<span style={{fontSize:15,color:C.amber}}>Rake Planner</span>
+          ?<span style={{fontSize:13,color:C.amber,display:'block',overflow:'hidden',
+              textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Rake Planner</span>
           :<><span style={{fontSize:17}}>Angul PlateMill</span>
             <span style={{fontSize:12,color:'var(--dim)',marginLeft:8,fontWeight:400,
               fontFamily:F.b,letterSpacing:'.02em'}}>Rake Planner</span></>
@@ -4915,7 +4918,7 @@ function App(){
           fontFamily:F.b,fontWeight:600}} title="Clear">✕</button>}
       </div>}
 
-      <div style={{flex:1,flexBasis:mob?'100%':'auto',height:mob?0:'auto'}}/>
+      <div style={{flex:1}}/>
 
       {fileDate&&!mob&&<div style={{fontSize:11,fontFamily:F.m,color:'var(--mute)',
         textAlign:'right',lineHeight:1.7}}>
@@ -4937,12 +4940,13 @@ function App(){
         onMouseLeave={e=>{e.currentTarget.style.background='color-mix(in srgb,var(--amber) 12%,transparent)'}}>
         ↑ {mob?'File':'New File'}
       </button>}
+      <div style={{display:'flex',alignItems:'center',gap:mob?6:12,flexShrink:0,flexWrap:'nowrap'}}>
       {rows.length>0&&<button onClick={()=>setOvMap(true)}
         title="Siding Overview Map"
         style={{background:'rgba(20,184,166,.12)',border:'1px solid rgba(20,184,166,.38)',
-          borderRadius:'var(--radius-sm)',color:'#14b8a6',fontFamily:F.h,fontSize:12,fontWeight:700,
-          letterSpacing:'.07em',textTransform:'uppercase',padding:'9px 16px',cursor:'pointer',
-          display:'flex',alignItems:'center',gap:5,transition:'all .15s',flexShrink:0}}
+          borderRadius:'var(--radius-sm)',color:'#14b8a6',fontFamily:F.h,fontSize:mob?11:12,fontWeight:700,
+          letterSpacing:'.07em',textTransform:'uppercase',padding:mob?'7px 10px':'9px 16px',cursor:'pointer',
+          display:'flex',alignItems:'center',gap:5,transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}
         onMouseEnter={e=>e.currentTarget.style.background='rgba(20,184,166,.22)'}
         onMouseLeave={e=>e.currentTarget.style.background='rgba(20,184,166,.12)'}>
         🗺 Overview
@@ -4950,13 +4954,15 @@ function App(){
         <button onClick={()=>exportEBTPWithMapping(rows)}
           title="Export full EBTP raw file with _State, _Region, _Siding appended as last 3 columns"
           style={{background:'rgba(91,163,217,.12)',border:'1px solid rgba(91,163,217,.35)',
-            borderRadius:'var(--radius-sm)',color:C.sky,fontFamily:F.h,fontSize:12,fontWeight:700,
-            letterSpacing:'.07em',textTransform:'uppercase',padding:'9px 16px',cursor:'pointer',
-            display:'flex',alignItems:'center',gap:5,transition:'all .15s',flexShrink:0}}
+            borderRadius:'var(--radius-sm)',color:C.sky,fontFamily:F.h,fontSize:mob?11:12,fontWeight:700,
+            letterSpacing:'.07em',textTransform:'uppercase',padding:mob?'7px 10px':'9px 16px',cursor:'pointer',
+            display:'flex',alignItems:'center',gap:5,transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}
           onMouseEnter={e=>e.currentTarget.style.background='rgba(91,163,217,.22)'}
           onMouseLeave={e=>e.currentTarget.style.background='rgba(91,163,217,.12)'}>
           ↓ EBTP+Map
         </button>
+      </div>
+      </div>
         {!mob&&<div id="hubFrameHeaderSlot" style={{
           display:'flex',alignItems:'center',gap:8,flexShrink:0,minHeight:34
         }}/>}
@@ -4968,7 +4974,7 @@ function App(){
       </div>
     </div>
     {/* Spacer reserving the fixed header's visual footprint in the flex flow below */}
-    <div style={{height:mob?150:74,flexShrink:0}}/>
+    <div style={{height:mob?116:74,flexShrink:0}}/>
 
     {/* ── Mobile Search + Theme ── */}
     {mob&&<div style={{padding:'10px 14px',background:'var(--s0)',
