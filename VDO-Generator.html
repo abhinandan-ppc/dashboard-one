@@ -61,7 +61,8 @@ body{margin:0;min-height:100vh;background-color:var(--bg-color);color:var(--tx);
 #uploadBtn{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border-color:transparent;position:relative;margin-left:auto;flex-shrink:0}
 .hdr-r .upload-btn:hover{filter:brightness(1.08);background:var(--md-sys-color-primary)}
 .hdr-r .upload-btn:disabled{opacity:.7;cursor:default;transform:none}
-.file-badge{display:none;flex-direction:column;font-size:11px;font-family:var(--mono, monospace);color:var(--tm);line-height:1.5;text-align:right;flex-shrink:0;max-width:260px;transition:max-height .2s ease,opacity .2s ease;overflow:hidden}
+.file-badge{display:none;flex-direction:column;font-size:11px;font-family:var(--mono, monospace);color:var(--tm);line-height:1.5;text-align:right;flex-shrink:0;max-width:260px;overflow:hidden}
+.file-badge.scroll-hidden{display:none!important;margin:0!important}
 .file-badge #fname{color:var(--tm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .file-badge b{color:var(--tx);font-weight:800}
 .spinner{display:none;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;opacity:.85;animation:spin .7s linear infinite}
@@ -198,7 +199,7 @@ tr:hover td{background:var(--input-hover)}
   .hdr-r button:not(#uploadBtn){min-height:44px}
   #uploadBtn{width:44px;height:44px;min-height:44px;max-height:44px;box-sizing:border-box}
   #themeToggle{width:44px;height:44px}
-  .hdr-r{justify-content:flex-end;gap:10px 8px}
+  .hdr-r{justify-content:center;gap:10px 8px}
   #dist{gap:10px}
   .panel{margin-bottom:14px}
   .panel h2{margin-bottom:12px}
@@ -1319,8 +1320,7 @@ window.addEventListener('message', e=>{
   if(!badge) return;
   const apply=()=>{
     const hide=window.innerWidth<=720 && window.scrollY>20;
-    badge.style.maxHeight=hide?'0px':'40px';
-    badge.style.opacity=hide?'0':'1';
+    badge.classList.toggle('scroll-hidden',hide);
   };
   apply();
   window.addEventListener('scroll',apply,{passive:true});
