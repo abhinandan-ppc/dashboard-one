@@ -1394,7 +1394,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     return latestDate||'—';
   },[fileName,latestDate]);
 
-  return<div style={{padding:'0 24px 60px',width:'100%',maxWidth:'none',boxSizing:'border-box'}}>
+  return<div style={{padding:mob?'0 12px 60px':'0 24px 60px',width:'100%',maxWidth:'none',boxSizing:'border-box'}}>
     {/* ═══ HEADER (fixed on desktop — floats in place regardless of ancestor scroll containers.
         On mobile it switches to sticky: sticky occupies real space in the flex flow, so the header's
         own footprint is exactly the spacer's job, structurally, without needing a matching pixel

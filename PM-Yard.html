@@ -539,7 +539,7 @@ aside.collapsed .left-toggle {
 
 /* Mobile Devices */
 @media (max-width: 768px) {
-  header { padding: 12px; gap: 12px; justify-content: flex-start; flex-wrap: wrap; left: 10px; right: 10px; }
+  header { padding: 12px; gap: 12px; justify-content: flex-start; flex-wrap: wrap; left: 12px; right: 12px; }
 
   /* Row 1: Logo (left, fixed) + Title (left-aligned next to logo, flex-grows) + this page's
      own action buttons (right, fixed) — one non-wrapping row. */
@@ -625,8 +625,8 @@ aside.collapsed .left-toggle {
   .panel { top: var(--panel-top, 183px) !important; }
   .side-toggle-btn { top: 50px; }
   
-  aside { width: calc(100% - 20px); left: 10px; bottom: 70px; max-height: calc(100vh - 250px); z-index: 50;}
-  .inspector { width: calc(100% - 20px); right: 10px; bottom: 70px; max-height: calc(100vh - 250px); z-index: 51;}
+  aside { width: calc(100% - 24px); left: 12px; bottom: 70px; max-height: calc(100vh - 250px); z-index: 50;}
+  .inspector { width: calc(100% - 24px); right: 12px; bottom: 70px; max-height: calc(100vh - 250px); z-index: 51;}
   
   aside.collapsed { transform: translateX(calc(-100% - 10px)); }
   .inspector.collapsed { transform: translateX(calc(100% + 10px)); }
@@ -647,7 +647,7 @@ aside.collapsed .left-toggle {
   }
   .hint { display: none !important; }
 
-  .toolbar { width: calc(100% - 20px); bottom: 12px; overflow-x: auto; justify-content: flex-start; border-radius: var(--radius-s); }
+  .toolbar { width: calc(100% - 24px); bottom: 12px; overflow-x: auto; justify-content: flex-start; border-radius: var(--radius-s); }
   .tbtn { flex-shrink: 0; padding: 8px 14px; font-size: 10.5px; }
   .compass-wrapper { bottom: 80px; width: 44px; height: 44px; right: 16px;}
 }
@@ -660,7 +660,7 @@ aside.collapsed .left-toggle {
   .panel-head { padding: 10px 12px; font-size: 11px; }
   .panel-body { padding: 12px; gap: 12px; max-height: calc(100vh - 130px); }
 
-  aside, .inspector { left: 8px; right: 8px; width: calc(100% - 16px); bottom: 64px; max-height: calc(100vh - 235px); }
+  aside, .inspector { left: 12px; right: 12px; width: calc(100% - 24px); bottom: 64px; max-height: calc(100vh - 235px); }
 
   /* Legend: reduce padding/gap and allow wrapping without squish */
   .legend { padding: 8px; gap: 2px; }

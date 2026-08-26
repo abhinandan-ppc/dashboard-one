@@ -4750,7 +4750,7 @@ function App(){
   // DOM-node handoff for the hub's MutationObserver to race.
   const placeholderHeaderBar=
     <>
-    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 12px 0':'20px 22px 0',zIndex:50,boxSizing:'border-box'}}>
+    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 12px 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
     <div className="glass-card" style={{padding:mob?'12px 12px':'12px 20px',display:'flex',
       flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
       alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
@@ -4866,7 +4866,7 @@ function App(){
          VDO-Generator.html — the nested independently-scrolling panes are
          self-contained overlays/scroll boxes, not affected by this choice)
          ── */}
-    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 12px 0':'20px 22px 0',zIndex:50,boxSizing:'border-box'}}>
+    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 12px 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
     <div className="glass-card" style={{padding:mob?'12px 12px':'12px 20px',display:'flex',
       flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
       alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
@@ -4987,7 +4987,7 @@ function App(){
     </div>}
 
     {/* ── KPI Strip ── */}
-    <div style={{display:'flex',gap:8,padding:`12px ${mob?12:22}px`,flexShrink:0,
+    <div style={{display:'flex',gap:8,padding:`12px ${mob?12:24}px`,flexShrink:0,
       flexWrap:'wrap',rowGap:8}}>
       <KCard label="Orders"       value={kpis.cnt.toLocaleString()} sub={actCnt?`${actCnt} filter active`:'All orders'} accent="var(--dim)" mob={mob}/>
       <KCard label="Order Qty"    value={fmt(kpis.qty)} sub="MT" accent={C.amber} mob={mob}/>
@@ -5003,7 +5003,7 @@ function App(){
     </div>
 
     {/* ── Body ── */}
-    <div style={{display:'flex',gap:16,padding:`0 ${mob?12:22}px 28px`,flex:1,minHeight:0,position:'relative'}}>
+    <div style={{display:'flex',gap:16,padding:`0 ${mob?12:24}px 28px`,flex:1,minHeight:0,position:'relative'}}>
 
       {/* Desktop sidebar */}
       {!isNarrow&&<div style={{width:248,flexShrink:0,display:'flex',flexDirection:'column',overflowY:'auto'}}>
