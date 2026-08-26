@@ -7,15 +7,14 @@
 <link rel="icon" type="image/png" href="favicon.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800;9..40,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="theme.css"/>
 <style>
-:root { --glass-border: 1px solid rgba(0,0,0,0.06); }
-[data-theme="dark"] { --glass-border: 1px solid rgba(255,255,255,0.1); }
+:root { --glass-border-rule: 1px solid var(--glass-border); }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
 body {
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   color: var(--tx);
   background-color: var(--bg-color);
   transition: background-color 0.3s, color 0.3s;
@@ -29,7 +28,7 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 .top-bar {
   min-height: 64px; box-sizing: border-box;
   background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-  padding: 12px 20px; border-radius: var(--radius-lg); border: var(--glass-border); box-shadow: var(--shadow-md);
+  padding: 12px 20px; border-radius: var(--radius-lg); border: var(--glass-border-rule); box-shadow: var(--shadow-md);
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px;
 }
 .top-l { display: flex; align-items: center; gap: 14px; min-width: 0; justify-self: start; }
@@ -39,11 +38,11 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 .jspl-badge { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .jspl-logo { width: 62px; height: 28px; object-fit: contain; object-position: left center; flex-shrink: 0; }
 .jspl-brand-text { line-height: 1.2; }
-.jspl-brand-l1 { font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--tx); }
+.jspl-brand-l1 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--tx); }
 .jspl-brand-l2 { font-size: 9px; color: var(--tm); letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
 .jspl-divider { width: 1px; height: 28px; background: var(--br); flex-shrink: 0; }
 
-.view-tabs { display: flex; gap: 6px; background: var(--input-bg); padding: 4px; border-radius: var(--radius-pill); border: var(--glass-border); justify-self: center; }
+.view-tabs { display: flex; gap: 6px; background: var(--input-bg); padding: 4px; border-radius: var(--radius-pill); border: var(--glass-border-rule); justify-self: center; }
 .view-tabs button {
   padding: 9px 20px; font-size: 13px; font-weight: 700; border-radius: var(--radius-pill);
   background: transparent; color: var(--tm); transition: all 0.2s; white-space: nowrap;
@@ -68,7 +67,7 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 .frame-stage { flex: 1; min-height: 0; position: relative; padding: 0 24px 24px; }
 .frame-box {
   position: absolute; inset: 0 24px 24px;
-  border-radius: var(--radius-m); overflow: hidden; border: var(--glass-border); box-shadow: var(--glass-shadow);
+  border-radius: var(--radius-m); overflow: hidden; border: var(--glass-border-rule); box-shadow: var(--glass-shadow);
   display: none; background: var(--bg-color);
 }
 .frame-box.on { display: block; }

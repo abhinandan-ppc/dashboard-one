@@ -1,13 +1,16 @@
 /* ══════════════════════════════════════════════════════════
    JSPL DASHBOARD — SHARED DESIGN SYSTEM
-   Material 3 tonal surfaces + glassmorphism
+   Glassmorphism (per typeui.sh/design-skills/glassmorphism):
+   frosted-glass surfaces, translucent layers, subtle blur,
+   luminous borders. Primary #1856FF / Secondary #3A344E /
+   Success #07CA6B / Warning #E89558 / Danger #EA2143, tighter
+   4-20px radius scale, Plus Jakarta Sans + JetBrains Mono.
    Single source of truth for every page in this project.
-   Canonicalized from Rake-Planner.html's token set.
    ══════════════════════════════════════════════════════════ */
 
 *,*::before,*::after{box-sizing:border-box}
 
-/* ── M3 Dark (default) ── */
+/* ── Dark (default) ── */
 :root{
   /* Surfaces — neutral grey-blue, no harsh contrast */
   --bg:#0f172a;
@@ -16,8 +19,8 @@
   --s2:rgba(36,49,70,.58);
   --s3:rgba(44,58,82,.55);
   --s4:rgba(52,68,94,.52);
-  --bdr:rgba(255,255,255,.1);
-  --bdrHi:rgba(255,255,255,.14);
+  --bdr:rgba(255,255,255,.12);
+  --bdrHi:rgba(255,255,255,.22);
 
   /* Typography — warm white, readable at every size */
   --text:#f8fafc;
@@ -25,54 +28,65 @@
   --dim:#94a3b8;
   --mute:#64748b;
 
-  /* M3 accent palette — muted, not neon */
-  --amber:#d4923c;       --amber-bg:rgba(212,146,60,.12);
-  --sky:#5ba3d9;         --sky-bg:rgba(91,163,217,.1);
-  --green:#4caf7d;       --green-bg:rgba(76,175,125,.1);
-  --rose:#e07070;        --rose-bg:rgba(224,112,112,.1);
-  --violet:#9b87d4;      --violet-bg:rgba(100,60,220,.1);
-  --orange:#d4793c;      --orange-bg:rgba(212,121,60,.1);
+  /* Glassmorphism accent palette (dark-mode lightened variants of the
+     spec's light-mode hues, keeping the same brand hue per role) */
+  --primary:#5b8dff;     --on-primary:#00174f;   --primary-bg:rgba(91,141,255,.14);
+  --secondary:#a79fcf;   --on-secondary:#1c1830; --secondary-bg:rgba(167,159,207,.12);
+  --success:#22d889;     --success-bg:rgba(34,216,137,.12);
+  --warning:#f5a868;     --warning-bg:rgba(245,168,104,.12);
+  --danger:#ff5c7a;      --danger-bg:rgba(255,92,122,.12);
+
+  /* Legacy accent names kept as aliases onto the roles above so existing
+     var(--amber)/var(--sky) etc usages repaint under the new palette
+     without touching every call site */
+  --amber:var(--warning);        --amber-bg:var(--warning-bg);
+  --sky:var(--primary);          --sky-bg:var(--primary-bg);
+  --green:var(--success);        --green-bg:var(--success-bg);
+  --rose:var(--danger);          --rose-bg:var(--danger-bg);
+  --violet:var(--secondary);     --violet-bg:var(--secondary-bg);
+  --orange:var(--warning);       --orange-bg:var(--warning-bg);
   --teal:#3da8a0;
 
   /* Material 3 role tokens (for pages already using --md-sys-color-*) */
-  --md-sys-color-primary:#8dcdff;
-  --md-sys-color-on-primary:#00344f;
-  --md-sys-color-primary-container:#004b70;
-  --md-sys-color-on-primary-container:#cbe6ff;
-  --md-sys-color-secondary:#38bdf8;
+  --md-sys-color-primary:var(--primary);
+  --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#173a8f;
+  --md-sys-color-on-primary-container:#dbe6ff;
+  --md-sys-color-secondary:var(--secondary);
 
   /* Glass */
   --glass:rgba(30,41,59,.65);
   --glass-card:rgba(30,41,59,.55);
   --glass-hi:rgba(30,41,59,.92);
-  --glass-border:rgba(255,255,255,.1);
-  --glass-border-hi:rgba(255,255,255,.18);
-  --glass-blur:blur(24px);
-  --glass-shadow:0 4px 24px rgba(0,0,0,.3);
+  --glass-border:rgba(255,255,255,.14);
+  --glass-border-hi:rgba(255,255,255,.26);
+  --glass-blur:blur(16px);
+  --glass-shadow:0 4px 20px rgba(0,0,0,.28);
 
-  /* Elevation shadows — true M3 tonal */
-  --shadow-xs:0 1px 2px rgba(0,0,0,.3);
-  --shadow-sm:0 2px 8px rgba(0,0,0,.35),0 1px 3px rgba(0,0,0,.2);
-  --shadow-md:0 4px 16px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.25);
-  --shadow-lg:0 10px 32px rgba(0,0,0,.55),0 4px 12px rgba(0,0,0,.3);
-  --shadow-xl:0 20px 56px rgba(0,0,0,.65),0 8px 20px rgba(0,0,0,.35);
-  --shadow-inset:inset 0 1px 0 rgba(255,255,255,.05);
-  --shadow-glow-amber:0 0 0 2px rgba(212,146,60,.25),0 3px 12px rgba(212,146,60,.15);
+  /* Elevation shadows — soft, diffuse, glass-appropriate */
+  --shadow-xs:0 1px 2px rgba(0,0,0,.24);
+  --shadow-sm:0 2px 8px rgba(0,0,0,.28),0 1px 2px rgba(0,0,0,.16);
+  --shadow-md:0 4px 14px rgba(0,0,0,.32),0 1px 4px rgba(0,0,0,.18);
+  --shadow-lg:0 8px 26px rgba(0,0,0,.4),0 3px 8px rgba(0,0,0,.22);
+  --shadow-xl:0 16px 44px rgba(0,0,0,.48),0 6px 16px rgba(0,0,0,.26);
+  --shadow-inset:inset 0 1px 0 rgba(255,255,255,.06);
+  --shadow-glow-amber:0 0 0 2px rgba(245,168,104,.22),0 3px 12px rgba(245,168,104,.14);
 
-  /* Radius scale (canonical names + legacy aliases) */
-  --radius-xs:6px; --radius-sm:10px; --radius-md:16px;
-  --radius-lg:18px; --radius-xl:24px; --radius-pill:999px;
+  /* Radius scale — compact glassmorphism scale (4/8px small/medium per
+     spec), extrapolated up for larger surfaces + legacy aliases */
+  --radius-xs:4px; --radius-sm:8px; --radius-md:12px;
+  --radius-lg:16px; --radius-xl:20px; --radius-pill:999px;
 
   /* Composites */
   --s1-80:rgba(30,41,59,.8); --s2-50:rgba(36,49,70,.5); --s2-80:rgba(36,49,70,.8);
-  --bdr-10:rgba(255,255,255,.04);
+  --bdr-10:rgba(255,255,255,.05);
 
   /* ── Legacy aliases — kept so older pages don't need every rule rewritten ── */
   --bg-color:var(--bg);
   --tx:var(--text); --tm:var(--dim);
   --br:var(--bdr);
-  --input-bg:rgba(255,255,255,.04);
-  --input-hover:rgba(255,255,255,.08);
+  --input-bg:rgba(255,255,255,.05);
+  --input-hover:rgba(255,255,255,.09);
   --glass-bg:var(--glass);
   --glass-bg-solid:var(--glass-hi);
   --glass-bg-hover:rgba(30,41,59,.85);
@@ -80,7 +94,8 @@
   color-scheme:dark;
 }
 
-/* ── M3 Light — rich, high-contrast, fully readable ── */
+/* ── Light — glassmorphism spec: primary #1856FF on a white/near-white
+   surface, rich enough contrast to stay WCAG AA on translucent glass ── */
 :root[data-theme="light"], [data-theme="light"]{
   --bg:#f0f4f8;
   --s0:rgba(255,255,255,.95);
@@ -88,43 +103,52 @@
   --s2:rgba(240,244,252,.85);
   --s3:rgba(226,232,246,.80);
   --s4:rgba(212,220,240,.76);
-  --bdr:rgba(0,0,0,.08);
-  --bdrHi:rgba(0,0,0,.18);
+  --bdr:rgba(0,0,0,.1);
+  --bdrHi:rgba(0,0,0,.2);
 
-  --text:#1a1c1e;
+  --text:#141414;
   --text-hi:#030712;
   --dim:#44474e;
   --mute:#6b7280;
 
-  --amber:#b45309;       --amber-bg:rgba(180,83,9,.1);
-  --sky:#1d4ed8;         --sky-bg:rgba(29,78,216,.09);
-  --green:#15803d;       --green-bg:rgba(21,128,61,.09);
-  --rose:#b91c1c;        --rose-bg:rgba(185,28,28,.09);
-  --violet:#6d28d9;      --violet-bg:rgba(109,40,217,.09);
-  --orange:#c2410c;      --orange-bg:rgba(194,65,12,.09);
+  --primary:#1856ff;     --on-primary:#ffffff;   --primary-bg:rgba(24,86,255,.09);
+  --secondary:#3a344e;   --on-secondary:#ffffff; --secondary-bg:rgba(58,52,78,.08);
+  --success:#07ca6b;     --success-bg:rgba(7,202,107,.1);
+  --warning:#e89558;     --warning-bg:rgba(232,149,88,.12);
+  --danger:#ea2143;      --danger-bg:rgba(234,33,67,.1);
+
+  /* Legacy accent names kept as aliases onto the roles above so existing
+     var(--amber)/var(--sky) etc usages repaint under the new palette
+     without touching every call site */
+  --amber:var(--warning);        --amber-bg:var(--warning-bg);
+  --sky:var(--primary);          --sky-bg:var(--primary-bg);
+  --green:var(--success);        --green-bg:var(--success-bg);
+  --rose:var(--danger);          --rose-bg:var(--danger-bg);
+  --violet:var(--secondary);     --violet-bg:var(--secondary-bg);
+  --orange:var(--warning);       --orange-bg:var(--warning-bg);
   --teal:#0f766e;
 
-  --md-sys-color-primary:#006493;
-  --md-sys-color-on-primary:#ffffff;
-  --md-sys-color-primary-container:#cbe6ff;
-  --md-sys-color-on-primary-container:#001e30;
-  --md-sys-color-secondary:#0ea5e9;
+  --md-sys-color-primary:var(--primary);
+  --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#dbe6ff;
+  --md-sys-color-on-primary-container:#00164f;
+  --md-sys-color-secondary:var(--secondary);
 
   --glass:rgba(255,255,255,.72);
   --glass-card:rgba(255,255,255,.80);
   --glass-hi:rgba(255,255,255,.98);
-  --glass-border:rgba(0,0,0,.10);
-  --glass-border-hi:rgba(0,0,0,.18);
-  --glass-blur:blur(24px);
-  --glass-shadow:0 8px 32px rgba(0,0,0,.08);
+  --glass-border:rgba(0,0,0,.12);
+  --glass-border-hi:rgba(0,0,0,.22);
+  --glass-blur:blur(16px);
+  --glass-shadow:0 6px 24px rgba(0,0,0,.07);
 
-  --shadow-xs:0 1px 3px rgba(0,0,0,.08);
-  --shadow-sm:0 2px 8px rgba(0,0,0,.10),0 1px 3px rgba(0,0,0,.06);
-  --shadow-md:0 4px 16px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08);
-  --shadow-lg:0 10px 32px rgba(0,0,0,.16),0 4px 12px rgba(0,0,0,.10);
-  --shadow-xl:0 20px 56px rgba(0,0,0,.20),0 8px 20px rgba(0,0,0,.12);
+  --shadow-xs:0 1px 2px rgba(0,0,0,.06);
+  --shadow-sm:0 2px 6px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
+  --shadow-md:0 4px 12px rgba(0,0,0,.1),0 1px 4px rgba(0,0,0,.06);
+  --shadow-lg:0 8px 24px rgba(0,0,0,.13),0 3px 8px rgba(0,0,0,.08);
+  --shadow-xl:0 16px 40px rgba(0,0,0,.16),0 6px 14px rgba(0,0,0,.1);
   --shadow-inset:inset 0 1px 0 rgba(255,255,255,.9);
-  --shadow-glow-amber:0 0 0 2px rgba(180,83,9,.25),0 3px 12px rgba(180,83,9,.15);
+  --shadow-glow-amber:0 0 0 2px rgba(232,149,88,.25),0 3px 12px rgba(232,149,88,.15);
 
   --s1-80:rgba(255,255,255,.88); --s2-50:rgba(240,244,252,.55); --s2-80:rgba(240,244,252,.85);
   --bdr-10:rgba(0,0,0,.06);
@@ -150,13 +174,13 @@ body{
     radial-gradient(ellipse 50% 40% at 50% 50%, rgba(155,135,212,.04) 0%, transparent 70%);
   background-attachment:fixed;
   color:var(--text);
-  font-family:'DM Sans',system-ui,-apple-system,sans-serif;
+  font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
   transition:background .3s,color .3s;
 }
 
-h1,h2,h3{font-family:'DM Sans',sans-serif;font-weight:700;color:var(--text-hi);line-height:1.2}
+h1,h2,h3{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;color:var(--text-hi);line-height:1.2}
 
 /* ── Scrollbars ── */
 ::-webkit-scrollbar{width:5px;height:5px}
@@ -186,19 +210,19 @@ input::placeholder{color:var(--mute);opacity:1}
 
 /* ── Leaflet map chrome (used by PM-Yard / Rake-Planner) ── */
 .leaflet-tooltip{background:rgba(14,20,32,.92) !important;border:1px solid rgba(255,255,255,.14) !important;
-  color:#eceef4 !important;font-family:'DM Sans',system-ui,sans-serif !important;
+  color:#eceef4 !important;font-family:'Plus Jakarta Sans',system-ui,sans-serif !important;
   font-size:13px !important;line-height:1.5 !important;border-radius:10px !important;
   box-shadow:0 8px 32px rgba(0,0,0,.6) !important;padding:9px 13px !important;
   backdrop-filter:blur(16px) !important;-webkit-backdrop-filter:blur(16px) !important}
 [data-theme="light"] .leaflet-tooltip{background:rgba(255,255,255,.92) !important;border:1px solid rgba(0,0,0,.12) !important;color:#1a1e2a !important}
 .leaflet-tooltip::before{border-top-color:var(--bdrHi) !important;border-bottom-color:var(--bdrHi) !important}
-.leaflet-container{background:var(--bg) !important;font-family:'DM Sans',sans-serif}
+.leaflet-container{background:var(--bg) !important;font-family:'Plus Jakarta Sans',sans-serif}
 .leaflet-control-zoom a{background:var(--s1) !important;color:var(--dim) !important;border-color:var(--bdrHi) !important}
 .leaflet-control-zoom a:hover{background:var(--s2) !important;color:var(--text) !important}
 .leaflet-control-attribution{background:var(--glass) !important;color:var(--mute) !important;font-size:10px !important;backdrop-filter:blur(8px) !important}
 .leaflet-control-attribution a{color:var(--sky) !important}
 .leaflet-div-icon{background:transparent !important;border:none !important}
-.leaflet-container *{font-family:'DM Sans',system-ui,sans-serif}
+.leaflet-container *{font-family:'Plus Jakarta Sans',system-ui,sans-serif}
 
 /* ── Shared animations ── */
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
@@ -271,5 +295,5 @@ input::placeholder{color:var(--mute);opacity:1}
   border:2px solid var(--bdr);border-top-color:var(--sky);animation:spin .7s linear infinite}
 .fetch-status-label{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text)}
 .fetch-status-log{max-height:90px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
-.fetch-status-log div{font-family:'DM Mono',monospace;font-size:10.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fetch-status-log div{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fetch-status-log div:last-child{color:var(--dim)}

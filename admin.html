@@ -7,24 +7,24 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800;9..40,900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="theme.css"/>
 <style>
 :root {
   /* --glass-border here is a full border shorthand (width+style+color), unlike
      theme.css's color-only --glass-border, so it must stay locally defined. */
   --glass-border: 1px solid rgba(0,0,0,0.08);
-  --primary: #006493; --on-primary: #ffffff; --good: #15803d; --bad: #b91c1c; --warn: #b45309;
+  --good: #15803d; --bad: #b91c1c; --warn: #b45309;
   --page-side: 24px;
 }
 @media (max-width: 640px) { :root { --page-side: 12px; } }
 [data-theme="dark"] {
   --glass-border: 1px solid rgba(255,255,255,0.1);
-  --primary: #8dcdff; --on-primary: #00344f; --good: #4ade80; --bad: #f87171; --warn: #fbbf24;
+  --good: #4ade80; --bad: #f87171; --warn: #fbbf24;
 }
 * { box-sizing: border-box; }
 html, body { min-height: 100%; margin: 0; }
-body { font-family: 'DM Sans', system-ui, sans-serif; color: var(--tx); background: var(--bg-color); min-height: 100dvh; }
+body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: var(--tx); background: var(--bg-color); min-height: 100dvh; }
 button { font: inherit; cursor: pointer; border: none; outline: none; }
 input, select { font: inherit; color: inherit; }
 
@@ -82,7 +82,7 @@ a { color: var(--primary); }
 #hubFrameHeaderSlot button img { width: 100% !important; height: 100% !important; border-radius: 50% !important; object-fit: cover !important; }
 .jspl-logo { width: 46px; height: 21px; object-fit: contain; object-position: left center; flex-shrink: 0; }
 .jspl-brand-text { line-height: 1; }
-.jspl-brand-l1 { font-family: 'DM Sans', sans-serif; font-weight: 900; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--tx); }
+.jspl-brand-l1 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 900; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--tx); }
 .jspl-brand-l2 { font-size: 9px; color: var(--tm); letter-spacing: .05em; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
 .jspl-divider { width: 1px; height: 28px; background: var(--br); flex-shrink: 0; }
 .hd { display: flex; align-items: center; flex: 1; min-width: 0; }
