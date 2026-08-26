@@ -208,30 +208,12 @@ input::placeholder{color:var(--mute);opacity:1}
 .card-lift:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
 .card-lift:active{transform:translateY(0);box-shadow:var(--shadow-md)}
 
-/* ── Header glow — a very subtle light-blue rim light hugging the
-   outer edge of every page's header card, applied via the .header-glow
-   utility class. Implemented as box-shadow (not a filled/blurred
-   background) on an ::after that's the SAME size as the header itself
-   (inset:0) with no fill of its own — box-shadow only ever paints
-   OUTSIDE an element's box, so this can never bleed through the
-   header's translucent glass background into its interior, no matter
-   how it's layered. The pulse only varies the shadow's spread/opacity
-   (never introduces another hue), for a slow, gentle "breathing" glow
-   rather than a visible sweep. ── */
-@keyframes header-glow-pulse{
-  0%,100%{box-shadow:0 0 10px 0 rgba(96,180,255,.22)}
-  50%{box-shadow:0 0 16px 1px rgba(96,180,255,.32)}
-}
-.header-glow{isolation:isolate}
-.header-glow::after{
-  content:'';
-  position:absolute;
-  inset:0;
-  z-index:-1;
-  border-radius:inherit;
-  animation:header-glow-pulse 5s ease-in-out infinite;
-  pointer-events:none;
-}
+/* ── Header entrance — a small, tasteful one-time fade+lift when a
+   page's header first mounts (reuses the shared fadeUp keyframe below
+   used elsewhere in this codebase). Applied via .header-enter so no
+   markup changes are needed across pages. Runs once, not looping —
+   deliberately not "flashy". ── */
+.header-enter{animation:fadeUp .5s cubic-bezier(.22,1,.36,1) both}
 
 /* ── Leaflet map chrome (used by PM-Yard / Rake-Planner) ── */
 .leaflet-tooltip{background:rgba(14,20,32,.92) !important;border:1px solid rgba(255,255,255,.14) !important;
