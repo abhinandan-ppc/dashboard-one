@@ -87,7 +87,8 @@ a { color: var(--primary); }
 .jspl-divider { width: 1px; height: 28px; background: var(--br); flex-shrink: 0; }
 .hd { display: flex; align-items: center; flex: 1; min-width: 0; }
 .hd h1 { font-size: 17px; font-weight: 800; margin: 0; }
-.hd .sub { font-size: 12.5px; color: var(--tm); margin-top: 4px; transition: max-height .2s ease, opacity .2s ease, margin-top .2s ease; }
+.sub { font-size: 12px; color: var(--tm); line-height: 1.5; }
+.hd .sub { font-size: 12.5px; margin-top: 4px; transition: max-height .2s ease, opacity .2s ease, margin-top .2s ease; }
 @media (max-width: 640px) {
   .hd .sub { max-height: 40px; opacity: 1; overflow: hidden; }
   .hd .sub.hdr-sub-collapsed { max-height: 0; opacity: 0; margin-top: 0; }
@@ -108,26 +109,34 @@ a { color: var(--primary); }
 .stat .num { font-size: 24px; font-weight: 800; }
 .stat .lbl { font-size: 11.5px; color: var(--tm); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
 
-.users { display: flex; flex-direction: column; gap: 14px; }
-.user-card { background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--glass-shadow); padding: 18px 20px; }
-.user-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; cursor: pointer; }
-.expand-chevron { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; color: var(--tm); transition: transform 0.2s ease; flex-shrink: 0; }
-.user-card.expanded .expand-chevron { transform: rotate(180deg); }
+.users { display: flex; flex-direction: column; gap: 10px; }
+.user-card { position: relative; background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--glass-shadow); padding: 12px 44px 12px 14px; }
+.user-top { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.user-info { min-width: 0; flex: 1; }
+.user-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.user-name-row .badge { margin-left: auto; }
+.expand-toggle {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  width: 26px; height: 26px; padding: 0; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: var(--input-bg); border: var(--glass-border); color: var(--tm);
+  font-size: 13px; line-height: 1; cursor: pointer; transition: transform 0.2s ease, background 0.2s ease;
+}
+.expand-toggle:hover { background: var(--input-hover); }
+.user-card.expanded .expand-toggle { transform: translateY(-50%) rotate(180deg); }
 .user-access-collapsible { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.25s ease, opacity 0.2s ease; }
 .user-card.expanded .user-access-collapsible { max-height: 2000px; opacity: 1; }
-.user-id { display: flex; align-items: center; gap: 12px; }
-.avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--input-bg); flex-shrink: 0; }
-.user-name { font-weight: 800; font-size: 14px; }
-.user-email { font-size: 12px; color: var(--tm); }
-.user-meta { font-size: 11px; color: var(--tm); margin-top: 2px; }
+.avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: var(--input-bg); flex-shrink: 0; }
+.user-name { font-weight: 800; font-size: 13.5px; }
+.user-email { font-size: 11.5px; color: var(--tm); }
+.user-meta { font-size: 10.5px; color: var(--tm); margin-top: 1px; }
 
-.badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+.badge { display: inline-flex; align-items: center; flex-shrink: 0; padding: 3px 9px; border-radius: var(--radius-pill); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
 .badge.approved { background: rgba(34,197,94,0.15); color: var(--good); }
 .badge.pending { background: rgba(251,191,36,0.15); color: var(--warn); }
 .badge.blocked { background: rgba(239,68,68,0.15); color: var(--bad); }
 
-.user-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.mini-btn { padding: 6px 13px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 700; background: var(--input-bg); border: var(--glass-border); color: var(--tx); }
+.user-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.mini-btn { height: 26px; padding: 0 12px; border-radius: 999px; font-size: 11px; font-weight: 700; background: var(--input-bg); border: var(--glass-border); color: var(--tx); display: inline-flex; align-items: center; }
 .mini-btn.good:hover { background: rgba(34,197,94,0.18); color: var(--good); }
 .mini-btn.bad:hover { background: rgba(239,68,68,0.18); color: var(--bad); }
 .mini-btn.warn:hover { background: rgba(251,191,36,0.18); color: var(--warn); }
@@ -156,7 +165,7 @@ a { color: var(--primary); }
   .stat-row { gap: 8px; margin-bottom: 14px; }
   .stat { min-width: 100%; padding: 12px 14px; }
   .users { gap: 10px; }
-  .user-card { padding: 14px; }
+  .user-card { padding: 12px 40px 12px 12px; }
   .user-top { gap: 10px; }
   .user-actions { gap: 10px; }
   .mini-btn { padding: 8px 14px; }
@@ -393,28 +402,26 @@ function userCard(user){
 
   return (
     '<div class="user-card' + (isExpanded ? ' expanded' : '') + '" data-email="' + esc(email) + '">' +
+      '<button type="button" class="expand-toggle" data-action="toggle-expand" aria-label="Toggle details">&#9662;</button>' +
       '<div class="user-top" data-action="toggle-expand">' +
-        '<div class="user-id">' +
-          '<img class="avatar" src="' + esc(user.picture || '') + '" onerror="this.style.visibility=\'hidden\'">' +
-          '<div>' +
-            '<div class="user-name">' + esc(user.name || email) + (isPromotedAdmin ? ' <span class="badge approved" style="background:rgba(0,100,147,0.16);color:var(--primary)">admin</span>' : '') + '</div>' +
-            '<div class="user-email">' + esc(email) + '</div>' +
-            '<div class="user-meta">' + (user.lastLogin ? ('First seen ' + esc(fmtDate(user.firstLogin)) + ' &middot; Last login ' + esc(fmtDate(user.lastLogin))) : 'Added manually &middot; never logged in yet') + '</div>' +
+        '<img class="avatar" src="' + esc(user.picture || '') + '" onerror="this.style.visibility=\'hidden\'">' +
+        '<div class="user-info">' +
+          '<div class="user-name-row">' +
+            '<span class="user-name">' + esc(user.name || email) + (isPromotedAdmin ? ' <span class="badge approved" style="background:rgba(0,100,147,0.16);color:var(--primary)">admin</span>' : '') + '</span>' +
+            '<span class="badge ' + esc(status) + '">' + esc(status) + '</span>' +
           '</div>' +
+          '<div class="user-email">' + esc(email) + '</div>' +
+          '<div class="user-meta">' + (user.lastLogin ? ('First seen ' + esc(fmtDate(user.firstLogin)) + ' &middot; Last login ' + esc(fmtDate(user.lastLogin))) : 'Added manually &middot; never logged in yet') + '</div>' +
         '</div>' +
-        '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
-          '<span class="badge ' + esc(status) + '">' + esc(status) + '</span>' +
-          '<div class="user-actions">' +
-            '<button type="button" class="mini-btn good" data-action="approve">Approve</button>' +
-            '<button type="button" class="mini-btn warn" data-action="pending">Set pending</button>' +
-            '<button type="button" class="mini-btn bad" data-action="block">Block</button>' +
-            (isPromotedAdmin
-              ? '<button type="button" class="mini-btn warn" data-action="remove-admin">Remove admin</button>'
-              : '<button type="button" class="mini-btn" data-action="make-admin">Make admin</button>') +
-            '<button type="button" class="mini-btn bad" data-action="delete">Remove</button>' +
-          '</div>' +
-          '<span class="expand-chevron" aria-hidden="true">&#9662;</span>' +
-        '</div>' +
+      '</div>' +
+      '<div class="user-actions">' +
+        '<button type="button" class="mini-btn good" data-action="approve">Approve</button>' +
+        '<button type="button" class="mini-btn warn" data-action="pending">Set pending</button>' +
+        '<button type="button" class="mini-btn bad" data-action="block">Block</button>' +
+        (isPromotedAdmin
+          ? '<button type="button" class="mini-btn warn" data-action="remove-admin">Remove admin</button>'
+          : '<button type="button" class="mini-btn" data-action="make-admin">Make admin</button>') +
+        '<button type="button" class="mini-btn bad" data-action="delete">Remove</button>' +
       '</div>' +
       '<div class="user-access-collapsible">' +
         '<div class="divider"></div>' +
