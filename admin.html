@@ -46,7 +46,7 @@ input, select { font: inherit; color: inherit; }
 .dd.open .dd-menu { display: flex; }
 .dd-item { padding: 8px 12px; border-radius: var(--radius-sm); font-size: 13px; color: var(--tx); cursor: pointer; white-space: nowrap; }
 .dd-item:hover { background: var(--input-hover, rgba(148,163,184,0.14)); }
-.dd-item.on { background: rgba(0,100,147,0.16); color: var(--primary); font-weight: 700; }
+.dd-item.on { background: rgba(var(--primary-rgb),0.16); color: var(--primary); font-weight: 700; }
 a { color: var(--primary); }
 
 .wrap { max-width: 1180px; margin: 0 auto; padding: 0 var(--page-side) 80px; }
@@ -138,7 +138,7 @@ a { color: var(--primary); }
 .user-actions { display: flex; margin-top: 10px; background: var(--input-bg); border: var(--glass-border); border-radius: var(--radius-pill); overflow: hidden; }
 .action-btn { flex: 1; height: 30px; padding: 0 6px; border-radius: 0; font-size: 10.5px; font-weight: 700; background: transparent; border: none; color: var(--tx); display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; position: relative; transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease; }
 .action-btn:not(:first-child)::before { content: ''; position: absolute; left: 0; top: 22%; bottom: 22%; width: 1px; background: var(--br); }
-.action-btn:hover { background: rgba(0,100,147,0.14); color: var(--primary); box-shadow: inset 0 0 14px rgba(0,100,147,0.22); }
+.action-btn:hover { background: rgba(var(--primary-rgb),0.14); color: var(--primary); box-shadow: inset 0 0 14px rgba(var(--primary-rgb),0.22); }
 .action-btn.good:hover { background: rgba(34,197,94,0.16); color: var(--good); box-shadow: inset 0 0 14px rgba(34,197,94,0.28); }
 .action-btn.bad:hover { background: rgba(239,68,68,0.16); color: var(--bad); box-shadow: inset 0 0 14px rgba(239,68,68,0.28); }
 .action-btn.warn:hover { background: rgba(251,191,36,0.16); color: var(--warn); box-shadow: inset 0 0 14px rgba(251,191,36,0.28); }
@@ -154,7 +154,7 @@ a { color: var(--primary); }
 .page-chip { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: var(--radius-m); background: var(--input-bg); border: var(--glass-border); font-size: 12px; cursor: pointer; user-select: none; overflow: hidden; }
 .page-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .page-chip input { accent-color: var(--primary); width: 15px; height: 15px; flex-shrink: 0; }
-.page-chip.on { background: rgba(0,100,147,0.14); border-color: var(--primary); color: var(--primary); }
+.page-chip.on { background: rgba(var(--primary-rgb),0.14); border-color: var(--primary); color: var(--primary); }
 
 .toggle-row { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
 .switch-chip { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-m); background: var(--input-bg); border: var(--glass-border); font-size: 12.5px; font-weight: 600; cursor: pointer; user-select: none; }
@@ -421,7 +421,7 @@ function userCard(user){
         '<img class="avatar" src="' + esc(user.picture || '') + '" onerror="this.style.visibility=\'hidden\'">' +
         '<div class="user-info">' +
           '<div class="user-name-row">' +
-            '<span class="user-name">' + esc(user.name || email) + (isPromotedAdmin ? ' <span class="badge approved" style="background:rgba(0,100,147,0.16);color:var(--primary)">admin</span>' : '') + '</span>' +
+            '<span class="user-name">' + esc(user.name || email) + (isPromotedAdmin ? ' <span class="badge approved" style="background:rgba(var(--primary-rgb),0.16);color:var(--primary)">admin</span>' : '') + '</span>' +
             '<span class="badge ' + esc(status) + '">' + esc(status) + '</span>' +
           '</div>' +
           '<div class="user-email">' + esc(email) + '</div>' +

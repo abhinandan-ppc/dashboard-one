@@ -62,7 +62,7 @@ body{margin:0;min-height:100vh;background-color:var(--bg-color);color:var(--tx);
 .sub{color:var(--tm);font-size:13px;margin:0 0 20px}
 .panel{background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:var(--glass-border-rule);border-radius:var(--radius-l);box-shadow:var(--glass-shadow);padding:20px 22px;margin-bottom:18px}
 .panel h2{margin:0 0 14px;font-size:12.5px;text-transform:uppercase;letter-spacing:1.4px;color:var(--md-sys-color-primary);font-weight:800}
-body.drag-over::after{content:'Drop EBTP .xlsx to upload';position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:var(--md-sys-color-on-primary);background:rgba(0,100,147,.55);backdrop-filter:blur(3px);border:3px dashed var(--md-sys-color-on-primary);margin:14px;border-radius:var(--radius-l);pointer-events:none}
+body.drag-over::after{content:'Drop EBTP .xlsx to upload';position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:var(--md-sys-color-on-primary);background:rgba(var(--primary-rgb),.55);backdrop-filter:blur(3px);border:3px dashed var(--md-sys-color-on-primary);margin:14px;border-radius:var(--radius-l);pointer-events:none}
 #fname{font-weight:700;color:var(--md-sys-color-primary);font-size:13px}
 .row{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-end}
 .fld{display:flex;flex-direction:column;gap:6px}
