@@ -208,22 +208,32 @@ input::placeholder{color:var(--mute);opacity:1}
 .card-lift:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
 .card-lift:active{transform:translateY(0);box-shadow:var(--shadow-md)}
 
-/* ── Header glow ring — a slow-spinning light-blue halo behind every
-   page's header card, applied via the .header-glow utility class.
-   Needs the element it's on to establish its own stacking context
-   (position already set to fixed/sticky/relative by every header this
-   is used on) so the ::before can sit behind it at z-index:-1. ── */
+/* ── Header glow — a soft, even light-blue halo hugging the whole
+   rounded shape of every page's header card (like an ambient rim
+   light, not a sweeping comet), applied via the .header-glow utility
+   class. A slow rotating conic-gradient provides a gentle shimmer,
+   but every stop stays a shade of the same light blue — no stop ever
+   drops to transparent, so the halo never looks like it's "sweeping"
+   past, just breathing. Needs the element it's on to establish its
+   own stacking context (position already set to fixed/sticky/relative
+   by every header this is used on) so the ::after can sit behind it
+   at z-index:-1. ── */
 @keyframes header-glow-spin{to{transform:rotate(360deg)}}
 .header-glow{isolation:isolate}
 .header-glow::after{
   content:'';
   position:absolute;
-  inset:-3px;
+  inset:-10px;
   z-index:-1;
   border-radius:inherit;
-  background:conic-gradient(from 0deg,transparent 0%,rgba(91,141,255,.55) 12%,transparent 28%);
-  filter:blur(7px);
-  animation:header-glow-spin 7s linear infinite;
+  background:conic-gradient(from 0deg,
+    rgba(96,180,255,.42),
+    rgba(96,180,255,.7) 25%,
+    rgba(96,180,255,.42) 50%,
+    rgba(96,180,255,.7) 75%,
+    rgba(96,180,255,.42) 100%);
+  filter:blur(18px);
+  animation:header-glow-spin 12s linear infinite;
   pointer-events:none;
 }
 
