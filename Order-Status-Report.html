@@ -7,7 +7,7 @@
 <link rel="icon" type="image/png" href="favicon.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="theme.css"/>
 <style>
@@ -118,7 +118,7 @@ const DARK_C={
   bg:'var(--bg)',s0:'var(--s0)',s1:'var(--s1)',s2:'var(--s2)',s3:'var(--s3)',s4:'var(--s4)',
   bdr:'var(--bdr)',bdrHi:'var(--bdrHi)',
   text:'var(--text)',dim:'var(--dim)',mute:'var(--mute)',
-  _amber:'#d4923c',_sky:'#5ba3d9',_green:'#4caf7d',_rose:'#e07070',_violet:'#9b87d4',_orange:'#d4793c',_teal:'#3da8a0',
+  _amber:'#f5a868',_sky:'#5b8dff',_green:'#22d889',_rose:'#ff5c7a',_violet:'#a79fcf',_orange:'#f5a868',_teal:'#3da8a0',
   amber:'var(--amber)',amberBg:'var(--amber-bg)',
   sky:'var(--sky)',skyBg:'var(--sky-bg)',
   green:'var(--green)',greenBg:'var(--green-bg)',
@@ -131,7 +131,7 @@ const LIGHT_C={
   bg:'var(--bg)',s0:'var(--s0)',s1:'var(--s1)',s2:'var(--s2)',s3:'var(--s3)',s4:'var(--s4)',
   bdr:'var(--bdr)',bdrHi:'var(--bdrHi)',
   text:'var(--text)',dim:'var(--dim)',mute:'var(--mute)',
-  _amber:'#b45309',_sky:'#1d4ed8',_green:'#15803d',_rose:'#b91c1c',_violet:'#6d28d9',_orange:'#c2410c',_teal:'#0f766e',
+  _amber:'#e89558',_sky:'#1856ff',_green:'#07ca6b',_rose:'#ea2143',_violet:'#3a344e',_orange:'#e89558',_teal:'#0f766e',
   amber:'var(--amber)',amberBg:'var(--amber-bg)',
   sky:'var(--sky)',skyBg:'var(--sky-bg)',
   green:'var(--green)',greenBg:'var(--green-bg)',
@@ -174,7 +174,7 @@ function useThemeManager(){
   },[]);
   return{pref,setPref,effective};
 }
-const F={h:"'Plus Jakarta Sans',sans-serif",b:"'Plus Jakarta Sans',sans-serif",m:"'JetBrains Mono',monospace"};
+const F={h:"'Poppins',sans-serif",b:"'Poppins',sans-serif",m:"'JetBrains Mono',monospace"};
 const JINDAL_LOGO='data:image/png;base64,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';
 
 /* ═══════════════════ JSPL BRAND BADGE (copied from Rake-Planner) ═══════════════════ */
@@ -1408,7 +1408,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         own footprint is exactly the spacer's job, structurally, without needing a matching pixel
         height guess for the taller wrapped/column mobile layout — see the spacer below.) ═══ */}
     <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 0 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
-    <div className="glass-card" style={{padding:mob?'12px 12px':'12px 20px',display:'flex',
+    <div className="glass-card header-glow" style={{position:'relative',padding:mob?'12px 12px':'12px 20px',display:'flex',
       flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
       alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
       minHeight:mob?'auto':64,boxSizing:'border-box'}}>
@@ -1789,6 +1789,10 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         <StackedBar label="Issued" onlineV={onlineOffline.issued.online} offlineV={onlineOffline.issued.offline}
           onSegClick={v=>toggleChartFilter('finishingLine',v)} activeSet={chartFilters.finishingLine}/>
       </div>
+    </div>
+
+    <div style={{marginTop:24,marginBottom:8,color:'var(--mute)',fontSize:11.5,textAlign:'center',fontFamily:F.m}}>
+      Order Status Report · self-contained offline tool
     </div>
 
     {kpiDrill&&<KpiDrillPanel rows={filtered}

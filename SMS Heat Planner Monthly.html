@@ -9,7 +9,7 @@
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="theme.css"/>
 <style>
 /* ─── MATERIAL 3 & GLASSMORPHISM DESIGN SYSTEM ─── */
@@ -75,7 +75,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body, html { 
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif; 
+  font-family: 'Poppins', system-ui, sans-serif; 
   color: var(--tx); 
   min-height: 100vh; 
   line-height: 1.5; 
@@ -1856,7 +1856,7 @@ window.createTooltip = function(from, to, weight) {
     const tx = isDark ? '#f8fafc' : '#1a1c1e';
     const br = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
     return `
-    <div style="background:${bg}; padding:12px; border-radius:12px; border:1px solid ${br}; box-shadow:0 4px 16px rgba(0,0,0,0.1); font-family:'Plus Jakarta Sans',sans-serif; color:${tx}; min-width:180px;">
+    <div style="background:${bg}; padding:12px; border-radius:12px; border:1px solid ${br}; box-shadow:0 4px 16px rgba(0,0,0,0.1); font-family:'Poppins',sans-serif; color:${tx}; min-width:180px;">
         <div style="font-size:11px; font-weight:800; color:#8b5cf6; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.5px;">Material Flow</div>
         <div style="font-size:13px; margin-bottom:8px;"><b>${from}</b> ➔ <b>${to}</b></div>
         <div style="font-size:18px; font-weight:900; color:#0ea5e9;">${fmt(Math.round(weight))} t</div>
@@ -1947,7 +1947,7 @@ window.renderSankey = function() {
     tooltip: { isHtml: true },
     sankey: {
       node: { 
-        label: { fontSize: 13, bold: true, color: labelColor, fontName: 'Plus Jakarta Sans' }, 
+        label: { fontSize: 13, bold: true, color: labelColor, fontName: 'Poppins' }, 
         nodePadding: 24, 
         colors: ['#0ea5e9', '#ea580c', '#16a34a', '#7c3aed', '#eab308', '#ec4899', '#14b8a6', '#ef4444', '#8b5cf6', '#06b6d4', '#f59e0b'] 
       },
@@ -2012,7 +2012,7 @@ window.drawFlowLines = function() {
           text.setAttribute("y", (y1+y2)/2);
           text.setAttribute("fill", color);
           text.setAttribute("font-size", "11");
-          text.setAttribute("font-family", "Plus Jakarta Sans, sans-serif");
+          text.setAttribute("font-family", "Poppins, sans-serif");
           text.setAttribute("font-weight", "800");
           text.setAttribute("text-anchor", "middle");
           text.setAttribute("dy", "4");
