@@ -239,7 +239,7 @@ input[type=range] { flex: 1; accent-color: var(--md-sys-color-secondary); height
 .panel {
   background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   border-radius: var(--radius-m); border: var(--glass-border); box-shadow: var(--glass-shadow);
-  display: flex; flex-direction: column; position: absolute; top: 96px; z-index: 15;
+  display: flex; flex-direction: column; position: absolute; top: var(--panel-top, 96px); z-index: 15;
   transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
   overflow: visible !important;
 }
@@ -533,7 +533,7 @@ aside.collapsed .left-toggle {
   .kpi-pill { scroll-snap-align: start; flex-shrink: 0; }
   
   /* Push panels and their toggle buttons down to clear the 2-row header */
-  .panel { top: 143px; }
+  .panel { top: var(--panel-top, 143px); }
   .side-toggle-btn { top: 24px; }
 }
 
@@ -622,7 +622,7 @@ aside.collapsed .left-toggle {
   .kpi-group-title { font-size: 8px; }
 
   /* Accurately push side panels down further to clear the new 3-row header */
-  .panel { top: 183px !important; }
+  .panel { top: var(--panel-top, 183px) !important; }
   .side-toggle-btn { top: 50px; }
   
   aside { width: calc(100% - 20px); left: 10px; bottom: 70px; max-height: calc(100vh - 250px); z-index: 50;}
@@ -5107,6 +5107,23 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
 });
+
+// Keep the side panels' top offset locked to the header's ACTUAL rendered
+// height (rather than a hand-guessed px number that silently drifts out of
+// sync whenever the header's content/row-count changes) by measuring it
+// directly and exposing the result as --panel-top for every .panel{top:...}
+// rule to read.
+(function syncPanelTop(){
+  const header = document.querySelector('header');
+  if(!header) return;
+  const apply = () => {
+    const rect = header.getBoundingClientRect();
+    document.documentElement.style.setProperty('--panel-top', (rect.bottom + 12) + 'px');
+  };
+  apply();
+  window.addEventListener('resize', apply);
+  if(window.ResizeObserver) new ResizeObserver(apply).observe(header);
+})();
 
 // ─── Responsive Initialization ───
 // Auto-collapse the left sidebar on mobile devices so it doesn't block the 3D view

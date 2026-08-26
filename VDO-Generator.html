@@ -174,8 +174,8 @@ tr:hover td{background:var(--input-hover)}
      inline SVG icon plus a text label (span or bare text node), so we just
      collapse the label via font-size:0 and re-square the button — no ::before
      content-injection needed since the icon isn't an emoji glyph. */
-  .hdr-r #uploadBtn,.hdr-r #onlineBtn,.hdr-r #resetBtn{font-size:0;padding:0;width:40px;height:40px;justify-content:center;gap:0}
-  .hdr-r #uploadBtn svg,.hdr-r #onlineBtn svg,.hdr-r #resetBtn svg{width:18px;height:18px;flex-shrink:0}
+  .hdr-r #uploadBtn{font-size:0;padding:0;width:40px;height:40px;justify-content:center;gap:0}
+  .hdr-r #uploadBtn svg{width:18px;height:18px;flex-shrink:0}
   .sub,#status.status{display:none}
   .jspl-brand-text,.jspl-divider{display:none}
 }
@@ -186,8 +186,8 @@ tr:hover td{background:var(--input-hover)}
   .filterpop{left:12px !important;right:12px !important;max-width:none;width:auto}
   .header-spacer{height:0}
   .top-bar{padding:10px;gap:10px}
-  .hdr-r button:not(#uploadBtn):not(#onlineBtn):not(#resetBtn){min-height:44px}
-  .hdr-r #uploadBtn,.hdr-r #onlineBtn,.hdr-r #resetBtn{width:44px;height:44px;min-height:44px;max-height:44px;box-sizing:border-box}
+  .hdr-r button:not(#uploadBtn){min-height:44px}
+  .hdr-r #uploadBtn{width:44px;height:44px;min-height:44px;max-height:44px;box-sizing:border-box}
   #themeToggle{width:44px;height:44px}
   .hdr-r{justify-content:flex-end;gap:10px 8px}
   #dist{gap:10px}
@@ -213,24 +213,19 @@ tr:hover td{background:var(--input-hover)}
       </div>
     </div>
     <div class="hdr-r">
-      <span class="file-badge" id="fileBadge" style="display:none">
-        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
-        <span id="fname"></span><b id="fSnapshot"></b>
-      </span>
       <button class="reset-btn upload-btn" id="uploadBtn" type="button" title="Upload EBTP" aria-label="Upload EBTP">
         <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M4 21h16"/></svg>
         <span>Upload EBTP</span>
         <span class="spinner" id="uploadSpinner"></span>
       </button>
-      <button class="reset-btn upload-btn" id="onlineBtn" type="button" title="Online EBTP Refresh" aria-label="Online EBTP Refresh">
-        <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg>
-        <span id="onlineBtnLabel">Online EBTP Refresh</span>
-        <span class="spinner" id="onlineSpinner"></span>
-      </button>
       <input type="file" id="file" accept=".xlsx,.xlsm" style="display:none">
-      <button class="reset-btn" id="resetBtn" type="button" title="Reset" aria-label="Reset"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg> Reset</button>
       <button id="themeToggle" type="button" title="Theme" aria-label="Toggle theme"><svg id="themeIcon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path></svg></button>
+      <div id="hubFrameHeaderSlot" style="display:flex;gap:8px;align-items:center;flex-shrink:0"></div>
     </div>
+    <span class="file-badge" id="fileBadge" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+      <span id="fname"></span><b id="fSnapshot"></b>
+    </span>
   </div>
 </div>
 <div class="header-spacer"></div>
@@ -686,9 +681,7 @@ async function fetchEbtpDirectly(){
 }
 
 function setOnlineFetching(on,label){
-  $('#onlineBtn').disabled=on;
-  $('#onlineSpinner').classList.toggle('on', on);
-  $('#onlineBtnLabel').textContent=label||'Online EBTP Refresh';
+  if(on&&label)$('#status').textContent=label;
 }
 
 function handleCSV(text,label){
@@ -1264,7 +1257,6 @@ window.addEventListener('DOMContentLoaded',()=>{
   const fi=$('#file');
   $('#uploadBtn').addEventListener('click',()=>fi.click());
   fi.addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0]);});
-  $('#onlineBtn').addEventListener('click',fetchOnlineEBTP);
   // Auto-load EBTP on open (hub cache, falling back to a direct fetch) so
   // this tool doesn't require an explicit click before it has data —
   // unless the user is already mid-upload of their own file.
@@ -1295,7 +1287,6 @@ window.addEventListener('DOMContentLoaded',()=>{
     });
     renderParties($('#psearch').value);
   }));
-  $('#resetBtn').addEventListener('click',()=>location.reload());
   $('#themeToggle').addEventListener('click',()=>{
     const next = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
     setTheme(next);
@@ -1308,6 +1299,7 @@ window.addEventListener('message', e=>{
     const d=e.data;
     if(d && d.type==='theme' && d.value) setTheme(d.value);
     if(d && d.type==='reset') location.reload();
+    if(d && d.type==='ebtp-cache-updated') fetchOnlineEBTP();
   }catch(err){}
 });
 </script>
