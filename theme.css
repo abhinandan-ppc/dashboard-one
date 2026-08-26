@@ -31,7 +31,7 @@
 
   /* Glassmorphism accent palette (dark-mode lightened variants of the
      spec's light-mode hues, keeping the same brand hue per role) */
-  --primary:#006493;     --on-primary:#ffffff;   --primary-bg:rgba(0,100,147,.16); --primary-rgb:0,100,147;
+  --primary:#29b6f6;     --on-primary:#00344d;   --primary-bg:rgba(41,182,246,.14); --primary-rgb:41,182,246;
   --secondary:#a79fcf;   --on-secondary:#1c1830; --secondary-bg:rgba(167,159,207,.12);
   --success:#22d889;     --success-bg:rgba(34,216,137,.12);
   --warning:#f5a868;     --warning-bg:rgba(245,168,104,.12);
