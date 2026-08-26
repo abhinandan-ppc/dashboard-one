@@ -555,7 +555,23 @@ aside.collapsed .left-toggle {
 }
 .btn:hover { background: var(--input-hover); transform: translateY(-1px); }
 .btn:active { transform: scale(0.96); box-shadow: none; } /* Shrinks slightly on click for a tactile feel */
-  
+
+  /* Icon-only header action buttons on mobile: the label is a direct text
+     node after the leading emoji (no wrapping span in the markup), so the
+     text is hidden via font-size:0 and the icon is redrawn via ::before
+     content (more reliable across browsers than ::first-letter, which has
+     inconsistent emoji-grapheme boundary behavior). */
+  #btn-analysis, #btn-export, #btn-upload-dd, #btn-ctrl {
+    font-size: 0; padding: 0; width: 40px; height: 40px; justify-content: center; align-items: center; gap: 0; position: relative;
+  }
+  #btn-analysis::before, #btn-export::before, #btn-upload-dd::before, #btn-ctrl::before {
+    font-size: 16px; line-height: 1;
+  }
+  #btn-analysis::before { content: "\1F916"; }
+  #btn-export::before { content: "\2B07\FE0F"; }
+  #btn-upload-dd::before { content: "\1F4E4"; }
+  #btn-ctrl::before { content: "\2699\FE0F"; }
+
   /* Row 3: KPIs */
   .kpi-dashboard { order: 3; flex-basis: 100%; margin-top: 4px; padding: 0 0 8px 0; }
   .kpi-stat .val { font-size: 13px; }

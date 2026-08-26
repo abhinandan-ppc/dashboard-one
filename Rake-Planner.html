@@ -4865,7 +4865,7 @@ function App(){
          sticky) guarantees it stays pinned regardless of this page's
          nested independently-scrolling panes) ── */}
     <div style={{position:'fixed',top:0,left:0,right:0,padding:mob?'8px 10px 0':'10px 22px 0',zIndex:50}}>
-    <div style={{minHeight:64,display:'flex',alignItems:'center',gap:12,padding:`0 ${mob?14:22}px`,
+    <div style={{minHeight:mob?'auto':64,display:'flex',flexWrap:mob?'wrap':'nowrap',alignItems:'center',gap:mob?8:12,padding:mob?'10px 14px':`0 ${22}px`,
       background:'var(--glass)',
       backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
       border:'1px solid var(--glass-border)',borderRadius:'var(--radius-lg)',boxSizing:'border-box',
@@ -4915,7 +4915,7 @@ function App(){
           fontFamily:F.b,fontWeight:600}} title="Clear">✕</button>}
       </div>}
 
-      <div style={{flex:1}}/>
+      <div style={{flex:1,flexBasis:mob?'100%':'auto',height:mob?0:'auto'}}/>
 
       {fileDate&&!mob&&<div style={{fontSize:11,fontFamily:F.m,color:'var(--mute)',
         textAlign:'right',lineHeight:1.7}}>
@@ -4931,7 +4931,7 @@ function App(){
         background:'color-mix(in srgb,var(--amber) 12%,transparent)',
         border:'1px solid var(--amber)',borderRadius:'var(--radius-sm)',
         color:C.amber,fontFamily:F.h,fontSize:12,fontWeight:700,letterSpacing:'.07em',
-        textTransform:'uppercase',padding:`9px ${mob?13:18}px`,cursor:'pointer',
+        textTransform:'uppercase',padding:`9px ${mob?13:18}px`,cursor:'pointer',margin:mob?'0 auto':0,
         display:'flex',alignItems:'center',gap:5,transition:'all .15s',flexShrink:0}}
         onMouseEnter={e=>{e.currentTarget.style.background='color-mix(in srgb,var(--amber) 24%,transparent)'}}
         onMouseLeave={e=>{e.currentTarget.style.background='color-mix(in srgb,var(--amber) 12%,transparent)'}}>
@@ -4965,7 +4965,7 @@ function App(){
       </div>
     </div>
     {/* Spacer reserving the fixed header's visual footprint in the flex flow below */}
-    <div style={{height:mob?72:74,flexShrink:0}}/>
+    <div style={{height:mob?110:74,flexShrink:0}}/>
 
     {/* ── Mobile Search + Theme ── */}
     {mob&&<div style={{padding:'10px 14px',background:'var(--s0)',

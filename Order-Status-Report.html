@@ -1389,25 +1389,32 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
   },[fileName,latestDate]);
 
   return<div style={{padding:'0 24px 60px',width:'100%',maxWidth:'none',boxSizing:'border-box'}}>
-    {/* ═══ HEADER (fixed, not sticky — floats in place regardless of ancestor scroll containers) ═══ */}
-    <div style={{position:'fixed',top:0,left:0,right:0,padding:'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
-    <div className="glass-card" style={{padding:'12px 20px',display:'flex',flexWrap:'wrap',
-      alignItems:'center',gap:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
-      minHeight:64,boxSizing:'border-box'}}>
-      <JSPLBadge/>
-      <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0}}/>
-      <div style={{flexShrink:0}}>
-        <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700}}>Order Status</div>
-        <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2}}>Order Status Report</div>
+    {/* ═══ HEADER (fixed on desktop — floats in place regardless of ancestor scroll containers.
+        On mobile it switches to sticky: sticky occupies real space in the flex flow, so the header's
+        own footprint is exactly the spacer's job, structurally, without needing a matching pixel
+        height guess for the taller wrapped/column mobile layout — see the spacer below.) ═══ */}
+    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 12px 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
+    <div className="glass-card" style={{padding:mob?'10px 14px':'12px 20px',display:'flex',
+      flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
+      alignItems:mob?'stretch':'center',gap:mob?10:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
+      minHeight:mob?'auto':64,boxSizing:'border-box'}}>
+      <div style={{display:'flex',alignItems:'center',gap:14,justifyContent:mob?'center':'flex-start',flexWrap:'wrap'}}>
+        <JSPLBadge/>
+        <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0,display:mob?'none':'block'}}/>
+        <div style={{flexShrink:0}}>
+          <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:mob?'center':'left'}}>Order Status</div>
+          <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:mob?'center':'left'}}>Order Status Report</div>
+        </div>
       </div>
 
-      <div style={{flex:1}}/>
+      {!mob&&<div style={{flex:1}}/>}
 
-      <div style={{fontSize:11,fontFamily:F.m,color:'var(--mute)',textAlign:'right',lineHeight:1.6,flexShrink:0}}>
-        <div style={{color:'var(--dim)',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{fileName}</div>
+      <div style={{fontSize:11,fontFamily:F.m,color:'var(--mute)',textAlign:mob?'center':'right',lineHeight:1.6,flexShrink:0}}>
+        <div style={{color:'var(--dim)',maxWidth:mob?'100%':220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{fileName}</div>
         <div>EBTP loaded: <b style={{color:'var(--text)'}}>{ebtpDateLabel}</b></div>
       </div>
 
+      <div style={{display:'flex',gap:10,flexWrap:'wrap',justifyContent:mob?'center':'flex-start'}}>
       <button onClick={()=>setReleasedOnly(v=>!v)} style={{height:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
         border:`1.5px solid ${releasedOnly?C.sky:'var(--bdrHi)'}`,background:releasedOnly?'var(--sky-bg)':'var(--s2)',
         color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:12,fontWeight:700,cursor:'pointer',
@@ -1425,13 +1432,16 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
           for first; without it, the hub falls back to floating its Home/Refresh/Theme/User controls
           fixed at top-right. Left unstyled (no pill/background) so the hub's own 40x40 circular
           buttons render at their native uniform size instead of inheriting a wrapper's chrome. */}
-      <div id="hubFrameHeaderSlot" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0}}/>
+      <div id="hubFrameHeaderSlot" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,justifyContent:mob?'center':'flex-start'}}/>
+      </div>
     </div>
     </div>
     {/* Spacer reserving the fixed header's visual footprint in the flex flow below
         (20px outer top padding + 64px minHeight, both border-box, + 16px breathing room
-        before the next bar — see the header above) */}
-    <div style={{height:100}}/>
+        before the next bar — see the header above). Not needed on mobile: the header switches to
+        position:sticky there, so it already occupies its own space in the document flow — an
+        additional spacer would just double the gap. */}
+    <div style={{height:mob?0:100}}/>
     <div className="glass-card" style={{padding:'12px 16px',marginBottom:18,display:'flex',gap:10,flexWrap:'wrap',
       position:'relative',zIndex:40,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-sm)'}}>
       <MultiSelect label="Release Status" options={relStaOptions} selected={relStaSel} onChange={setRelStaSel}/>
@@ -1479,7 +1489,8 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       <div style={{fontFamily:F.h,fontSize:12,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase',color:'var(--mute)',marginBottom:14}}>
         Order Fulfillment Flow <span style={{color:'var(--dim)',fontWeight:500,letterSpacing:0,textTransform:'none'}}>· Billed ← BTP</span>
       </div>
-      <div style={{display:'flex',alignItems:'stretch',gap:mob?6:8,overflowX:'auto',paddingBottom:2}}>
+      <div style={{display:'flex',alignItems:'stretch',gap:mob?6:8,overflowX:'auto',paddingBottom:2,
+        WebkitOverflowScrolling:'touch'}}>
         <div style={{display:'flex',flexDirection:'column',gap:mob?6:8,flex:'0 0 auto',
           background:'var(--s2)',border:'1px solid var(--bdr)',borderRadius:'var(--radius-md)',
           padding:mob?'8px 8px 6px':'10px 10px 8px'}}>
@@ -1487,7 +1498,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
             background:'var(--s0)',border:'1px solid var(--bdrHi)',fontFamily:F.b,fontSize:10.5,
             color:'var(--mute)',whiteSpace:'nowrap'}}>Grand Total</div>
           <div className="card-lift" onClick={()=>setKpiDrill({key:'orderQtyLive',label:'Order Qty_Live'})}
-            style={{flex:1,minWidth:0,height:128,display:'flex',flexDirection:'column',cursor:'pointer',
+            style={{flex:mob?'0 0 150px':1,minWidth:mob?150:0,height:128,display:'flex',flexDirection:'column',cursor:'pointer',
             gap:7,padding:'12px 14px',borderRadius:'var(--radius-md)',background:'var(--amber-bg)',
             border:`1px solid var(--bdrHi)`,borderTop:`3px solid ${C.jsplGold}`}}>
             <div style={{fontFamily:F.h,fontSize:14,fontWeight:800,letterSpacing:'.03em',textTransform:'uppercase',color:'var(--text)',whiteSpace:'nowrap'}}>Order Qty_Live</div>
@@ -1502,7 +1513,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
           flex:'0 0 20px',color:'var(--mute)',fontSize:20,alignSelf:'center',marginTop:16}}>‹</div>
         {flowGroups.map((g,gi)=>(
           <React.Fragment key={g.baseKey}>
-            <div style={{display:'flex',flexDirection:'column',gap:mob?6:8,flex:g.stages.length,minWidth:0,
+            <div style={{display:'flex',flexDirection:'column',gap:mob?6:8,flex:mob?'0 0 auto':g.stages.length,minWidth:0,
               background:'var(--s2)',border:'1px solid var(--bdr)',borderRadius:'var(--radius-md)',
               padding:mob?'8px 8px 6px':'10px 10px 8px'}}>
               <div style={{alignSelf:'flex-start',padding:'3px 10px',borderRadius:'var(--radius-pill)',
@@ -1514,7 +1525,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
                 {g.stages.map((s,i)=>{
                   const p=pct(s.value,g.baseValue);
                   return<div key={s.key} className="card-lift" onClick={()=>setKpiDrill({key:s.key,label:s.label})}
-                    style={{flex:1,minWidth:0,height:128,display:'flex',flexDirection:'column',cursor:'pointer',
+                    style={{flex:mob?'0 0 150px':1,minWidth:mob?150:0,height:128,display:'flex',flexDirection:'column',cursor:'pointer',
                     gap:7,padding:'12px 13px',borderRadius:'var(--radius-md)',background:'var(--s1)',
                     border:`1px solid var(--bdr)`,borderTop:`3px solid ${s.color}`}}>
                     <div style={{fontFamily:F.h,fontSize:14,fontWeight:800,letterSpacing:'.03em',textTransform:'uppercase',color:'var(--text)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.label}</div>

@@ -100,7 +100,14 @@ header{
   background:var(--glass);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);
   border:var(--glass-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);
 }
-@media(max-width:640px){header{padding:10px 14px;gap:10px}.header-spacer{height:104px}}
+@media(max-width:640px){
+.wrap{padding:0 10px 56px}
+.header-fixed{padding:14px 10px 0}
+header{padding:10px 14px;gap:10px;flex-direction:column;align-items:stretch;text-align:center}
+.header-brand{flex-direction:column;align-items:center;text-align:center;gap:10px}
+.jspl-divider{display:none}
+.header-spacer{height:190px}
+}
 .header-brand{display:flex;align-items:center;gap:16px;min-width:0;flex-wrap:wrap}
 .jspl-badge{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .jspl-logo{height:28px;width:auto;object-fit:contain;object-position:left center;flex-shrink:0;filter:drop-shadow(0 6px 14px rgba(2,6,23,.16))}
