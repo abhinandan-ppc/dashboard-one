@@ -530,7 +530,7 @@ aside.collapsed .left-toggle {
 
 /* Mobile Devices */
 @media (max-width: 768px) {
-  header { padding: 12px 10px; gap: 8px; justify-content: center; flex-wrap: wrap; left: 10px; right: 10px; }
+  header { padding: 12px; gap: 12px; justify-content: center; flex-wrap: wrap; left: 10px; right: 10px; }
   
   /* Row 1: Brand - Full Width & Centered */
   .brand { order: 1; width: 100%; justify-content: center; margin: 0; }
@@ -540,7 +540,7 @@ aside.collapsed .left-toggle {
   
   /* Row 2: Action Buttons - Full Width, Centered, Scrollable if needed */
   .h-actions {
-  display: flex; gap: 8px; align-items: center; justify-content: flex-end;
+  display: flex; gap: 8px; align-items: center; justify-content: center;
   padding: 4px 0; /* Added vertical padding to prevent animation clipping */
   flex-shrink: 0; background: transparent; border: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; margin-left: 0;
   order: 2;
@@ -639,6 +639,8 @@ aside.collapsed .left-toggle {
 
 /* Small Phones (320-480px) */
 @media (max-width: 480px) {
+  header { padding: 10px; gap: 10px; }
+
   /* Tighten panel padding so boxes don't feel cramped against the screen edge */
   .panel-head { padding: 10px 12px; font-size: 11px; }
   .panel-body { padding: 12px; gap: 12px; max-height: calc(100vh - 130px); }

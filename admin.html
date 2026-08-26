@@ -58,10 +58,10 @@ a { color: var(--primary); }
   display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
 }
 @media (max-width: 640px) {
-  .top-wrapper{padding:16px 0 0;position:sticky}
+  .top-wrapper{padding:8px 12px;position:sticky}
   .header-spacer{display:none}
   #bannerHost{margin-top:18px}
-  .top-bar{padding:10px 14px;gap:10px;flex-direction:column;align-items:stretch;flex-wrap:nowrap}
+  .top-bar{padding:12px;gap:12px;flex-direction:column;align-items:stretch;flex-wrap:nowrap}
   .hd h1{font-size:15px}
   .jspl-badge{justify-content:center}
   .jspl-divider{display:none}
@@ -77,7 +77,11 @@ a { color: var(--primary); }
 .jspl-divider { width: 1px; height: 28px; background: var(--br); flex-shrink: 0; }
 .hd { display: flex; align-items: center; flex: 1; min-width: 0; }
 .hd h1 { font-size: 17px; font-weight: 800; margin: 0; }
-.hd .sub { font-size: 12.5px; color: var(--tm); margin-top: 4px; }
+.hd .sub { font-size: 12.5px; color: var(--tm); margin-top: 4px; transition: max-height .2s ease, opacity .2s ease, margin-top .2s ease; }
+@media (max-width: 640px) {
+  .hd .sub { max-height: 40px; opacity: 1; overflow: hidden; }
+  .hd .sub.hdr-sub-collapsed { max-height: 0; opacity: 0; margin-top: 0; }
+}
 .hd-actions { display: flex; align-items: center; gap: 10px; }
 .btn { padding: 9px 16px; border-radius: var(--radius-pill); font-weight: 700; font-size: 13px; background: var(--input-bg); color: var(--tx); border: var(--glass-border); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
 .btn:hover { filter: brightness(1.05); }
@@ -133,6 +137,7 @@ a { color: var(--primary); }
 .save-hint.show { opacity: 1; }
 
 @media (max-width: 480px) {
+  .top-bar { padding: 10px; gap: 10px; }
   .panel { padding: 14px; margin-bottom: 14px; }
   .stat-row { gap: 8px; margin-bottom: 14px; }
   .stat { min-width: 100%; padding: 12px 14px; }
@@ -267,6 +272,20 @@ async function loadMe(){
     document.getElementById('signedInAs').textContent = '';
   }
 }
+
+// Mobile-only: collapse the "Signed in as..." subtitle on scroll (reappears at scroll-top),
+// mirroring the EBTP status-line collapse pattern used on Order-Status-Report.html.
+(function initHeaderSubCollapse(){
+  var subEl = document.getElementById('signedInAs');
+  if(!subEl) return;
+  function onScroll(){
+    if(window.innerWidth > 640) { subEl.classList.remove('hdr-sub-collapsed'); return; }
+    subEl.classList.toggle('hdr-sub-collapsed', window.scrollY > 20);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  onScroll();
+})();
 
 // Permission edits (page checkboxes, "all pages", "dev access") are staged
 // here per-email and only sent to the server when "Update permissions" is
