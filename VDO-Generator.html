@@ -39,7 +39,7 @@ body{margin:0;min-height:100vh;background-color:var(--bg-color);color:var(--tx);
 .top-wrapper{position:fixed;top:0;left:0;right:0;z-index:50;padding:24px 24px 0;box-sizing:border-box}
 .header-spacer{height:104px}
 .top-bar{min-height:64px;background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);padding:12px 20px;border-radius:var(--radius-lg);border:var(--glass-border);box-shadow:var(--shadow-md);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;box-sizing:border-box}
-.top-l{display:flex;align-items:center;gap:14px;min-width:0}
+.top-l{display:flex;align-items:center;gap:14px;min-width:0;flex:1 1 auto}
 .top-l .eyebrow{font-size:11px;color:var(--tm);letter-spacing:.5px;text-transform:uppercase;font-weight:700}
 .top-l h1{font-size:18px;font-weight:800;color:var(--tx);letter-spacing:-.2px;margin:0;white-space:nowrap}
 .jspl-badge{display:flex;align-items:center;gap:8px;flex-shrink:0}
@@ -53,17 +53,21 @@ body{margin:0;min-height:100vh;background-color:var(--bg-color);color:var(--tx);
 .hdr-r button:hover{background:var(--input-hover);transform:translateY(-2px)}
 .hdr-r button svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #themeToggle{width:40px;padding:0;border-radius:50%;justify-content:center}
-.hdr-r .upload-btn{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border-color:transparent;position:relative}
+#uploadBtn{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border-color:transparent;position:relative;margin-left:auto;flex-shrink:0}
 .hdr-r .upload-btn:hover{filter:brightness(1.08);background:var(--md-sys-color-primary)}
 .hdr-r .upload-btn:disabled{opacity:.7;cursor:default;transform:none}
-.file-badge{display:none;align-items:center;gap:8px;padding:0 14px;height:40px;border-radius:var(--radius-pill);background:var(--input-bg);border:var(--glass-border);font-size:12.5px;color:var(--tx);white-space:nowrap;max-width:260px}
-.file-badge svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;color:var(--md-sys-color-primary)}
-.file-badge span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.file-badge b{color:var(--md-sys-color-primary);font-weight:800;flex-shrink:0}
+.file-badge{display:none;flex-direction:column;font-size:11px;font-family:var(--mono, monospace);color:var(--tm);line-height:1.5;text-align:right;flex-shrink:0;max-width:260px;transition:max-height .2s ease,opacity .2s ease;overflow:hidden}
+.file-badge #fname{color:var(--tm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-badge b{color:var(--tx);font-weight:800}
 .spinner{display:none;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;opacity:.85;animation:spin .7s linear infinite}
 .spinner.on{display:inline-block}
-@media (max-width:900px){.file-badge{max-width:160px}.file-badge span{max-width:70px}}
-@media (max-width:720px){.top-bar{flex-wrap:wrap}.top-l{order:1;flex:1 1 auto;min-width:0;flex-wrap:nowrap}.hdr-r{order:2;justify-content:flex-end;flex-wrap:nowrap;flex-shrink:0}.file-badge{max-width:none;order:3;flex:1 1 100%;justify-content:center;margin-top:8px}}
+@media (max-width:900px){.file-badge{max-width:160px}}
+@media (max-width:720px){
+  .top-bar{flex-wrap:wrap}
+  .top-l{order:1;flex:1 1 auto;min-width:0;flex-wrap:nowrap}
+  .hdr-r{order:2;flex:1 1 100%;justify-content:center;margin-top:8px;border-top:1px solid var(--br);padding-top:8px}
+  .file-badge{order:3;flex:1 1 100%;text-align:left;max-width:none;margin-top:6px}
+}
 .sub{color:var(--tm);font-size:13px;margin:0 0 20px}
 .panel{background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:var(--glass-border);border-radius:var(--radius-l);box-shadow:var(--glass-shadow);padding:20px 22px;margin-bottom:18px}
 .panel h2{margin:0 0 14px;font-size:12.5px;text-transform:uppercase;letter-spacing:1.4px;color:var(--md-sys-color-primary);font-weight:800}
@@ -174,7 +178,7 @@ tr:hover td{background:var(--input-hover)}
      inline SVG icon plus a text label (span or bare text node), so we just
      collapse the label via font-size:0 and re-square the button — no ::before
      content-injection needed since the icon isn't an emoji glyph. */
-  .hdr-r #uploadBtn{font-size:0;padding:0;width:40px;height:40px;justify-content:center;gap:0}
+  #uploadBtn{font-size:0;padding:0;width:40px;height:40px;justify-content:center;gap:0}
   .hdr-r #uploadBtn svg{width:18px;height:18px;flex-shrink:0}
   .sub,#status.status{display:none}
   .jspl-brand-text,.jspl-divider{display:none}
@@ -187,7 +191,7 @@ tr:hover td{background:var(--input-hover)}
   .header-spacer{height:0}
   .top-bar{padding:10px;gap:10px}
   .hdr-r button:not(#uploadBtn){min-height:44px}
-  .hdr-r #uploadBtn{width:44px;height:44px;min-height:44px;max-height:44px;box-sizing:border-box}
+  #uploadBtn{width:44px;height:44px;min-height:44px;max-height:44px;box-sizing:border-box}
   #themeToggle{width:44px;height:44px}
   .hdr-r{justify-content:flex-end;gap:10px 8px}
   #dist{gap:10px}
@@ -211,21 +215,21 @@ tr:hover td{background:var(--input-hover)}
         <div class="eyebrow">Value of Delayed Orders</div>
         <h1>VDO Generator</h1>
       </div>
-    </div>
-    <div class="hdr-r">
       <button class="reset-btn upload-btn" id="uploadBtn" type="button" title="Upload EBTP" aria-label="Upload EBTP">
         <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M4 21h16"/></svg>
         <span>Upload EBTP</span>
         <span class="spinner" id="uploadSpinner"></span>
       </button>
       <input type="file" id="file" accept=".xlsx,.xlsm" style="display:none">
+    </div>
+    <div class="hdr-r">
       <button id="themeToggle" type="button" title="Theme" aria-label="Toggle theme"><svg id="themeIcon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path></svg></button>
       <div id="hubFrameHeaderSlot" style="display:flex;gap:8px;align-items:center;flex-shrink:0"></div>
     </div>
-    <span class="file-badge" id="fileBadge" style="display:none">
-      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
-      <span id="fname"></span><b id="fSnapshot"></b>
-    </span>
+    <div class="file-badge" id="fileBadge" style="display:none">
+      <div id="fname"></div>
+      <div>EBTP loaded: <b id="fSnapshot"></b></div>
+    </div>
   </div>
 </div>
 <div class="header-spacer"></div>
@@ -698,8 +702,8 @@ function handleCSV(text,label){
   $('#cutoff').value=snapshot;
   $('#asofNote').textContent='online fetch — defaulting snapshot to today';
   $('#fname').textContent=label||'Online EBTP';
-  $('#fSnapshot').textContent=' · EBTP as of '+fmtBadgeDate(snapshot);
-  $('#fileBadge').style.display='inline-flex';
+  $('#fSnapshot').textContent=fmtBadgeDate(snapshot);
+  $('#fileBadge').style.display='flex';
   buildPartyList();
 }
 
@@ -708,7 +712,7 @@ async function fetchOnlineEBTP(){
   $('#preview').innerHTML=previewSkeleton();
   const cached=await readHubEbtpCache();
   if(cached&&cached.csvText){
-    handleCSV(cached.csvText,'Online EBTP (hub cache)');
+    handleCSV(cached.csvText,'Live EBTP (Google Sheet)');
     setOnlineFetching(false);
     return;
   }
@@ -718,13 +722,13 @@ async function fetchOnlineEBTP(){
     setOnlineFetching(true,'Waiting for hub cache…');
     await new Promise(r=>setTimeout(r,600));
     const c=await readHubEbtpCache();
-    if(c&&c.csvText){ handleCSV(c.csvText,'Online EBTP (hub cache)'); setOnlineFetching(false); return; }
+    if(c&&c.csvText){ handleCSV(c.csvText,'Live EBTP (Google Sheet)'); setOnlineFetching(false); return; }
   }
   // Hub cache never showed up — fetch it ourselves.
   setOnlineFetching(true,'Fetching EBTP directly…');
   try{
     const text=await fetchEbtpDirectly();
-    handleCSV(text,'Online EBTP (direct fetch)');
+    handleCSV(text,'Live EBTP (Google Sheet)');
     setOnlineFetching(false);
   }catch(e){
     $('#preview').innerHTML='';
@@ -755,8 +759,8 @@ function handleFile(file){
       $('#cutoff').value=snapshot;
       $('#asofNote').textContent=detected?('snapshot date read from filename'):('no date in filename — defaulting to today');
       $('#fname').textContent=file.name;
-      $('#fSnapshot').textContent=' · EBTP as of '+fmtBadgeDate(snapshot);
-      $('#fileBadge').style.display='inline-flex';
+      $('#fSnapshot').textContent=fmtBadgeDate(snapshot);
+      $('#fileBadge').style.display='flex';
       buildPartyList();
     }catch(err){$('#preview').innerHTML=''; $('#status').textContent='Error reading file: '+err.message;}
     finally{ setUploading(false); }
@@ -1302,4 +1306,19 @@ window.addEventListener('message', e=>{
     if(d && d.type==='ebtp-cache-updated') fetchOnlineEBTP();
   }catch(err){}
 });
+
+// Hide the EBTP-loaded status text on scroll (mobile only), same convention
+// as Order-Status-Report.html's fileName/EBTP-date block.
+(function(){
+  const badge=document.getElementById('fileBadge');
+  if(!badge) return;
+  const apply=()=>{
+    const hide=window.innerWidth<=720 && window.scrollY>20;
+    badge.style.maxHeight=hide?'0px':'40px';
+    badge.style.opacity=hide?'0':'1';
+  };
+  apply();
+  window.addEventListener('scroll',apply,{passive:true});
+  window.addEventListener('resize',apply);
+})();
 </script>

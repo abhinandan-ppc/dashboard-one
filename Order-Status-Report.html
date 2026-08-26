@@ -1415,12 +1415,12 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         </div>
 
         {mob&&<div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,marginLeft:'auto'}}>
-        <button onClick={()=>setReleasedOnly(v=>!v)} title="Released Orders" style={{height:34,width:34,padding:0,borderRadius:'var(--radius-pill)',
+        <button onClick={()=>setReleasedOnly(v=>!v)} title="Released Orders" style={{height:34,width:releasedOnly?40:34,padding:0,borderRadius:'var(--radius-pill)',
           border:`1.5px solid ${releasedOnly?C.sky:'var(--bdrHi)'}`,background:releasedOnly?'var(--sky-bg)':'var(--s2)',
-          color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:15,fontWeight:700,cursor:'pointer',
-          display:'flex',alignItems:'center',justifyContent:'center',
+          color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:13,fontWeight:700,cursor:'pointer',
+          display:'flex',alignItems:'center',justifyContent:'center',gap:2,
           textTransform:'uppercase',transition:'all .15s',flexShrink:0}}>
-          {releasedOnly?'✓':'▢'}
+          {releasedOnly?'✓🔓':'🔓'}
         </button>
         <button onClick={clearAll} disabled={!anyFilterActive} title="Clear Filters" style={{height:34,width:34,padding:0,borderRadius:'var(--radius-pill)',
           border:'1.5px solid var(--bdrHi)',background:'var(--s2)',color:anyFilterActive?C.rose:'var(--mute)',
