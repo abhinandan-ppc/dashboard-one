@@ -88,10 +88,11 @@ body{
 }
 button,input,select{font:inherit}
 button{cursor:pointer;border:none;outline:none;background:none}
-.wrap{max-width:min(1720px,calc(100vw - 40px));margin:0 auto;padding:0 20px 72px}
+:root{--page-side:20px}
+.wrap{max-width:min(1720px,calc(100vw - 40px));margin:0 auto;padding:0 var(--page-side) 72px}
 .header-fixed{
   position:fixed;top:0;left:0;right:0;z-index:50;
-  max-width:min(1720px,calc(100vw - 40px));margin:0 auto;padding:28px 20px 0;box-sizing:border-box;
+  max-width:min(1720px,calc(100vw - 40px));margin:0 auto;padding:28px var(--page-side) 0;box-sizing:border-box;
 }
 .header-spacer{height:108px}
 header{
@@ -101,8 +102,9 @@ header{
   border:var(--glass-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);
 }
 @media(max-width:640px){
-.wrap{padding:0 8px 56px}
-.header-fixed{position:sticky;padding:8px 10px 0}
+:root{--page-side:8px}
+.wrap{padding:0 var(--page-side) 56px}
+.header-fixed{position:sticky;padding:8px var(--page-side) 0}
 header{padding:12px;gap:10px;flex-direction:column;align-items:center;text-align:center}
 .header-brand{flex-direction:column;align-items:center;text-align:center;gap:8px;justify-content:center}
 .jspl-divider{display:none}

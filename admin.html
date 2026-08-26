@@ -15,7 +15,9 @@
      theme.css's color-only --glass-border, so it must stay locally defined. */
   --glass-border: 1px solid rgba(0,0,0,0.08);
   --primary: #006493; --on-primary: #ffffff; --good: #15803d; --bad: #b91c1c; --warn: #b45309;
+  --page-side: 20px;
 }
+@media (max-width: 640px) { :root { --page-side: 12px; } }
 [data-theme="dark"] {
   --glass-border: 1px solid rgba(255,255,255,0.1);
   --primary: #8dcdff; --on-primary: #00344f; --good: #4ade80; --bad: #f87171; --warn: #fbbf24;
@@ -47,9 +49,9 @@ input, select { font: inherit; color: inherit; }
 .dd-item.on { background: rgba(0,100,147,0.16); color: var(--primary); font-weight: 700; }
 a { color: var(--primary); }
 
-.wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px 80px; }
-@media (max-width: 640px) { .wrap{padding:0 12px 60px} }
-.top-wrapper { position: fixed; top: 0; left: 0; right: 0; z-index: 50; max-width: 1180px; margin: 0 auto; padding: 28px 20px 0; box-sizing: border-box; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 var(--page-side) 80px; }
+@media (max-width: 640px) { .wrap{padding:0 var(--page-side) 60px} }
+.top-wrapper { position: fixed; top: 0; left: 0; right: 0; z-index: 50; max-width: 1180px; margin: 0 auto; padding: 28px var(--page-side) 0; box-sizing: border-box; }
 .header-spacer { height: 108px; }
 .top-bar {
   min-height: 64px; box-sizing: border-box;
@@ -58,7 +60,7 @@ a { color: var(--primary); }
   display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
 }
 @media (max-width: 640px) {
-  .top-wrapper{padding:8px 12px;position:sticky}
+  .top-wrapper{padding:8px var(--page-side);position:sticky}
   .header-spacer{display:none}
   #bannerHost{margin-top:18px}
   .top-bar{padding:12px;gap:12px;flex-direction:column;align-items:stretch;flex-wrap:nowrap}
