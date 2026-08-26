@@ -151,17 +151,33 @@ tr:hover td{background:var(--input-hover)}
 }
 @media (max-width:720px){
   .wrap{padding:16px 12px 40px}
+  .top-wrapper{padding:14px 10px 0}
+  .top-l{flex-wrap:wrap;row-gap:8px}
+  .hdr-r{gap:8px;row-gap:10px}
+  .header-spacer{height:180px}
   .panel{padding:16px}
   .row{gap:14px}
+  .row .fld{flex:1 1 100%;min-width:0}
+  .fld input[type=date],.fld input[type=text]{width:100%}
   th .thhead{padding:9px 6px}
   #preview td{padding:9px 6px}
   #pivotWrap td,#pivotWrap th{padding:10px 12px}
+  #sumCards{gap:10px}
+  .tabs{flex-wrap:wrap;gap:8px}
+  .btn,.btn.ghost{padding:11px 18px}
 }
 @media (max-width:560px){
   #sumCards{grid-template-columns:1fr}
-  .radios{gap:10px}
+  .radios{gap:14px}
   .pager{justify-content:center;text-align:center}
   .filterpop{left:12px !important;right:12px !important;max-width:none;width:auto}
+  .header-spacer{height:220px}
+  .hdr-r button{min-height:44px}
+  .hdr-r{justify-content:center;gap:10px 8px}
+  #dist{gap:10px}
+  .panel{margin-bottom:14px}
+  .panel h2{margin-bottom:12px}
+  #sumCards .card{padding:14px}
 }
 </style></head><body><div class="wrap">
 <div class="top-wrapper">

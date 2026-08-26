@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Jindal Steel Angul — SMS & Mills Simulator (M3)</title>
 <link rel="icon" type="image/png" href="favicon.png"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -395,8 +395,19 @@ select option { background-color: var(--bg-color); color: var(--tx); }
   .eb-row .ml { width: 75px; font-size: 11px; white-space: normal; line-height: 1.2;}
   .eb-row .vl { width: 50px; font-size: 11px; }
   .pm-card { padding: 12px; }
-  
+
   .btn-pu { padding: 16px; font-size: 14px; width: 100%; flex: none; box-sizing: border-box; }
+
+  .app-shell { gap: 14px; padding: 16px 12px; }
+  .content-area { gap: 14px; }
+  .kpi-row { gap: 10px; }
+  .ov-grid, .pm-grid { gap: 14px; }
+  .panel, .coll-panel { margin-bottom: 0; }
+  .pb { padding: 14px; }
+  .tc { padding: 16px; }
+  .cap-micro-grid-wrap { padding-bottom: 10px; }
+  .btn-header { min-height: 40px; }
+  .flow-view-btn { min-height: 36px; }
 }
 
 @media(max-width:480px){
@@ -404,6 +415,11 @@ select option { background-color: var(--bg-color); color: var(--tx); }
   .tot-eb-card { flex-direction: column; align-items: flex-start; gap: 4px; padding: 16px; }
   .tot-eb-lbl { font-size: 12px; }
   .tot-eb-val { font-size: 20px; }
+  .app-shell { padding: 12px 10px; gap: 12px; }
+  .pm-card { padding: 10px; }
+  .tc { padding: 12px; }
+  .pb { padding: 12px; }
+  #main-content { margin-bottom: 16px; }
 }
 </style>
 </head>

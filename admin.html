@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>User &amp; Access Management &middot; Jindal Steel Angul</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -120,6 +120,26 @@ a { color: var(--primary); }
 .empty { text-align: center; padding: 60px 20px; color: var(--tm); }
 .save-hint { font-size: 11px; color: var(--tm); margin-top: 10px; opacity: 0; transition: opacity 0.2s; }
 .save-hint.show { opacity: 1; }
+
+@media (max-width: 480px) {
+  .panel { padding: 14px; margin-bottom: 14px; }
+  .stat-row { gap: 8px; margin-bottom: 14px; }
+  .stat { min-width: 100%; padding: 12px 14px; }
+  .users { gap: 10px; }
+  .user-card { padding: 14px; }
+  .user-top { gap: 10px; }
+  .user-actions { gap: 10px; }
+  .mini-btn { padding: 8px 14px; }
+  .divider { margin: 12px 0; }
+  .pages-grid { gap: 10px; }
+  .page-chip { padding: 8px 12px; }
+  .toggle-row { gap: 14px; margin-top: 10px; }
+  .add-page-row { flex-direction: column; gap: 10px; }
+  .add-page-row input { min-width: 0; width: 100%; }
+  .hd-actions { gap: 8px; }
+  .hd-actions .btn { padding: 8px 12px; font-size: 12.5px; }
+}
+
 </style>
 </head>
 <body>

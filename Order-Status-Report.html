@@ -44,6 +44,24 @@ thead tr th:last-child{border-radius:0 var(--radius-xs) 0 0}
 @media (max-width:900px){
   .grid-donut-cust,.grid-map-metrics{grid-template-columns:1fr}
 }
+/* Mobile spacing pass (320-414px phones, extended up to 600px). Most layout on this page is set via
+   inline style objects in the React code (not editable per the desktop-parity requirement), so these
+   rules use !important on the few real CSS-class hooks (.glass-card, .card-lift) plus generic table
+   sizing to relieve cramped/uneven padding, gaps, and table squish without touching desktop rules,
+   JS, or HTML structure. */
+@media (max-width:600px){
+  .glass-card{padding:10px 12px !important;margin-bottom:14px !important}
+  .grid-donut-cust,.grid-map-metrics{gap:12px !important;margin-bottom:14px !important}
+  .card-lift{padding:9px 10px !important}
+  table{font-size:11.5px !important}
+  button{font-size:11px !important}
+}
+@media (max-width:480px){
+  .glass-card{padding:8px 10px !important}
+  /* Give tables a sane minimum so columns stay legible and scroll horizontally inside their
+     existing overflow-x wrapper, instead of squeezing illegibly narrow on 320-414px screens. */
+  table{min-width:520px}
+}
 /* Defensive: ensure nothing globally forces Leaflet's SVG circle markers to black — each marker
    sets its own fill/stroke inline via Leaflet's path options, but guard against any stray
    `svg *{fill:...}` / `path{fill:...}` rule elsewhere overriding .leaflet-interactive shapes. */
@@ -992,6 +1010,15 @@ const IDX={
    paren) is a DISTINCT, deliberately-excluded value (mirrors the old logic's "not (1)" exclusion);
    only the exact strings below count as released. */
 const RELEASED_REMARKS=new Set(['captive','sbu released','fi released','fi released(2)']);
+function useBreakpoint(){
+  const[bp,setBp]=useState(()=>({mob:window.innerWidth<640,tab:window.innerWidth<1024,w:window.innerWidth}));
+  useEffect(()=>{
+    const h=()=>setBp({mob:window.innerWidth<640,tab:window.innerWidth<1024,w:window.innerWidth});
+    window.addEventListener('resize',h,{passive:true});
+    return()=>window.removeEventListener('resize',h);
+  },[]);
+  return bp;
+}
 function isReleasedRow(r){
   const v=String(r['Remarks']||'').trim().toLowerCase();
   return RELEASED_REMARKS.has(v);
@@ -999,6 +1026,7 @@ function isReleasedRow(r){
 
 /* ═══════════════════ MAIN DASHBOARD ═══════════════════ */
 function Dashboard({rawRows,rawArr,headers,fileName}){
+  const{mob}=useBreakpoint();
   const[relStaSel,setRelStaSel]=useState(new Set());
   const[vagSel,setVagSel]=useState(new Set());
   const[htcSel,setHtcSel]=useState(new Set());
@@ -1447,14 +1475,14 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     </div>
 
     {/* ═══ PANEL 2: REVERSE-FLOW ORDER PIPELINE ═══ */}
-    <div style={{...card,padding:'18px 20px',marginBottom:18}}>
+    <div style={{...card,padding:mob?'12px 14px':'18px 20px',marginBottom:18}}>
       <div style={{fontFamily:F.h,fontSize:12,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase',color:'var(--mute)',marginBottom:14}}>
         Order Fulfillment Flow <span style={{color:'var(--dim)',fontWeight:500,letterSpacing:0,textTransform:'none'}}>· Billed ← BTP</span>
       </div>
-      <div style={{display:'flex',alignItems:'stretch',gap:8,overflowX:'auto',paddingBottom:2}}>
-        <div style={{display:'flex',flexDirection:'column',gap:8,flex:'0 0 auto',
+      <div style={{display:'flex',alignItems:'stretch',gap:mob?6:8,overflowX:'auto',paddingBottom:2}}>
+        <div style={{display:'flex',flexDirection:'column',gap:mob?6:8,flex:'0 0 auto',
           background:'var(--s2)',border:'1px solid var(--bdr)',borderRadius:'var(--radius-md)',
-          padding:'10px 10px 8px'}}>
+          padding:mob?'8px 8px 6px':'10px 10px 8px'}}>
           <div style={{alignSelf:'flex-start',padding:'3px 10px',borderRadius:'var(--radius-pill)',
             background:'var(--s0)',border:'1px solid var(--bdrHi)',fontFamily:F.b,fontSize:10.5,
             color:'var(--mute)',whiteSpace:'nowrap'}}>Grand Total</div>
@@ -1474,15 +1502,15 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
           flex:'0 0 20px',color:'var(--mute)',fontSize:20,alignSelf:'center',marginTop:16}}>‹</div>
         {flowGroups.map((g,gi)=>(
           <React.Fragment key={g.baseKey}>
-            <div style={{display:'flex',flexDirection:'column',gap:8,flex:g.stages.length,minWidth:0,
+            <div style={{display:'flex',flexDirection:'column',gap:mob?6:8,flex:g.stages.length,minWidth:0,
               background:'var(--s2)',border:'1px solid var(--bdr)',borderRadius:'var(--radius-md)',
-              padding:'10px 10px 8px'}}>
+              padding:mob?'8px 8px 6px':'10px 10px 8px'}}>
               <div style={{alignSelf:'flex-start',padding:'3px 10px',borderRadius:'var(--radius-pill)',
                 background:'var(--s0)',border:'1px solid var(--bdrHi)',fontFamily:F.b,fontSize:10.5,
                 color:'var(--mute)',whiteSpace:'nowrap'}}>
                 % of <b style={{color:'var(--text)'}}>{g.baseLabel}</b> = <span style={{fontFamily:F.m,color:'var(--text)'}}>{fmt(g.baseValue)}</span>
               </div>
-              <div style={{display:'flex',alignItems:'stretch',gap:8}}>
+              <div style={{display:'flex',alignItems:'stretch',gap:mob?6:8}}>
                 {g.stages.map((s,i)=>{
                   const p=pct(s.value,g.baseValue);
                   return<div key={s.key} className="card-lift" onClick={()=>setKpiDrill({key:s.key,label:s.label})}
@@ -1508,7 +1536,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
 
     {/* ═══ PANEL 3+4+5: Donut / Rake chips / Customer table ═══ */}
     <div className="grid-donut-cust">
-      <div className="glass-card" style={{padding:'14px 16px',display:'flex',flexDirection:'column',gap:8,
+      <div className="glass-card" style={{padding:mob?'10px 12px':'14px 16px',display:'flex',flexDirection:'column',gap:8,
         alignItems:'center',height:'100%',maxHeight:360,boxShadow:'var(--shadow-sm)',borderRadius:'var(--radius-lg)'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',gap:8}}>
           <div style={{fontFamily:F.h,fontSize:11.5,fontWeight:800,letterSpacing:'.07em',textTransform:'uppercase',color:'var(--text)'}}>Supply Condition Split</div>
@@ -1537,8 +1565,8 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         </div>
       </div>
 
-      <div className="glass-card" style={{padding:'16px 18px',overflow:'hidden',display:'flex',flexDirection:'column',
-        height:640,boxShadow:'var(--shadow-sm)',borderRadius:'var(--radius-lg)'}}>
+      <div className="glass-card" style={{padding:mob?'10px 12px':'16px 18px',overflow:'hidden',display:'flex',flexDirection:'column',
+        height:mob?480:640,boxShadow:'var(--shadow-sm)',borderRadius:'var(--radius-lg)'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:8}}>
           <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--text)'}}>Customer-wise Order Status</div>
           <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
@@ -1643,16 +1671,16 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
 
     {/* ═══ PANEL 7+8: India map / Supply Condition x metrics ═══ */}
     <div className="grid-map-metrics">
-      <div style={{...card,padding:'16px',overflow:'hidden',display:'flex',flexDirection:'column',height:'100%'}}>
+      <div style={{...card,padding:mob?'10px':'16px',overflow:'hidden',display:'flex',flexDirection:'column',height:'100%'}}>
         <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',marginBottom:10}}>
           Order Qty by State/City
         </div>
-        <div ref={mapRef} style={{width:'100%',flex:1,minHeight:340,borderRadius:'var(--radius-md)',overflow:'hidden'}}/>
+        <div ref={mapRef} style={{width:'100%',flex:1,minHeight:mob?260:340,borderRadius:'var(--radius-md)',overflow:'hidden'}}/>
         {stateAgg.unmapped>0&&<div style={{marginTop:8,fontSize:11.5,color:'var(--mute)',fontFamily:F.b}}>
           ⚠ Other/Unmapped: {fmt(stateAgg.unmapped,0)} rows (no matching city or state/STO centroid — likely export/overseas or blank destination)
         </div>}
       </div>
-      <div style={{...card,padding:'18px',overflow:'hidden',display:'flex',flexDirection:'column',height:'100%'}}>
+      <div style={{...card,padding:mob?'12px':'18px',overflow:'hidden',display:'flex',flexDirection:'column',height:'100%'}}>
         <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',marginBottom:12}}>Supply Condition × Metrics</div>
         <div style={{overflowX:'auto'}}>
           <table style={{width:'100%',fontSize:12.5}}>

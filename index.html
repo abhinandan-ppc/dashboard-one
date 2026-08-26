@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Jindal Steel Angul &middot; AI Planning Hub</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -365,11 +365,29 @@ input { font: inherit; color: inherit; }
 
 @media (max-width: 640px) {
   .top-wrapper { padding: 8px 12px; }
-  .top-bar { padding: 12px; }
+  .top-bar { padding: 12px; gap: 10px; }
+  .top-l { gap: 10px; }
   .top-l h1 { font-size: 15px; }
+  .hdr-r { gap: 8px; }
   .stage { padding: calc(var(--frame-top, 88px) + 12px) 14px 40px; }
-  .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .stage-hd { margin-bottom: 14px; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .card { padding: 16px; gap: 10px; }
+  .card .icon-wrap { width: 40px; height: 40px; }
   .icon-grid { grid-template-columns: repeat(5, 1fr); }
+  .frame-skeleton-inner { padding: 24px 16px; }
+  .modal { padding: 18px; }
+}
+
+@media (max-width: 400px) {
+  .stage { padding: calc(var(--frame-top, 88px) + 10px) 10px 32px; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+  .card { padding: 12px; gap: 8px; }
+  .card .card-name { font-size: 13.5px; }
+  .card .card-path { font-size: 10.5px; padding: 2px 6px; }
+  .icon-grid { grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .frame-skeleton .skeleton-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .frame-skeleton-inner { padding: 18px 12px; }
 }
 </style>
 </head>

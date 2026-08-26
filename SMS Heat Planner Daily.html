@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SMS Heat Planning Optimizer</title>
 <link rel="icon" type="image/png" href="favicon.png"/>
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
@@ -407,9 +407,26 @@ div.google-visualization-tooltip {
   .tabs-container { margin-top: 8px; }
   .tab-bar { display: grid; grid-template-columns: 1fr 1fr; padding: 12px; gap: 8px; }
   .tab-bar button { font-size: 12px; padding: 10px 12px; text-align: center; white-space: normal; line-height: 1.2; }
+  .main-container { gap: 16px; }
+  .dashboard-top-section { gap: 16px; }
+  .dashboard-side-controls { gap: 16px; }
+  .eq-grid { gap: 16px; margin-bottom: 16px; }
+  .kpi-strip { gap: 12px; }
+  .hroom { gap: 6px; margin-top: 12px; }
+  .hchip { padding: 8px 12px; }
+  .flow-wrapper { height: 60vh; min-height: 420px; }
+  .flow-controls { top: 10px; right: 10px; gap: 2px; padding: 4px 6px; }
+  .flow-drag-handle { padding: 8px; }
+  .flow-controls button { min-width: 32px; min-height: 32px; }
 }
 @media(max-width: 480px){
   .kpi-strip { grid-template-columns: 1fr; }
+  .card { padding: 14px; }
+  .main-container { padding: 0 12px; gap: 14px; }
+  .kpi-strip { padding: 12px; }
+  .flow-wrapper { height: 55vh; min-height: 380px; }
+  .fc-node { width: 130px; padding: 10px 14px; }
+  .fc-node.expanded { width: 200px; }
 }
 </style>
 </head>

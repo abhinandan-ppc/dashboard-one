@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Jindal Steel Plate Mill Yard — 3D Live Inventory</title>
 <link rel="icon" type="image/png" href="favicon.png"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
@@ -590,6 +590,46 @@ aside.collapsed .left-toggle {
   .toolbar { width: calc(100% - 20px); bottom: 12px; overflow-x: auto; justify-content: flex-start; border-radius: var(--radius-s); }
   .tbtn { flex-shrink: 0; padding: 8px 14px; font-size: 10.5px; }
   .compass-wrapper { bottom: 80px; width: 44px; height: 44px; right: 16px;}
+}
+
+/* Small Phones (320-480px) */
+@media (max-width: 480px) {
+  /* Tighten panel padding so boxes don't feel cramped against the screen edge */
+  .panel-head { padding: 10px 12px; font-size: 11px; }
+  .panel-body { padding: 12px; gap: 12px; max-height: calc(100vh - 130px); }
+
+  aside, .inspector { left: 8px; right: 8px; width: calc(100% - 16px); bottom: 64px; max-height: calc(100vh - 235px); }
+
+  /* Legend: reduce padding/gap and allow wrapping without squish */
+  .legend { padding: 8px; gap: 2px; }
+  .leg-row { padding: 5px 6px; font-size: 11px; flex-wrap: wrap; gap: 4px; }
+  .leg-left { gap: 6px; }
+
+  /* KPI row: tighter spacing so pills don't overlap on 320-375px widths */
+  .kpi-dashboard { gap: 6px; padding: 4px 4px 12px 4px; }
+  .kpi-group { padding: 3px 6px; }
+  .kpi-stats { gap: 10px; }
+  .kpi-stat .val { font-size: 12px; }
+  .kpi-stat .lbl { font-size: 7px; }
+  .kpi-divider { height: 18px; }
+
+  /* Inspector detail sections */
+  .insp-head { padding: 12px 14px; }
+  .insp-id { font-size: 18px; }
+  .insp-body { padding: 12px 14px; max-height: calc(100vh - 100px); }
+  .stack-viz { max-height: 200px; }
+  .plate-list { max-height: 180px; }
+  .empty-msg { padding: 20px 8px; font-size: 12px; }
+
+  /* Toolbar buttons: shrink further so all tools fit without crowding */
+  .toolbar { padding: 4px; gap: 3px; }
+  .tbtn { padding: 7px 10px; font-size: 10px; }
+
+  /* Dropdown panels: match tighter panel padding */
+  .dropdown-panel { top: 172px !important; }
+  .search-input { padding: 10px 12px; font-size: 12.5px; }
+  .chips { gap: 5px; }
+  .chip { padding: 5px 10px; font-size: 10px; }
 }
 </style>
 </head>
