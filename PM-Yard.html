@@ -33,7 +33,11 @@
   --input-bg: rgba(0,0,0,0.04);
   --input-hover: rgba(0,0,0,0.08);
 
-  --radius-xs: 6px; --radius-s: 12px; --radius-m: 16px; --radius-pill: 100px;
+  --radius-xs: 6px; --radius-s: 12px; --radius-m: 16px; --radius-lg: 18px; --radius-pill: 100px;
+  --shadow-md: var(--glass-shadow);
+  --text: var(--tx); --dim: var(--tm); --mute: var(--tm);
+  --bdr: var(--br); --bdrHi: rgba(0,0,0,0.18);
+  --s2: var(--input-bg);
 }
 
 [data-theme="dark"] {
@@ -55,6 +59,10 @@
   --br: rgba(255,255,255,0.1);
   --input-bg: rgba(255,255,255,0.04);
   --input-hover: rgba(255,255,255,0.08);
+
+  --text: var(--tx); --dim: var(--tm); --mute: var(--tm);
+  --bdr: var(--br); --bdrHi: rgba(255,255,255,0.14);
+  --s2: var(--input-bg);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -76,11 +84,12 @@ canvas { display: block; touch-action: none; outline: none; }
 
 /* ─── HEADER ─── */
 header {
-  position: absolute; top: 8px; left: 16px; right: 16px; min-height: 50px;
+  position: absolute; top: 20px; left: 24px; right: 24px; min-height: 64px;
   border: var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md);
   display: flex; align-items: center; justify-content: space-between; z-index: 100;
-  padding: 4px 20px; pointer-events: auto; gap: 16px;
+  padding: 12px 20px; pointer-events: auto; gap: 14px;
   background: transparent; /* Moved glass effect to ::before so dropdowns can blur the canvas */
+  box-sizing: border-box;
 }
 header::before {
   content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
@@ -111,12 +120,12 @@ header::before {
   display: flex; gap: 8px; align-items: center; justify-content: flex-end;
   padding: 0; flex-shrink: 0; background: transparent; border: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; margin-left: 0;
 }
-.btn { 
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px; 
-  padding: 0 16px; border: var(--glass-border); border-radius: var(--radius-pill); 
-  font-size: 12px; font-weight: 800; cursor: pointer; transition: all 0.2s; 
-  outline: none; background: var(--input-bg); color: var(--tx); box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  height: 32px; box-sizing: border-box; font-family: inherit; white-space: nowrap; margin: 0;
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 0 16px; border: 1.5px solid var(--bdrHi); border-radius: var(--radius-pill);
+  font-size: 12px; font-weight: 700; text-transform: uppercase; cursor: pointer; transition: all 0.15s;
+  outline: none; background: var(--s2); color: var(--dim);
+  height: 34px; box-sizing: border-box; font-family: inherit; white-space: nowrap; margin: 0;
 }
 .btn:hover { background: var(--input-hover); transform: translateY(-1px); }
 .btn-primary { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); border-color: transparent; }
@@ -230,7 +239,7 @@ input[type=range] { flex: 1; accent-color: var(--md-sys-color-secondary); height
 .panel {
   background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   border-radius: var(--radius-m); border: var(--glass-border); box-shadow: var(--glass-shadow);
-  display: flex; flex-direction: column; position: absolute; top: 70px; z-index: 15;
+  display: flex; flex-direction: column; position: absolute; top: 96px; z-index: 15;
   transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1);
   overflow: visible !important;
 }

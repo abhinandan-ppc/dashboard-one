@@ -4750,25 +4750,25 @@ function App(){
   // DOM-node handoff for the hub's MutationObserver to race.
   const placeholderHeaderBar=
     <>
-    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'8px 10px 0':'10px 22px 0',zIndex:50}}>
-      <div style={{minHeight:64,display:'flex',alignItems:'center',gap:12,padding:`0 ${mob?14:22}px`,
-        background:'var(--glass)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
-        border:'1px solid var(--glass-border)',borderRadius:'var(--radius-lg)',boxSizing:'border-box',
-        boxShadow:'var(--shadow-md)'}}>
+    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 0 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
+    <div className="glass-card" style={{padding:mob?'12px 12px':'12px 20px',display:'flex',
+      flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
+      alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
+      minHeight:mob?'auto':64,boxSizing:'border-box'}}>
+      <div style={{display:'flex',alignItems:'center',gap:14,justifyContent:mob?'center':'flex-start',flexWrap:'wrap'}}>
         <JSPLBadge/>
-        <div style={{width:1,height:30,background:'var(--bdr)',flexShrink:0}}/>
-        <div style={{fontFamily:F.h,fontWeight:800,color:'var(--text)',letterSpacing:'.06em',
-          textTransform:'uppercase',flexShrink:0,lineHeight:1.2}}>
-          <span style={{fontSize:17}}>Angul PlateMill</span>
-          <span style={{fontSize:12,color:'var(--dim)',marginLeft:8,fontWeight:400,
-            fontFamily:F.b,letterSpacing:'.02em'}}>Rake Planner</span>
+        <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0,display:mob?'none':'block'}}/>
+        <div style={{flexShrink:0}}>
+          <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:mob?'center':'left'}}>Rake Planning</div>
+          <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:mob?'center':'left'}}>Rake Planner</div>
         </div>
-        <div style={{flex:1}}/>
-        <div id="hubFrameHeaderSlot" style={{display:'flex',alignItems:'center',gap:8,flexShrink:0,minHeight:34}}/>
       </div>
+      {!mob&&<div style={{flex:1}}/>}
+      <div id="hubFrameHeaderSlot" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,justifyContent:mob?'center':'flex-start',width:mob?'100%':'auto'}}/>
+    </div>
     </div>
     {/* Spacer reserving the fixed header's visual footprint in the flex flow below (mobile header is sticky, so it reserves its own space and needs no spacer) */}
-    <div style={{height:mob?0:74,flexShrink:0}}/>
+    <div style={{height:mob?0:100,flexShrink:0}}/>
     </>;
 
   const fetchStatusOverlay=fetchPhase&&
@@ -4866,14 +4866,13 @@ function App(){
          VDO-Generator.html — the nested independently-scrolling panes are
          self-contained overlays/scroll boxes, not affected by this choice)
          ── */}
-    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'8px 10px 0':'10px 22px 0',zIndex:50}}>
-    <div style={{minHeight:mob?'auto':64,display:'flex',flexWrap:mob?'wrap':'nowrap',alignItems:'center',gap:mob?8:12,padding:mob?'10px 14px':`0 ${22}px`,
-      background:'var(--glass)',
-      backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
-      border:'1px solid var(--glass-border)',borderRadius:'var(--radius-lg)',boxSizing:'border-box',
-      boxShadow:'var(--shadow-md)',transition:'box-shadow .2s'}}>
+    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 0 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
+    <div className="glass-card" style={{padding:mob?'12px 12px':'12px 20px',display:'flex',
+      flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
+      alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
+      minHeight:mob?'auto':64,boxSizing:'border-box'}}>
 
-      <div style={mob?{display:'flex',alignItems:'center',gap:8,width:'100%',flexWrap:'nowrap'}:{display:'contents'}}>
+      <div style={{display:'flex',alignItems:'center',gap:14,justifyContent:mob?'center':'flex-start',flexWrap:'wrap'}}>
       {/* Hamburger on narrow */}
       {isNarrow&&<button onClick={()=>setSideOpen(o=>!o)} style={{
         background:'transparent',border:'1px solid var(--bdr)',borderRadius:'var(--radius-sm)',
@@ -4890,22 +4889,15 @@ function App(){
         </span>}
       </button>}
 
-      <JSPLBadge compact={mob}/>
-      <div style={{width:1,height:30,background:'var(--bdr)',flexShrink:0}}/>
-
-      <div style={{fontFamily:F.h,fontWeight:800,color:'var(--text)',letterSpacing:'.06em',
-        textTransform:'uppercase',flexShrink:mob?1:0,minWidth:mob?0:undefined,
-        overflow:mob?'hidden':undefined,lineHeight:1.2}}>
-        {mob
-          ?<span style={{fontSize:13,color:C.amber,display:'block',overflow:'hidden',
-              textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Rake Planner</span>
-          :<><span style={{fontSize:17}}>Angul PlateMill</span>
-            <span style={{fontSize:12,color:'var(--dim)',marginLeft:8,fontWeight:400,
-              fontFamily:F.b,letterSpacing:'.02em'}}>Rake Planner</span></>
-        }
+        <JSPLBadge/>
+        <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0,display:mob?'none':'block'}}/>
+        <div style={{flexShrink:0}}>
+          <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:mob?'center':'left'}}>Rake Planning</div>
+          <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:mob?'center':'left'}}>Rake Planner</div>
+        </div>
       </div>
 
-      {!mob&&<div style={{position:'relative',flex:'1 1 200px',maxWidth:360,marginLeft:8}}>
+      {!mob&&<div style={{position:'relative',flex:'1 1 200px',maxWidth:360}}>
         <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',
           color:'var(--mute)',fontSize:16,pointerEvents:'none'}}>⌕</span>
         <input style={{...inp,paddingLeft:34,paddingRight:srch?34:12,fontSize:13,
@@ -4920,34 +4912,37 @@ function App(){
           fontFamily:F.b,fontWeight:600}} title="Clear">✕</button>}
       </div>}
 
-      <div style={{flex:1}}/>
+      {!mob&&<div style={{flex:1}}/>}
 
       {fileDate&&!mob&&<div style={{fontSize:11,fontFamily:F.m,color:'var(--mute)',
-        textAlign:'right',lineHeight:1.7}}>
+        textAlign:'right',lineHeight:1.6,flexShrink:0}}>
         <div style={{color:'var(--dim)',maxWidth:200,overflow:'hidden',
           textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{fileName}</div>
         <div>{fileDate.toLocaleDateString()}</div>
       </div>}
 
+      <div style={{display:'flex',gap:mob?12:10,flexWrap:'wrap',justifyContent:mob?'center':'flex-start',
+        alignItems:'center',width:mob?'100%':'auto',paddingTop:mob?8:0,borderTop:mob?'1px solid var(--bdr)':'none'}}>
+
       {/* Theme toggle */}
       {!mob&&<ThemeToggle pref={pref} setPref={setPref}/>}
 
-      {!mob&&<button onClick={()=>fileRef.current.click()} style={{
+      {!mob&&<button onClick={()=>fileRef.current.click()} style={{height:mob?42:34,padding:'0 16px',
+        borderRadius:'var(--radius-pill)',border:'1.5px solid var(--amber)',
         background:'color-mix(in srgb,var(--amber) 12%,transparent)',
-        border:'1px solid var(--amber)',borderRadius:'var(--radius-sm)',
-        color:C.amber,fontFamily:F.h,fontSize:12,fontWeight:700,letterSpacing:'.07em',
-        textTransform:'uppercase',padding:`9px ${mob?13:18}px`,cursor:'pointer',margin:mob?'0 auto':0,
+        color:C.amber,fontFamily:F.h,fontSize:12,fontWeight:700,
+        textTransform:'uppercase',cursor:'pointer',
         display:'flex',alignItems:'center',gap:5,transition:'all .15s',flexShrink:0}}
         onMouseEnter={e=>{e.currentTarget.style.background='color-mix(in srgb,var(--amber) 24%,transparent)'}}
         onMouseLeave={e=>{e.currentTarget.style.background='color-mix(in srgb,var(--amber) 12%,transparent)'}}>
-        ↑ {mob?'File':'New File'}
+        ↑ New File
       </button>}
-      <div style={{display:'flex',alignItems:'center',gap:mob?6:12,flexShrink:0,flexWrap:'nowrap'}}>
       {rows.length>0&&<button onClick={()=>setOvMap(true)}
         title="Siding Overview Map"
-        style={{background:'rgba(20,184,166,.12)',border:'1px solid rgba(20,184,166,.38)',
-          borderRadius:'var(--radius-sm)',color:'#14b8a6',fontFamily:F.h,fontSize:mob?11:12,fontWeight:700,
-          letterSpacing:'.07em',textTransform:'uppercase',padding:mob?'7px 10px':'9px 16px',cursor:'pointer',
+        style={{height:mob?42:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
+          border:'1.5px solid rgba(20,184,166,.38)',background:'rgba(20,184,166,.12)',
+          color:'#14b8a6',fontFamily:F.h,fontSize:12,fontWeight:700,
+          textTransform:'uppercase',cursor:'pointer',
           display:'flex',alignItems:'center',gap:5,transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}
         onMouseEnter={e=>e.currentTarget.style.background='rgba(20,184,166,.22)'}
         onMouseLeave={e=>e.currentTarget.style.background='rgba(20,184,166,.12)'}>
@@ -4955,28 +4950,26 @@ function App(){
       </button>}
         <button onClick={()=>exportEBTPWithMapping(rows)}
           title="Export full EBTP raw file with _State, _Region, _Siding appended as last 3 columns"
-          style={{background:'rgba(91,163,217,.12)',border:'1px solid rgba(91,163,217,.35)',
-            borderRadius:'var(--radius-sm)',color:C.sky,fontFamily:F.h,fontSize:mob?11:12,fontWeight:700,
-            letterSpacing:'.07em',textTransform:'uppercase',padding:mob?'7px 10px':'9px 16px',cursor:'pointer',
+          style={{height:mob?42:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
+            border:'1.5px solid rgba(91,163,217,.35)',background:'rgba(91,163,217,.12)',
+            color:C.sky,fontFamily:F.h,fontSize:12,fontWeight:700,
+            textTransform:'uppercase',cursor:'pointer',
             display:'flex',alignItems:'center',gap:5,transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}
           onMouseEnter={e=>e.currentTarget.style.background='rgba(91,163,217,.22)'}
           onMouseLeave={e=>e.currentTarget.style.background='rgba(91,163,217,.12)'}>
           ↓ EBTP+Map
         </button>
+
+      {mob&&<div style={{width:1,height:24,background:'var(--bdr)',flexShrink:0}}/>}
+
+      <div id="hubFrameHeaderSlot" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,justifyContent:mob?'center':'flex-start'}}/>
       </div>
-      </div>
-        {!mob&&<div id="hubFrameHeaderSlot" style={{
-          display:'flex',alignItems:'center',gap:8,flexShrink:0,minHeight:34
-        }}/>}
-        {mob&&<div id="hubFrameHeaderSlot" style={{
-          display:'flex',alignItems:'center',justifyContent:'center',gap:8,flexShrink:0,minHeight:34,flexBasis:'100%'
-        }}/>}
         <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:'none'}}
           onChange={e=>e.target.files[0]&&parseFile(e.target.files[0])}/>
-      </div>
+    </div>
     </div>
     {/* Spacer reserving the fixed header's visual footprint in the flex flow below (mobile header is sticky, so it reserves its own space and needs no spacer) */}
-    <div style={{height:mob?0:74,flexShrink:0}}/>
+    <div style={{height:mob?0:100,flexShrink:0}}/>
 
     {/* ── Mobile Search + Theme ── */}
     {mob&&<div style={{padding:'10px 14px',background:'var(--s0)',
