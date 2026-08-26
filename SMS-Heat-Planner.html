@@ -52,6 +52,12 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 
 .hdr-r { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 #hubFrameHeaderSlot { display: flex; align-items: center; justify-content: center; gap: 8px; flex-basis: 100%; border-top: 1px solid var(--br); padding-top: 10px; margin-top: 2px; }
+/* Normalize the hub-injected Home/Refresh/Theme/User icon buttons to a
+   uniform 40x40 circle — without this the user-avatar icon in particular
+   can render larger/mismatched. !important wins over the buttons' own
+   inline style attributes. */
+#hubFrameHeaderSlot button { width: 40px !important; height: 40px !important; min-width: 40px !important; min-height: 40px !important; max-width: 40px !important; max-height: 40px !important; padding: 0 !important; border-radius: 999px !important; box-sizing: border-box !important; }
+#hubFrameHeaderSlot button img { width: 100% !important; height: 100% !important; border-radius: 50% !important; object-fit: cover !important; }
 .theme-toggle {
   height: 34px; width: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
   border-radius: var(--radius-pill); font-size: 15px; background: var(--input-bg); color: var(--tx); border: 1.5px solid var(--br);
@@ -89,7 +95,7 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
   .view-tabs button {
     padding: 0; width: 34px; height: 34px; font-size: 0; display: inline-flex; align-items: center; justify-content: center;
   }
-  .view-tabs button[data-view="daily"]::before { content: "📆"; font-size: 15px; }
+  .view-tabs button[data-view="daily"]::before { content: "📋"; font-size: 15px; }
   .view-tabs button[data-view="monthly"]::before { content: "🗓️"; font-size: 15px; }
   .reset-btn {
     width: 34px; padding: 0; font-size: 0; gap: 0; justify-content: center;
@@ -128,7 +134,7 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
     </div>
     <div class="hdr-r">
     <nav class="view-tabs" id="viewTabs">
-      <button data-view="daily" class="on" type="button">📆 Daily Planner</button>
+      <button data-view="daily" class="on" type="button">📋 Daily Planner</button>
       <button data-view="monthly" type="button">🗓️ Monthly Planner</button>
     </nav>
       <button class="reset-btn" id="resetAllBtn" type="button">🔄 Reset</button>

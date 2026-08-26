@@ -564,8 +564,12 @@ aside.collapsed .left-toggle {
      button renders at the same fixed size on this row. !important is needed
      to win over the buttons' own inline style attributes. */
   #hubFrameHeaderSlot button {
-    width: 40px !important; height: 40px !important; min-width: 40px !important;
+    width: 40px !important; height: 40px !important; min-width: 40px !important; min-height: 40px !important;
+    max-width: 40px !important; max-height: 40px !important;
     padding: 0 !important; border-radius: 999px !important; box-sizing: border-box !important;
+  }
+  #hubFrameHeaderSlot button img {
+    width: 100% !important; height: 100% !important; border-radius: 50% !important; object-fit: cover !important;
   }
 
   /* Row 3: KPIs */
