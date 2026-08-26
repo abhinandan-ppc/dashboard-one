@@ -546,6 +546,9 @@ aside.collapsed .left-toggle {
   .brand-text { display: flex; flex-direction: column; align-items: center; }
   .brand-text h1 { font-size: 16px; white-space: nowrap; }
   .brand-text p { font-size: 9px; white-space: nowrap; }
+  /* Hide the JSPL brand text (name + plant line) on mobile; keep the logo
+     image and this page's own title visible. */
+  .jspl-brand-text, .jspl-divider { display: none; }
   
   /* Row 2: Action Buttons - Full Width, Centered, Scrollable if needed */
   .h-actions {

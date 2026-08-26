@@ -95,6 +95,9 @@ button{cursor:pointer;border:none;outline:none;background:none}
   max-width:min(1720px,calc(100vw - 40px));margin:0 auto;padding:28px var(--page-side) 0;box-sizing:border-box;
 }
 .header-spacer{height:108px}
+@media(min-width:641px) and (max-width:780px){
+.header-spacer{height:180px}
+}
 header{
   display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px 20px;
   min-height:64px;box-sizing:border-box;flex-wrap:wrap;
@@ -104,10 +107,11 @@ header{
 @media(max-width:640px){
 :root{--page-side:8px}
 .wrap{padding:0 var(--page-side) 56px}
-.header-fixed{position:sticky;padding:8px var(--page-side) 0}
+.header-fixed{position:sticky;padding:8px 0 0}
 header{padding:12px;gap:10px;flex-direction:column;align-items:center;text-align:center}
 .header-brand{flex-direction:column;align-items:center;text-align:center;gap:8px;justify-content:center}
 .jspl-divider{display:none}
+.jspl-brand-text{display:none}
 .page-copy .sub{display:none}
 .header-spacer{height:0}
 .step:first-of-type{margin-top:32px}

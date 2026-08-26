@@ -4750,13 +4750,13 @@ function App(){
   // DOM-node handoff for the hub's MutationObserver to race.
   const placeholderHeaderBar=
     <>
-    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 0 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
+    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 12px 0':'20px 22px 0',zIndex:50,boxSizing:'border-box'}}>
     <div className="glass-card" style={{padding:mob?'12px 12px':'12px 20px',display:'flex',
       flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
       alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
       minHeight:mob?'auto':64,boxSizing:'border-box'}}>
       <div style={{display:'flex',alignItems:'center',gap:14,justifyContent:mob?'center':'flex-start',flexWrap:'wrap'}}>
-        <JSPLBadge/>
+        <JSPLBadge compact={mob}/>
         <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0,display:mob?'none':'block'}}/>
         <div style={{flexShrink:0}}>
           <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:mob?'center':'left'}}>Rake Planning</div>
@@ -4866,7 +4866,7 @@ function App(){
          VDO-Generator.html — the nested independently-scrolling panes are
          self-contained overlays/scroll boxes, not affected by this choice)
          ── */}
-    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 0 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
+    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 12px 0':'20px 22px 0',zIndex:50,boxSizing:'border-box'}}>
     <div className="glass-card" style={{padding:mob?'12px 12px':'12px 20px',display:'flex',
       flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
       alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
@@ -4889,12 +4889,35 @@ function App(){
         </span>}
       </button>}
 
-        <JSPLBadge/>
+        <JSPLBadge compact={mob}/>
         <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0,display:mob?'none':'block'}}/>
         <div style={{flexShrink:0}}>
           <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:mob?'center':'left'}}>Rake Planning</div>
           <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:mob?'center':'left'}}>Rake Planner</div>
         </div>
+
+        {rows.length>0&&<button onClick={()=>setOvMap(true)}
+          title="Siding Overview Map"
+          style={{height:mob?42:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
+            border:'1.5px solid rgba(20,184,166,.38)',background:'rgba(20,184,166,.12)',
+            color:'#14b8a6',fontFamily:F.h,fontSize:12,fontWeight:700,
+            textTransform:'uppercase',cursor:'pointer',
+            display:'flex',alignItems:'center',gap:5,transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}
+          onMouseEnter={e=>e.currentTarget.style.background='rgba(20,184,166,.22)'}
+          onMouseLeave={e=>e.currentTarget.style.background='rgba(20,184,166,.12)'}>
+          🗺 Overview
+        </button>}
+        <button onClick={()=>exportEBTPWithMapping(rows)}
+          title="Export full EBTP raw file with _State, _Region, _Siding appended as last 3 columns"
+          style={{height:mob?42:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
+            border:'1.5px solid rgba(91,163,217,.35)',background:'rgba(91,163,217,.12)',
+            color:C.sky,fontFamily:F.h,fontSize:12,fontWeight:700,
+            textTransform:'uppercase',cursor:'pointer',
+            display:'flex',alignItems:'center',gap:5,transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}
+          onMouseEnter={e=>e.currentTarget.style.background='rgba(91,163,217,.22)'}
+          onMouseLeave={e=>e.currentTarget.style.background='rgba(91,163,217,.12)'}>
+          ↓ EBTP+Map
+        </button>
       </div>
 
       {!mob&&<div style={{position:'relative',flex:'1 1 200px',maxWidth:360}}>
@@ -4924,9 +4947,6 @@ function App(){
       <div style={{display:'flex',gap:mob?12:10,flexWrap:'wrap',justifyContent:mob?'center':'flex-start',
         alignItems:'center',width:mob?'100%':'auto',paddingTop:mob?8:0,borderTop:mob?'1px solid var(--bdr)':'none'}}>
 
-      {/* Theme toggle */}
-      {!mob&&<ThemeToggle pref={pref} setPref={setPref}/>}
-
       {!mob&&<button onClick={()=>fileRef.current.click()} style={{height:mob?42:34,padding:'0 16px',
         borderRadius:'var(--radius-pill)',border:'1.5px solid var(--amber)',
         background:'color-mix(in srgb,var(--amber) 12%,transparent)',
@@ -4937,28 +4957,6 @@ function App(){
         onMouseLeave={e=>{e.currentTarget.style.background='color-mix(in srgb,var(--amber) 12%,transparent)'}}>
         ↑ New File
       </button>}
-      {rows.length>0&&<button onClick={()=>setOvMap(true)}
-        title="Siding Overview Map"
-        style={{height:mob?42:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
-          border:'1.5px solid rgba(20,184,166,.38)',background:'rgba(20,184,166,.12)',
-          color:'#14b8a6',fontFamily:F.h,fontSize:12,fontWeight:700,
-          textTransform:'uppercase',cursor:'pointer',
-          display:'flex',alignItems:'center',gap:5,transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}
-        onMouseEnter={e=>e.currentTarget.style.background='rgba(20,184,166,.22)'}
-        onMouseLeave={e=>e.currentTarget.style.background='rgba(20,184,166,.12)'}>
-        🗺 Overview
-      </button>}
-        <button onClick={()=>exportEBTPWithMapping(rows)}
-          title="Export full EBTP raw file with _State, _Region, _Siding appended as last 3 columns"
-          style={{height:mob?42:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
-            border:'1.5px solid rgba(91,163,217,.35)',background:'rgba(91,163,217,.12)',
-            color:C.sky,fontFamily:F.h,fontSize:12,fontWeight:700,
-            textTransform:'uppercase',cursor:'pointer',
-            display:'flex',alignItems:'center',gap:5,transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}
-          onMouseEnter={e=>e.currentTarget.style.background='rgba(91,163,217,.22)'}
-          onMouseLeave={e=>e.currentTarget.style.background='rgba(91,163,217,.12)'}>
-          ↓ EBTP+Map
-        </button>
 
       {mob&&<div style={{width:1,height:24,background:'var(--bdr)',flexShrink:0}}/>}
 
@@ -4986,11 +4984,10 @@ function App(){
           background:'transparent',border:'none',color:'var(--dim)',cursor:'pointer',
           fontSize:14,lineHeight:1}}>✕</button>}
       </div>
-      <ThemeToggle pref={pref} setPref={setPref}/>
     </div>}
 
     {/* ── KPI Strip ── */}
-    <div style={{display:'flex',gap:8,padding:`12px ${mob?10:22}px`,flexShrink:0,
+    <div style={{display:'flex',gap:8,padding:`12px ${mob?12:22}px`,flexShrink:0,
       flexWrap:'wrap',rowGap:8}}>
       <KCard label="Orders"       value={kpis.cnt.toLocaleString()} sub={actCnt?`${actCnt} filter active`:'All orders'} accent="var(--dim)" mob={mob}/>
       <KCard label="Order Qty"    value={fmt(kpis.qty)} sub="MT" accent={C.amber} mob={mob}/>
@@ -5032,7 +5029,6 @@ function App(){
             display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
             <JSPLBadge compact={true}/>
             <div style={{display:'flex',alignItems:'center',gap:8}}>
-              <ThemeToggle pref={pref} setPref={setPref}/>
               <span style={{fontFamily:F.h,fontSize:13,fontWeight:700,color:C.amber,
                 letterSpacing:'.1em',textTransform:'uppercase'}}>
                 {actCnt>0?`Filters (${actCnt})`:'Filters'}
