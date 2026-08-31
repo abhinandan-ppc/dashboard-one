@@ -71,6 +71,13 @@ export default async function middleware(req) {
       return;
     }
 
+    if (path.startsWith('api/ai/')) {
+      // AI chat and endpoint routes have their own auth + admin checks
+      // inside chat.js / endpoint.js. Let authenticated users through so
+      // the handler can return proper JSON errors instead of HTML deny pages.
+      return;
+    }
+
     if (isAdminArea) {
       return denyPage('Admins only', "This area is restricted to administrators.");
     }
