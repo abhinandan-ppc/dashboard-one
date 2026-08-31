@@ -1,5 +1,5 @@
-import { verifySession, readCookie } from './api/_session.js';
-import { resolveAccess, DEV_HOSTS, CHILD_PAGE_PARENTS } from './api/_acl.js';
+import { verifySession, readCookie } from './lib/_session.js';
+import { resolveAccess, DEV_HOSTS, CHILD_PAGE_PARENTS } from './lib/_acl.js';
 
 // The root page and index.html render unauthenticated too — they show their
 // own login box and call /api/auth/me client-side. Every other page (the

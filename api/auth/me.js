@@ -1,5 +1,5 @@
-import { verifySession, readCookie } from '../_session.js';
-import { resolveAccess } from '../_acl.js';
+import { verifySession, readCookie } from '../../lib/_session.js';
+import { resolveAccess } from '../../lib/_acl.js';
 
 export const config = { runtime: 'edge' };
 

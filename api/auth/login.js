@@ -1,4 +1,4 @@
-import { redirectWithCookies } from '../_session.js';
+import { redirectWithCookies } from '../../lib/_session.js';
 
 export const config = { runtime: 'edge' };
 
