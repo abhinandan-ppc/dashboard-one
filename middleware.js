@@ -5,7 +5,7 @@ import { resolveAccess, DEV_HOSTS, CHILD_PAGE_PARENTS } from './api/_acl.js';
 // own login box and call /api/auth/me client-side. Every other page (the
 // actual tools, admin.html, and the admin API) stays gated by this middleware.
 export const config = {
-  matcher: ['/((?!api/auth|api/ai|favicon.ico|favicon.png|theme.css|index.html|$).*)'],
+  matcher: ['/((?!api/auth|favicon.ico|favicon.png|theme.css|index.html|$).*)'],
 };
 
 function esc(s) {

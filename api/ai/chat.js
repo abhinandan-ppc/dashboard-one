@@ -1,7 +1,9 @@
 import { verifySession, readCookie } from '../_session.js';
 import { resolveAccess } from '../_acl.js';
 
-// Uses default Node.js runtime to avoid Edge bundling conflicts with middleware.
+// Force Node.js runtime — prevents Vercel Edge bundler from pulling this
+// into the middleware bundle (which causes "unsupported modules" errors).
+export const config = { runtime: 'nodejs' };
 
 const OMNIROUTE_KEY = process.env.OMNIROUTE_KEY || 'sk-61be4b16598dca09-9b9c27-5ae47255';
 
