@@ -474,10 +474,12 @@ a { color: var(--primary); }
 .model-popup {
   position: fixed;
   z-index: 2147483646;
-  background: var(--panel-bg);
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   border-radius: 14px;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.45);
+  box-shadow: var(--shadow-xl);
   padding: 8px;
   min-width: 260px;
   max-height: 340px;

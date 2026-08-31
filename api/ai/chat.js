@@ -107,7 +107,7 @@ export default async function handler(req) {
   const apiMessages = buildOmniRouteMessages(messages, attachments);
 
 const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 25000);
+    const timeout = setTimeout(() => controller.abort(), 8000);
 
 try {
      const response = await fetch(OMNIROUTE_URL + '/chat/completions', {
@@ -149,7 +149,7 @@ try {
   } catch (err) {
     clearTimeout(timeout);
     const msg = err.name === 'AbortError'
-      ? 'OmniRoute request timed out. The AI service may be temporarily unavailable — try again in a moment.'
+      ? 'The AI model took too long to respond. Try a faster model (Auto > Best Fast) or a shorter prompt.'
       : `Failed to connect to OmniRoute: ${err.message}`;
     return new Response(JSON.stringify({
       error: 'Request failed',
