@@ -13,18 +13,8 @@ const OMNIROUTE_ENDPOINTS = {
 
 let activeEndpoint = process.env.OMNIROUTE_URL || null;
 
-const MODEL_MAP = {
-  'auto/best-coding': 'auto/best-coding',
-  'auto/best-fast': 'auto/best-fast',
-  'auto/best-free': 'auto/best-free',
-  'kilocode/anthropic/claude-sonnet-4.6': 'kilocode/anthropic/claude-sonnet-4.6',
-  'kilocode/anthropic/claude-opus-4.7': 'kilocode/anthropic/claude-opus-4.7',
-  'kilocode/openai/gpt-5.5': 'kilocode/openai/gpt-5.5',
-  'kilocode/openai/gpt-5.4-mini': 'kilocode/openai/gpt-5.4-mini',
-  'kilocode/google/gemini-3.1-pro-preview': 'kilocode/google/gemini-3.1-pro-preview',
-  'openrouter/z-ai/glm-5.2:free': 'openrouter/z-ai/glm-5.2:free',
-  'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free': 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
-};
+// Model is passed through directly to OmniRoute — no static map needed.
+// The /api/ai/models endpoint curates available models for the frontend.
 
 function buildOmniRouteMessages(history, attachments) {
   const messages = [];
@@ -113,7 +103,7 @@ export default async function handler(req) {
 
   const OMNIROUTE_URL = endpoints[endpoint] || endpoints.intranet;
 
-  const modelName = MODEL_MAP[model] || MODEL_MAP['auto/best-coding'];
+  const modelName = model || 'auto/best-coding';
   const apiMessages = buildOmniRouteMessages(messages, attachments);
 
 const controller = new AbortController();

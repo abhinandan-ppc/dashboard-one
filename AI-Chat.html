@@ -447,12 +447,13 @@ a { color: var(--primary); }
   padding-bottom: 4px;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  position: relative;
 }
 .model-selector::-webkit-scrollbar {
   display: none;
 }
 .model-chip {
-  padding: 5px 12px;
+  padding: 5px 10px;
   border-radius: var(--radius-pill);
   background: var(--input-bg);
   border: 1px solid var(--glass-border);
@@ -461,12 +462,65 @@ a { color: var(--primary); }
   color: var(--tm);
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .model-chip:hover { background: var(--input-hover); color: var(--tx); }
 .model-chip.active {
   background: var(--primary);
   color: var(--on-primary);
   border-color: transparent;
+}
+.model-popup {
+  position: fixed;
+  z-index: 2147483646;
+  background: var(--panel-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.45);
+  padding: 8px;
+  min-width: 260px;
+  max-height: 340px;
+  overflow-y: auto;
+  display: none;
+  scrollbar-width: thin;
+}
+.model-popup.open { display: block; }
+.model-popup-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.model-popup-item:hover { background: var(--input-hover); }
+.model-popup-item.active { background: var(--primary); color: var(--on-primary); }
+.model-popup-item .mpi-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--tx);
+}
+.model-popup-item.active .mpi-name { color: var(--on-primary); }
+.model-popup-item .mpi-desc {
+  font-size: 10.5px;
+  color: var(--tm);
+}
+.model-popup-item.active .mpi-desc { color: rgba(255,255,255,0.7); }
+.model-popup-cat {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary);
+  padding: 6px 12px 4px;
+}
+.model-loading {
+  padding: 12px;
+  text-align: center;
+  color: var(--tm);
+  font-size: 11px;
 }
 
 .input-wrapper {
@@ -734,7 +788,8 @@ a { color: var(--primary); }
   .message-content { max-width: 90%; padding: 12px 14px; font-size: 13px; }
   .input-area { padding: 12px; }
   .model-selector { margin-bottom: 10px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
-  .model-chip { padding: 5px 10px; font-size: 11px; }
+  .model-chip { padding: 4px 8px; font-size: 10px; }
+  .model-popup { min-width: 220px; max-height: 280px; }
   .welcome-title { font-size: 20px; }
   .suggestions { grid-template-columns: 1fr; }
 }
@@ -813,16 +868,12 @@ a { color: var(--primary); }
 
   <div class="input-area">
     <div class="attachment-preview" id="attachmentPreview"></div>
-    <div class="model-selector">
-      <span style="font-size:11px;color:var(--tm)">Model:</span>
-      <button class="model-chip active" data-model="auto/best-coding">Auto</button>
-      <button class="model-chip" data-model="auto/best-fast">Fast</button>
-      <button class="model-chip" data-model="auto/best-free">Free</button>
-      <button class="model-chip" data-model="kilocode/anthropic/claude-sonnet-4.6">Claude 4.6</button>
-      <button class="model-chip" data-model="kilocode/anthropic/claude-opus-4.7">Opus 4.7</button>
-      <button class="model-chip" data-model="kilocode/openai/gpt-5.5">GPT-5.5</button>
-      <button class="model-chip" data-model="kilocode/google/gemini-3.1-pro-preview">Gemini 3.1</button>
-      <button class="model-chip" data-model="openrouter/z-ai/glm-5.2:free">GLM 5.2</button>
+    <div class="model-selector" id="modelSelector">
+      <div id="modelCategories" style="display:flex;gap:4px;flex-shrink:0"></div>
+      <div class="model-chip active" id="modelSelected" role="button" tabindex="0" aria-label="Select model" style="max-width:160px;overflow:hidden;text-overflow:ellipsis">
+        <span id="modelSelectedName">🤖 Auto · Best Coding</span>
+      </div>
+      <div class="model-popup" id="modelPopup"></div>
       <div class="connection-status offline" id="connectionStatus" role="button" tabindex="0" aria-label="Select endpoint" aria-expanded="false">
         <span class="status-dot"></span>
         <span class="status-text">Offline</span>
@@ -861,6 +912,9 @@ a { color: var(--primary); }
   var selectedEndpoint = localStorage.getItem('jspl-hub-endpoint') || 'cloudflare';
   var isProcessing = false;
   var userAvatarUrl = '';
+  var modelCategories = {};
+  var activeCategory = 'auto';
+  var modelPopupOpen = false;
 
   fetch('/api/auth/me', { credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(d){
     if(d && d.picture) userAvatarUrl = d.picture;
@@ -964,13 +1018,163 @@ a { color: var(--primary); }
     setTheme(current === 'light' ? 'dark' : 'light');
   });
 
-  document.querySelectorAll('.model-chip').forEach(function(chip){
-    chip.addEventListener('click', function(){
-      document.querySelectorAll('.model-chip').forEach(function(c){ c.classList.remove('active'); });
-      chip.classList.add('active');
-      selectedModel = chip.getAttribute('data-model');
+  // === Dynamic Model System ===
+  var modelCategoriesEl = document.getElementById('modelCategories');
+  var modelSelectedEl = document.getElementById('modelSelected');
+  var modelSelectedName = document.getElementById('modelSelectedName');
+  var modelPopupEl = document.getElementById('modelPopup');
+
+  function detectCategory(prompt) {
+    var lower = (prompt || '').toLowerCase();
+    if (/```|function|class|import|def |const |let |var |return |if\s*\(|for\s*\(|while\s*\(|code|debug|error|bug|fix|implement|refactor|compile|build|api|endpoint|database|sql|query/.test(lower)) return 'coding';
+    if (/image|picture|photo|draw|illustrat|design|logo|icon|generate.*img|create.*img|render|sketch/.test(lower)) return 'image';
+    if (/video|animation|animate|movie|clip|footage|scene|transition/.test(lower)) return 'video';
+    if (/chat|tell me|explain|what is|how do|help me|write|email|summarize|describe|translate/.test(lower)) return 'chat';
+    return 'chat';
+  }
+
+  function renderCategoryTabs() {
+    if (!modelCategoriesEl || !modelCategories.auto) return;
+    modelCategoriesEl.innerHTML = '';
+    var order = ['auto', 'chat', 'coding', 'image', 'video', 'free'];
+    order.forEach(function(catKey) {
+      var cat = modelCategories[catKey];
+      if (!cat) return;
+      var btn = document.createElement('button');
+      btn.className = 'model-chip' + (catKey === activeCategory ? ' active' : '');
+      btn.setAttribute('data-category', catKey);
+      btn.textContent = cat.icon + ' ' + cat.label;
+      btn.title = cat.description;
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        activeCategory = catKey;
+        renderCategoryTabs();
+        showModelPopup(btn);
+      });
+      modelCategoriesEl.appendChild(btn);
     });
+  }
+
+  function showModelPopup(anchorEl) {
+    if (!modelPopupEl || !modelCategories[activeCategory]) return;
+    var cat = modelCategories[activeCategory];
+    var html = '<div class="model-popup-cat">' + esc(cat.icon) + ' ' + esc(cat.label) + '</div>';
+    cat.models.forEach(function(m) {
+      var isActive = m.id === selectedModel;
+      html += '<div class="model-popup-item' + (isActive ? ' active' : '') + '" data-model="' + esc(m.id) + '">' +
+        '<span class="mpi-name">' + esc(m.name) + '</span>' +
+        '<span class="mpi-desc">' + esc(m.desc) + '</span>' +
+        '</div>';
+    });
+    modelPopupEl.innerHTML = html;
+
+    // Position popup
+    var rect = anchorEl.getBoundingClientRect();
+    modelPopupEl.style.top = (rect.top - 8) + 'px';
+    modelPopupEl.style.left = rect.left + 'px';
+    modelPopupEl.style.transform = 'translateY(-100%)';
+    modelPopupEl.classList.add('open');
+    modelPopupOpen = true;
+
+    // Bind click handlers
+    modelPopupEl.querySelectorAll('.model-popup-item').forEach(function(item) {
+      item.addEventListener('click', function(e) {
+        e.stopPropagation();
+        selectModel(item.getAttribute('data-model'));
+        closeModelPopup();
+      });
+    });
+  }
+
+  function closeModelPopup() {
+    if (modelPopupEl) modelPopupEl.classList.remove('open');
+    modelPopupOpen = false;
+  }
+
+  function selectModel(modelId) {
+    selectedModel = modelId;
+    // Find display name
+    var displayName = modelId;
+    var displayIcon = '🤖';
+    Object.keys(modelCategories).forEach(function(catKey) {
+      var cat = modelCategories[catKey];
+      if (!cat) return;
+      cat.models.forEach(function(m) {
+        if (m.id === modelId) {
+          displayName = cat.icon + ' ' + m.name;
+          displayIcon = cat.icon;
+        }
+      });
+    });
+    if (modelSelectedName) modelSelectedName.textContent = displayName;
+    // Update active states
+    modelPopupEl.querySelectorAll('.model-popup-item').forEach(function(item) {
+      item.classList.toggle('active', item.getAttribute('data-model') === modelId);
+    });
+  }
+
+  if (modelSelectedEl) {
+    modelSelectedEl.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (modelPopupOpen) { closeModelPopup(); return; }
+      showModelPopup(modelSelectedEl);
+    });
+  }
+
+  document.addEventListener('click', function(e) {
+    if (modelPopupOpen && !modelPopupEl.contains(e.target) && e.target !== modelSelectedEl) {
+      closeModelPopup();
+    }
   });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModelPopup();
+  });
+
+  // Fetch models from API on load
+  (async function fetchModels() {
+    try {
+      var r = await fetch('/api/ai/models?endpoint=' + selectedEndpoint, { credentials: 'same-origin' });
+      var data = await r.json();
+      if (data.categories) {
+        modelCategories = data.categories;
+        renderCategoryTabs();
+        selectModel(selectedModel);
+      }
+    } catch(e) {
+      // Fallback to hardcoded categories
+      modelCategories = {
+        auto: { label: 'Auto', icon: '🤖', description: 'Smart routing', models: [
+          { id: 'auto/best-coding', name: 'Best Coding', desc: 'Optimized for code' },
+          { id: 'auto/best-fast', name: 'Best Fast', desc: 'Fastest response' },
+          { id: 'auto/best-free', name: 'Best Free', desc: 'Free tier' },
+          { id: 'auto/best-chat', name: 'Best Chat', desc: 'Best conversation' },
+          { id: 'auto/best-reasoning', name: 'Best Reasoning', desc: 'Deep thinking' },
+          { id: 'auto/best-vision', name: 'Best Vision', desc: 'Image understanding' },
+        ]},
+        chat: { label: 'Chat', icon: '💬', description: 'General purpose', models: [
+          { id: 'oc/claude-opus-5', name: 'Claude Opus 5', desc: 'Anthropic' },
+          { id: 'oc/gpt-5.5', name: 'GPT-5.5', desc: 'OpenAI' },
+          { id: 'oc/gemini-3.5-flash', name: 'Gemini 3.5', desc: 'Google' },
+        ]},
+        coding: { label: 'Code', icon: '💻', description: 'Coding specialized', models: [
+          { id: 'kilocode/anthropic/claude-sonnet-4.6', name: 'Claude 4.6', desc: 'Kilocode' },
+          { id: 'kilocode/openai/gpt-5.5', name: 'GPT-5.5', desc: 'Kilocode' },
+        ]},
+        image: { label: 'Image', icon: '🎨', description: 'Image generation', models: [
+          { id: 'openai/chatgpt-image-latest', name: 'ChatGPT Image', desc: 'OpenAI' },
+        ]},
+        video: { label: 'Video', icon: '🎬', description: 'Video generation', models: [
+          { id: 'vag/google/veo-3.1-generate-001', name: 'Veo 3.1', desc: 'Google' },
+        ]},
+        free: { label: 'Free', icon: '🆓', description: 'No-cost models', models: [
+          { id: 'openrouter/z-ai/glm-5.2:free', name: 'GLM 5.2', desc: 'Free' },
+          { id: 'oc/mimo-v2.5-free', name: 'Mimo v2.5', desc: 'Free' },
+        ]},
+      };
+      renderCategoryTabs();
+    }
+  })();
 
   document.querySelectorAll('.suggestion-card').forEach(function(card){
     card.addEventListener('click', function(){
@@ -1209,6 +1413,14 @@ a { color: var(--primary); }
       userContent += '\n\n[Attachments: ' + attachments.map(function(a){ return a.name; }).join(', ') + ']';
     }
 
+    // Auto-detect: if user is on an auto model, pick the best auto variant
+    var modelToSend = selectedModel;
+    if (selectedModel.startsWith('auto/')) {
+      var detected = detectCategory(content);
+      var autoMap = { coding: 'auto/best-coding', image: 'auto/best-vision', video: 'auto/best-vision', chat: 'auto/best-chat', free: 'auto/best-free' };
+      modelToSend = autoMap[detected] || 'auto/best-chat';
+    }
+
     var currentAttachments = attachments.slice();
     addMessage('user', content, currentAttachments);
     messageInput.value = '';
@@ -1227,7 +1439,7 @@ a { color: var(--primary); }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: messages.slice(0, -1).concat([{ role: 'user', content: userContent }]),
-          model: selectedModel,
+          model: modelToSend,
           attachments: currentAttachments.map(function(a){
             return { name: a.name, type: a.type, data: a.data };
           })
