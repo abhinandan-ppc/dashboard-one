@@ -15,13 +15,15 @@ let activeEndpoint = process.env.OMNIROUTE_URL || null;
 
 const MODEL_MAP = {
   'auto/best-coding': 'auto/best-coding',
-  'vag/anthropic/claude-sonnet-4': 'vag/anthropic/claude-sonnet-4',
-  'vag/anthropic/claude-opus-5': 'vag/anthropic/claude-opus-5',
-  'vag/openai/gpt-4o': 'vag/openai/gpt-4o',
-  'vag/google/gemini-2.0-flash': 'vag/google/gemini-2.0-flash',
-  'vag/google/gemini-2.5-pro': 'vag/google/gemini-2.5-pro',
-  'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free': 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
+  'auto/best-fast': 'auto/best-fast',
+  'auto/best-free': 'auto/best-free',
+  'kilocode/anthropic/claude-sonnet-4.6': 'kilocode/anthropic/claude-sonnet-4.6',
+  'kilocode/anthropic/claude-opus-4.7': 'kilocode/anthropic/claude-opus-4.7',
+  'kilocode/openai/gpt-5.5': 'kilocode/openai/gpt-5.5',
+  'kilocode/openai/gpt-5.4-mini': 'kilocode/openai/gpt-5.4-mini',
+  'kilocode/google/gemini-3.1-pro-preview': 'kilocode/google/gemini-3.1-pro-preview',
   'openrouter/z-ai/glm-5.2:free': 'openrouter/z-ai/glm-5.2:free',
+  'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free': 'openrouter/nvidia/nemotron-3-ultra-550b-a55b:free',
 };
 
 function buildOmniRouteMessages(history, attachments) {
@@ -114,9 +116,13 @@ export default async function handler(req) {
   const modelName = MODEL_MAP[model] || MODEL_MAP['auto/best-coding'];
   const apiMessages = buildOmniRouteMessages(messages, attachments);
 
+const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25000);
+
 try {
      const response = await fetch(OMNIROUTE_URL + '/chat/completions', {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${OMNIROUTE_KEY}`,
@@ -130,6 +136,7 @@ try {
     });
 
     if (!response.ok) {
+      clearTimeout(timeout);
       const errorText = await response.text().catch(() => 'Unknown error');
       return new Response(JSON.stringify({
         error: 'OmniRoute API error',
@@ -141,6 +148,7 @@ try {
       });
     }
 
+    clearTimeout(timeout);
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || 'No response generated';
 
@@ -149,9 +157,13 @@ try {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err) {
+    clearTimeout(timeout);
+    const msg = err.name === 'AbortError'
+      ? 'OmniRoute request timed out. The AI service may be temporarily unavailable — try again in a moment.'
+      : `Failed to connect to OmniRoute: ${err.message}`;
     return new Response(JSON.stringify({
       error: 'Request failed',
-      content: `Failed to connect to OmniRoute: ${err.message}`
+      content: msg
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
