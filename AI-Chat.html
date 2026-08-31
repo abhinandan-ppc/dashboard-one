@@ -45,6 +45,7 @@
   --glass-hi:rgba(30,41,59,.92);
   --glass-border:rgba(255,255,255,.14);
   --glass-border-hi:rgba(255,255,255,.26);
+  --glass-border-rule:1px solid var(--glass-border);
   --glass-blur:blur(16px);
   --glass-shadow:0 4px 20px rgba(0,0,0,.28);
   --shadow-xs:0 1px 2px rgba(0,0,0,.24);
@@ -92,6 +93,7 @@
   --md-sys-color-secondary:var(--secondary);
   --glass:rgba(255,255,255,.72);--glass-card:rgba(255,255,255,.80);--glass-hi:rgba(255,255,255,.98);
   --glass-border:rgba(0,0,0,.12);--glass-border-hi:rgba(0,0,0,.22);
+  --glass-border-rule:1px solid var(--glass-border);
   --glass-blur:blur(16px);--glass-shadow:0 6px 24px rgba(0,0,0,.07);
   --shadow-xs:0 1px 2px rgba(0,0,0,.06);
   --shadow-sm:0 2px 6px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
@@ -474,24 +476,18 @@ a { color: var(--primary); }
 .model-popup {
   position: fixed;
   z-index: 2147483646;
-  background: rgba(15, 23, 42, 0.72);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 14px;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border-rule);
+  border-radius: var(--radius-m);
+  box-shadow: var(--glass-shadow);
   padding: 8px;
   min-width: 260px;
   max-height: 340px;
   overflow-y: auto;
   display: none;
   scrollbar-width: thin;
-}
-:root[data-theme="light"] .model-popup,
-[data-theme="light"] .model-popup {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(0,0,0,0.08);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.5);
 }
 .model-popup.open { display: block; }
 .model-popup-item {
@@ -924,7 +920,7 @@ a { color: var(--primary); }
 
   var messages = [];
   var attachments = [];
-  var selectedModel = 'auto/best-coding';
+  var selectedModel = 'auto/best-fast';
   var selectedEndpoint = localStorage.getItem('jspl-hub-endpoint') || 'cloudflare';
   var isProcessing = false;
   var userAvatarUrl = '';
@@ -1390,7 +1386,7 @@ a { color: var(--primary); }
     }
     
     div.innerHTML = '<div class="message-avatar">' + avatar + '</div>' + contentHTML;
-    chatArea.prepend(div);
+    chatArea.appendChild(div);
   }
 
   function formatContent(content){
@@ -1438,8 +1434,8 @@ a { color: var(--primary); }
     var modelToSend = selectedModel;
     if (selectedModel.startsWith('auto/')) {
       var detected = detectCategory(content);
-      var autoMap = { coding: 'auto/best-coding', image: 'auto/best-vision', video: 'auto/best-vision', chat: 'auto/best-chat', free: 'auto/best-free' };
-      modelToSend = autoMap[detected] || 'auto/best-chat';
+      var autoMap = { coding: 'auto/best-coding-fast', image: 'auto/best-vision', video: 'auto/best-vision', chat: 'auto/best-fast', free: 'auto/best-free' };
+      modelToSend = autoMap[detected] || 'auto/best-fast';
     }
 
     var currentAttachments = attachments.slice();

@@ -95,37 +95,52 @@ export default async function handler(req) {
     cloudflare: 'https://speech-constructed-sims-deputy.trycloudflare.com/v1'
   };
 
-  const OMNIROUTE_URL = endpoints[endpoint] || endpoints.cloudflare;
-  const modelName = model || 'auto/best-coding';
+  const primaryUrl = endpoints[endpoint] || endpoints.cloudflare;
+  const modelName = model || 'auto/best-fast';
   const apiMessages = buildOmniRouteMessages(messages, attachments);
 
-  // Use SSE streaming — non-streaming OmniRoute responses take 45s+ but
-  // streaming returns keepalive pings immediately and content within ~20s.
-  try {
-    const response = await fetch(OMNIROUTE_URL + '/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OMNIROUTE_KEY}`,
-      },
-      body: JSON.stringify({
-        model: modelName,
-        messages: apiMessages,
-        max_tokens: 4096,
-        stream: true,
-      }),
-    });
+  const body = JSON.stringify({
+    model: modelName,
+    messages: apiMessages,
+    max_tokens: 2048,
+    stream: true,
+  });
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error');
-      return new Response(JSON.stringify({
-        error: 'OmniRoute API error',
-        content: `API Error (${response.status}): ${errorText}`
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${OMNIROUTE_KEY}`,
+  };
+
+  // Try primary endpoint, then fallbacks in parallel — first good SSE stream wins
+  const priorities = [primaryUrl, ...Object.values(endpoints).filter(u => u !== primaryUrl)];
+  let response = null;
+
+  for (const url of priorities) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 8000);
+      const res = await fetch(url + '/chat/completions', {
+        method: 'POST',
+        signal: ctrl.signal,
+        headers,
+        body,
       });
-    }
+      clearTimeout(timer);
+      if (res.ok) { response = res; break; }
+    } catch { continue; }
+  }
+
+  if (!response) {
+    return new Response(JSON.stringify({
+      error: 'All endpoints failed',
+      content: 'All OmniRoute endpoints are unreachable. Please try again later.'
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  try {
 
     // Pipe the SSE stream to the client, filtering out keepalive chunks
     const reader = response.body.getReader();
