@@ -1,5 +1,5 @@
-import { readCookie, verifySession } from '../../lib/_session.js';
-import { isPrimaryAdmin, resolveAccess, getRegistry, saveRegistry, KNOWN_PAGES, ADMIN_EMAILS } from '../../lib/_acl.js';
+import { readCookie, verifySession } from '../_session.js';
+import { isPrimaryAdmin, resolveAccess, getRegistry, saveRegistry, KNOWN_PAGES, ADMIN_EMAILS } from '../_acl.js';
 
 export const config = { runtime: 'edge' };
 

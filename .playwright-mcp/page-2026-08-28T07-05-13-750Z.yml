@@ -1,0 +1,44 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - generic [ref=f1e4]:
+        - img "Jindal Steel Logo" [ref=f1e5]
+        - generic [ref=f1e6]:
+          - generic [ref=f1e7]: Jindal Steel
+          - generic [ref=f1e8]: Angul · Plate Mill
+      - generic [ref=f1e10]:
+        - generic [ref=f1e11]: AI Assistant
+        - heading "AI Chat" [level=1] [ref=f1e12]
+    - button "Toggle theme" [ref=f1e14] [cursor=pointer]
+  - generic [ref=f1e17]:
+    - generic [ref=f1e19]:
+      - generic [ref=f1e24]: OmniRoute AI Assistant
+      - generic [ref=f1e25]: Ask me anything about code, text, images, or data. I can help you write, analyze, debug, and create.
+      - generic [ref=f1e26]:
+        - button "Code Review Explain this code and suggest improvements" [ref=f1e27] [cursor=pointer]:
+          - generic [ref=f1e28]: Code Review
+          - generic [ref=f1e29]: Explain this code and suggest improvements
+        - button "Writing Help me write a professional email" [ref=f1e30] [cursor=pointer]:
+          - generic [ref=f1e31]: Writing
+          - generic [ref=f1e32]: Help me write a professional email
+        - button "Image Analyze this image and describe what you see" [ref=f1e33] [cursor=pointer]:
+          - generic [ref=f1e34]: Image
+          - generic [ref=f1e35]: Analyze this image and describe what you see
+        - button "Debug Help me debug this error message" [ref=f1e36] [cursor=pointer]:
+          - generic [ref=f1e37]: Debug
+          - generic [ref=f1e38]: Help me debug this error message
+    - generic [ref=f1e39]:
+      - generic [ref=f1e40]:
+        - generic [ref=f1e41]: "Model:"
+        - button "Auto" [ref=f1e42] [cursor=pointer]
+        - button "Claude 4" [ref=f1e43] [cursor=pointer]
+        - button "Opus 5" [ref=f1e44] [cursor=pointer]
+        - button "GPT-4o" [ref=f1e45] [cursor=pointer]
+        - button "Gemini 2.0" [ref=f1e46] [cursor=pointer]
+        - button "Gemini 2.5" [ref=f1e47] [cursor=pointer]
+        - button "Nemotron" [ref=f1e48] [cursor=pointer]
+        - button "GLM 5.2" [ref=f1e49] [cursor=pointer]
+      - generic [ref=f1e50]:
+        - button "Attach file" [ref=f1e51] [cursor=pointer]
+        - textbox "Ask me anything..." [ref=f1e54]
+        - button "Send" [ref=f1e55] [cursor=pointer]

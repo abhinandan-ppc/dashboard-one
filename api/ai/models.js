@@ -1,5 +1,5 @@
-import { verifySession, readCookie } from '../../lib/_session.js';
-import { resolveAccess } from '../../lib/_acl.js';
+import { verifySession, readCookie } from '../_session.js';
+import { resolveAccess } from '../_acl.js';
 
 // Uses default Node.js runtime to avoid Edge bundling conflicts with middleware.
 

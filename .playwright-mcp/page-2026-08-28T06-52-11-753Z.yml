@@ -1,0 +1,44 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - img "Jindal Steel Logo" [ref=e6]
+        - generic [ref=e7]:
+          - generic [ref=e8]: Jindal Steel
+          - generic [ref=e9]: Angul · Plate Mill
+      - generic [ref=e11]:
+        - generic [ref=e12]: AI Assistant
+        - heading "AI Chat" [level=1] [ref=e13]
+    - button "Toggle theme" [ref=e15] [cursor=pointer]
+  - generic [ref=e18]:
+    - generic [ref=e20]:
+      - generic [ref=e25]: OmniRoute AI Assistant
+      - generic [ref=e26]: Ask me anything about code, text, images, or data. I can help you write, analyze, debug, and create.
+      - generic [ref=e27]:
+        - button "Code Review Explain this code and suggest improvements" [ref=e28] [cursor=pointer]:
+          - generic [ref=e29]: Code Review
+          - generic [ref=e30]: Explain this code and suggest improvements
+        - button "Writing Help me write a professional email" [ref=e31] [cursor=pointer]:
+          - generic [ref=e32]: Writing
+          - generic [ref=e33]: Help me write a professional email
+        - button "Image Analyze this image and describe what you see" [ref=e34] [cursor=pointer]:
+          - generic [ref=e35]: Image
+          - generic [ref=e36]: Analyze this image and describe what you see
+        - button "Debug Help me debug this error message" [ref=e37] [cursor=pointer]:
+          - generic [ref=e38]: Debug
+          - generic [ref=e39]: Help me debug this error message
+    - generic [ref=e40]:
+      - generic [ref=e41]:
+        - generic [ref=e42]: "Model:"
+        - button "Auto" [ref=e43] [cursor=pointer]
+        - button "Claude 4" [ref=e44] [cursor=pointer]
+        - button "Opus 5" [ref=e45] [cursor=pointer]
+        - button "GPT-4o" [ref=e46] [cursor=pointer]
+        - button "Gemini 2.0" [ref=e47] [cursor=pointer]
+        - button "Gemini 2.5" [ref=e48] [cursor=pointer]
+        - button "Nemotron" [ref=e49] [cursor=pointer]
+        - button "GLM 5.2" [ref=e50] [cursor=pointer]
+      - generic [ref=e51]:
+        - button "Attach file" [ref=e52] [cursor=pointer]
+        - textbox "Ask me anything..." [ref=e55]
+        - button "Send" [ref=e56] [cursor=pointer]

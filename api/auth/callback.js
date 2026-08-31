@@ -1,5 +1,5 @@
-import { createSession, readCookie, redirectWithCookies } from '../../lib/_session.js';
-import { recordLogin } from '../../lib/_acl.js';
+import { createSession, readCookie, redirectWithCookies } from '../_session.js';
+import { recordLogin } from '../_acl.js';
 
 export const config = { runtime: 'edge' };
 
