@@ -479,17 +479,26 @@ a { color: var(--primary); }
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border: var(--glass-border-rule);
-  border-radius: var(--radius-m);
-  box-shadow: var(--glass-shadow);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
   padding: 8px;
   min-width: 260px;
   max-height: 340px;
   overflow-y: auto;
-  display: none;
   scrollbar-width: thin;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
 }
-.model-popup.open { display: block; }
+.model-popup.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
 .model-popup-item {
   display: flex;
   flex-direction: column;
