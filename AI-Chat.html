@@ -474,18 +474,24 @@ a { color: var(--primary); }
 .model-popup {
   position: fixed;
   z-index: 2147483646;
-  background: var(--glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 14px;
-  box-shadow: var(--shadow-xl);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
   padding: 8px;
   min-width: 260px;
   max-height: 340px;
   overflow-y: auto;
   display: none;
   scrollbar-width: thin;
+}
+:root[data-theme="light"] .model-popup,
+[data-theme="light"] .model-popup {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.5);
 }
 .model-popup.open { display: block; }
 .model-popup-item {
@@ -523,6 +529,14 @@ a { color: var(--primary); }
   text-align: center;
   color: var(--tm);
   font-size: 11px;
+}
+@keyframes modelPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--primary-rgb, 56,189,248), 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(var(--primary-rgb, 56,189,248), 0); }
+}
+#modelSelected {
+  animation: modelPulse 2s ease-in-out 3;
+  cursor: pointer;
 }
 
 .input-wrapper {
@@ -1142,6 +1156,11 @@ a { color: var(--primary); }
         modelCategories = data.categories;
         renderCategoryTabs();
         selectModel(selectedModel);
+        // Auto-open popup briefly on first load so user sees the selector
+        setTimeout(function(){
+          if (modelSelectedEl) showModelPopup(modelSelectedEl);
+          setTimeout(closeModelPopup, 4000);
+        }, 800);
       }
     } catch(e) {
       // Fallback to hardcoded categories
@@ -1450,9 +1469,54 @@ a { color: var(--primary); }
 
       if(!response.ok) throw new Error('Request failed: ' + response.status);
 
-      var data = await response.json();
-      hideTyping();
-      addMessage('assistant', data.content || 'I received your message but could not generate a response.');
+      var contentType = response.headers.get('content-type') || '';
+
+      if (contentType.indexOf('text/event-stream') !== -1) {
+        // SSE streaming response
+        hideTyping();
+        var fullContent = '';
+        var assistantDiv = document.createElement('div');
+        assistantDiv.className = 'message assistant';
+        assistantDiv.innerHTML = '<div class="message-avatar">AI</div><div class="message-content"><div class="msg-text"></div></div>';
+        chatArea.appendChild(assistantDiv);
+        var msgTextEl = assistantDiv.querySelector('.msg-text');
+        scrollToBottom();
+
+        var reader = response.body.getReader();
+        var decoder = new TextDecoder();
+        var buffer = '';
+
+        while (true) {
+          var result = await reader.read();
+          if (result.done) break;
+          buffer += decoder.decode(result.value, { stream: true });
+          var lines = buffer.split('\n');
+          buffer = lines.pop();
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line.startsWith('data: ')) continue;
+            try {
+              var evt = JSON.parse(line.slice(6));
+              if (evt.content) {
+                fullContent += evt.content;
+                msgTextEl.innerHTML = formatContent(fullContent);
+                scrollToBottom();
+              }
+            } catch(e) {}
+          }
+        }
+
+        if (fullContent) {
+          messages.push({ role: 'assistant', content: fullContent });
+        } else {
+          addMessage('assistant', 'No response generated. Try a different model.');
+        }
+      } else {
+        // JSON fallback (error responses)
+        var data = await response.json();
+        hideTyping();
+        addMessage('assistant', data.content || 'I received your message but could not generate a response.');
+      }
     } catch(err) {
       hideTyping();
       addMessage('assistant', 'Sorry, I encountered an error: ' + err.message + '\n\nPlease check that the AI API endpoint is configured.');

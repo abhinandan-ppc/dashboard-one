@@ -11,11 +11,6 @@ const OMNIROUTE_ENDPOINTS = {
   cloudflare: process.env.OMNIROUTE_URL_CLOUDFLARE || 'https://speech-constructed-sims-deputy.trycloudflare.com/v1',
 };
 
-let activeEndpoint = process.env.OMNIROUTE_URL || null;
-
-// Model is passed through directly to OmniRoute — no static map needed.
-// The /api/ai/models endpoint curates available models for the frontend.
-
 function buildOmniRouteMessages(history, attachments) {
   const messages = [];
 
@@ -91,9 +86,8 @@ export default async function handler(req) {
     });
   }
 
-  // Support endpoint selector from client
   const url = new URL(req.url);
-  const endpoint = url.searchParams.get('endpoint') || 'intranet';
+  const endpoint = url.searchParams.get('endpoint') || 'cloudflare';
 
   const endpoints = {
     intranet: 'http://10.36.4.165:20128/v1',
@@ -101,18 +95,15 @@ export default async function handler(req) {
     cloudflare: 'https://speech-constructed-sims-deputy.trycloudflare.com/v1'
   };
 
-  const OMNIROUTE_URL = endpoints[endpoint] || endpoints.intranet;
-
+  const OMNIROUTE_URL = endpoints[endpoint] || endpoints.cloudflare;
   const modelName = model || 'auto/best-coding';
   const apiMessages = buildOmniRouteMessages(messages, attachments);
 
-const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-
-try {
-     const response = await fetch(OMNIROUTE_URL + '/chat/completions', {
+  // Use SSE streaming — non-streaming OmniRoute responses take 45s+ but
+  // streaming returns keepalive pings immediately and content within ~20s.
+  try {
+    const response = await fetch(OMNIROUTE_URL + '/chat/completions', {
       method: 'POST',
-      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${OMNIROUTE_KEY}`,
@@ -121,16 +112,14 @@ try {
         model: modelName,
         messages: apiMessages,
         max_tokens: 4096,
-        stream: false,
+        stream: true,
       }),
     });
 
     if (!response.ok) {
-      clearTimeout(timeout);
       const errorText = await response.text().catch(() => 'Unknown error');
       return new Response(JSON.stringify({
         error: 'OmniRoute API error',
-        details: errorText,
         content: `API Error (${response.status}): ${errorText}`
       }), {
         status: 200,
@@ -138,18 +127,61 @@ try {
       });
     }
 
-    clearTimeout(timeout);
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || 'No response generated';
+    // Pipe the SSE stream to the client, filtering out keepalive chunks
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
 
-    return new Response(JSON.stringify({ content }), {
+    const stream = new ReadableStream({
+      async pull(controller) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            controller.close();
+            return;
+          }
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6).trim();
+            if (data === '[DONE]') {
+              controller.close();
+              return;
+            }
+
+            try {
+              const parsed = JSON.parse(data);
+              // Skip keepalive chunks
+              if (parsed.id === 'omniroute-keepalive') continue;
+              // Forward actual content chunks
+              const delta = parsed.choices?.[0]?.delta?.content;
+              if (delta) {
+                controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ content: delta })}\n\n`));
+              }
+            } catch {
+              // Skip unparseable lines
+            }
+          }
+        }
+      },
+      cancel() {
+        reader.cancel();
+      }
+    });
+
+    return new Response(stream, {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
     });
   } catch (err) {
-    clearTimeout(timeout);
     const msg = err.name === 'AbortError'
-      ? 'The AI model took too long to respond. Try a faster model (Auto > Best Fast) or a shorter prompt.'
+      ? 'The AI model took too long to respond. Try a faster model or a shorter prompt.'
       : `Failed to connect to OmniRoute: ${err.message}`;
     return new Response(JSON.stringify({
       error: 'Request failed',
