@@ -1,7 +1,7 @@
 import { verifySession, readCookie } from '../_session.js';
 import { resolveAccess } from '../_acl.js';
 
-export const config = { runtime: 'edge' };
+// Uses default Node.js runtime to avoid Edge bundling conflicts with middleware.
 
 export default async function handler(req) {
   const session = await verifySession(readCookie(req, 'session'));
