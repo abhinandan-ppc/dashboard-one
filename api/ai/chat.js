@@ -101,7 +101,7 @@ export default async function handler(req) {
   const modelName = model || 'auto/best-fast';
   const apiMessages = buildOmniRouteMessages(messages, attachments);
 
-  const body = JSON.stringify({
+  const requestBody = JSON.stringify({
     model: modelName,
     messages: apiMessages,
     max_tokens: 2048,
@@ -125,7 +125,7 @@ export default async function handler(req) {
         method: 'POST',
         signal: ctrl.signal,
         headers,
-        body,
+        body: requestBody,
       });
       clearTimeout(timer);
       if (res.ok) { response = res; break; }
