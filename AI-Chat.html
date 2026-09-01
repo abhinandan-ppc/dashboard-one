@@ -1102,11 +1102,28 @@ a { color: var(--primary); }
     html += '</div>';
     modelPopupEl.innerHTML = html;
 
-    // Position popup
-    var rect = anchorEl.getBoundingClientRect();
-    modelPopupEl.style.top = (rect.top - 8) + 'px';
-    modelPopupEl.style.left = rect.left + 'px';
-    modelPopupEl.style.transform = 'translateY(-100%)';
+    // Position popup, clamped to stay fully within the viewport
+    var margin = 8;
+    var anchorRect = anchorEl.getBoundingClientRect();
+    var popupRect = modelPopupEl.getBoundingClientRect();
+    var width = popupRect.width;
+    var height = popupRect.height;
+
+    var left = anchorRect.left;
+    var maxLeft = window.innerWidth - width - margin;
+    if (left > maxLeft) left = maxLeft;
+    if (left < margin) left = margin;
+
+    var top = anchorRect.top - margin - height;
+    if (top < margin) {
+      top = anchorRect.bottom + margin;
+      var maxTop = window.innerHeight - height - margin;
+      if (top > maxTop) top = maxTop;
+    }
+
+    modelPopupEl.style.left = left + 'px';
+    modelPopupEl.style.top = top + 'px';
+    modelPopupEl.style.transform = 'none';
     modelPopupEl.classList.add('open');
     modelPopupOpen = true;
 
@@ -1163,6 +1180,10 @@ a { color: var(--primary); }
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeModelPopup();
+  });
+
+  window.addEventListener('resize', function() {
+    if (modelPopupOpen) closeModelPopup();
   });
 
   // Fetch models from API on load

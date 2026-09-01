@@ -51,7 +51,7 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 .view-tabs button.on { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 
 .hdr-r { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-#hubFrameHeaderSlot { display: flex; align-items: center; justify-content: center; gap: 8px; flex-basis: 100%; border-top: 1px solid var(--br); padding-top: 10px; margin-top: 2px; }
+#hubFrameHeaderSlot { display: flex; align-items: center; justify-content: center; gap: 8px; }
 /* Normalize the hub-injected Home/Refresh/Theme/User icon buttons to a
    uniform 40x40 circle — without this the user-avatar icon in particular
    can render larger/mismatched. !important wins over the buttons' own
@@ -87,6 +87,7 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
   .top-bar { align-items: center; padding: 12px; gap: 10px; }
   .top-l { flex: 1 1 auto; justify-content: flex-start; min-width: 0; }
   .top-l > div:last-child { flex: 1; min-width: 0; text-align: left; }
+  #hubFrameHeaderSlot { flex-basis: 100%; border-top: 1px solid var(--br); padding-top: 10px; margin-top: 2px; }
   .top-l h1 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .jspl-brand-text { display: none; }
   .jspl-divider { display: none; }
