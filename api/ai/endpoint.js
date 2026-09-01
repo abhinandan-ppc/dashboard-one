@@ -28,17 +28,22 @@ export default async function handler(req) {
   }
 
   const endpoints = {
-    intranet: 'http://10.36.4.165:20128/v1',
-    ngrok: 'https://traffic-appetite-relay.ngrok-free.dev/v1',
-    cloudflare: 'https://speech-constructed-sims-deputy.trycloudflare.com/v1'
+    intranet: process.env.OMNIROUTE_URL_INTRANET,
+    ngrok: process.env.OMNIROUTE_URL_NGROK,
+    cloudflare: process.env.OMNIROUTE_URL_CLOUDFLARE,
   };
 
-  return new Response(JSON.stringify({ 
-    success: true, 
+  const base = endpoints[endpoint];
+  if (!base) {
+    return new Response(JSON.stringify({ error: 'Endpoint is not configured' }), { status: 503 });
+  }
+
+  return new Response(JSON.stringify({
+    success: true,
     endpoint,
-    url: endpoints[endpoint] + '/chat/completions'
-  }), { 
-    status: 200, 
-    headers: { 'Content-Type': 'application/json' } 
+    url: base + '/chat/completions'
+  }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
   });
 }

@@ -3,12 +3,12 @@ import { resolveAccess } from '../_acl.js';
 
 export const config = { runtime: 'nodejs' };
 
-const OMNIROUTE_KEY = process.env.OMNIROUTE_KEY || 'sk-61be4b16598dca09-9b9c27-5ae47255';
+const OMNIROUTE_KEY = process.env.OMNIROUTE_KEY;
 
 const OMNIROUTE_ENDPOINTS = {
-  intranet: process.env.OMNIROUTE_URL_INTRANET || 'http://10.36.4.165:20128/v1',
-  ngrok: process.env.OMNIROUTE_URL_NGROK || 'https://traffic-appetite-relay.ngrok-free.dev/v1',
-  cloudflare: process.env.OMNIROUTE_URL_CLOUDFLARE || 'https://speech-constructed-sims-deputy.trycloudflare.com/v1',
+  intranet: process.env.OMNIROUTE_URL_INTRANET,
+  ngrok: process.env.OMNIROUTE_URL_NGROK,
+  cloudflare: process.env.OMNIROUTE_URL_CLOUDFLARE,
 };
 
 // Curated model categories with display names

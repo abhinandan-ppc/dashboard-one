@@ -5,12 +5,12 @@ import { resolveAccess } from '../_acl.js';
 // into the middleware bundle (which causes "unsupported modules" errors).
 export const config = { runtime: 'nodejs' };
 
-const OMNIROUTE_KEY = process.env.OMNIROUTE_KEY || 'sk-61be4b16598dca09-9b9c27-5ae47255';
+const OMNIROUTE_KEY = process.env.OMNIROUTE_KEY;
 
 const OMNIROUTE_ENDPOINTS = {
-  intranet: process.env.OMNIROUTE_URL_INTRANET || 'http://10.36.4.165:20128/v1',
-  ngrok: process.env.OMNIROUTE_URL_NGROK || 'https://traffic-appetite-relay.ngrok-free.dev/v1',
-  cloudflare: process.env.OMNIROUTE_URL_CLOUDFLARE || 'https://speech-constructed-sims-deputy.trycloudflare.com/v1',
+  intranet: process.env.OMNIROUTE_URL_INTRANET,
+  ngrok: process.env.OMNIROUTE_URL_NGROK,
+  cloudflare: process.env.OMNIROUTE_URL_CLOUDFLARE,
 };
 
 function buildOmniRouteMessages(history, attachments) {
@@ -88,16 +88,23 @@ export default async function handler(req) {
     });
   }
 
+  if (!OMNIROUTE_KEY) {
+    return new Response(JSON.stringify({ error: 'AI gateway is not configured' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const url = new URL(req.url);
   const endpoint = url.searchParams.get('endpoint') || 'cloudflare';
 
-  const endpoints = {
-    intranet: 'http://10.36.4.165:20128/v1',
-    ngrok: 'https://traffic-appetite-relay.ngrok-free.dev/v1',
-    cloudflare: 'https://speech-constructed-sims-deputy.trycloudflare.com/v1'
-  };
-
-  const primaryUrl = endpoints[endpoint] || endpoints.cloudflare;
+  const primaryUrl = OMNIROUTE_ENDPOINTS[endpoint] || OMNIROUTE_ENDPOINTS.cloudflare;
+  if (!primaryUrl) {
+    return new Response(JSON.stringify({ error: 'AI gateway is not configured' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
   const modelName = model || 'auto/best-fast';
   const apiMessages = buildOmniRouteMessages(messages, attachments);
 
@@ -114,7 +121,7 @@ export default async function handler(req) {
   };
 
   // Try primary endpoint, then fallbacks in parallel — first good SSE stream wins
-  const priorities = [primaryUrl, ...Object.values(endpoints).filter(u => u !== primaryUrl)];
+  const priorities = [primaryUrl, ...Object.values(OMNIROUTE_ENDPOINTS).filter(u => u && u !== primaryUrl)];
   let response = null;
 
   for (const url of priorities) {
