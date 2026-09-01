@@ -836,6 +836,8 @@ a { color: var(--primary); }
 </head>
 <body>
 
+<div class="model-popup" id="modelPopup"></div>
+
 <div class="endpoint-selector" id="endpointSelector">
   <div class="endpoint-selector-header">Select Endpoint</div>
   <div class="endpoint-option active" data-endpoint="intranet">Intranet</div>
@@ -905,7 +907,6 @@ a { color: var(--primary); }
       <div class="model-chip active" id="modelSelected" role="button" tabindex="0" aria-label="Select model" style="max-width:160px;overflow:hidden;text-overflow:ellipsis">
         <span id="modelSelectedName">🤖 Auto · Best Coding</span>
       </div>
-      <div class="model-popup" id="modelPopup"></div>
       <div class="connection-status offline" id="connectionStatus" role="button" tabindex="0" aria-label="Select endpoint" aria-expanded="false">
         <span class="status-dot"></span>
         <span class="status-text">Offline</span>
