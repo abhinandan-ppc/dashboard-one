@@ -1082,8 +1082,11 @@ a { color: var(--primary); }
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
         activeCategory = catKey;
-        renderCategoryTabs();
+        // Position against this button before renderCategoryTabs() rebuilds
+        // the tab row and detaches it — measuring a detached node returns an
+        // all-zero rect, which pinned the popup to the viewport's top-left.
         showModelPopup(btn);
+        renderCategoryTabs();
       });
       modelCategoriesEl.appendChild(btn);
     });
