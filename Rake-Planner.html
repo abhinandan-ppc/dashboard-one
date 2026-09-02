@@ -1057,6 +1057,77 @@ function addOrd(rk,ord,q){
   rk.totalFG+=fg; rk.totalWIP+=wip; rk.totalBTR+=n2(parseFloat(ord['BTR']));
 }
 
+// Sequential fill + best-fit + defrag knapsack packer — shared by packRakes
+// (per-siding) and the Combine Rakes feature (arbitrary merged order lists).
+function packOrdersIntoRakes(grpOrders,wagType){
+  if(!grpOrders.length)return[];
+  const cap=RAKE_CAP*(1+RAKE_TOL);
+  // ── Score & sort: PURE PRIORITY FIRST (no city override) → Bal desc ──
+  // This guarantees tier-0 (FG+pay) always precedes tier-1 etc., filling Rake 1 first.
+  const scored=grpOrders.map(ord=>({
+    ord,
+    q:n2(parseFloat(ord['Bal to PGI'])),
+    p:rkPriority(ord)
+  })).filter(o=>o.q>0);
+
+  // Primary: priority asc (0=FG+Pay first). Secondary: Bal desc (largest orders first = better fill).
+  // NO city grouping here — city grouping inside a priority tier can push high-priority
+  // orders behind low-priority ones of different cities, breaking Rake 1 content.
+  scored.sort((a,b)=> a.p!==b.p ? a.p-b.p : b.q-a.q);
+
+  // ── Sequential fill ──
+  const rakes=[];
+  const oversized=[];
+  for(const{ord,q} of scored){
+    let placed=false;
+    if(rakes.length>0){
+      const last=rakes[rakes.length-1];
+      if(last.totalBal+q<=cap){addOrd(last,ord,q);placed=true;}
+    }
+    if(!placed){
+      if(q<=cap)rakes.push(mkRake(ord,q));
+      else oversized.push({ord,q});
+    }
+  }
+
+  // ── Best-fit for oversized ──
+  for(const{ord,q} of oversized){
+    let bi=-1,br=Infinity;
+    for(let i=0;i<rakes.length;i++){const r=cap-rakes[i].totalBal;if(r>=q&&r<br){br=r;bi=i;}}
+    if(bi>=0)addOrd(rakes[bi],ord,q);else rakes.push(mkRake(ord,q));
+  }
+
+  // ── Defrag ──
+  for(let ei=0;ei<rakes.length-1;ei++){
+    const early=rakes[ei];
+    const rem=cap-early.totalBal;
+    if(rem<1)continue;
+    for(let li=ei+1;li<rakes.length;li++){
+      const later=rakes[li];
+      const earlyMinP=early.items.reduce((m,{ord})=>Math.min(m,rkPriority(ord)),99);
+      for(let j=0;j<later.items.length;j++){
+        const{ord:lOrd,q:lQ}=later.items[j];
+        if(rkPriority(lOrd)>=earlyMinP)continue;
+        if(lQ<=rem){
+          addOrd(early,lOrd,lQ);
+          later.items.splice(j,1);
+          later.totalBal-=lQ;
+          later.totalFG-=n2(parseFloat(lOrd['FG UR Stock']));
+          later.totalWIP-=Math.max(0,n2(parseFloat(lOrd['Plate Stock']))-n2(parseFloat(lOrd['FG UR Stock'])));
+          later.totalBTR-=n2(parseFloat(lOrd['BTR']));
+          later.totalQty-=n2(parseFloat(lOrd['Order Qty_Live']));
+          break;
+        }
+      }
+    }
+  }
+
+  // ── NO post-sort: sequential fill order = display order ──
+  const fr=rakes.filter(rk=>rk.items.length>0);
+  fr.forEach(rk=>{rk.wagonType=wagType;});
+  return fr;
+}
+
 function packRakes(rows){
   const by={};
   for(const r of rows){
@@ -1068,84 +1139,13 @@ function packRakes(rows){
   }
   const res={};
   for(const[sid,{region,orders}]of Object.entries(by)){
-    const cap=RAKE_CAP*(1+RAKE_TOL);
-
     // ── Separate LONG wagon orders from standard (BOSM/BRN + BRN) ──
     // LONG wagons must NOT carry BOSM/BRN or BRN plates (freight loss)
     const stdOrders =orders.filter(r=>r._WagonType!=='LONG');
     const longOrders=orders.filter(r=>r._WagonType==='LONG');
 
-    // Pack each wagon group separately, label rakes with wagon type
-    const packGroup=(grpOrders,wagType)=>{
-      if(!grpOrders.length)return[];
-      // ── Score & sort: PURE PRIORITY FIRST (no city override) → Bal desc ──
-    // This guarantees tier-0 (FG+pay) always precedes tier-1 etc., filling Rake 1 first.
-      const scored=grpOrders.map(ord=>({
-      ord,
-      q:n2(parseFloat(ord['Bal to PGI'])),
-      p:rkPriority(ord)
-    })).filter(o=>o.q>0);
-
-    // Primary: priority asc (0=FG+Pay first). Secondary: Bal desc (largest orders first = better fill).
-    // NO city grouping here — city grouping inside a priority tier can push high-priority
-    // orders behind low-priority ones of different cities, breaking Rake 1 content.
-      scored.sort((a,b)=> a.p!==b.p ? a.p-b.p : b.q-a.q);
-
-      // ── Sequential fill ──
-      const rakes=[];
-      const oversized=[];
-      for(const{ord,q} of scored){
-        let placed=false;
-        if(rakes.length>0){
-          const last=rakes[rakes.length-1];
-          if(last.totalBal+q<=cap){addOrd(last,ord,q);placed=true;}
-        }
-        if(!placed){
-          if(q<=cap)rakes.push(mkRake(ord,q));
-          else oversized.push({ord,q});
-        }
-      }
-
-      // ── Best-fit for oversized ──
-      for(const{ord,q} of oversized){
-        let bi=-1,br=Infinity;
-        for(let i=0;i<rakes.length;i++){const r=cap-rakes[i].totalBal;if(r>=q&&r<br){br=r;bi=i;}}
-        if(bi>=0)addOrd(rakes[bi],ord,q);else rakes.push(mkRake(ord,q));
-      }
-
-      // ── Defrag ──
-      for(let ei=0;ei<rakes.length-1;ei++){
-        const early=rakes[ei];
-        const rem=cap-early.totalBal;
-        if(rem<1)continue;
-        for(let li=ei+1;li<rakes.length;li++){
-          const later=rakes[li];
-          const earlyMinP=early.items.reduce((m,{ord})=>Math.min(m,rkPriority(ord)),99);
-          for(let j=0;j<later.items.length;j++){
-            const{ord:lOrd,q:lQ}=later.items[j];
-            if(rkPriority(lOrd)>=earlyMinP)continue;
-            if(lQ<=rem){
-              addOrd(early,lOrd,lQ);
-              later.items.splice(j,1);
-              later.totalBal-=lQ;
-              later.totalFG-=n2(parseFloat(lOrd['FG UR Stock']));
-              later.totalWIP-=Math.max(0,n2(parseFloat(lOrd['Plate Stock']))-n2(parseFloat(lOrd['FG UR Stock'])));
-              later.totalBTR-=n2(parseFloat(lOrd['BTR']));
-              later.totalQty-=n2(parseFloat(lOrd['Order Qty_Live']));
-              break;
-            }
-          }
-        }
-      }
-
-      // ── NO post-sort: sequential fill order = display order ──
-      const fr=rakes.filter(rk=>rk.items.length>0);
-      fr.forEach(rk=>{rk.wagonType=wagType;});
-      return fr;
-    }; // end packGroup
-
     // Pack standard and LONG separately, then combine
-    const finalRakes=[...packGroup(stdOrders,'BOSM/BRN+BRN'),...packGroup(longOrders,'LONG')];
+    const finalRakes=[...packOrdersIntoRakes(stdOrders,'BOSM/BRN+BRN'),...packOrdersIntoRakes(longOrders,'LONG')];
 
     const allOrd=orders;
     res[sid]={siding:sid,region,rakes:finalRakes,
@@ -1461,6 +1461,97 @@ function freightCost(ord,sidingOverride){
   const rR=useODC?fr.rateO:(fr.rateN||0),hR=useODC?fr.handO:(fr.handN||0),tR=useODC?fr.secO:(fr.secN||0);
   const rake=Math.round(rR*bal),hand=Math.round(hR*bal),truck=Math.round(tR*bal);
   return{rake,hand,truck,total:rake+hand+truck,rakeRate:rR,handRate:hR,truckRate:tR,totalRate:rR+hR+tR,bal,isODC:useODC};
+}
+
+/* Reverse of SIDING_ALIASES: resolved FREIGHT_RATES/hub code -> every
+   logical/service code (including itself) that resolves to it. Needed
+   because SIDING_SERVICE and _Siding values use logical codes like
+   'JSPP'/'HDCG', while FREIGHT_RATES/SIDING_COORDS use their resolved
+   physical hub codes like 'GFCJ'/'DKAE' (see resolveHub/freightCost). */
+let _aliasTargets=null;
+function aliasTargetsFor(sid){
+  if(!_aliasTargets){
+    _aliasTargets={};
+    for(const[alias,target]of Object.entries(SIDING_ALIASES)){
+      (_aliasTargets[target]=_aliasTargets[target]||[]).push(alias);
+    }
+  }
+  return[sid,...(_aliasTargets[sid]||[])];
+}
+
+/* Does `sid`'s known service area plausibly cover `city`? Fuzzy-matches
+   against SIDING_SERVICE's city list (checking every logical code that
+   aliases to this resolved siding), or falls back to mlAssignSiding's
+   nearest-centroid classifier agreeing with this siding. Used to keep the
+   Combine Rakes optimizer from recommending a cheap-on-paper but
+   geographically nonsensical siding. */
+function sidingCoversCity(sid,city){
+  for(const code of aliasTargetsFor(sid)){
+    const info=SIDING_SERVICE[code];
+    if(info&&info.cities.some(c=>fuzzyScore(city,c)>=.8))return true;
+  }
+  const ml=mlAssignSiding(city);
+  return!!(ml&&aliasTargetsFor(sid).includes(ml.siding));
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   COMBINE RAKES — candidate siding evaluator
+   ─────────────────────────────────────────────────────────────────
+   Given a merged list of {ord,q} items (from two rakes picked to be
+   combined) and their shared wagonType, scores every siding in
+   FREIGHT_RATES as a place to route the WHOLE merged load, and returns
+   the cheapest plausible candidates (always including the two original
+   sidings as guaranteed baseline options).
+   Returns: {baselineCost, candidates:[{siding,name,region,totalCost,
+     savings,distKm,rakesNeeded,utilizationPct,coverage}], mergedCities}
+   ───────────────────────────────────────────────────────────────── */
+function evaluateCombineCandidates(mergedOrders,wagonType,originalSidings){
+  const cap=RAKE_CAP*(1+RAKE_TOL);
+  const totalBal=mergedOrders.reduce((s,{q})=>s+n2(q),0);
+  const mergedCities=[...new Set(mergedOrders.map(({ord})=>
+    String(ord['Ship To Party City']||'').trim().toUpperCase()).filter(Boolean))];
+
+  const baselineCost=mergedOrders.reduce((s,{ord})=>{
+    const fc=freightCost(ord); return s+(fc?fc.total:0);
+  },0);
+
+  // Map resolved hub code -> the raw siding label(s) the user actually picked,
+  // so the UI can show "JSPP (current)" instead of the internal "GFCJ" code.
+  const origLabels={};
+  for(const raw of(originalSidings||[])){
+    const base=String(raw||'').toUpperCase().replace(/\s*\(Long\)/i,'').trim();
+    const resolved=SIDING_ALIASES[base]||base;
+    (origLabels[resolved]=origLabels[resolved]||new Set()).add(base);
+  }
+  const origSet=new Set(Object.keys(origLabels));
+
+  const candidates=[];
+  for(const sid of Object.keys(FREIGHT_RATES)){
+    const fr=FREIGHT_RATES[sid];
+    const hub=resolveHub(sid);
+    if(!hub)continue; // no known coordinates — can't route or show on map
+    if(fr.rateN===0&&fr.rateO==null)continue; // incomplete/placeholder rate row
+    if(wagonType==='LONG'&&fr.rateO==null)continue; // no ODC rate — can't legally carry LONG wagons here
+    const isOriginal=origSet.has(sid);
+    const coverage=mergedCities.filter(c=>sidingCoversCity(sid,c)).length;
+    if(!isOriginal&&coverage===0)continue; // not a guaranteed baseline and covers nothing merged
+
+    const totalCost=mergedOrders.reduce((s,{ord})=>{
+      const fc=freightCost(ord,sid); return s+(fc?fc.total:0);
+    },0);
+    const rakesNeeded=Math.max(1,Math.ceil(totalBal/cap));
+    candidates.push({
+      siding:sid,name:fr.name,region:fr.region,
+      originalLabel:isOriginal?[...origLabels[sid]].join('+'):null,
+      totalCost,savings:baselineCost-totalCost,
+      distKm:Math.round(haversine(ANGUL.lat,ANGUL.lng,hub.lat,hub.lng)),
+      rakesNeeded,utilizationPct:Math.min(100,Math.round(totalBal/(rakesNeeded*cap)*100)),
+      coverage,isOriginal,
+    });
+  }
+
+  candidates.sort((a,b)=>a.totalCost-b.totalCost);
+  return{baselineCost,totalBal,mergedCities,candidates};
 }
 
 /* Sold-To-Party → Segment lookup (from the shared EBTP workbook's SEGMENT tab,
@@ -3326,6 +3417,176 @@ function exportRakeXLSX(rakePlan){
   XLSX.writeFile(wb,`JSP_RakePlan_${siding}_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
+/* ═══════════════════ COMBINE RAKES — OPTIMAL SIDING SUGGESTION ═══════════════════
+   Advisory what-if tool: merges two picked rakes' orders, scores every siding
+   in FREIGHT_RATES as a place to route the combined load (evaluateCombineCandidates),
+   and previews the repacked rake(s) at the chosen candidate. Read-only — this
+   never mutates the live rows/data; it only recommends + exports. */
+function CombineRakesModal({rakeA,rakeB,sidA,sidB,onClose}){
+  const wagonMismatch=rakeA.wagonType!==rakeB.wagonType;
+
+  const mergedOrders=useMemo(()=>wagonMismatch?[]:[...rakeA.items,...rakeB.items],[rakeA,rakeB,wagonMismatch]);
+  const evalRes=useMemo(()=>wagonMismatch?null:
+    evaluateCombineCandidates(mergedOrders,rakeA.wagonType,[sidA,sidB]),
+    [mergedOrders,rakeA.wagonType,sidA,sidB,wagonMismatch]);
+
+  const topCandidates=evalRes?evalRes.candidates.slice(0,6):[];
+  const [chosenSid,setChosenSid]=useState(null);
+  const active=topCandidates.find(c=>c.siding===chosenSid)||topCandidates[0]||null;
+
+  // Repacking depends only on the merged order set + wagon type — capacity
+  // packing is independent of which destination siding is ultimately chosen.
+  const repackedRakes=useMemo(()=>{
+    if(!mergedOrders.length)return[];
+    return packOrdersIntoRakes(mergedOrders.map(({ord})=>ord),rakeA.wagonType);
+  },[mergedOrders,rakeA.wagonType]);
+
+  const cap=RAKE_CAP*(1+RAKE_TOL);
+  const beforeUtilA=Math.round(rakeA.totalBal/cap*100);
+  const beforeUtilB=Math.round(rakeB.totalBal/cap*100);
+  const afterUtil=repackedRakes.length?Math.round(
+    repackedRakes.reduce((s,rk)=>s+rk.totalBal,0)/(repackedRakes.length*cap)*100):0;
+
+  const rc=active?(C.region[active.region]||C.region.Unknown):C.region.Unknown;
+
+  const exportCombined=()=>{
+    if(!active||!repackedRakes.length)return;
+    exportRakeXLSX({siding:`COMBINED (${sidA}+${sidB} → ${active.siding})`,region:active.region||'Unknown',rakes:repackedRakes});
+  };
+
+  return<div style={{position:'fixed',inset:0,zIndex:500,background:'rgba(2,5,18,.88)',
+    backdropFilter:'blur(5px)',display:'flex',alignItems:'center',justifyContent:'center',
+    animation:'fadeUp .18s ease-out'}}
+    onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div style={{background:'var(--s1)',borderRadius:16,border:`1px solid ${rc.bdr}`,
+      boxShadow:`var(--shadow-xl),0 0 40px ${rc.glow}22`,
+      display:'flex',flexDirection:'column',
+      width:'min(980px,97vw)',maxHeight:'92dvh',overflow:'hidden'}}>
+
+      {/* Header */}
+      <div style={{padding:'14px 20px',borderBottom:'1px solid var(--bdr)',flexShrink:0,
+        background:`linear-gradient(135deg,${C.s2},${C.s1})`,
+        display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',rowGap:6}}>
+        <span style={{fontSize:20}}>🔀</span>
+        <div>
+          <div style={{fontFamily:F.h,fontSize:16,fontWeight:800,color:'var(--text)',letterSpacing:'.05em',textTransform:'uppercase'}}>
+            Combine Rakes
+          </div>
+          <div style={{fontSize:11,color:'var(--dim)',marginTop:2,fontFamily:F.b}}>
+            <STag code={sidA}/> ({fmt(rakeA.totalBal)} MT) + <STag code={sidB}/> ({fmt(rakeB.totalBal)} MT)
+          </div>
+        </div>
+        <div style={{flex:1}}/>
+        <button onClick={onClose} style={{background:'transparent',border:'1px solid var(--bdr)',
+          borderRadius:6,color:'var(--dim)',padding:'7px 12px',cursor:'pointer',fontSize:13,transition:'all .15s'}}
+          onMouseEnter={e=>{e.currentTarget.style.background=C.s2;}}
+          onMouseLeave={e=>{e.currentTarget.style.background='transparent';}}>
+          ✕ Close
+        </button>
+      </div>
+
+      {wagonMismatch?
+        <div style={{padding:30,textAlign:'center',color:C.rose,fontFamily:F.b,fontSize:13}}>
+          ⚠ Cannot combine — one rake is LONG wagon and the other is standard (BOSM/BRN).
+          Mixing wagon types on one rake causes freight loss and isn't physically valid.
+        </div>
+      :<>
+        {/* Summary strip */}
+        <div style={{padding:'12px 20px',borderBottom:'1px solid var(--bdr)',flexShrink:0,
+          background:'var(--s2)',display:'flex',gap:20,flexWrap:'wrap',alignItems:'center'}}>
+          <div>
+            <div style={{fontSize:10,color:'var(--mute)',fontFamily:F.h,letterSpacing:'.08em',textTransform:'uppercase'}}>Before</div>
+            <div style={{fontSize:12,color:'var(--dim)',fontFamily:F.b,marginTop:2}}>
+              2 rakes · <span style={{color:C.amber}}>{sidA} ({beforeUtilA}%)</span> + <span style={{color:C.amber}}>{sidB} ({beforeUtilB}%)</span>
+            </div>
+          </div>
+          <span style={{fontSize:18,color:'var(--mute)'}}>→</span>
+          <div>
+            <div style={{fontSize:10,color:'var(--mute)',fontFamily:F.h,letterSpacing:'.08em',textTransform:'uppercase'}}>After</div>
+            <div style={{fontSize:12,color:C.green,fontFamily:F.b,fontWeight:700,marginTop:2}}>
+              {repackedRakes.length} rake{repackedRakes.length!==1?'s':''} · {active?active.name:'—'} ({afterUtil}% util)
+            </div>
+          </div>
+          {active&&<div>
+            <div style={{fontSize:10,color:'var(--mute)',fontFamily:F.h,letterSpacing:'.08em',textTransform:'uppercase'}}>Est. Savings</div>
+            <div style={{fontSize:13,fontFamily:F.m,fontWeight:700,marginTop:2,
+              color:active.savings>0?C.green:active.savings<0?C.rose:'var(--dim)'}}>
+              {active.savings>0?'↓':active.savings<0?'↑':''} ₹{Math.abs(Math.round(active.savings)).toLocaleString('en-IN')}
+            </div>
+          </div>}
+          <div style={{marginLeft:'auto',fontSize:11,color:'var(--dim)',fontFamily:F.b}}>
+            {evalRes.totalBal.toLocaleString('en-IN')} MT · {mergedOrders.length} orders
+          </div>
+        </div>
+
+        {/* Candidate siding cards */}
+        <div style={{padding:'12px 20px',borderBottom:'1px solid var(--bdr)',flexShrink:0,overflowX:'auto'}}>
+          <div style={{fontSize:10,color:'var(--mute)',fontFamily:F.h,letterSpacing:'.08em',textTransform:'uppercase',marginBottom:8}}>
+            Candidate Sidings — ranked by total freight cost
+          </div>
+          <div style={{display:'flex',gap:8,flexWrap:'nowrap'}}>
+            {topCandidates.map(c=>{
+              const cr=C.region[c.region]||C.region.Unknown;
+              const isActive=active&&c.siding===active.siding;
+              return<div key={c.siding} onClick={()=>setChosenSid(c.siding)} style={{
+                cursor:'pointer',flex:'0 0 190px',padding:'10px 12px',borderRadius:'var(--radius-sm)',
+                background:isActive?cr.bgHi:cr.bg,border:`1px solid ${isActive?cr.glow:cr.bdr}`,
+                boxShadow:isActive?`0 0 12px ${cr.glow}40`:'none',transition:'all .15s'}}>
+                <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                  <STag code={c.originalLabel||c.siding}/>
+                  {c.isOriginal&&<span style={{fontSize:9,color:'var(--mute)',fontFamily:F.b}}>(current)</span>}
+                </div>
+                <div style={{fontSize:11,color:cr.txt,fontFamily:F.b,marginBottom:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name}</div>
+                <div style={{fontFamily:F.m,fontSize:13,fontWeight:700,color:'var(--text)'}}>₹{Math.round(c.totalCost).toLocaleString('en-IN')}</div>
+                <div style={{fontSize:10,color:'var(--dim)',marginTop:2}}>{c.distKm} km · {c.rakesNeeded} rake{c.rakesNeeded!==1?'s':''} · {c.utilizationPct}%</div>
+              </div>;
+            })}
+          </div>
+        </div>
+
+        {/* Preview table of repacked orders */}
+        <div style={{flex:1,minHeight:0,overflow:'auto',padding:'0 20px'}}>
+          <table style={{width:'100%',borderCollapse:'collapse'}}>
+            <thead><tr>
+              <th style={th0}>Rake</th>
+              <th style={th0}>SO No.</th>
+              <th style={th0}>Customer</th>
+              <th style={th0}>City</th>
+              <th style={{...th0,textAlign:'right'}}>Bal PGI</th>
+              <th style={{...th0,textAlign:'right'}}>Freight ₹</th>
+            </tr></thead>
+            <tbody>
+              {repackedRakes.flatMap((rk,ri)=>rk.items.map(({ord,q},oi)=>{
+                const fc=active?freightCost(ord,active.siding):null;
+                return<tr key={ri+'-'+oi}>
+                  <td style={td0}>Rake {ri+1}</td>
+                  <td style={td0}>{ord['SO No.']||''}</td>
+                  <td style={{...td0,maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ord['Sold To Party Name']||''}</td>
+                  <td style={td0}>{ord['Ship To Party City']||''}</td>
+                  <td style={tn0}>{fmt(q)}</td>
+                  <td style={tn0}>{fc?fc.total.toLocaleString('en-IN'):'—'}</td>
+                </tr>;
+              }))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer */}
+        <div style={{padding:'10px 20px',borderTop:'1px solid var(--bdr)',flexShrink:0,
+          background:`linear-gradient(90deg,${C.s2},${C.s1})`,display:'flex',gap:10,justifyContent:'flex-end'}}>
+          <button onClick={exportCombined} disabled={!active} style={{
+            background:`${C._green}18`,border:`1px solid ${C._green}60`,borderRadius:'var(--radius-sm)',
+            color:C.green,fontFamily:F.h,fontSize:12,fontWeight:700,padding:'8px 16px',
+            cursor:active?'pointer':'default',opacity:active?1:.5,
+            letterSpacing:'.07em',textTransform:'uppercase',transition:'all .15s'}}>
+            ↓ Export Combined Plan
+          </button>
+        </div>
+      </>}
+    </div>
+  </div>;
+}
+
 /* ═══════════════════ RAKE COLUMNS FOR DRILL ═══════════════════ */
 const RK_DD=DD; // shared with Order Release Summary
 
@@ -3615,8 +3876,19 @@ function RakePredictor({rows}){
   const[rkAI,setRkAI]=useState(null);
   const[rkTransport,setRkTransport]=useState(null);
   const[regionOpen,setRegionOpen]=useState({});
+  const[combineSel,setCombineSel]=useState([]); // up to 2 {sid,idx} refs
+  const[rkCombine,setRkCombine]=useState(null); // {selA,selB} once "Combine →" clicked
   const{mob}=useBreakpoint();
   const data=useMemo(()=>packRakes(rows),[rows]);
+  const toggleCombineSel=(sid,idx,wagonType)=>{
+    setCombineSel(sel=>{
+      const already=sel.find(s=>s.sid===sid&&s.idx===idx);
+      if(already)return sel.filter(s=>!(s.sid===sid&&s.idx===idx));
+      if(sel.length>=2)return sel; // cap at 2, ignore further picks
+      if(sel.length===1&&sel[0].wagonType!==wagonType)return sel; // wagon-type mismatch — no-op
+      return[...sel,{sid,idx,wagonType}];
+    });
+  };
   const sids=useMemo(()=>Object.values(data).sort((a,b)=>RO.indexOf(a.region)-RO.indexOf(b.region)),[data]);
   if(!sids.length)return null;
   const regions=useMemo(()=>{
@@ -3632,6 +3904,8 @@ function RakePredictor({rows}){
   const fullRakes=sids.reduce((s,d)=>s+d.rakes.filter(r=>r.totalBal>=RAKE_CAP*.9).length,0);
   const totalMT=sids.reduce((s,d)=>s+d.totalBal,0);
   const drillPlan=rkDrill?data[rkDrill.sid]:null;
+  const combineRakeA=rkCombine?data[rkCombine.selA.sid]?.rakes[rkCombine.selA.idx]:null;
+  const combineRakeB=rkCombine?data[rkCombine.selB.sid]?.rakes[rkCombine.selB.idx]:null;
 
   return<div style={{...card,marginTop:14,overflow:'hidden',boxShadow:'var(--shadow-sm)'}}>
     <div onClick={()=>setOpen(o=>!o)} style={{padding:'14px 20px',cursor:'pointer',
@@ -3740,14 +4014,21 @@ function RakePredictor({rows}){
               const pays=rk.items.map(({ord})=>payStatus(ord));
               const hasNone=pays.some(p=>p==='none'),hasPart=pays.some(p=>p==='partial');
               const isActive=rkDrill?.sid===siding&&rkDrill?.idx===realIdx;
+              const combSelected=combineSel.some(s=>s.sid===siding&&s.idx===realIdx);
+              const combDisabled=!combSelected&&(combineSel.length>=2||
+                (combineSel.length===1&&combineSel[0].wagonType!==rk.wagonType));
               return<div key={realIdx} style={{marginBottom:8,
                 background:isActive?'var(--s3)':readyForDispatch?'rgba(34,197,94,.06)':'rgba(0,0,0,.18)',
-                border:`1px solid ${isActive?C.amber:readyForDispatch?C._green+'50':rc.bdr+'30'}`,
+                border:`1px solid ${combSelected?C.sky:isActive?C.amber:readyForDispatch?C._green+'50':rc.bdr+'30'}`,
                 borderRadius:'var(--radius-sm)',overflow:'hidden',transition:'all .15s',
                 opacity:dim?.45:1,
                 filter:dim?'saturate(.35)':'none'}}>
                 <div style={{padding:'5px 10px',display:'flex',alignItems:'center',gap:5,
                   borderBottom:`1px solid ${rc.bdr}20`,flexWrap:'wrap',rowGap:3}}>
+                  <input type="checkbox" checked={combSelected} disabled={combDisabled}
+                    onChange={()=>toggleCombineSel(siding,realIdx,rk.wagonType)}
+                    title={combDisabled?"Can't mix LONG and standard wagon rakes, or more than 2 at once":'Select to combine with another rake'}
+                    style={{width:13,height:13,cursor:combDisabled?'default':'pointer',accentColor:C.sky,flexShrink:0,opacity:combDisabled?.4:1}}/>
                   <span style={{fontFamily:F.m,fontSize:12,color:rc.txt,fontWeight:600}}>Rake {realIdx+1} · {rk.items.length} orders</span>
                   {rk.wagonType&&<span style={{fontSize:9,padding:'1px 7px',borderRadius:'var(--radius-pill)',
                     background:rk.wagonType==='LONG'?'rgba(212,121,60,.2)':'rgba(91,163,217,.15)',
@@ -3923,6 +4204,46 @@ function RakePredictor({rows}){
     {rkTransport&&data[rkTransport]&&ReactDOM.createPortal(
       <TransportPlan sidingData={data[rkTransport]} onClose={()=>setRkTransport(null)}/>,
       document.body
+    )}
+
+    {combineSel.length>0&&ReactDOM.createPortal(
+      <div style={{position:'fixed',left:'50%',bottom:24,transform:'translateX(-50%)',zIndex:250,
+        background:'var(--s1)',border:`1px solid ${C.sky}70`,borderRadius:'var(--radius-lg)',
+        boxShadow:`var(--shadow-xl),0 0 24px ${C._sky}30`,
+        padding:'10px 14px',display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',
+        maxWidth:'94vw'}}>
+        <span style={{fontSize:11,color:C.sky,fontFamily:F.h,fontWeight:700,letterSpacing:'.05em',textTransform:'uppercase'}}>
+          🔀 {combineSel.length} rake{combineSel.length!==1?'s':''} selected
+        </span>
+        {combineSel.map(s=>{
+          const rk=data[s.sid]?.rakes[s.idx];
+          return<span key={s.sid+s.idx} style={{fontSize:11,color:'var(--dim)',fontFamily:F.b,
+            background:'var(--s2)',border:'1px solid var(--bdr)',borderRadius:'var(--radius-pill)',padding:'3px 10px'}}>
+            {s.sid} · Rake {s.idx+1} · {rk?fmt(rk.totalBal):'—'} MT
+          </span>;
+        })}
+        <button onClick={()=>setCombineSel([])} style={{background:'transparent',border:'1px solid var(--bdr)',
+          borderRadius:6,color:'var(--dim)',padding:'6px 10px',cursor:'pointer',fontSize:11}}>
+          ✕ Clear
+        </button>
+        <button onClick={()=>{setRkCombine({selA:combineSel[0],selB:combineSel[1]});setCombineSel([]);}}
+          disabled={combineSel.length!==2} style={{
+          background:combineSel.length===2?`${C._sky}22`:'transparent',
+          border:`1px solid ${combineSel.length===2?C.sky:'var(--bdr)'}`,
+          borderRadius:6,color:combineSel.length===2?C.sky:'var(--mute)',
+          fontFamily:F.h,fontSize:11,fontWeight:700,letterSpacing:'.05em',
+          padding:'7px 14px',cursor:combineSel.length===2?'pointer':'default',transition:'all .15s'}}>
+          Combine → {combineSel.length===2?'':`(${combineSel.length}/2)`}
+        </button>
+      </div>,document.body
+    )}
+
+    {rkCombine&&combineRakeA&&combineRakeB&&ReactDOM.createPortal(
+      <CombineRakesModal
+        rakeA={combineRakeA} rakeB={combineRakeB}
+        sidA={rkCombine.selA.sid} sidB={rkCombine.selB.sid}
+        onClose={()=>setRkCombine(null)}
+      />,document.body
     )}
   </div>;
 }
