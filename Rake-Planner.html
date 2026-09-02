@@ -3482,6 +3482,24 @@ function CombineRakesModal({rakeA,rakeB,sidA,sidB,onClose}){
   const afterUtil=repackedRakes.length?Math.round(
     repackedRakes.reduce((s,rk)=>s+rk.totalBal,0)/(repackedRakes.length*cap)*100):0;
 
+  // Same metrics RakeDrillPanel shows for a single rake — computed across the
+  // combined order set so the user can see FG/WIP/payment readiness before exporting.
+  const combTot=useMemo(()=>mergedOrders.reduce((a,{ord})=>({
+    qty:a.qty+n2(parseFloat(ord['Order Qty_Live'])),
+    bal:a.bal+n2(parseFloat(ord['Bal to PGI'])),
+    fg:a.fg+n2(parseFloat(ord['FG UR Stock'])),
+    wip:a.wip+n2(ord._WIP||0),
+    btr:a.btr+n2(parseFloat(ord['BTR'])),
+    tsl:a.tsl+n2(ord._TotalSlab||0),
+  }),{qty:0,bal:0,fg:0,wip:0,btr:0,tsl:0}),[mergedOrders]);
+  const combFgOk=combTot.fg>=combTot.bal&&combTot.bal>0;
+  const combPays=mergedOrders.map(({ord})=>payStatus(ord));
+  const combHasNone=combPays.some(p=>p==='none'),combHasPart=combPays.some(p=>p==='partial'),combAllOk=!combHasNone&&!combHasPart;
+  const rakeReady=rk=>{
+    const fgOk=rk.totalFG>=rk.totalBal&&rk.totalBal>0;
+    return fgOk&&rk.totalBal>=RAKE_CAP*.9;
+  };
+
   const rc=active?(C.region[active.region]||C.region.Unknown):C.region.Unknown;
 
   const exportCombined=()=>{
@@ -3552,6 +3570,44 @@ function CombineRakesModal({rakeA,rakeB,sidA,sidB,onClose}){
           <div style={{marginLeft:'auto',fontSize:11,color:'var(--dim)',fontFamily:F.b}}>
             {evalRes.totalBal.toLocaleString('en-IN')} MT · {mergedOrders.length} orders
           </div>
+        </div>
+
+        {/* Combined metrics — same figures RakeDrillPanel shows for a single rake */}
+        <div style={{padding:'10px 20px',borderBottom:'1px solid var(--bdr)',flexShrink:0,
+          display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',rowGap:6}}>
+          {repackedRakes.map((rk,ri)=>{
+            const ready=rakeReady(rk);
+            return<span key={ri} style={{display:'inline-flex',alignItems:'center',gap:5,padding:'3px 10px',borderRadius:6,
+              background:ready?`${C._green}25`:rk.totalFG>=rk.totalBal&&rk.totalBal>0?`${C._sky}18`:`${C._rose}20`,
+              border:`1px solid ${ready?C.green:rk.totalFG>=rk.totalBal&&rk.totalBal>0?C.sky:C.rose}`,
+              fontFamily:F.h,fontSize:10,fontWeight:700,
+              color:ready?C.green:rk.totalFG>=rk.totalBal&&rk.totalBal>0?C.sky:C.rose}}>
+              Rake {ri+1}: {ready?'🚂 READY':rk.totalFG>=rk.totalBal&&rk.totalBal>0?'🟡 FG PARTIAL':'🔴 FG SHORT'}
+            </span>;
+          })}
+          {!combAllOk&&<span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'3px 10px',borderRadius:6,
+            background:combHasNone?`${C._rose}18`:`${C._amber}18`,border:`1px solid ${combHasNone?C.rose:C.amber}`,
+            fontFamily:F.h,fontSize:10,fontWeight:700,color:combHasNone?C.rose:C.amber}}>
+            {combHasNone?'⚠ NO PAY':'~ PART PAY'} · verify
+          </span>}
+          <div style={{display:'flex',gap:10,flexWrap:'wrap',rowGap:4}}>
+            {[['Qty',combTot.qty,'var(--text)'],['Bal',combTot.bal,C.sky],['FG',combTot.fg,C.green],
+              ['WIP',combTot.wip,'#f97316'],['BTR',combTot.btr,'#a78bfa'],['TotSlab',combTot.tsl,'#facc15']
+            ].map(([l,v,cl])=>(
+              <span key={l} style={{fontFamily:F.m,fontSize:11,color:cl}}>
+                <span style={{color:'var(--mute)',fontFamily:F.b,fontSize:11}}>{l}: </span>{fmt(v)}
+              </span>
+            ))}
+          </div>
+          {active&&(()=>{
+            const tot=mergedOrders.reduce((s,{ord})=>{const fc=freightCost(ord,active.siding);return fc?{r:s.r+fc.rake,t:s.t+fc.truck,x:s.x+fc.total}:s;},{r:0,t:0,x:0});
+            if(!tot.x)return null;
+            const cr2=v=>'₹'+(v/1e5).toFixed(1)+'L';
+            return<span style={{fontFamily:F.b,fontSize:11,color:C.amber,whiteSpace:'nowrap'}}>
+              Rail: {cr2(tot.r)}{tot.t>0?<span style={{color:'#f97316'}}> + Truck: {cr2(tot.t)}</span>:null}
+              <span style={{fontWeight:700,marginLeft:4}}>= {cr2(tot.x)}</span>
+            </span>;
+          })()}
         </div>
 
         {/* Candidate siding cards */}
@@ -4245,6 +4301,7 @@ function RakePredictor({rows}){
       <div style={{position:'fixed',left:'50%',bottom:24,transform:'translateX(-50%)',zIndex:250,
         background:'var(--s1)',border:`1px solid ${C.sky}70`,borderRadius:'var(--radius-lg)',
         boxShadow:`var(--shadow-xl),0 0 24px ${C._sky}30`,
+        backdropFilter:'blur(14px) saturate(1.4)',WebkitBackdropFilter:'blur(14px) saturate(1.4)',
         padding:'10px 14px',display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',
         maxWidth:'94vw'}}>
         <span style={{fontSize:11,color:C.sky,fontFamily:F.h,fontWeight:700,letterSpacing:'.05em',textTransform:'uppercase'}}>
