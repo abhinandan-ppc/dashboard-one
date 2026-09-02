@@ -2349,9 +2349,14 @@ function OverviewMapModal({rows,onClose}){
 function RakeMapModal({rakePlan,rakeIdx,onClose}){
   const mapRef=useRef(null);
   const mapInst=useRef(null);
+  const searchMarkerRef=useRef(null);
   const[lightMap,setLightMap]=useState(false);
   const[cityDrill,setCityDrill]=useState(null); // {cityName, rows}
   const[reverseKm,setReverseKm]=useState(100);  // reverse range limit
+  const[searchQ,setSearchQ]=useState('');
+  const[searchBusy,setSearchBusy]=useState(false);
+  const[searchErr,setSearchErr]=useState('');
+  const[searchResult,setSearchResult]=useState(null); // {name,lat,lng,distAngul,distHub}
   const rk=rakeIdx!=null?rakePlan.rakes[rakeIdx]:null;
   const rc=C.region[rakePlan.region]||C.region.Unknown;
   const baseCode=rakePlan.siding.replace(/\s*\(Long\)/,'').trim();
@@ -2402,6 +2407,55 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
              (1-t)**2*aLng+2*(1-t)*t*cg+t**2*bLng];
     });
   }
+
+  // ── Live place search via OpenStreetMap's free Nominatim geocoder ──
+  // No API key required; distances are computed client-side with haversine
+  // against Angul and the resolved hub the moment a location is found.
+  async function runSearch(){
+    const q=searchQ.trim();
+    if(!q||searchBusy)return;
+    setSearchBusy(true);setSearchErr('');
+    try{
+      const url='https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q);
+      const res=await fetch(url,{headers:{'Accept':'application/json'}});
+      if(!res.ok)throw new Error('Search request failed');
+      const hits=await res.json();
+      if(!hits.length){setSearchResult(null);setSearchErr(`No location found for "${q}"`);return;}
+      const hit=hits[0];
+      const lat=parseFloat(hit.lat),lng=parseFloat(hit.lon);
+      if(isNaN(lat)||isNaN(lng)){setSearchResult(null);setSearchErr('Location has no usable coordinates');return;}
+      setSearchResult({
+        name:hit.display_name||q,lat,lng,
+        distAngul:Math.round(haversine(ANGUL.lat,ANGUL.lng,lat,lng)),
+        distHub:hub?Math.round(haversine(hub.lat,hub.lng,lat,lng)):null,
+      });
+    }catch(e){setSearchResult(null);setSearchErr('Search failed — check your connection');}
+    finally{setSearchBusy(false);}
+  }
+
+  // Drop/update a pin for the searched location without rebuilding the map
+  useEffect(()=>{
+    const map=mapInst.current;
+    if(!map||!window.L)return;
+    if(searchMarkerRef.current){searchMarkerRef.current.remove();searchMarkerRef.current=null;}
+    if(!searchResult)return;
+    const L=window.L;
+    const icon=L.divIcon({html:`
+      <div style="position:relative;width:30px;height:38px;filter:drop-shadow(0 2px 5px rgba(0,0,0,.5))">
+        <svg viewBox="0 0 24 32" width="30" height="38">
+          <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20c0-6.6-5.4-12-12-12z" fill="#38bdf8"/>
+          <circle cx="12" cy="12" r="5" fill="#031521"/>
+        </svg>
+      </div>`,className:'',iconSize:[30,38],iconAnchor:[15,38]});
+    const tip=`<div style="font-family:Poppins,system-ui,sans-serif;max-width:220px">`
+      +`<div style="font-size:12px;font-weight:700;margin-bottom:3px">${escHtml(searchResult.name)}</div>`
+      +`<div style="font-size:11px;color:#f59e0b">${fmt(searchResult.distAngul)} km from Angul PlateMill</div>`
+      +(searchResult.distHub!=null?`<div style="font-size:11px;color:#38bdf8">${fmt(searchResult.distHub)} km from ${escHtml(hub.name)}</div>`:'')
+      +`</div>`;
+    searchMarkerRef.current=L.marker([searchResult.lat,searchResult.lng],{icon,zIndexOffset:100})
+      .addTo(map).bindTooltip(tip,{direction:'top',permanent:true,offset:[0,-34],opacity:.97});
+    map.flyTo([searchResult.lat,searchResult.lng],7,{duration:.8});
+  },[searchResult]);
 
   useEffect(()=>{
     if(!mapRef.current||!window.L)return;
@@ -2582,8 +2636,11 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
     const allPts=[[ANGUL.lat,ANGUL.lng],...(hub?[[hub.lat,hub.lng]]:[]),...cities.map(c=>[c.lat,c.lng])];
     if(allPts.length>1)map.fitBounds(L.latLngBounds(allPts),{padding:[50,50],maxZoom:8});
 
-    return()=>{if(mapInst.current){mapInst.current.remove();mapInst.current=null;}};
+    return()=>{if(mapInst.current){mapInst.current.remove();mapInst.current=null;}searchMarkerRef.current=null;};
   },[rakePlan.siding,rakeIdx,lightMap,reverseKm]);
+
+  // Reset the search pin when switching to a different rake/siding
+  useEffect(()=>{setSearchResult(null);setSearchQ('');setSearchErr('');},[rakePlan.siding,rakeIdx]);
 
   return<><div style={{position:'fixed',inset:0,zIndex:300,background:'rgba(2,5,18,.88)',
     backdropFilter:'blur(5px)',display:'flex',alignItems:'center',justifyContent:'center',
@@ -2624,6 +2681,39 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
           onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color=C.dim}}>
           ✕ Close
         </button>
+      </div>
+
+      {/* Place search — free OpenStreetMap Nominatim geocoding, computes
+          distance from Angul PlateMill (and the rake's hub) on search */}
+      <div style={{padding:'8px 18px',borderBottom:'1px solid var(--bdr)',flexShrink:0,
+        background:'var(--s2)',display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+        <span style={{fontSize:11,color:'var(--mute)',fontFamily:F.h,letterSpacing:'.08em',textTransform:'uppercase',flexShrink:0}}>
+          📍 Search Place
+        </span>
+        <input type="text" placeholder="City / place name…" value={searchQ}
+          onChange={e=>{setSearchQ(e.target.value);if(searchErr)setSearchErr('');}}
+          onKeyDown={e=>{if(e.key==='Enter')runSearch();}}
+          style={{...inp,flex:'1 1 160px',minWidth:120,padding:'5px 10px',fontSize:12}}/>
+        <button onClick={runSearch} disabled={searchBusy||!searchQ.trim()} style={{
+          background:`${C._sky}18`,border:`1px solid ${C._sky}60`,borderRadius:6,
+          color:C.sky,fontFamily:F.h,fontSize:11,fontWeight:700,letterSpacing:'.05em',
+          padding:'6px 14px',cursor:searchBusy||!searchQ.trim()?'default':'pointer',
+          opacity:searchBusy?.6:1,flexShrink:0,transition:'opacity .15s'}}>
+          {searchBusy?'Searching…':'Search'}
+        </button>
+        {searchResult&&<>
+          <span style={{fontSize:11,fontFamily:F.m,color:C.amber,fontWeight:700,flexShrink:0}}>
+            {fmt(searchResult.distAngul)} km from Angul
+          </span>
+          {searchResult.distHub!=null&&<span style={{fontSize:11,fontFamily:F.m,color:C.sky,flexShrink:0}}>
+            · {fmt(searchResult.distHub)} km from {hub.name}
+          </span>}
+          <button onClick={()=>{setSearchResult(null);setSearchQ('');}} title="Clear search pin" style={{
+            background:'transparent',border:'1px solid var(--bdr)',borderRadius:5,color:'var(--dim)',
+            padding:'3px 9px',cursor:'pointer',fontSize:11,flexShrink:0}}>✕</button>
+        </>}
+        {searchErr&&<span style={{fontSize:11,color:C.rose,flexShrink:0}}>{searchErr}</span>}
+        <span style={{fontSize:9,color:'var(--mute)',marginLeft:'auto',flexShrink:0}}>via OpenStreetMap Nominatim</span>
       </div>
 
       {/* Reverse range bar */}
@@ -3434,10 +3524,20 @@ function RakePredictor({rows}){
   const[rkMap,setRkMap]=useState(null);
   const[rkAI,setRkAI]=useState(null);
   const[rkTransport,setRkTransport]=useState(null);
+  const[regionOpen,setRegionOpen]=useState({});
   const{mob}=useBreakpoint();
   const data=useMemo(()=>packRakes(rows),[rows]);
   const sids=useMemo(()=>Object.values(data).sort((a,b)=>RO.indexOf(a.region)-RO.indexOf(b.region)),[data]);
   if(!sids.length)return null;
+  const regions=useMemo(()=>{
+    const seen=new Set(sids.map(s=>s.region));
+    return RO.filter(r=>seen.has(r)).concat([...seen].filter(r=>!RO.includes(r)));
+  },[sids]);
+  const byRegion=useMemo(()=>{
+    const g={};
+    sids.forEach(s=>{(g[s.region]=g[s.region]||[]).push(s);});
+    return g;
+  },[sids]);
   const totRakes=sids.reduce((s,d)=>s+d.rakes.length,0);
   const fullRakes=sids.reduce((s,d)=>s+d.rakes.filter(r=>r.totalBal>=RAKE_CAP*.9).length,0);
   const totalMT=sids.reduce((s,d)=>s+d.totalBal,0);
@@ -3471,8 +3571,32 @@ function RakePredictor({rows}){
       <span style={{fontFamily:F.m,fontSize:12,color:'var(--mute)',transform:`rotate(${open?'0':'180deg'})`,transition:'transform .2s'}}>▲</span>
     </div>
 
-    {open&&<div style={{padding:mob?'10px 8px':'16px 18px',display:'flex',flexWrap:'wrap',gap:mob?8:12}}>
-      {sids.map(({siding,region,rakes,totalBal,totalQty,n})=>{
+    {open&&<div style={{padding:mob?'10px 8px':'16px 18px'}}>
+      {regions.map(region=>{
+        const list=byRegion[region]||[];
+        if(!list.length)return null;
+        const rrc=C.region[region]||C.region.Unknown;
+        const isRegionOpen=regionOpen[region]!==false;
+        const regRakes=list.reduce((s,d)=>s+d.rakes.filter(r=>r.totalBal>=RAKE_CAP*RAKE_MIN_SHOW).length,0);
+        const regBal=list.reduce((s,d)=>s+d.totalBal,0);
+        return<div key={region} style={{marginBottom:12}}>
+          <div onClick={()=>setRegionOpen(p=>({...p,[region]:!isRegionOpen}))} style={{
+            cursor:'pointer',display:'flex',alignItems:'center',gap:10,padding:'9px 14px',
+            background:rrc.bg,border:`1px solid ${rrc.bdr}`,
+            borderRadius:isRegionOpen?'var(--radius-sm) var(--radius-sm) 0 0':'var(--radius-sm)',
+            userSelect:'none',transition:'border-radius .15s'}}>
+            <RBadge region={region}/>
+            <span style={{fontSize:11.5,color:rrc.txt,opacity:.85}}>
+              {list.length} siding{list.length!==1?'s':''} · {regRakes} rake{regRakes!==1?'s':''} · {fmt(regBal)} MT bal
+            </span>
+            <span style={{flex:1}}/>
+            <span style={{fontFamily:F.m,fontSize:11,color:rrc.txt,opacity:.7,
+              transform:`rotate(${isRegionOpen?'0':'180deg'})`,transition:'transform .2s'}}>▲</span>
+          </div>
+          {isRegionOpen&&<div style={{display:'flex',flexWrap:'wrap',gap:mob?8:12,
+            border:`1px solid ${rrc.bdr}`,borderTop:'none',borderRadius:'0 0 var(--radius-sm) var(--radius-sm)',
+            background:'rgba(0,0,0,.08)',padding:mob?8:12}}>
+          {list.map(({siding,region,rakes,totalBal,totalQty,n})=>{
         const rc=C.region[region]||C.region.Unknown;
         // Only count/show rakes that meet the 50% minimum threshold
         const visRakes=rakes.filter(r=>r.totalBal>=RAKE_CAP*RAKE_MIN_SHOW);
@@ -3600,7 +3724,7 @@ function RakePredictor({rows}){
                     return<>
                       <div style={{display:'flex',justifyContent:'space-between',marginBottom:2}}>
                         <span style={{fontSize:11.5,color:rc.txt,fontWeight:600}}>WIP Stock</span>
-                        <span style={{fontFamily:F.m,fontSize:11,color:wipCol,fontWeight:700}}>+{fmt(wipTot)} MT</span>
+                        <span style={{fontFamily:F.m,fontSize:11,color:wipCol,fontWeight:700}}>{fmt(wipTot)} MT</span>
                       </div>
                       <div style={{height:4,borderRadius:3,background:'rgba(0,0,0,.35)',overflow:'hidden',position:'relative',marginBottom:5}}>
                         <div style={{height:'100%',width:`${fgPct}%`,borderRadius:3,
@@ -3678,6 +3802,9 @@ function RakePredictor({rows}){
               ↓ Excel
             </button>
           </div>
+        </div>;
+          })}
+          </div>}
         </div>;
       })}
     </div>}
