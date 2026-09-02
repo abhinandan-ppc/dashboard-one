@@ -512,6 +512,9 @@ function computeRow(row){
   else if(FREIGHT_RATES[siding]){const _fr=FREIGHT_RATES[siding];if(_fr.region)region=_fr.region;if(_fr.state)state=_fr.state;}
   // Orders with no rail siding → Road region for display
   if(region==='Unknown'||!siding||siding==='Unknown'){region='Road';}
+  // Yellow Goods segment (per the live Segment table) always routes to Road,
+  // overriding any siding/region derived above — these customers don't ship by rail.
+  if(isYellowGoodsCust(row['Sold To Party Name'])){siding='ROAD';region='Road';}
   return{_State:state,_Region:region,_Siding:siding,
     _WIP:plate-fg,_TotalSlab:slab+noPl,
     _FIStatus:getFIStatus(rem),
@@ -1460,29 +1463,16 @@ function freightCost(ord,sidingOverride){
   return{rake,hand,truck,total:rake+hand+truck,rakeRate:rR,handRate:hR,truckRate:tR,totalRate:rR+hR+tR,bal,isODC:useODC};
 }
 
-/* Customers excluded from rail planning by default (OEM/captive/govt/small lots) */
-const DEFAULT_EXCL_CUST_PREFIXES=[
-  'AAKANKSHA, GOVERNMENT','DUMMY CUSTOMER FOR ENQUIRY',
-  'DEFENCE (NAVY','APEX AUTO PRIVATE',
-  'EC BLADES AND TOOLS','FAB TOOL INDUSTRIES',
-  'FERRUM EXTREME ENGINEERING',
-  'HD HYUNDAI CONSTRUCTION EQUIPMENT','HD CONSTRUCTION EQUIPMENT INDIA',
-  'ICE STEEL 1 PRIVATE','INDIA METAL ONE STEEL PLATE',
-  'JCB INDIA LTD',
-  'KAKAJI AUTO','KATSUSHIRO MATEX INDIA',
-  'METSO OUTOTEC INDIA','MODEL INFRA CORPORATION',
-  'POLYHOSE SATO-SHOJI','RANE INDUSTRIES PVT',
-  'RSB TRANSMISSIONS','SATO SHOJI INDIA',
-  'SCHWING STETTER','SURIN AUTOMOTIVE',
-  'TATA HITACHI CONSTRUCTION','TATA STEEL DOWNSTREAM PRODUCTS',
-  'TII INDIA PVT','WHEELS INDIA LIMITED',
-  'AGRO AUTO COMPONENTS','THRIVENI EARTHMOVERS',
-  'L&T HEAVY ENGINEERING',
-];
-function isDefaultExclCust(name){
+/* Sold-To-Party → Segment lookup (from the shared EBTP workbook's SEGMENT tab,
+   fetched/cached by the hub — see SEGMENT_MAP loader below). Customers whose
+   segment is "Yellow Goods" (OEM/captive earthmoving & construction-equipment
+   accounts) are routed to Road by default in computeRow() — they are NOT
+   deselected from the customer filter; they simply never need a rail siding. */
+let SEGMENT_MAP=new Map(); // normalized "SOLD TO PARTY NAME" -> normalized "SEGMENT"
+function normCustKey(name){return String(name||'').trim().toUpperCase();}
+function isYellowGoodsCust(name){
   if(!name)return false;
-  const n=name.toUpperCase().trim();
-  return DEFAULT_EXCL_CUST_PREFIXES.some(p=>n.startsWith(p.toUpperCase()));
+  return SEGMENT_MAP.get(normCustKey(name))==='YELLOW GOODS';
 }
 /* Heat Treatment Category — mirrors CASE formula from BI */
 function getHTC(extGrade, supplyCondition){
@@ -4260,6 +4250,57 @@ function writeHubEbtpCache(csvText,rowCount){
   }).catch(()=>false);
 }
 
+/* Segment cache — same shared IndexedDB (jspl-ebtp-shared-db/cache), different
+   key ('segment'), written by the hub's fetchAndCacheSegment(). Read-only here:
+   this page never fetches the Segment sheet itself, it just consumes the cache. */
+const SEGMENT_DB_KEY='segment';
+function readHubSegmentCache(){
+  return openEbtpDb().then(db=>{
+    if(!db)return null;
+    return new Promise(resolve=>{
+      try{
+        const tx=db.transaction(EBTP_DB_STORE,'readonly');
+        const req=tx.objectStore(EBTP_DB_STORE).get(SEGMENT_DB_KEY);
+        req.onsuccess=()=>{try{db.close();}catch(e){}resolve(req.result||null);};
+        req.onerror=()=>{try{db.close();}catch(e){}resolve(null);};
+      }catch(e){try{db.close();}catch(_){}resolve(null);}
+    });
+  }).catch(()=>null);
+}
+/* Parses the Segment sheet's CSV ("Sold To Party Name,Segment,...") into
+   SEGMENT_MAP. Reuses the same quote-aware column split as parseCSV. */
+function loadSegmentCsvIntoMap(csvText){
+  if(!csvText)return false;
+  const splitCSV=line=>{
+    const c=[];let cur='',inQ=false;
+    for(const ch of line){
+      if(ch==='"'){inQ=!inQ;}
+      else if(ch===','&&!inQ){c.push(cur.replace(/^"|"$/g,'').trim());cur='';}
+      else cur+=ch;
+    }
+    c.push(cur.replace(/^"|"$/g,'').trim());
+    return c;
+  };
+  const lines=csvText.split('\n').filter(l=>l.trim());
+  if(!lines.length)return false;
+  const headers=splitCSV(lines[0]).map(h=>h.toLowerCase());
+  const custIdx=headers.findIndex(h=>h.includes('sold to party name'));
+  const segIdx=headers.findIndex(h=>h==='segment'||h.endsWith('segment'));
+  if(custIdx===-1||segIdx===-1)return false;
+  const map=new Map();
+  for(let i=1;i<lines.length;i++){
+    const cols=splitCSV(lines[i]);
+    const cust=normCustKey(cols[custIdx]);
+    const seg=String(cols[segIdx]||'').trim().toUpperCase();
+    if(cust&&seg)map.set(cust,seg);
+  }
+  SEGMENT_MAP=map;
+  return true;
+}
+// Best-effort early load, independent of React mount timing, so SEGMENT_MAP
+// is populated as early as possible before the first file/CSV parse runs.
+readHubSegmentCache().then(cached=>{ if(cached&&cached.csvText)loadSegmentCsvIntoMap(cached.csvText); }).catch(()=>{});
+
 /* ── Fallback fetch chain — only used when the hub's cache isn't ready ── */
 function tryXHR(url,attempts=5,timeoutMs=4000){
   const attempt=n=>new Promise((res,rej)=>{
@@ -4517,7 +4558,7 @@ function App(){
         });
         setSelM(new Set(defaultModes));
         const _allC2=[...new Set(processed.map(r=>r['Sold To Party Name']).filter(Boolean))];
-        setSelCust(new Set(_allC2.filter(c=>!isDefaultExclCust(c))));
+        setSelCust(new Set(_allC2)); // all customers selected by default — Yellow Goods route to Road, not hidden
       }catch(err){alert('Parse error: '+err.message);}
       setLoading(false);
     };
@@ -4677,7 +4718,7 @@ function App(){
         const allModes=[...new Set(processed.map(r=>r['MODE']).filter(Boolean))];
         setSelM(new Set(allModes.filter(m=>{const mu=String(m).toUpperCase();return !mu.startsWith('HOLD')&&!mu.includes('PT');})));
         const _allC2=[...new Set(processed.map(r=>r['Sold To Party Name']).filter(Boolean))];
-        setSelCust(new Set(_allC2.filter(c=>!isDefaultExclCust(c))));
+        setSelCust(new Set(_allC2)); // all customers selected by default — Yellow Goods route to Road, not hidden
       }catch(e){console.error('CSV parse:',e);}
       setLoading(false);
       },50);
@@ -4745,10 +4786,34 @@ function App(){
         const cached=await readHubEbtpCache();
         if(cached&&cached.csvText)parseCSV(cached.csvText);
       }
+      if(e.data&&e.data.type==='segment-cache-updated'){
+        const cached=await readHubSegmentCache();
+        if(cached&&cached.csvText&&loadSegmentCsvIntoMap(cached.csvText)){
+          // Re-derive _Siding/_Region (Yellow Goods → Road) for already-loaded rows
+          setRows(prev=>prev.length?prev.map(r=>({...r,...computeRow(r)})):prev);
+        }
+      }
     };
     window.addEventListener('message',onMsg);
     return()=>window.removeEventListener('message',onMsg);
   },[parseCSV]);
+
+  // If the segment map arrives (or was already cached) after rows are already
+  // loaded — e.g. this page was opened before the hub finished the segment
+  // fetch — re-derive routing once it's available so Yellow Goods still lands
+  // on Road even without a full reparse.
+  useEffect(()=>{
+    if(!rows.length)return;
+    let alive=true;
+    readHubSegmentCache().then(cached=>{
+      if(!alive||!cached||!cached.csvText)return;
+      if(loadSegmentCsvIntoMap(cached.csvText)){
+        setRows(prev=>prev.map(r=>({...r,...computeRow(r)})));
+      }
+    }).catch(()=>{});
+    return()=>{alive=false;};
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[rows.length>0]);
 
   // A real sticky header bar (matching the loaded dashboard's own top bar)
   // shown during boot/loading/error states, instead of a floating overlay

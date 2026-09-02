@@ -188,15 +188,16 @@ input[type=range] { flex: 1; accent-color: var(--md-sys-color-secondary); height
 .select-selected:hover { background: rgba(14, 165, 233, 0.05); }
 .select-selected.open { border-radius: var(--radius-xs) var(--radius-xs) 0 0; }
 .select-items {
-  position: absolute; top: 100%; left: 0; right: 0; background: #0f172a;
-  border: 1px solid var(--md-sys-color-secondary); border-top: none; 
+  position: absolute; top: 100%; left: 0; right: 0; background: var(--glass-hi);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--md-sys-color-secondary); border-top: none;
   border-radius: 0 0 var(--radius-xs) var(--radius-xs); z-index: 99; display: none;
-  flex-direction: column; box-shadow: 0 8px 16px rgba(0,0,0,0.4); overflow: hidden;
+  flex-direction: column; box-shadow: var(--shadow-lg); overflow: hidden;
 }
 .select-items.show { display: flex; }
-.select-items div { padding: 12px 14px; cursor: pointer; transition: 0.1s; color: #f8fafc; font-weight: 500;}
+.select-items div { padding: 12px 14px; cursor: pointer; transition: 0.1s; color: var(--text); font-weight: 500;}
 .select-items div:hover { background: rgba(14, 165, 233, 0.15); }
-.select-items div.active-item { background: #2563eb; color: #ffffff; font-weight: 700;}
+.select-items div.active-item { background: var(--md-sys-color-secondary); color: var(--on-secondary); font-weight: 700;}
 
 /* ─── SIDEBARS ─── */
 .panel {

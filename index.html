@@ -1257,6 +1257,7 @@ function installFrameHeaderControls(){
           // dashboard (fetchAndCacheEBTP broadcasts 'ebtp-cache-updated' on
           // success, which every dashboard listens for and re-parses).
           try{ fetchAndCacheEBTP(true); }catch(e){}
+          try{ fetchAndCacheSegment(true); }catch(e){}
         });
         themeBtn.addEventListener('click', function(){
           var themeToggle = document.getElementById('themeToggle');
@@ -1442,6 +1443,7 @@ window.addEventListener('message', function(e){
     // force), and shares one in-flight promise if already fetching.
     if(e.data && e.data.type === 'request-ebtp-fetch'){
       try{ fetchAndCacheEBTP(!!e.data.force); }catch(err){}
+      try{ fetchAndCacheSegment(!!e.data.force); }catch(err){}
     }
   }catch(err){}
 });
@@ -1583,6 +1585,7 @@ itemForm.addEventListener("submit", function(e){
 /* ─── Refresh EBTP ─── */
 document.getElementById("resetBtn").addEventListener("click", function(){
   try{ fetchAndCacheEBTP(true); }catch(e){}
+  try{ fetchAndCacheSegment(true); }catch(e){}
 });
 
 /* ─── Theme ─── */
@@ -1643,7 +1646,7 @@ setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
     if(userMenu) userMenu.style.display = 'none';
     // fetchAndCacheEBTP() is defined in a <script> further down the page —
     // defer to the next tick so that script has finished executing first.
-    setTimeout(function(){ try{ fetchAndCacheEBTP(); }catch(e){} }, 0);
+    setTimeout(function(){ try{ fetchAndCacheEBTP(); }catch(e){} try{ fetchAndCacheSegment(); }catch(e){} }, 0);
     return;
   }
 
@@ -1665,6 +1668,7 @@ setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
       render();
     }
     try{ fetchAndCacheEBTP(); }catch(e){}
+    try{ fetchAndCacheSegment(); }catch(e){}
   }).catch(function(){
     if(stageEl) stageEl.style.display = 'none';
     if(loginWrap) loginWrap.style.display = 'flex';
@@ -1728,6 +1732,11 @@ setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
 "use strict";
 var EBTP_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQEKS6uq6epbkSmpv548hSG63WVUiFwKLXctpeM3G8NMeXJ_ZJaTCuFj95n4gTRuhchM_T4q_kp5_au/pub?gid=0&single=true&output=csv";
 var EBTP_CACHE_KEY = "jspl-ebtp-cache-v1";
+// Sold-To-Party → Segment lookup (e.g. "Yellow Goods"), published from the same
+// workbook's SEGMENT tab. Fetched/cached alongside EBTP so every dashboard can
+// read it from the same shared IndexedDB without its own network round-trip.
+var SEGMENT_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQEKS6uq6epbkSmpv548hSG63WVUiFwKLXctpeM3G8NMeXJ_ZJaTCuFj95n4gTRuhchM_T4q_kp5_au/pub?gid=856963267&single=true&output=csv";
+var SEGMENT_CACHE_KEY = "jspl-segment-cache-v1";
 
 function tryXHR(url, attempts, timeoutMs){
   attempts = attempts || 5; timeoutMs = timeoutMs || 4000;
@@ -1792,6 +1801,7 @@ function tryApiProxy(){
 var EBTP_DB_NAME = 'jspl-ebtp-shared-db';
 var EBTP_DB_STORE = 'cache';
 var EBTP_DB_KEY = 'latest';
+var SEGMENT_DB_KEY = 'segment';
 
 function openEbtpDb(){
   return new Promise(function(resolve){
@@ -1807,21 +1817,21 @@ function openEbtpDb(){
     }catch(e){ resolve(null); }
   });
 }
-function readEbtpCache(){
+function readDbCache(key){
   return openEbtpDb().then(function(db){
     if(!db) return null;
     return new Promise(function(resolve){
       try{
         var tx = db.transaction(EBTP_DB_STORE, 'readonly');
         var store = tx.objectStore(EBTP_DB_STORE);
-        var req = store.get(EBTP_DB_KEY);
+        var req = store.get(key);
         req.onsuccess = function(){ try{ db.close(); }catch(e){} resolve(req.result || null); };
         req.onerror = function(){ try{ db.close(); }catch(e){} resolve(null); };
       }catch(e){ try{ db.close(); }catch(_){} resolve(null); }
     });
   }).catch(function(){ return null; });
 }
-function writeEbtpCache(csvText, rowCount){
+function writeDbCache(key, csvText, rowCount, localStorageFlagKey){
   var record = { csvText: csvText, fetchedAt: Date.now(), rowCount: rowCount };
   return openEbtpDb().then(function(db){
     if(!db) return false;
@@ -1829,10 +1839,12 @@ function writeEbtpCache(csvText, rowCount){
       try{
         var tx = db.transaction(EBTP_DB_STORE, 'readwrite');
         var store = tx.objectStore(EBTP_DB_STORE);
-        store.put(record, EBTP_DB_KEY);
+        store.put(record, key);
         tx.oncomplete = function(){
           try{ db.close(); }catch(e){}
-          try{ localStorage.setItem(EBTP_CACHE_KEY, JSON.stringify({ fetchedAt: record.fetchedAt, rowCount: rowCount })); }catch(e){}
+          if(localStorageFlagKey){
+            try{ localStorage.setItem(localStorageFlagKey, JSON.stringify({ fetchedAt: record.fetchedAt, rowCount: rowCount })); }catch(e){}
+          }
           resolve(true);
         };
         tx.onerror = function(){ try{ db.close(); }catch(e){} resolve(false); };
@@ -1840,6 +1852,10 @@ function writeEbtpCache(csvText, rowCount){
     });
   }).catch(function(){ return false; });
 }
+function readEbtpCache(){ return readDbCache(EBTP_DB_KEY); }
+function writeEbtpCache(csvText, rowCount){ return writeDbCache(EBTP_DB_KEY, csvText, rowCount, EBTP_CACHE_KEY); }
+function readSegmentCache(){ return readDbCache(SEGMENT_DB_KEY); }
+function writeSegmentCache(csvText, rowCount){ return writeDbCache(SEGMENT_DB_KEY, csvText, rowCount, SEGMENT_CACHE_KEY); }
 
 // Legacy per-page localStorage caches from before EBTP fetching was
 // centralized here. Rake-Planner in particular used to persist BOTH the
@@ -1940,6 +1956,48 @@ function fetchAndCacheEBTP(force){
     return { ok: false, error: errs.join(' · ') };
   })();
   return ebtpFetchInFlight;
+}
+
+// ── Segment (Sold-To-Party → Segment, e.g. "Yellow Goods") — same fetch
+// strategy chain as EBTP, minus the site-specific /api/ebtp-proxy route,
+// cached under its own key so it never collides with the EBTP record. ──
+var segmentFetchInFlight = null;
+function fetchAndCacheSegment(force){
+  if(segmentFetchInFlight && !force) return segmentFetchInFlight;
+  var enc = encodeURIComponent(SEGMENT_SHEET_URL);
+  var strats = [
+    { n: 'XHR',            f: function(){ return tryXHR(SEGMENT_SHEET_URL); } },
+    { n: 'Iframe',         f: function(){ return tryIframeFetch(SEGMENT_SHEET_URL); } },
+    { n: 'corsproxy.io',   f: function(){ return tryProxyFetch('https://corsproxy.io/?' + enc, false); } },
+    { n: 'codetabs',       f: function(){ return tryProxyFetch('https://api.codetabs.com/v1/proxy?quest=' + enc, false); } },
+    { n: 'allorigins/raw', f: function(){ return tryProxyFetch('https://api.allorigins.win/raw?url=' + enc, false); } },
+    { n: 'allorigins/get', f: function(){ return tryProxyFetch('https://api.allorigins.win/get?url=' + enc, true); } },
+    { n: 'thingproxy',     f: function(){ return tryProxyFetch('https://thingproxy.freeboard.io/fetch/' + SEGMENT_SHEET_URL, false); } },
+    { n: 'jsonp.afeld.me', f: function(){ return tryProxyFetch('https://jsonp.afeld.me/?url=' + enc, false); } },
+  ];
+
+  segmentFetchInFlight = (async function(){
+    var cached = await readSegmentCache();
+    if(cached && !force) { segmentFetchInFlight = null; return { ok: true, cached: true, fetchedAt: cached.fetchedAt }; }
+
+    for(var i = 0; i < strats.length; i++){
+      var f = strats[i].f;
+      try{
+        var text = await f();
+        if(!text || text.length < 50) throw new Error('empty');
+        if(text.split('\n')[0].indexOf(',') === -1) throw new Error('not CSV');
+        var rowCount = text.split('\n').filter(function(l){ return l.trim(); }).length - 1;
+        var wrote = await writeSegmentCache(text, rowCount);
+        segmentFetchInFlight = null;
+        if(!wrote) return { ok: false, error: 'IndexedDB write failed' };
+        try{ broadcastToFrame({ type: 'segment-cache-updated', fetchedAt: Date.now(), rowCount: rowCount }); }catch(e){}
+        return { ok: true, rowCount: rowCount, fetchedAt: Date.now() };
+      }catch(e){ /* try next strategy, silently — segment lookup is a soft enhancement */ }
+    }
+    segmentFetchInFlight = null;
+    return { ok: false, error: 'All segment fetch methods failed' };
+  })();
+  return segmentFetchInFlight;
 }
 </script>
 
