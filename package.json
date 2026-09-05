@@ -1,5 +1,5 @@
 {
-  "dependencies": {
-    "bytez.js": "^3.0.0"
-  }
+  "name": "dashboard-one",
+  "private": true,
+  "type": "module"
 }
