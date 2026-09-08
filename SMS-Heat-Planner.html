@@ -18,15 +18,16 @@ body {
   color: var(--tx);
   background-color: var(--bg-color);
   transition: background-color 0.3s, color 0.3s;
-  display: flex;
-  flex-direction: column;
+  position: relative;
   overflow: hidden;
 }
 button { font: inherit; cursor: pointer; border: none; outline: none; }
 
-.top-wrapper { flex-shrink: 0; padding: 20px 24px 16px; position: sticky; top: 0; z-index: 50; }
+.top-wrapper { position: absolute; top: 0; left: 0; right: 0; padding: 20px 24px 16px; z-index: 50; pointer-events: none; }
+.top-wrapper > * { pointer-events: auto; }
 .top-bar {
   position: relative; min-height: 64px; box-sizing: border-box;
+  max-width: 1600px; margin: 0 auto;
   background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   padding: 12px 20px; border-radius: var(--radius-lg); border: var(--glass-border-rule); box-shadow: var(--shadow-md);
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;
@@ -74,7 +75,7 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 }
 .reset-btn:hover { background: var(--input-hover); }
 
-.frame-stage { flex: 1; min-height: 0; position: relative; }
+.frame-stage { position: absolute; inset: 0; }
 .frame-box {
   position: absolute; inset: 0;
   overflow: hidden; display: none; background: var(--bg-color);
@@ -225,8 +226,32 @@ window.addEventListener('message', function(e){
     var theme = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
     if(e.source === (dailyFrame && dailyFrame.contentWindow)) sendTheme(dailyFrame, theme);
     if(e.source === (monthlyFrame && monthlyFrame.contentWindow)) sendTheme(monthlyFrame, theme);
+    sendFrameTop(e.source === (dailyFrame && dailyFrame.contentWindow) ? dailyFrame : monthlyFrame);
   }
 });
+
+// ─── Floating header height: pushed into both iframes so their own content
+// starts clear of the transparent overlay instead of rendering underneath it ───
+var topBarEl = document.querySelector('.top-bar');
+function sendFrameTop(frame){
+  if(!frame || !frame.contentWindow || !topBarEl) return;
+  var rect = topBarEl.getBoundingClientRect();
+  var height = Math.ceil(rect.bottom);
+  frame.contentWindow.postMessage({type: 'frame-top', height: height}, '*');
+}
+function broadcastFrameTop(){
+  sendFrameTop(dailyFrame);
+  if(monthlyLoaded) sendFrameTop(monthlyFrame);
+}
+window.addEventListener('resize', broadcastFrameTop);
+// The daily iframe often finishes loading before the parent's own web fonts
+// do, so its first measurement can undershoot the header's final height —
+// re-measure once fonts settle and once more shortly after for safety.
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(broadcastFrameTop);
+window.addEventListener('load', broadcastFrameTop);
+setTimeout(broadcastFrameTop, 400);
+dailyFrame.addEventListener('load', broadcastFrameTop);
+monthlyFrame.addEventListener('load', broadcastFrameTop);
 
 setTheme(localStorage.getItem('smsPlannerTheme') || 'dark');
 </script>

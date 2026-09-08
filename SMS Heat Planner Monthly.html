@@ -91,6 +91,7 @@ body, html {
   overflow-x: hidden;
   width: 100%;
 }
+body { padding-top: var(--frame-top, 96px); }
 
 /* ─── SCROLLBARS ─── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -126,7 +127,7 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
 .btn-header { height: 40px; padding: 0 20px; border-radius: 20px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; background: var(--input-bg); color: var(--tx); border: var(--glass-border); outline: none; }
 .btn-header:hover { background: var(--input-hover); transform: scale(1.02); }
 /* ─── APP SHELL & LAYOUT ─── */
-.app-shell { max-width: 1600px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; width: 100%; overflow-x: hidden; box-sizing: border-box; }
+.app-shell { max-width: 1600px; margin: 0 auto; padding: 16px 24px 24px; display: flex; flex-direction: column; gap: 20px; width: 100%; overflow-x: hidden; box-sizing: border-box; }
 
 .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; margin-bottom: 4px; }
 .kpi { 
@@ -735,6 +736,7 @@ function applyTheme(mode) {
 window.addEventListener("message", (e) => {
     if (e.data && e.data.type === "set-theme") applyTheme(e.data.theme);
     if (e.data && e.data.type === "reset") window.resetSimulator();
+    if (e.data && e.data.type === "frame-top") document.documentElement.style.setProperty('--frame-top', e.data.height + 'px');
 });
 if (window.parent !== window) window.parent.postMessage({type: "theme-ready"}, "*");
 
