@@ -471,6 +471,13 @@ input { font: inherit; color: inherit; }
   </div>
 </div>
 
+<div class="login-wrap" id="pendingWrap" style="display:none">
+  <div class="login-box">
+    <h2>Access pending</h2>
+    <p>Your account is registered but hasn't been approved yet. Ask the administrator to grant access, then reload this page.</p>
+  </div>
+</div>
+
 <div class="stage" id="stage" style="display:none">
   <div class="stage-hd">
     <h2>Planning &amp; Monitoring Tools</h2>
@@ -1635,6 +1642,7 @@ setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
   var userName = document.getElementById('userName');
   var userDomain = document.getElementById('userDomain');
   var adminLink = document.getElementById('adminLink');
+  var pendingWrap = document.getElementById('pendingWrap');
 
   var isLocalDev = ['localhost', '127.0.0.1', '::1', ''].indexOf(location.hostname) !== -1
     || location.hostname.endsWith('.local')
@@ -1654,13 +1662,25 @@ setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
     if(!r.ok) throw new Error('unauthenticated');
     return r.json();
   }).then(function(u){
+    var isAdminUser = !!u.admin;
+    if(!isAdminUser && u.status !== 'approved'){
+      if(stageEl) stageEl.style.display = 'none';
+      if(loginWrap) loginWrap.style.display = 'none';
+      if(pendingWrap) pendingWrap.style.display = 'flex';
+      if(userMenu) userMenu.style.display = '';
+      if(userAvatar){ if(u.picture) userAvatar.src = u.picture; else userAvatar.removeAttribute('src'); }
+      if(userName) userName.textContent = u.name || u.email || '';
+      if(userDomain) userDomain.textContent = u.email || '';
+      if(adminLink) adminLink.style.display = 'none';
+      return;
+    }
+    if(pendingWrap) pendingWrap.style.display = 'none';
     if(stageEl) stageEl.style.display = '';
     if(loginWrap) loginWrap.style.display = 'none';
     if(userMenu) userMenu.style.display = '';
     if(userAvatar){ if(u.picture) userAvatar.src = u.picture; else userAvatar.removeAttribute('src'); }
     if(userName) userName.textContent = u.name || u.email || '';
     if(userDomain) userDomain.textContent = u.email || '';
-    var isAdminUser = !!u.admin;
     if(adminLink) adminLink.style.display = isAdminUser ? '' : 'none';
     if(isAdminUser && !items.some(function(it){ return it.path === 'admin.html'; })){
       items.push({ id: 'admin-users', name: 'Admin: Users & Access', path: 'admin.html', icon: 'shield' });
@@ -1671,6 +1691,7 @@ setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
     try{ fetchAndCacheSegment(); }catch(e){}
   }).catch(function(){
     if(stageEl) stageEl.style.display = 'none';
+    if(pendingWrap) pendingWrap.style.display = 'none';
     if(loginWrap) loginWrap.style.display = 'flex';
     if(userMenu) userMenu.style.display = 'none';
   });
