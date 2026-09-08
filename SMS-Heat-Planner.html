@@ -42,7 +42,10 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 .jspl-brand-l2 { font-size: 9px; color: var(--tm); letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
 .jspl-divider { width: 1px; height: 28px; background: var(--br); flex-shrink: 0; }
 
-.view-tabs { display: flex; gap: 6px; background: var(--input-bg); padding: 4px; border-radius: var(--radius-pill); border: var(--glass-border-rule); }
+.view-tabs {
+  display: flex; gap: 6px; background: var(--input-bg); padding: 4px; border-radius: var(--radius-pill); border: var(--glass-border-rule);
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 1;
+}
 .view-tabs button {
   padding: 9px 20px; font-size: 13px; font-weight: 700; border-radius: var(--radius-pill);
   background: transparent; color: var(--tm); transition: all 0.2s; white-space: nowrap;
@@ -93,6 +96,7 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
   .jspl-divider { display: none; }
   .jspl-logo { width: 34px; height: 16px; }
   .hdr-r { flex-shrink: 0; }
+  .view-tabs { position: static; transform: none; }
   .view-tabs button {
     padding: 0; width: 34px; height: 34px; font-size: 0; display: inline-flex; align-items: center; justify-content: center;
   }
@@ -133,11 +137,11 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
         <h1>SMS Heat Planner</h1>
       </div>
     </div>
-    <div class="hdr-r">
     <nav class="view-tabs" id="viewTabs">
       <button data-view="daily" class="on" type="button">📋 Daily Planner</button>
       <button data-view="monthly" type="button">🗓️ Monthly Planner</button>
     </nav>
+    <div class="hdr-r">
       <button class="reset-btn" id="resetAllBtn" type="button">🔄 Reset</button>
     </div>
     <div id="hubFrameHeaderSlot"></div>
