@@ -74,11 +74,10 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 }
 .reset-btn:hover { background: var(--input-hover); }
 
-.frame-stage { flex: 1; min-height: 0; position: relative; padding: 0 24px 24px; }
+.frame-stage { flex: 1; min-height: 0; position: relative; }
 .frame-box {
-  position: absolute; inset: 0 24px 24px;
-  border-radius: var(--radius-m); overflow: hidden; border: var(--glass-border-rule); box-shadow: var(--glass-shadow);
-  display: none; background: var(--bg-color);
+  position: absolute; inset: 0;
+  overflow: hidden; display: none; background: var(--bg-color);
 }
 .frame-box.on { display: block; }
 .frame-box iframe { width: 100%; height: 100%; border: none; display: block; background: var(--bg-color); }
@@ -106,8 +105,6 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
     width: 34px; padding: 0; font-size: 0; gap: 0; justify-content: center;
   }
   .reset-btn::before { content: "🔄"; font-size: 15px; }
-  .frame-stage { padding: 0 12px 12px; }
-  .frame-box { inset: 0 12px 12px; }
 }
 @media (max-width: 480px) {
   .top-bar { padding: 10px; gap: 8px; }
