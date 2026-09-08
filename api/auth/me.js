@@ -11,9 +11,9 @@ export default async function handler(req) {
       headers: { 'Content-Type': 'application/json' },
     });
   }
-  let admin = false;
+  let admin = false, user = null;
   try {
-    ({ admin } = await resolveAccess(session.email));
+    ({ admin, user } = await resolveAccess(session.email));
   } catch {
     admin = false;
   }
@@ -24,6 +24,7 @@ export default async function handler(req) {
     picture: session.picture,
     domain: session.domain,
     admin,
+    status: user ? user.status : (admin ? 'approved' : 'pending'),
   }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
