@@ -172,6 +172,19 @@ a { color: var(--primary); }
 .jspl-divider { width: 1px; height: 28px; background: var(--br); flex-shrink: 0; }
 
 .hdr-r { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+/* Normalize the hub-injected Home/Refresh EBTP/Theme/User icon buttons
+   (mounted into #hubFrameHeaderSlot with inline styles by the parent hub)
+   to the same fixed 40x40 circle every other embedded page forces via
+   this same rule, so they render identically everywhere. !important is
+   needed to win over the buttons' own inline style attributes. */
+#hubFrameHeaderSlot button {
+  width: 40px !important; height: 40px !important; min-width: 40px !important; min-height: 40px !important;
+  max-width: 40px !important; max-height: 40px !important;
+  padding: 0 !important; border-radius: 999px !important; box-sizing: border-box !important;
+}
+#hubFrameHeaderSlot button img {
+  width: 100% !important; height: 100% !important; border-radius: 50% !important; object-fit: cover !important;
+}
 .hdr-r button {
   transform: translateY(0) scale(1);
   transition:

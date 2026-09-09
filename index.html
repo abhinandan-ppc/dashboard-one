@@ -1118,9 +1118,12 @@ function installFrameHeaderControls(){
         // Fixed, page-independent size: these 4 buttons must look identical
         // everywhere they're injected, so nothing here may be derived from
         // a host page's own button styling (that was the source of the
-        // buttons rendering at a different size/shape per page).
-        var UNIFORM_BTN_SIZE = 34;
-        var UNIFORM_ICON_SIZE = 15;
+        // buttons rendering at a different size/shape per page). 40px/18px
+        // matches the `#hubFrameHeaderSlot button` !important rule every
+        // embedded page's own stylesheet already enforces, so this JS
+        // default and every page's CSS lock agree.
+        var UNIFORM_BTN_SIZE = 40;
+        var UNIFORM_ICON_SIZE = 18;
         var UNIFORM_RADIUS = '999px';
         var btnBase = 'width:'+UNIFORM_BTN_SIZE+'px;height:'+UNIFORM_BTN_SIZE+'px;min-width:'+UNIFORM_BTN_SIZE+'px;min-height:'+UNIFORM_BTN_SIZE+'px;border-radius:'+UNIFORM_RADIUS+';display:inline-flex;align-items:center;justify-content:center;backdrop-filter:blur(18px) saturate(130%);-webkit-backdrop-filter:blur(18px) saturate(130%);cursor:pointer;padding:0;border:none;box-sizing:border-box;transform:translateY(0) scale(1);transition:transform .2s cubic-bezier(.22,1,.36,1),background .2s ease,box-shadow .2s ease,border-color .2s ease,color .2s ease;';
         var mkBtn = function(label, variant, svg){
@@ -1150,10 +1153,10 @@ function installFrameHeaderControls(){
           return btn;
         };
 
-        var homeBtn = mkBtn('Home', 'home', "<svg viewBox='0 0 24 24' aria-hidden='true' style='width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;'><path d='M3 10.5 12 3l9 7.5'></path><path d='M5 9.5V21h14V9.5'></path><path d='M9 21v-6h6v6'></path></svg>");
-        var resetBtn = mkBtn('Refresh EBTP', 'neutral', "<svg viewBox='0 0 24 24' aria-hidden='true' style='width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;'><path d='M21 12a9 9 0 1 1-2.64-6.36'></path><path d='M21 3v6h-6'></path></svg>");
-        var sunThemeSvg = "<svg viewBox='0 0 24 24' aria-hidden='true' style='width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;'><path d='M12 3v2.5'></path><path d='M12 18.5V21'></path><path d='M4.93 4.93l1.77 1.77'></path><path d='M17.3 17.3l1.77 1.77'></path><path d='M3 12h2.5'></path><path d='M18.5 12H21'></path><path d='M4.93 19.07l1.77-1.77'></path><path d='M17.3 6.7l1.77-1.77'></path><circle cx='12' cy='12' r='4'></circle></svg>";
-        var moonThemeSvg = "<svg viewBox='0 0 24 24' aria-hidden='true' style='width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;'><path d='M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z'></path></svg>";
+        var homeBtn = mkBtn('Home', 'home', "<svg viewBox='0 0 24 24' aria-hidden='true' style='width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;'><path d='M3 10.5 12 3l9 7.5'></path><path d='M5 9.5V21h14V9.5'></path><path d='M9 21v-6h6v6'></path></svg>");
+        var resetBtn = mkBtn('Refresh EBTP', 'neutral', "<svg viewBox='0 0 24 24' aria-hidden='true' style='width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;'><path d='M21 12a9 9 0 1 1-2.64-6.36'></path><path d='M21 3v6h-6'></path></svg>");
+        var sunThemeSvg = "<svg viewBox='0 0 24 24' aria-hidden='true' style='width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;'><path d='M12 3v2.5'></path><path d='M12 18.5V21'></path><path d='M4.93 4.93l1.77 1.77'></path><path d='M17.3 17.3l1.77 1.77'></path><path d='M3 12h2.5'></path><path d='M18.5 12H21'></path><path d='M4.93 19.07l1.77-1.77'></path><path d='M17.3 6.7l1.77-1.77'></path><circle cx='12' cy='12' r='4'></circle></svg>";
+        var moonThemeSvg = "<svg viewBox='0 0 24 24' aria-hidden='true' style='width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;'><path d='M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z'></path></svg>";
         var themeBtn = mkBtn('Theme', 'neutral', sunThemeSvg);
         var syncInjectedThemeIcon = function(theme){
           themeBtn.innerHTML = theme === 'dark' ? sunThemeSvg : moonThemeSvg;
@@ -1314,19 +1317,9 @@ function installFrameHeaderControls(){
               }
             }catch(e){}
             controls.style.cssText = 'display:inline-flex;align-items:center;gap:6px;position:relative;z-index:5;margin-left:8px;flex-shrink:0;vertical-align:middle;';
-            [homeBtn, resetBtn, themeBtn, userAvatarBtn].filter(Boolean).forEach(function(btn){
-              btn.style.width = '34px';
-              btn.style.height = '34px';
-              btn.style.minWidth = '34px';
-              btn.style.minHeight = '34px';
-            });
-            [homeBtn, resetBtn, themeBtn, userAvatarBtn].filter(Boolean).forEach(function(btn){
-              var svg = btn.querySelector('svg');
-              if(svg){
-                svg.style.width = '15px';
-                svg.style.height = '15px';
-              }
-            });
+            // Size comes from btnBase's UNIFORM_BTN_SIZE/UNIFORM_ICON_SIZE —
+            // no per-placement override, so this row matches every other
+            // mount point exactly.
             exportBtn.insertAdjacentElement('afterend', controls);
             return true;
           }catch(e){}
@@ -1343,19 +1336,9 @@ function installFrameHeaderControls(){
             if(host.id === 'hubFrameHeaderSlot'){
               hideDuplicateHeaderControls(host.parentNode || host);
               controls.style.cssText = 'display:inline-flex;align-items:center;gap:6px;position:relative;z-index:5;flex-shrink:0;';
-              [homeBtn, resetBtn, themeBtn].forEach(function(btn){
-                btn.style.width = '34px';
-                btn.style.height = '34px';
-                btn.style.minWidth = '34px';
-                btn.style.minHeight = '34px';
-              });
-              [homeBtn, resetBtn, themeBtn].forEach(function(btn){
-                var svg = btn.querySelector('svg');
-                if(svg){
-                  svg.style.width = '15px';
-                  svg.style.height = '15px';
-                }
-              });
+              // Size comes from btnBase's UNIFORM_BTN_SIZE/UNIFORM_ICON_SIZE —
+              // no per-placement override, so this row matches every other
+              // mount point exactly.
               host.appendChild(controls);
             } else if(actionsHost){
               // Intentionally NOT sized off actionsHost's own buttons — every

@@ -79,7 +79,23 @@ header::before {
 .stat .n { font-size: 18px; font-weight: 900; color: var(--tx); letter-spacing: -0.5px; line-height:1.1; font-variant-numeric: tabular-nums; }
 .stat .l { font-size: 10px; color: var(--tm); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
 
-.h-actions { 
+/* Normalize the hub-injected Home/Refresh EBTP/Theme/User icon buttons
+   (mounted into #hubFrameHeaderSlot with inline styles by the parent hub)
+   to the same fixed 40x40 circle at every viewport width — matches the
+   unconditional rule every other embedded page (Rake-Planner, VDO-Generator,
+   Order-Status-Report, etc.) uses, so these buttons render identically
+   everywhere. !important is needed to win over the buttons' own inline
+   style attributes. */
+#hubFrameHeaderSlot button {
+  width: 40px !important; height: 40px !important; min-width: 40px !important; min-height: 40px !important;
+  max-width: 40px !important; max-height: 40px !important;
+  padding: 0 !important; border-radius: 999px !important; box-sizing: border-box !important;
+}
+#hubFrameHeaderSlot button img {
+  width: 100% !important; height: 100% !important; border-radius: 50% !important; object-fit: cover !important;
+}
+
+.h-actions {
   display: flex; gap: 8px; align-items: center; justify-content: flex-end;
   padding: 0; flex-shrink: 0; background: transparent; border: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; margin-left: 0;
 }
@@ -527,12 +543,9 @@ aside.collapsed .left-toggle {
 }
 
   /* Row 2: hub-injected Home/Refresh/Theme/User controls get their own
-     centered row below row 1; flex-basis:100% forces the line break.
-     !important overrides the element's inline max-width/overflow-x set
-     for the desktop scroll cap. */
+     centered row below row 1; flex-basis:100% forces the line break. */
   #hubFrameHeaderSlot {
-    order: 2 !important; max-width: none !important; overflow-x: visible !important;
-    flex-shrink: 0 !important; flex-basis: 100% !important; justify-content: center !important;
+    order: 2 !important; flex-shrink: 0 !important; flex-basis: 100% !important; justify-content: center !important;
   }
 
 .btn { 
@@ -561,20 +574,6 @@ aside.collapsed .left-toggle {
   #btn-export::before { content: "\2B07\FE0F"; }
   #btn-upload-dd::before { content: "\1F4E4"; }
   #btn-ctrl::before { content: "\2699\FE0F"; }
-
-  /* Normalize the hub-injected Home/Refresh EBTP/Theme/User icon buttons
-     (mounted into #hubFrameHeaderSlot with inline styles by the parent hub)
-     to match the 40x40 circular toolbar icon buttons above, so every header
-     button renders at the same fixed size on this row. !important is needed
-     to win over the buttons' own inline style attributes. */
-  #hubFrameHeaderSlot button {
-    width: 40px !important; height: 40px !important; min-width: 40px !important; min-height: 40px !important;
-    max-width: 40px !important; max-height: 40px !important;
-    padding: 0 !important; border-radius: 999px !important; box-sizing: border-box !important;
-  }
-  #hubFrameHeaderSlot button img {
-    width: 100% !important; height: 100% !important; border-radius: 50% !important; object-fit: cover !important;
-  }
 
   /* Row 3: KPIs */
   .kpi-dashboard {
@@ -927,11 +926,11 @@ aside.collapsed .left-toggle {
   </div>
   </div>
   <!-- Mount point for the hub's injected Home/Refresh/Theme/User controls.
-       Scrollable + width-capped rather than wrapping to a new row, since a
-       taller header would shift the .panel{top:...} offsets used elsewhere
-       for the 3D canvas overlay. -->
-  <div id="hubFrameHeaderSlot" style="display:flex;gap:8px;align-items:center;flex-shrink:1;
-    overflow-x:auto;max-width:200px;scrollbar-width:thin;"></div>
+       No width cap / scroll clipping here — matches every other embedded
+       page (Rake-Planner, Order-Status-Report, etc.), which just let this
+       row grow naturally instead of boxing the icons into a fixed-width
+       scroller that clips/cuts them off. -->
+  <div id="hubFrameHeaderSlot" style="display:flex;gap:8px;align-items:center;flex-shrink:0;"></div>
 </header>
 
 <!-- Camera Toolbar -->
