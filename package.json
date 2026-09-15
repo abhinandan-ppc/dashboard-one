@@ -1,6 +1,6 @@
 {
-  "dependencies": {
-    "bytez.js": "^3.0.0",
-    "codex": "^0.2.3"
+  "private": true,
+  "engines": {
+    "node": ">=18"
   }
 }

@@ -10,6 +10,12 @@ function json(obj, status) {
   });
 }
 
+function sameOrigin(req) {
+  const origin = req.headers.get('origin');
+  if (!origin) return false;
+  try { return new URL(origin).host === req.headers.get('host'); } catch { return false; }
+}
+
 async function requireAdmin(req) {
   const session = await verifySession(readCookie(req, 'session'));
   if (!session) return null;
@@ -25,12 +31,13 @@ export default async function handler(req) {
     try {
       const registry = await getRegistry();
       return json({ users: registry.users, knownPages: KNOWN_PAGES, adminEmails: ADMIN_EMAILS });
-    } catch (e) {
-      return json({ error: e.message }, 500);
+    } catch {
+      return json({ error: 'Unable to load the user registry' }, 500);
     }
   }
 
   if (req.method === 'POST') {
+    if (!sameOrigin(req)) return json({ error: 'origin check failed' }, 403);
     let body;
     try { body = await req.json(); } catch { return json({ error: 'invalid JSON body' }, 400); }
 
@@ -83,7 +90,7 @@ export default async function handler(req) {
           break;
         case 'setPages':
           if (!Array.isArray(body.pages)) return json({ error: 'pages must be an array' }, 400);
-          user.pages = [...new Set(body.pages.filter(p => typeof p === 'string' && p.trim()).map(p => p.trim()))];
+          user.pages = [...new Set(body.pages.filter(p => KNOWN_PAGES.includes(p)).map(p => p.trim()))];
           break;
         case 'setAllPages':
           user.allPages = !!body.allPages;
@@ -96,7 +103,7 @@ export default async function handler(req) {
           // devAccess), so rapid-fire checkbox toggles can't race each other into
           // clobbering one another's save — the UI batches them into one call.
           if (!Array.isArray(body.pages)) return json({ error: 'pages must be an array' }, 400);
-          user.pages = [...new Set(body.pages.filter(p => typeof p === 'string' && p.trim()).map(p => p.trim()))];
+          user.pages = [...new Set(body.pages.filter(p => KNOWN_PAGES.includes(p)).map(p => p.trim()))];
           user.allPages = !!body.allPages;
           user.devAccess = !!body.devAccess;
           break;
@@ -112,8 +119,8 @@ export default async function handler(req) {
 
       await saveRegistry(registry);
       return json({ ok: true, user: registry.users[email] });
-    } catch (e) {
-      return json({ error: e.message }, 500);
+    } catch {
+      return json({ error: 'Unable to update the user registry' }, 500);
     }
   }
 

@@ -6,7 +6,7 @@ export default async function handler(req) {
   try {
     const upstream = await fetch(EBTP_SHEET_URL, { cache: 'no-store' });
     if (!upstream.ok) {
-      return new Response('Upstream error: ' + upstream.status, { status: 502 });
+      return new Response('Upstream data is temporarily unavailable.', { status: 502 });
     }
     const text = await upstream.text();
     return new Response(text, {
@@ -14,10 +14,9 @@ export default async function handler(req) {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
         'Cache-Control': 'no-store',
-        'Access-Control-Allow-Origin': '*',
       },
     });
   } catch (e) {
-    return new Response('Proxy fetch failed: ' + ((e && e.message) || e), { status: 502 });
+    return new Response('Upstream data is temporarily unavailable.', { status: 502 });
   }
 }

@@ -199,7 +199,7 @@ input { font: inherit; color: inherit; }
 .google-btn:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.14); transform: translateY(-1px); }
 .google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
 
-.stage { width: 100%; max-width: none; margin: 0; padding: calc(var(--frame-top, 88px) + 28px) 24px 60px; }
+.stage { width: 100%; max-width: none; margin: 0; padding: calc(var(--frame-top, 88px) + 12px) 24px 60px; }
 .stage-hd { margin-bottom: 20px; }
 .stage-hd h2 { font-size: 15px; font-weight: 700; color: var(--tm); text-transform: uppercase; letter-spacing: 0.6px; }
 .stage-sub { font-size: 13px; color: var(--tm); margin-top: 4px; }
@@ -216,7 +216,7 @@ input { font: inherit; color: inherit; }
 @media (max-width: 768px) { .frame-skeleton .skeleton-row { grid-template-columns: repeat(2, 1fr); } }
 
 /* keep stage aligned to the same page gutters as the fixed header */
-.stage { width: 100%; max-width: none; margin: 0; padding: calc(var(--frame-top, 88px) + 28px) 24px 60px; }
+.stage { width: 100%; max-width: none; margin: 0; padding: calc(var(--frame-top, 88px) + 12px) 24px 60px; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
 
@@ -397,7 +397,8 @@ input { font: inherit; color: inherit; }
 }
 </style>
 </head>
-<body>
+<body class="page-hub">
+<a class="skip-link" href="#stage">Skip to content</a>
 
 <div class="top-wrapper">
   <div class="top-bar header-enter">
@@ -435,7 +436,7 @@ input { font: inherit; color: inherit; }
           <div class="user-panel-domain" id="userDomain"></div>
           <div class="user-panel-domain" id="userPanelEbtpDate" style="display:none"></div>
           <a class="user-panel-logout" id="adminLink" href="/admin.html" style="display:none;margin-top:6px">Admin: Users &amp; Access</a>
-          <a class="user-panel-logout" href="/api/auth/logout">Log out</a>
+          <form class="user-panel-logout-form" action="/api/auth/logout" method="post"><button class="user-panel-logout" type="submit">Log out</button></form>
         </div>
       </div>
     </div>
@@ -1213,13 +1214,17 @@ function installFrameHeaderControls(){
           panelName.style.cssText = 'font-weight:800;font-size:13px;color:#f8fafc;';
           var panelDomain = doc.createElement('div');
           panelDomain.style.cssText = 'font-size:11.5px;color:#94a3b8;margin-bottom:8px;';
-          var panelLogout = doc.createElement('a');
-          panelLogout.href = '/api/auth/logout';
+          var panelLogoutForm = doc.createElement('form');
+          panelLogoutForm.method = 'post';
+          panelLogoutForm.action = '/api/auth/logout';
+          var panelLogout = doc.createElement('button');
+          panelLogout.type = 'submit';
           panelLogout.textContent = 'Log out';
+          panelLogoutForm.appendChild(panelLogout);
           panelLogout.style.cssText = 'margin-top:6px;text-align:center;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,0.08);color:#f8fafc;font-weight:700;font-size:12.5px;text-decoration:none;border:1px solid rgba(255,255,255,0.14);';
           userAvatarPanel.appendChild(panelName);
           userAvatarPanel.appendChild(panelDomain);
-          userAvatarPanel.appendChild(panelLogout);
+          userAvatarPanel.appendChild(panelLogoutForm);
           doc.body.appendChild(userAvatarPanel);
 
           var applyInjectedUserStyles = function(theme){

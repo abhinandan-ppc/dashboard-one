@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+
 /* ══════════════════════════════════════════════════════════
    JSPL DASHBOARD — SHARED DESIGN SYSTEM
    Glassmorphism (per typeui.sh/design-skills/glassmorphism):
@@ -314,3 +316,112 @@ input::placeholder{color:var(--mute);opacity:1}
 .fetch-status-log{max-height:90px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
 .fetch-status-log div{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fetch-status-log div:last-child{color:var(--dim)}
+
+/* ── Shared Material 3 / glass primitives ── */
+:root{
+  --font-display:'Space Grotesk','Poppins',system-ui,sans-serif;
+  --font-body:'Manrope','Poppins',system-ui,sans-serif;
+  --ease-emphasized:cubic-bezier(.2,0,0,1);
+  --ease-standard:cubic-bezier(.2,0,0,1);
+  --page-gutter:24px;
+  --space-section:16px;
+  --space-mobile:12px;
+  --touch-target:44px;
+}
+body{font-family:var(--font-body)!important}
+button,input,select,textarea{font-family:var(--font-body)}
+h1,h2,h3{font-family:var(--font-display)!important;text-wrap:balance}
+button,a,input,select,textarea{transition:color .22s var(--ease-standard),background-color .22s var(--ease-standard),border-color .22s var(--ease-standard),box-shadow .22s var(--ease-standard),transform .22s var(--ease-emphasized)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 72%,white);outline-offset:3px}
+.m3-surface{background:linear-gradient(145deg,color-mix(in srgb,var(--glass) 92%,white 8%),var(--glass-card));border:1px solid var(--glass-border);box-shadow:var(--shadow-md),var(--shadow-inset);border-radius:var(--radius-lg)}
+.m3-field{min-height:var(--touch-target);background:var(--input-bg);color:var(--text);border:1px solid var(--bdr);border-radius:var(--radius-sm);padding:.65rem .8rem}
+.m3-field:hover{background:var(--input-hover);border-color:var(--bdrHi)}
+.m3-button{min-height:var(--touch-target);display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.65rem 1rem;border-radius:var(--radius-pill);font-weight:700}
+.m3-button:active{transform:scale(.98)}
+.m3-button-primary{background:var(--primary);color:var(--on-primary);box-shadow:var(--shadow-sm)}
+.m3-button-primary:hover{filter:saturate(1.05) brightness(1.06);box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.m3-button-tonal{background:var(--primary-bg);color:var(--primary);border:1px solid color-mix(in srgb,var(--primary) 30%,transparent)}
+.m3-button-quiet{background:var(--input-bg);color:var(--text);border:1px solid var(--bdr)}
+.m3-button-quiet:hover{background:var(--input-hover);border-color:var(--bdrHi)}
+.data-table-wrap{width:100%;overflow-x:auto;overscroll-behavior-inline:contain;border-radius:var(--radius-md);scrollbar-gutter:stable}
+.data-table-wrap::after{content:'';display:block;height:1px}
+.safe-area-bottom{padding-bottom:max(16px,env(safe-area-inset-bottom))}
+.skip-link{position:fixed;left:16px;top:12px;z-index:500;padding:10px 14px;border-radius:var(--radius-pill);background:var(--primary);color:var(--on-primary);font-weight:800;transform:translateY(-160%);transition:transform .22s var(--ease-emphasized)}
+.skip-link:focus{transform:translateY(0)}
+[aria-live]{min-height:1em}
+button:disabled,.btn:disabled{cursor:not-allowed;transform:none!important;filter:none!important;opacity:.58}
+@media (max-width:768px){
+  :root{--page-gutter:16px}
+  .desktop-only{display:none!important}
+  .mobile-stack{display:flex!important;flex-direction:column!important;align-items:stretch!important}
+  .mobile-full{width:100%!important;max-width:none!important}
+  .m3-button{min-height:48px}
+  .m3-surface{border-radius:var(--radius-md)}
+  .top-wrapper,.header-fixed{position:sticky!important;top:0;z-index:320}
+  .top-bar,header{backdrop-filter:blur(14px)!important;-webkit-backdrop-filter:blur(14px)!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}
+}
+
+/* ── Cross-page visual contract ──
+   These selectors deliberately use the existing page vocabulary so the
+   redesign can unify the multi-page app without changing tool behavior. */
+.top-wrapper,.header-fixed,.hdr-wrapper,.sticky-wrapper{
+  width:100%!important;
+  max-width:var(--page-header-max,1600px)!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  box-sizing:border-box!important;
+}
+.page-admin{--page-header-max:1180px}
+.page-grade{--page-header-max:1440px}
+.page-plate{--page-header-max:1720px}
+.page-sms-shell,.page-sms-child{--page-header-max:none}
+.page-sms-shell .top-bar{width:100%!important;max-width:none!important;margin-left:0!important;margin-right:0!important}
+.page-hub,.page-ai,.page-vdo{--page-header-max:none}
+.page-order .glass-card.header-enter{
+  width:100%!important;
+  max-width:1600px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+.page-rake .glass-card.header-enter{width:100%!important;max-width:none!important;margin-left:auto!important;margin-right:auto!important}
+.page-pm>header{left:16px!important;right:16px!important}
+.grid,.slots,.kpis,.kpi-row,.stat-row,.row,.tabs{gap:var(--space-section)}
+.panel,.glass-card,.slot,.kpi,.stat,.user-card,.embed{margin-bottom:var(--space-section)}
+.page-pm .panel,.page-pm aside{margin-bottom:0}
+.top-wrapper,.header-fixed,.hdr-wrapper,.sticky-wrapper{padding:18px var(--page-gutter,24px) 0!important}
+.top-bar,header,.top-bar.header-enter{
+  background:linear-gradient(145deg,color-mix(in srgb,var(--glass) 94%,white 6%),var(--glass-card))!important;
+  border:1px solid var(--glass-border)!important;
+  border-radius:20px!important;
+  box-shadow:var(--shadow-lg),var(--shadow-inset)!important;
+}
+.panel,.glass-card,.card,.slot,.kpi,.stat,.user-card,.embed,.pormap-panel{
+  background:linear-gradient(145deg,color-mix(in srgb,var(--glass-card) 94%,white 6%),var(--glass-card))!important;
+  border:1px solid var(--glass-border)!important;
+  box-shadow:var(--shadow-md),var(--shadow-inset)!important;
+}
+.panel:hover,.glass-card:hover,.card:hover,.slot:hover,.kpi:hover,.stat:hover,.user-card:hover{border-color:var(--glass-border-hi)!important}
+input,select,textarea,.m3-field{border-radius:var(--radius-sm)!important;border-color:var(--bdr)!important}
+button,.btn,.m3-button{font-family:var(--font-body)!important}
+button:not(.tabbtn):not(.gmOpt):not(.view-tabs button):hover,.btn:hover,.m3-button:hover{transform:translateY(-1px)}
+table{font-variant-numeric:tabular-nums}
+.table-wrap,#preview,#pivotWrap,.data-table-wrap{scrollbar-color:var(--bdrHi) transparent}
+@media (max-width:768px){
+  .top-wrapper,.header-fixed{width:100%!important;max-width:none!important;padding:8px 12px 0!important}
+  .hdr-wrapper,.sticky-wrapper{width:100%!important;max-width:none!important;padding:0 12px!important}
+  .page-admin .top-wrapper>.top-bar,
+  .page-plate .header-fixed>header,
+  .page-vdo .top-wrapper>.top-bar{width:calc(100% + 24px)!important;margin-left:-12px!important;margin-right:-12px!important}
+  .page-pm>header{left:12px!important;right:12px!important}
+  .page-pm>header{padding:10px!important;gap:10px!important}
+  .page-rake .glass-card.header-enter{width:100%!important;margin-left:0!important;margin-right:0!important;padding:10px 12px!important;gap:10px!important}
+  .page-sms-shell .top-bar{width:100%!important;padding:10px 12px!important;gap:8px!important}
+  .grid,.slots,.kpis,.kpi-row,.stat-row,.row,.tabs{gap:var(--space-mobile)}
+  .panel,.glass-card,.slot,.kpi,.stat,.user-card,.embed{margin-bottom:var(--space-mobile)}
+  .top-bar,header,.top-bar.header-enter{border-radius:16px!important}
+  .panel,.glass-card,.card,.slot,.kpi,.stat,.user-card{box-shadow:var(--shadow-sm),var(--shadow-inset)!important}
+  .top-l h1,.top-bar h1,header h1{max-width:calc(100vw - 150px);overflow:hidden;text-overflow:ellipsis}
+}

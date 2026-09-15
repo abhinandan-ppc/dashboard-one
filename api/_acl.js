@@ -63,8 +63,8 @@ export const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'abhinandan.mandal@jind
 export const DEV_HOSTS = (process.env.DEV_HOSTS || 'pmppc-dev.vercel.app')
   .split(',').map(s => s.trim()).filter(Boolean);
 
-// Known tool pages users can be granted access to. Admins can also grant
-// access to arbitrary custom paths (e.g. cards added with a one-off path).
+// Known tool pages users can be granted access to. Keep this explicit so a
+// permission record cannot accidentally authorize a future route or API path.
 //
 // "SMS Heat Planner Daily.html" and "SMS Heat Planner Monthly.html" are not
 // listed here — they're just the two tabs SMS-Heat-Planner.html loads in

@@ -67,12 +67,24 @@ export default async function handler(req) {
   const tokens = await tokenRes.json();
   if (!tokens.id_token) return new Response('Google sign-in failed: no ID token returned.', { status: 401 });
 
-  const payloadB64 = tokens.id_token.split('.')[1];
+  // Let Google validate the signature and return the claims. Decoding the JWT
+  // locally is not sufficient because an attacker can modify an unsigned
+  // payload while keeping the token structurally valid.
+  const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(tokens.id_token)}`);
+  if (!verifyRes.ok) return new Response('Google sign-in failed: invalid ID token.', { status: 401 });
   let claims;
   try {
-    claims = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+    claims = await verifyRes.json();
   } catch {
-    return new Response('Google sign-in failed: malformed ID token.', { status: 401 });
+    return new Response('Google sign-in failed: invalid identity response.', { status: 401 });
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const issuerValid = claims.iss === 'https://accounts.google.com' || claims.iss === 'accounts.google.com';
+  const audienceValid = claims.aud === process.env.GOOGLE_CLIENT_ID;
+  const expiryValid = Number(claims.exp) > now;
+  if (!issuerValid || !audienceValid || !expiryValid || !claims.sub) {
+    return new Response('Google sign-in failed: invalid token claims.', { status: 401 });
   }
 
   const allowedDomains = (process.env.ALLOWED_DOMAIN || '').split(',').map(d => d.trim().toLowerCase()).filter(Boolean);

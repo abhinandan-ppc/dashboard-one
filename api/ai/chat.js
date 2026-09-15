@@ -13,6 +13,21 @@ const OMNIROUTE_ENDPOINTS = {
   cloudflare: process.env.OMNIROUTE_URL_CLOUDFLARE,
 };
 
+const MAX_BODY_BYTES = 2_000_000;
+const MAX_MESSAGES = 40;
+const MAX_MESSAGE_CHARS = 20_000;
+const MAX_ATTACHMENTS = 4;
+const MAX_ATTACHMENT_CHARS = 600_000;
+const ALLOWED_ENDPOINTS = new Set(['intranet', 'ngrok', 'cloudflare']);
+const ALLOWED_MODELS = new Set(['auto/best-fast', 'auto/best', 'auto/fast']);
+
+function json(data, status) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
+}
+
 function buildOmniRouteMessages(history, attachments) {
   const messages = [];
 
@@ -42,18 +57,12 @@ function buildOmniRouteMessages(history, attachments) {
 
 export default async function handler(req) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ error: 'Method not allowed' }, 405);
   }
 
   const session = await verifySession(readCookie(req, 'session'));
   if (!session) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ error: 'Unauthorized' }, 401);
   }
 
   let admin = false;
@@ -64,48 +73,53 @@ export default async function handler(req) {
   }
 
   if (!admin) {
-    return new Response(JSON.stringify({ error: 'Access denied' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ error: 'Access denied' }, 403);
   }
 
   let body;
   try {
+    const contentLength = Number(req.headers.get('content-length') || 0);
+    if (contentLength > MAX_BODY_BYTES) return json({ error: 'Request is too large' }, 413);
     body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ error: 'Invalid JSON' }, 400);
   }
 
   const { messages, model, attachments } = body;
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
-    return new Response(JSON.stringify({ error: 'Messages required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ error: 'Messages required' }, 400);
+  }
+
+  if (messages.length > MAX_MESSAGES || messages.some(msg =>
+    !msg || !['user', 'assistant', 'system'].includes(msg.role) ||
+    typeof msg.content !== 'string' || msg.content.length > MAX_MESSAGE_CHARS)) {
+    return json({ error: 'Message payload is invalid or too large' }, 413);
+  }
+
+  if (attachments !== undefined && (!Array.isArray(attachments) || attachments.length > MAX_ATTACHMENTS || attachments.some(att =>
+    !att || typeof att.name !== 'string' || typeof att.type !== 'string' || typeof att.data !== 'string' ||
+    att.name.length > 160 || att.data.length > MAX_ATTACHMENT_CHARS ||
+    !(/^(text\/|image\/(png|jpeg|webp|gif)$)/i).test(att.type)))) {
+    return json({ error: 'Attachment payload is invalid or too large' }, 413);
   }
 
   if (!OMNIROUTE_KEY) {
-    return new Response(JSON.stringify({ error: 'AI gateway is not configured' }), {
-      status: 503,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ error: 'AI gateway is not configured' }, 503);
   }
 
   const url = new URL(req.url);
   const endpoint = url.searchParams.get('endpoint') || 'cloudflare';
 
+  if (!ALLOWED_ENDPOINTS.has(endpoint)) return json({ error: 'Invalid endpoint' }, 400);
+
   const primaryUrl = OMNIROUTE_ENDPOINTS[endpoint] || OMNIROUTE_ENDPOINTS.cloudflare;
   if (!primaryUrl) {
-    return new Response(JSON.stringify({ error: 'AI gateway is not configured' }), {
-      status: 503,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ error: 'AI gateway is not configured' }, 503);
   }
   const modelName = model || 'auto/best-fast';
+  if (typeof modelName !== 'string' || !ALLOWED_MODELS.has(modelName)) {
+    return json({ error: 'Invalid model' }, 400);
+  }
   const apiMessages = buildOmniRouteMessages(messages, attachments);
 
   const requestBody = JSON.stringify({
@@ -140,13 +154,7 @@ export default async function handler(req) {
   }
 
   if (!response) {
-    return new Response(JSON.stringify({
-      error: 'All endpoints failed',
-      content: 'All OmniRoute endpoints are unreachable. Please try again later.'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ error: 'AI service unavailable' }, 503);
   }
 
   try {
@@ -204,15 +212,8 @@ export default async function handler(req) {
       },
     });
   } catch (err) {
-    const msg = err.name === 'AbortError'
-      ? 'The AI model took too long to respond. Try a faster model or a shorter prompt.'
-      : `Failed to connect to OmniRoute: ${err.message}`;
-    return new Response(JSON.stringify({
-      error: 'Request failed',
-      content: msg
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({
+      error: err.name === 'AbortError' ? 'AI service timed out' : 'AI request failed',
+    }, 502);
   }
 }
