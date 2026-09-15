@@ -26,7 +26,7 @@
 
 body, html { 
   font-family: 'Poppins', system-ui, sans-serif; 
-  color: var(--tx); height: 100vh; overflow: hidden;
+  color: var(--tx); height: 100vh; overflow: hidden; overflow-x: clip;
   background-color: var(--bg-color);
   transition: background-color 0.3s, color 0.3s;
 }
@@ -546,6 +546,7 @@ aside.collapsed .left-toggle {
      centered row below row 1; flex-basis:100% forces the line break. */
   #hubFrameHeaderSlot {
     order: 2 !important; flex-shrink: 0 !important; flex-basis: 100% !important; justify-content: center !important;
+    width: 100%; box-sizing: border-box; border-top: 1px solid var(--br); padding-top: 10px; margin-top: 2px;
   }
 
 .btn { 
@@ -662,7 +663,7 @@ aside.collapsed .left-toggle {
 }
 </style>
 </head>
-<body>
+<body class="page-pm">
 
 <div id="root"></div>
 
@@ -1170,6 +1171,11 @@ let btrLoaded = false;
 let activeBtrRemarks        = new Set();
 let activeBtrDispatchModes  = new Set();
 let activeBtrFinanceStatuses = new Set();
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[character]));
+}
 let btrViewMode = 'all';   // options: 'all', 'live', 'por'
 let btrMetricMode = 'all'; // options: 'all', 'ul', 'ui', 'bp'
 let uidToPlates = {};      // Normalized UID -> array of plate objects sorted by SLOC then layer
@@ -2982,7 +2988,13 @@ function openInspector(obj) {
     const d = document.createElement('div');
     d.className = 'kv';
     if (id) d.id = id;
-    d.innerHTML = `<span class="k">${k}</span><span class="v">${v}</span>`;
+    const key = document.createElement('span');
+    key.className = 'k';
+    key.textContent = k;
+    const value = document.createElement('span');
+    value.className = 'v';
+    value.textContent = v;
+    d.append(key, value);
     return d;
   }
 
@@ -3099,19 +3111,19 @@ function openInspector(obj) {
       <div style="display:flex; align-items:stretch; min-width:0; flex:1;">
          <!-- FIXED: Tighter Uniform Color Block -->
          <div style="background:${plateColor}; width: 60px; flex-shrink: 0; padding: 0 6px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;">
-             <span style="font-size:9.5px; font-weight:900; color:rgba(0,0,0,0.65); white-space: nowrap;">L${p.layer||i+1}</span>
+             <span style="font-size:9.5px; font-weight:900; color:rgba(0,0,0,0.65); white-space: nowrap;">L${escapeHtml(p.layer||i+1)}</span>
              <span style="background:rgba(0,0,0,0.35); color:#fff; width: 22px; text-align: center; padding:1px 0; border-radius:3px; font-size:8.5px; font-weight:800; border:1px solid rgba(0,0,0,0.2); white-space: nowrap; flex-shrink: 0;" title="Position from Top">↓${posFromTop}</span>
          </div>
          
          <!-- Batch and Customer Name -->
          <div style="display:flex; align-items:center; padding-left:8px; min-width:0;">
-            <span style="font-size:10.5px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:0.3px;">${truckIcon}${p.batch}${custStr}</span>
+            <span style="font-size:10.5px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:0.3px;">${truckIcon}${escapeHtml(p.batch)}${custStr}</span>
          </div>
       </div>
       
       <!-- SLOC and Tonnage -->
       <div style="display:flex; align-items:center; gap:6px; flex-shrink:0; padding-right:8px;">
-         <span style="font-size:8.5px; font-weight:900; color:var(--tm); padding:1px 4px; background:var(--input-hover); border-radius:3px; text-transform:uppercase; letter-spacing:0.5px;">${p.sloc || '—'}</span>
+         <span style="font-size:8.5px; font-weight:900; color:var(--tm); padding:1px 4px; background:var(--input-hover); border-radius:3px; text-transform:uppercase; letter-spacing:0.5px;">${escapeHtml(p.sloc || '—')}</span>
          <span style="font-size:10.5px; font-weight:800; font-family:monospace; color:var(--md-sys-color-secondary);">${(p.wt||0).toFixed(1)}t</span>
       </div>
     `;
@@ -3158,25 +3170,25 @@ function openInspector(obj) {
     row.dataset.idx = originalIdx;
     row.dataset.globalmatch = p._matchesSearch ? 'true' : 'false';
     
-    const custStr = (p.cust && p.cust !== '—') ? ` <span style="color:var(--md-sys-color-secondary)">· BY ${p.cust}</span>` : '';
+    const custStr = (p.cust && p.cust !== '—') ? ` <span style="color:var(--md-sys-color-secondary)">· BY ${escapeHtml(p.cust)}</span>` : '';
     const rawPU   = Number(p.uid || '');
     const pUidKey = (!isNaN(rawPU) && rawPU !== 0) ? String(Math.round(rawPU)) : String(p.uid || '');
     const btrInfo = btrLoaded ? btrData[pUidKey] : null;
     const btrBadges = btrLoaded ? (btrInfo ? `
       <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;">
-        ${btrInfo.remarks      ? `<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3);">${btrInfo.remarks}</span>` : ''}
-        ${btrInfo.dispatchMode ? `<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(59,130,246,0.15);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);">${btrInfo.dispatchMode}</span>` : ''}
-        ${btrInfo.financeStatus? `<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3);">${btrInfo.financeStatus}</span>` : ''}
+        ${btrInfo.remarks      ? `<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3);">${escapeHtml(btrInfo.remarks)}</span>` : ''}
+        ${btrInfo.dispatchMode ? `<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(59,130,246,0.15);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);">${escapeHtml(btrInfo.dispatchMode)}</span>` : ''}
+        ${btrInfo.financeStatus? `<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3);">${escapeHtml(btrInfo.financeStatus)}</span>` : ''}
       </div>` :
       `<div style="margin-top:4px;"><span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);">⚠ RSS — Not in BTR</span></div>`)
     : '';
     row.innerHTML = `
       <div class="pr1">
-        <span><span style="color:${getPlateColorHex(p)}">${p.batch || '—'}</span></span>
+        <span><span style="color:${getPlateColorHex(p)}">${escapeHtml(p.batch || '—')}</span></span>
         <span style="color:var(--tx)">${(p.wt||0).toFixed(1)} MT</span>
       </div>
       <div class="pr2">
-        <span>${p.grade||'—'} · ${p.thick||'—'}mm × ${p.width||'—'}mm × ${p.len||'—'}mm<br>${p.sloc||'—'} · ${p.aging||0}d${custStr}</span>
+        <span>${escapeHtml(p.grade||'—')} · ${escapeHtml(p.thick||'—')}mm × ${escapeHtml(p.width||'—')}mm × ${escapeHtml(p.len||'—')}mm<br>${escapeHtml(p.sloc||'—')} · ${escapeHtml(p.aging||0)}d${custStr}</span>
       </div>
       ${btrBadges}`;
     
@@ -3202,13 +3214,13 @@ function openInspector(obj) {
         let lenM = p.len;
         if (p.len > 100) lenM = (p.len / 1000).toFixed(3).replace(/\.?0+$/, ''); 
 
-        document.querySelector('#kv-cust .v').innerHTML = p.cust || '—';
-        document.querySelector('#kv-intGrade .v').innerHTML = p.intGrade || '—';
-        document.querySelector('#kv-extGrade .v').innerHTML = p.grade || '—';
-        document.querySelector('#kv-supply .v').innerHTML = p.bSupply || p.sSupply || '—';
-        document.querySelector('#kv-dims .v').innerHTML = `${p.thick || 0}<span style="font-size:10px;color:var(--tm)">mm</span> × ${p.width || 0}<span style="font-size:10px;color:var(--tm)">mm</span> × ${lenM}<span style="font-size:10px;color:var(--tm)">m</span>`;
-        document.querySelector('#kv-pos .v').innerHTML = posFromTop;
-        document.querySelector('#kv-wtOnTop .v').innerHTML = `${wtOnTop.toFixed(1)} MT`;
+        document.querySelector('#kv-cust .v').textContent = p.cust || '—';
+        document.querySelector('#kv-intGrade .v').textContent = p.intGrade || '—';
+        document.querySelector('#kv-extGrade .v').textContent = p.grade || '—';
+        document.querySelector('#kv-supply .v').textContent = p.bSupply || p.sSupply || '—';
+        document.querySelector('#kv-dims .v').textContent = `${p.thick || 0}mm × ${p.width || 0}mm × ${lenM}m`;
+        document.querySelector('#kv-pos .v').textContent = posFromTop;
+        document.querySelector('#kv-wtOnTop .v').textContent = `${wtOnTop.toFixed(1)} MT`;
     } else {
         document.querySelector('#kv-cust .v').innerHTML = '—';
         document.querySelector('#kv-intGrade .v').innerHTML = '—';
