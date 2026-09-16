@@ -40,9 +40,17 @@ function denyPage(title, message, status) {
 
 export default async function middleware(req) {
   try {
+    const url = new URL(req.url);
+    let path = url.pathname.replace(/^\//, '');
+    try { path = decodeURIComponent(path); } catch { /* keep raw path if malformed */ }
+
+    // Allow AI API routes through without session check — they do their own auth
+    if (path.startsWith('api/ai/')) {
+      return;
+    }
+
     const token = readCookie(req, 'session');
     const session = await verifySession(token);
-    const url = new URL(req.url);
 
     if (!session) {
       const loginUrl = new URL('/api/auth/login', url);
@@ -51,8 +59,6 @@ export default async function middleware(req) {
     }
 
     const email = session.email;
-    let path = url.pathname.replace(/^\//, '');
-    try { path = decodeURIComponent(path); } catch { /* keep raw path if malformed */ }
     const isAdminArea = path === 'admin.html' || path.startsWith('api/admin/');
 
     let admin = false, user = null;
@@ -68,13 +74,6 @@ export default async function middleware(req) {
       // Shared live-data proxy used by Rake-Planner, Order-Status-Report and
       // VDO-Generator. Any authenticated user may call it — the page-level
       // ACL below already gates access to those tools themselves.
-      return;
-    }
-
-    if (path.startsWith('api/ai/')) {
-      // AI chat and endpoint routes have their own auth + admin checks
-      // inside chat.js / endpoint.js. Let authenticated users through so
-      // the handler can return proper JSON errors instead of HTML deny pages.
       return;
     }
 
