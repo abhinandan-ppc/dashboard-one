@@ -1,9 +1,9 @@
 import { verifySession, readCookie } from '../_session.js';
 import { resolveAccess } from '../_acl.js';
 
-// Force Node.js runtime — prevents Vercel Edge bundler from pulling this
+// Force Edge runtime — prevents Vercel Node.js bundler from pulling this
 // into the middleware bundle (which causes "unsupported modules" errors).
-export const config = { runtime: 'nodejs' };
+export const config = { runtime: 'edge' };
 
 const OMNIROUTE_KEY = process.env.OMNIROUTE_KEY;
 
