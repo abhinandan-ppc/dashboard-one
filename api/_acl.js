@@ -26,24 +26,34 @@ async function blobPutJson(pathname, value) {
   const storeId = storeIdFromToken(token);
   const requestId = `${storeId}:${Date.now()}:${Math.random().toString(16).slice(2)}`;
   const url = `${BLOB_API_URL}/?${new URLSearchParams({ pathname })}`;
-  const res = await fetch(url, {
-    method: 'PUT',
-    body: JSON.stringify(value),
-    headers: {
-      'x-api-blob-request-id': requestId,
-      'x-vercel-blob-store-id': storeId,
-      'x-api-blob-request-attempt': '0',
-      'x-api-version': BLOB_API_VERSION,
-      authorization: `Bearer ${token}`,
-      'x-vercel-blob-access': 'private',
-      'x-content-type': 'application/json',
-      'x-add-random-suffix': '0',
-      'x-allow-overwrite': '1',
-    },
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Blob write failed (${res.status}): ${text}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(url, {
+      method: 'PUT',
+      body: JSON.stringify(value),
+      headers: {
+        'x-api-blob-request-id': requestId,
+        'x-vercel-blob-store-id': storeId,
+        'x-api-blob-request-attempt': '0',
+        'x-api-version': BLOB_API_VERSION,
+        authorization: `Bearer ${token}`,
+        'x-vercel-blob-access': 'private',
+        'x-content-type': 'application/json',
+        'x-add-random-suffix': '0',
+        'x-allow-overwrite': '1',
+      },
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Blob write failed (${res.status}): ${text}`);
+    }
+  } catch (e) {
+    clearTimeout(timeout);
+    if (e.name === 'AbortError') throw new Error('Blob write timeout');
+    throw e;
   }
 }
 
@@ -51,10 +61,22 @@ async function blobGetJson(pathname) {
   const token = blobToken();
   const storeId = storeIdFromToken(token);
   const url = `https://${storeId}.private.blob.vercel-storage.com/${pathname}`;
-  const res = await fetch(url, { headers: { authorization: `Bearer ${token}` } });
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`Blob read failed (${res.status})`);
-  return res.json();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(url, { 
+      headers: { authorization: `Bearer ${token}` },
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Blob read failed (${res.status})`);
+    return res.json();
+  } catch (e) {
+    clearTimeout(timeout);
+    if (e.name === 'AbortError') throw new Error('Blob read timeout');
+    throw e;
+  }
 }
 
 export const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || 'abhinandan.mandal@jindalsteel.in')
