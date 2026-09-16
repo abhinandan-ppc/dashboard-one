@@ -67,162 +67,167 @@ export default async function handler(req) {
     return json({ error: 'Method not allowed' }, 405);
   }
 
-  const session = await verifySession(readCookie(req, 'session'));
-  if (!session) {
-    return json({ error: 'Unauthorized' }, 401);
-  }
-
-  let admin = false;
   try {
-    ({ admin } = await resolveAccess(session.email));
-  } catch {
-    admin = false;
-  }
+    const session = await verifySession(readCookie(req, 'session'));
+    if (!session) {
+      return json({ error: 'Unauthorized' }, 401);
+    }
 
-  if (!admin) {
-    return json({ error: 'Access denied' }, 403);
-  }
-
-  let body;
-  try {
-    const contentLength = Number(req.headers.get('content-length') || 0);
-    if (contentLength > MAX_BODY_BYTES) return json({ error: 'Request is too large' }, 413);
-    body = await req.json();
-  } catch {
-    return json({ error: 'Invalid JSON' }, 400);
-  }
-
-  const { messages, model, attachments } = body;
-  if (!messages || !Array.isArray(messages) || messages.length === 0) {
-    return json({ error: 'Messages required' }, 400);
-  }
-
-  if (messages.length > MAX_MESSAGES || messages.some(msg =>
-    !msg || !['user', 'assistant', 'system'].includes(msg.role) ||
-    typeof msg.content !== 'string' || msg.content.length > MAX_MESSAGE_CHARS)) {
-    return json({ error: 'Message payload is invalid or too large' }, 413);
-  }
-
-  if (attachments !== undefined && (!Array.isArray(attachments) || attachments.length > MAX_ATTACHMENTS || attachments.some(att =>
-    !att || typeof att.name !== 'string' || typeof att.type !== 'string' || typeof att.data !== 'string' ||
-    att.name.length > 160 || att.data.length > MAX_ATTACHMENT_CHARS ||
-    !(/^(text\/|image\/(png|jpeg|webp|gif)$)/i).test(att.type)))) {
-    return json({ error: 'Attachment payload is invalid or too large' }, 413);
-  }
-
-  if (!OMNIROUTE_KEY) {
-    return json({ error: 'AI gateway is not configured' }, 503);
-  }
-
-  const url = new URL(req.url);
-  const endpoint = url.searchParams.get('endpoint') || 'cloudflare';
-
-  if (!ALLOWED_ENDPOINTS.has(endpoint)) return json({ error: 'Invalid endpoint' }, 400);
-
-  const primaryUrl = normalizeEndpoint(OMNIROUTE_ENDPOINTS[endpoint] || OMNIROUTE_ENDPOINTS.cloudflare);
-  if (!primaryUrl) {
-    return json({ error: 'AI gateway is not configured' }, 503);
-  }
-  const modelName = model || 'auto/best-fast';
-  if (!isValidModel(modelName)) {
-    return json({ error: 'Invalid model' }, 400);
-  }
-  const apiMessages = buildOmniRouteMessages(messages, attachments);
-
-  const requestBody = JSON.stringify({
-    model: modelName,
-    messages: apiMessages,
-    max_tokens: 2048,
-    stream: true,
-  });
-
-  const headers = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${OMNIROUTE_KEY}`,
-  };
-
-  // Try primary endpoint, then fallbacks in parallel — first good SSE stream wins
-  const priorities = [primaryUrl, ...Object.values(OMNIROUTE_ENDPOINTS).map(normalizeEndpoint).filter(u => u && u !== primaryUrl)];
-  let response = null;
-  let lastUpstreamStatus = 0;
-
-  for (const url of priorities) {
+    let admin = false;
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 8000);
-      const res = await fetch(url + '/chat/completions', {
-        method: 'POST',
-        signal: ctrl.signal,
-        headers,
-        body: requestBody,
-      });
-      clearTimeout(timer);
-      if (res.ok) { response = res; break; }
-      lastUpstreamStatus = res.status;
-    } catch { continue; }
-  }
+      ({ admin } = await resolveAccess(session.email));
+    } catch (e) {
+      console.error('resolveAccess error:', e);
+      admin = false;
+    }
 
-  if (!response) {
-    return json({ error: 'AI service unavailable', upstreamStatus: lastUpstreamStatus || undefined }, 503);
-  }
+    if (!admin) {
+      return json({ error: 'Access denied' }, 403);
+    }
 
-  try {
+    let body;
+    try {
+      const contentLength = Number(req.headers.get('content-length') || 0);
+      if (contentLength > MAX_BODY_BYTES) return json({ error: 'Request is too large' }, 413);
+      body = await req.json();
+    } catch {
+      return json({ error: 'Invalid JSON' }, 400);
+    }
 
-    // Pipe the SSE stream to the client, filtering out keepalive chunks
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
+    const { messages, model, attachments } = body;
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return json({ error: 'Messages required' }, 400);
+    }
 
-    const stream = new ReadableStream({
-      async pull(controller) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) {
-            controller.close();
-            return;
-          }
+    if (messages.length > MAX_MESSAGES || messages.some(msg =>
+      !msg || !['user', 'assistant', 'system'].includes(msg.role) ||
+      typeof msg.content !== 'string' || msg.content.length > MAX_MESSAGE_CHARS)) {
+      return json({ error: 'Message payload is invalid or too large' }, 413);
+    }
 
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
+    if (attachments !== undefined && (!Array.isArray(attachments) || attachments.length > MAX_ATTACHMENTS || attachments.some(att =>
+      !att || typeof att.name !== 'string' || typeof att.type !== 'string' || typeof att.data !== 'string' ||
+      att.name.length > 160 || att.data.length > MAX_ATTACHMENT_CHARS ||
+      !(/^(text\/|image\/(png|jpeg|webp|gif)$)/i).test(att.type)))) {
+      return json({ error: 'Attachment payload is invalid or too large' }, 413);
+    }
 
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            const data = line.slice(6).trim();
-            if (data === '[DONE]') {
+    if (!OMNIROUTE_KEY) {
+      return json({ error: 'AI gateway is not configured' }, 503);
+    }
+
+    const url = new URL(req.url);
+    const endpoint = url.searchParams.get('endpoint') || 'cloudflare';
+
+    if (!ALLOWED_ENDPOINTS.has(endpoint)) return json({ error: 'Invalid endpoint' }, 400);
+
+    const primaryUrl = normalizeEndpoint(OMNIROUTE_ENDPOINTS[endpoint] || OMNIROUTE_ENDPOINTS.cloudflare);
+    if (!primaryUrl) {
+      return json({ error: 'AI gateway is not configured' }, 503);
+    }
+    const modelName = model || 'auto/best-fast';
+    if (!isValidModel(modelName)) {
+      return json({ error: 'Invalid model' }, 400);
+    }
+    const apiMessages = buildOmniRouteMessages(messages, attachments);
+
+    const requestBody = JSON.stringify({
+      model: modelName,
+      messages: apiMessages,
+      max_tokens: 2048,
+      stream: true,
+    });
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OMNIROUTE_KEY}`,
+    };
+
+    // Try primary endpoint, then fallbacks in parallel — first good SSE stream wins
+    const priorities = [primaryUrl, ...Object.values(OMNIROUTE_ENDPOINTS).map(normalizeEndpoint).filter(u => u && u !== primaryUrl)];
+    let response = null;
+    let lastUpstreamStatus = 0;
+
+    for (const url of priorities) {
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 8000);
+        const res = await fetch(url + '/chat/completions', {
+          method: 'POST',
+          signal: ctrl.signal,
+          headers,
+          body: requestBody,
+        });
+        clearTimeout(timer);
+        if (res.ok) { response = res; break; }
+        lastUpstreamStatus = res.status;
+      } catch { continue; }
+    }
+
+    if (!response) {
+      return json({ error: 'AI service unavailable', upstreamStatus: lastUpstreamStatus || undefined }, 503);
+    }
+
+    try {
+      // Pipe the SSE stream to the client, filtering out keepalive chunks
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      const stream = new ReadableStream({
+        async pull(controller) {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
               controller.close();
               return;
             }
 
-            try {
-              const parsed = JSON.parse(data);
-              // Skip keepalive chunks
-              if (parsed.id === 'omniroute-keepalive') continue;
-              // Forward actual content chunks
-              const delta = parsed.choices?.[0]?.delta?.content;
-              if (delta) {
-                controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ content: delta })}\n\n`));
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              const data = line.slice(6).trim();
+              if (data === '[DONE]') {
+                controller.close();
+                return;
               }
-            } catch {
-              // Skip unparseable lines
+
+              try {
+                const parsed = JSON.parse(data);
+                // Skip keepalive chunks
+                if (parsed.id === 'omniroute-keepalive') continue;
+                // Forward actual content chunks
+                const delta = parsed.choices?.[0]?.delta?.content;
+                if (delta) {
+                  controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ content: delta })}\n\n`));
+                }
+              } catch {
+                // Skip unparseable lines
+              }
             }
           }
+        },
+        cancel() {
+          reader.cancel();
         }
-      },
-      cancel() {
-        reader.cancel();
-      }
-    });
+      });
 
-    return new Response(stream, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
-    });
-  } catch (err) {
-    return json({
-      error: err.name === 'AbortError' ? 'AI service timed out' : 'AI request failed',
-    }, 502);
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
+    } catch (err) {
+      return json({
+        error: err.name === 'AbortError' ? 'AI service timed out' : 'AI request failed',
+      }, 502);
+    }
+  } catch (e) {
+    console.error('chat handler error:', e);
+    return json({ error: 'Internal server error', details: String(e) }, 500);
   }
 }

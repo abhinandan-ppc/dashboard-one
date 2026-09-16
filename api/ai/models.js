@@ -162,39 +162,45 @@ async function fetchOmniRouteModels(endpoint) {
 
 export default async function handler(req) {
   if (req.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
-  const session = await verifySession(readCookie(req, 'session'));
-  if (!session) {
-    return json({ error: 'Unauthorized' }, 401);
-  }
-
-  let admin = false;
   try {
-    ({ admin } = await resolveAccess(session.email));
-  } catch {
-    admin = false;
+    const session = await verifySession(readCookie(req, 'session'));
+    if (!session) {
+      return json({ error: 'Unauthorized' }, 401);
+    }
+
+    let admin = false;
+    try {
+      ({ admin } = await resolveAccess(session.email));
+    } catch (e) {
+      console.error('resolveAccess error:', e);
+      admin = false;
+    }
+
+    if (!admin) {
+      return json({ error: 'Access denied' }, 403);
+    }
+
+    const url = new URL(req.url);
+    const endpoint = url.searchParams.get('endpoint') || 'cloudflare';
+
+    // Try the requested endpoint first, then fallbacks
+    const priorities = [endpoint, 'cloudflare', 'ngrok', 'intranet'];
+    let models = null;
+
+    for (const ep of priorities) {
+      if (!OMNIROUTE_ENDPOINTS[ep]) continue;
+      models = await fetchOmniRouteModels(ep);
+      if (models) break;
+    }
+
+    if (!models) {
+      // Return static categories even if we can't verify
+      return json({ categories: CATEGORIES, verified: false });
+    }
+
+    return json({ categories: models, verified: true });
+  } catch (e) {
+    console.error('models handler error:', e);
+    return json({ error: 'Internal server error', details: String(e) }, 500);
   }
-
-  if (!admin) {
-    return json({ error: 'Access denied' }, 403);
-  }
-
-  const url = new URL(req.url);
-  const endpoint = url.searchParams.get('endpoint') || 'cloudflare';
-
-  // Try the requested endpoint first, then fallbacks
-  const priorities = [endpoint, 'cloudflare', 'ngrok', 'intranet'];
-  let models = null;
-
-  for (const ep of priorities) {
-    if (!OMNIROUTE_ENDPOINTS[ep]) continue;
-    models = await fetchOmniRouteModels(ep);
-    if (models) break;
-  }
-
-  if (!models) {
-    // Return static categories even if we can't verify
-    return json({ categories: CATEGORIES, verified: false });
-  }
-
-  return json({ categories: models, verified: true });
 }

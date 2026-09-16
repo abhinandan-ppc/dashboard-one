@@ -1455,6 +1455,9 @@ function openInFrame(path, title){
   // ensure layout has settled before measuring (handles font/load shifts)
   requestAnimationFrame(function(){ updateFrameTop(); });
   pageFrame.src = path;
+  // Update URL without reload
+  var state = { path: path, title: title || '' };
+  history.pushState(state, '', '/' + path);
 }
 
 document.getElementById('homeBtn').addEventListener('click', function(){
@@ -1468,7 +1471,38 @@ document.getElementById('homeBtn').addEventListener('click', function(){
   if(tw) tw.classList.remove('hidden-in-frame');
   // recompute frame/top offsets
   requestAnimationFrame(updateFrameTop);
+  // Update URL to home
+  history.pushState({ path: '' }, '', '/');
 });
+
+// Handle browser back/forward
+window.addEventListener('popstate', function(e){
+  var state = e.state;
+  if(state && state.path){
+    openInFrame(state.path, state.title);
+  } else {
+    // Navigated back to home
+    frameBox.classList.remove('on');
+    frameStage.style.display = 'none';
+    removeInjectedFrameControls();
+    try{ pageFrame.src = ''; }catch(e){}
+    var tw = document.querySelector('.top-wrapper');
+    if(tw) tw.classList.remove('hidden-in-frame');
+    requestAnimationFrame(updateFrameTop);
+  }
+});
+
+// Restore iframe from URL on initial load
+(function(){
+  var path = window.location.pathname.slice(1); // remove leading '/'
+  if(path && path.endsWith('.html')){
+    var item = items.find(function(i){ return i.path === path; });
+    if(item){
+      // defer to let DOM initialize
+      setTimeout(function(){ openInFrame(item.path, item.name); }, 0);
+    }
+  }
+})();
 
 // Open card actions (edit/delete) and normal card clicks (open in frame)
 grid.addEventListener("click", function(e){
