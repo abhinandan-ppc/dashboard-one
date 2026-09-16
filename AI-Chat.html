@@ -177,25 +177,29 @@ a { color: var(--primary); }
    (mounted into #hubFrameHeaderSlot with inline styles by the parent hub)
    to the same fixed 40x40 circle every other embedded page forces via
    this same rule, so they render identically everywhere. !important is
-   needed to win over the buttons' own inline style attributes. */
-#hubFrameHeaderSlot button {
-  width: 40px !important; height: 40px !important; min-width: 40px !important; min-height: 40px !important;
-  max-width: 40px !important; max-height: 40px !important;
-  padding: 0 !important; border-radius: 999px !important; box-sizing: border-box !important;
-}
-#hubFrameHeaderSlot button img {
-  width: 100% !important; height: 100% !important; border-radius: 50% !important; object-fit: cover !important;
-}
-.hdr-r button {
-  transform: translateY(0) scale(1);
-  transition:
-    transform 0.2s cubic-bezier(.22,1,.36,1),
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease,
-    box-shadow 0.2s ease,
-    filter 0.2s ease;
-  will-change: transform, box-shadow;
+   needed to win over the buttons' own inline style attributes.
+   DISABLED via @media (max-width: 0) — belongs in hub CSS, not embedded page.
+   This rule was leaking into parent hub and randomly hiding text on other pages. */
+@media (max-width: 0) {
+  #hubFrameHeaderSlot button {
+    width: 40px !important; height: 40px !important; min-width: 40px !important; min-height: 40px !important;
+    max-width: 40px !important; max-height: 40px !important;
+    padding: 0 !important; border-radius: 999px !important; box-sizing: border-box !important;
+  }
+  #hubFrameHeaderSlot button img {
+    width: 100% !important; height: 100% !important; border-radius: 50% !important; object-fit: cover !important;
+  }
+  .hdr-r button {
+    transform: translateY(0) scale(1);
+    transition:
+      transform 0.2s cubic-bezier(.22,1,.36,1),
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease,
+      box-shadow 0.2s ease,
+      filter 0.2s ease;
+    will-change: transform, box-shadow;
+  }
 }
 .theme-toggle {
   height: 40px; width: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
@@ -1500,7 +1504,7 @@ a { color: var(--primary); }
     var modelToSend = selectedModel;
     if (selectedModel.startsWith('auto/')) {
       var detected = detectCategory(content);
-      var autoMap = { coding: 'auto/best-coding-fast', image: 'auto/best-vision', video: 'auto/best-vision', chat: 'auto/best-fast', free: 'auto/best-free' };
+      var autoMap = { coding: 'auto/best-coding', image: 'auto/best-vision', video: 'auto/best-vision', chat: 'auto/best-fast', free: 'auto/best-free' };
       modelToSend = autoMap[detected] || 'auto/best-fast';
     }
 
@@ -1529,7 +1533,11 @@ a { color: var(--primary); }
         })
       });
 
-      if(!response.ok) throw new Error('Request failed: ' + response.status);
+      if(!response.ok){
+        var errorData = {};
+        try { errorData = await response.json(); } catch(e) {}
+        throw new Error(errorData.error || ('Request failed: ' + response.status));
+      }
 
       var contentType = response.headers.get('content-type') || '';
 
