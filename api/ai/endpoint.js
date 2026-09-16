@@ -1,7 +1,7 @@
 import { verifySession, readCookie } from '../_session.js';
 import { resolveAccess } from '../_acl.js';
 
-export const config = { runtime: 'nodejs' };
+export const config = { runtime: 'edge' };
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
