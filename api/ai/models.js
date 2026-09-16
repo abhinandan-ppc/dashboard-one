@@ -112,6 +112,13 @@ let cachedModels = null;
 let cacheTime = 0;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
+}
+
 async function fetchOmniRouteModels(endpoint) {
   const now = Date.now();
   if (cachedModels && (now - cacheTime) < CACHE_TTL) {
@@ -122,7 +129,9 @@ async function fetchOmniRouteModels(endpoint) {
   const timeout = setTimeout(() => controller.abort(), 10000);
 
   try {
-    const res = await fetch(OMNIROUTE_ENDPOINTS[endpoint] + '/models', {
+    const base = String(OMNIROUTE_ENDPOINTS[endpoint] || '').trim().replace(/\/+$/, '');
+    if (!base || !OMNIROUTE_KEY) return null;
+    const res = await fetch(base + '/models', {
       headers: { 'Authorization': `Bearer ${OMNIROUTE_KEY}` },
       signal: controller.signal,
     });
@@ -152,12 +161,10 @@ async function fetchOmniRouteModels(endpoint) {
 }
 
 export default async function handler(req) {
+  if (req.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
   const session = await verifySession(readCookie(req, 'session'));
   if (!session) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ error: 'Unauthorized' }, 401);
   }
 
   let admin = false;
@@ -168,10 +175,7 @@ export default async function handler(req) {
   }
 
   if (!admin) {
-    return new Response(JSON.stringify({ error: 'Access denied' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ error: 'Access denied' }, 403);
   }
 
   const url = new URL(req.url);
@@ -189,14 +193,8 @@ export default async function handler(req) {
 
   if (!models) {
     // Return static categories even if we can't verify
-    return new Response(JSON.stringify({ categories: CATEGORIES, verified: false }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ categories: CATEGORIES, verified: false });
   }
 
-  return new Response(JSON.stringify({ categories: models, verified: true }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return json({ categories: models, verified: true });
 }

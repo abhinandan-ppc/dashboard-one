@@ -19,13 +19,20 @@ const MAX_MESSAGE_CHARS = 20_000;
 const MAX_ATTACHMENTS = 4;
 const MAX_ATTACHMENT_CHARS = 600_000;
 const ALLOWED_ENDPOINTS = new Set(['intranet', 'ngrok', 'cloudflare']);
-const ALLOWED_MODELS = new Set(['auto/best-fast', 'auto/best', 'auto/fast']);
 
 function json(data, status) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   });
+}
+
+function isValidModel(model) {
+  return typeof model === 'string' && model.length > 0 && model.length <= 200 && !/[\u0000-\u001f\u007f]/.test(model);
+}
+
+function normalizeEndpoint(value) {
+  return String(value || '').trim().replace(/\/+$/, '');
 }
 
 function buildOmniRouteMessages(history, attachments) {
@@ -112,12 +119,12 @@ export default async function handler(req) {
 
   if (!ALLOWED_ENDPOINTS.has(endpoint)) return json({ error: 'Invalid endpoint' }, 400);
 
-  const primaryUrl = OMNIROUTE_ENDPOINTS[endpoint] || OMNIROUTE_ENDPOINTS.cloudflare;
+  const primaryUrl = normalizeEndpoint(OMNIROUTE_ENDPOINTS[endpoint] || OMNIROUTE_ENDPOINTS.cloudflare);
   if (!primaryUrl) {
     return json({ error: 'AI gateway is not configured' }, 503);
   }
   const modelName = model || 'auto/best-fast';
-  if (typeof modelName !== 'string' || !ALLOWED_MODELS.has(modelName)) {
+  if (!isValidModel(modelName)) {
     return json({ error: 'Invalid model' }, 400);
   }
   const apiMessages = buildOmniRouteMessages(messages, attachments);
@@ -135,8 +142,9 @@ export default async function handler(req) {
   };
 
   // Try primary endpoint, then fallbacks in parallel — first good SSE stream wins
-  const priorities = [primaryUrl, ...Object.values(OMNIROUTE_ENDPOINTS).filter(u => u && u !== primaryUrl)];
+  const priorities = [primaryUrl, ...Object.values(OMNIROUTE_ENDPOINTS).map(normalizeEndpoint).filter(u => u && u !== primaryUrl)];
   let response = null;
+  let lastUpstreamStatus = 0;
 
   for (const url of priorities) {
     try {
@@ -150,11 +158,12 @@ export default async function handler(req) {
       });
       clearTimeout(timer);
       if (res.ok) { response = res; break; }
+      lastUpstreamStatus = res.status;
     } catch { continue; }
   }
 
   if (!response) {
-    return json({ error: 'AI service unavailable' }, 503);
+    return json({ error: 'AI service unavailable', upstreamStatus: lastUpstreamStatus || undefined }, 503);
   }
 
   try {

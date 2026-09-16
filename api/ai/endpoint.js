@@ -3,10 +3,18 @@ import { resolveAccess } from '../_acl.js';
 
 export const config = { runtime: 'nodejs' };
 
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
+}
+
 export default async function handler(req) {
+  if (req.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
   const session = await verifySession(readCookie(req, 'session'));
   if (!session) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    return json({ error: 'Unauthorized' }, 401);
   }
 
   let admin = false;
@@ -17,14 +25,14 @@ export default async function handler(req) {
   }
 
   if (!admin) {
-    return new Response(JSON.stringify({ error: 'Access denied' }), { status: 403 });
+    return json({ error: 'Access denied' }, 403);
   }
 
   const url = new URL(req.url);
   const endpoint = url.searchParams.get('endpoint');
 
   if (!endpoint || !['intranet', 'ngrok', 'cloudflare'].includes(endpoint)) {
-    return new Response(JSON.stringify({ error: 'Invalid endpoint. Use: intranet, ngrok, or cloudflare' }), { status: 400 });
+    return json({ error: 'Invalid endpoint. Use: intranet, ngrok, or cloudflare' }, 400);
   }
 
   const endpoints = {
@@ -35,15 +43,8 @@ export default async function handler(req) {
 
   const base = endpoints[endpoint];
   if (!base) {
-    return new Response(JSON.stringify({ error: 'Endpoint is not configured' }), { status: 503 });
+    return json({ error: 'Endpoint is not configured' }, 503);
   }
 
-  return new Response(JSON.stringify({
-    success: true,
-    endpoint,
-    url: base + '/chat/completions'
-  }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
-  });
+  return json({ success: true, endpoint, configured: true });
 }
