@@ -11,6 +11,18 @@ function json(data, status = 200) {
 }
 
 export default async function handler(req) {
+  // Quick test - return immediately without any imports
+  if (new URL(req.url).searchParams.get('test') === '1') {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: 'Quick test working',
+      timestamp: Date.now()
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    });
+  }
+  
   if (req.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
   try {
     const session = await verifySession(readCookie(req, 'session'));
