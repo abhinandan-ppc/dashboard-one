@@ -69,9 +69,9 @@ input { font: inherit; color: inherit; }
 .frame-pill.visible .panel .pill-btn:nth-child(3) { transition-delay: 0.12s; }
 .frame-pill .panel .pill-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .frame-pill .panel .pill-btn:hover { background: rgba(30, 41, 59, 0.92); box-shadow: 0 12px 30px rgba(2, 6, 23, 0.4); }
-.frame-pill .panel .pill-btn.home { background: rgba(0, 100, 147, 0.9); color: #ffffff; border-color: rgba(141,205,255,0.42); box-shadow: 0 10px 28px rgba(0, 52, 79, 0.34); }
+.frame-pill .panel .pill-btn.home { background: rgba(var(--primary-rgb), 0.9); color: var(--on-primary); border-color: rgba(var(--primary-rgb), 0.42); box-shadow: 0 10px 28px rgba(var(--primary-rgb), 0.34); }
 .frame-pill .panel .pill-btn.reset { background: rgba(148, 163, 184, 0.82); color: #08111f; border-color: rgba(255,255,255,0.22); }
-.frame-pill .panel .pill-btn.theme { background: rgba(56, 189, 248, 0.88); color: #04263a; border-color: rgba(255,255,255,0.3); }
+.frame-pill .panel .pill-btn.theme { background: rgba(var(--primary-rgb), 0.88); color: var(--on-primary); border-color: rgba(255,255,255,0.3); }
 .frame-pill .panel .pill-btn:active{ transform: translateY(1px); }
 /* hotspot area (invisible) that reveals the pill on hover/touch */
 .frame-hotspot { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 180px; height: 36px; z-index: 329; pointer-events: auto; }
@@ -269,8 +269,8 @@ input { font: inherit; color: inherit; }
   visibility: visible !important;
   opacity: 0.24 !important;
   border-style: dashed !important;
-  border-color: rgba(141,205,255,0.52) !important;
-  box-shadow: inset 0 0 0 1px rgba(141,205,255,0.2) !important;
+  border-color: rgba(var(--primary-rgb),0.52) !important;
+  box-shadow: inset 0 0 0 1px rgba(var(--primary-rgb),0.2) !important;
   animation: placeholderPulse 0.9s ease-in-out infinite;
 }
 .drag-ghost {
@@ -1213,15 +1213,19 @@ function installFrameHeaderControls(){
         };
         var applyInjectedThemeStyles = function(theme){
           var isDark = theme !== 'light';
+          // Home button is branded with the current accent (--primary), not a
+          // fixed blue, so it repaints when the theme button's color picker changes.
+          var primaryRgb = getComputedStyle(document.documentElement).getPropertyValue('--primary-rgb').trim();
+          var onPrimary = getComputedStyle(document.documentElement).getPropertyValue('--on-primary').trim();
           [homeBtn, resetBtn, themeBtn].forEach(function(btn){
             if(btn.dataset.variant === 'home'){
-              btn.style.background = isDark ? 'rgba(0,100,147,0.9)' : 'rgba(2,132,199,0.92)';
-              btn.style.color = '#ffffff';
-              btn.style.border = '1px solid ' + (isDark ? 'rgba(141,205,255,0.36)' : 'rgba(125,211,252,0.72)');
-              btn.dataset.baseBorder = isDark ? 'rgba(141,205,255,0.36)' : 'rgba(125,211,252,0.72)';
-              btn.dataset.hoverBorder = isDark ? 'rgba(186,230,253,0.64)' : 'rgba(56,189,248,0.88)';
-              btn.dataset.baseShadow = isDark ? '0 10px 28px rgba(2,6,23,0.28)' : '0 10px 24px rgba(14,116,144,0.22)';
-              btn.dataset.hoverShadow = isDark ? '0 16px 34px rgba(2,6,23,0.36)' : '0 16px 34px rgba(14,116,144,0.28)';
+              btn.style.background = 'rgba(' + primaryRgb + ',' + (isDark ? '0.9' : '0.92') + ')';
+              btn.style.color = onPrimary || '#ffffff';
+              btn.style.border = '1px solid rgba(' + primaryRgb + ',0.5)';
+              btn.dataset.baseBorder = 'rgba(' + primaryRgb + ',0.5)';
+              btn.dataset.hoverBorder = 'rgba(' + primaryRgb + ',0.8)';
+              btn.dataset.baseShadow = isDark ? '0 10px 28px rgba(2,6,23,0.28)' : '0 10px 24px rgba(' + primaryRgb + ',0.22)';
+              btn.dataset.hoverShadow = isDark ? '0 16px 34px rgba(2,6,23,0.36)' : '0 16px 34px rgba(' + primaryRgb + ',0.28)';
             } else {
               btn.style.background = isDark ? 'rgba(15,23,42,0.78)' : 'rgba(255,255,255,0.78)';
               btn.style.color = isDark ? '#f8fafc' : '#334155';
@@ -1341,8 +1345,11 @@ function installFrameHeaderControls(){
           try{ fetchAndCacheSegment(true); }catch(e){}
         });
         themeBtn.addEventListener('click', function(){
-          var themeToggle = document.getElementById('themeToggle');
-          if(themeToggle) themeToggle.click();
+          // Clicking the real #themeToggle now opens its color-picker popover
+          // rather than instantly toggling dark/light, so drive the mode
+          // switch inside it directly instead of simulating a toggle click.
+          var modeSwitch = document.getElementById('modeSwitch');
+          if(modeSwitch) modeSwitch.click();
           var theme = document.documentElement.getAttribute('data-theme');
           syncInjectedThemeIcon(theme);
           applyInjectedThemeStyles(theme);
@@ -1667,32 +1674,40 @@ document.getElementById("resetBtn").addEventListener("click", function(){
 /* ─── Theme ─── */
 var themeBtn = document.getElementById("themeToggle");
 var root = document.documentElement;
+// Recolors the injected "Home" button in an already-mounted in-frame pill
+// to the current accent (--primary) — shared by theme AND accent changes,
+// since either one can change what --primary-rgb/--on-primary resolve to.
+function syncInjectedFrameHomeAccent(){
+  try{
+    var frameDoc = pageFrame && pageFrame.contentWindow && pageFrame.contentWindow.document;
+    var frameControls = frameDoc && frameDoc.getElementById('hubFrameHeaderControls');
+    if(!frameControls) return;
+    var theme = document.documentElement.getAttribute('data-theme');
+    var primaryRgb = getComputedStyle(document.documentElement).getPropertyValue('--primary-rgb').trim();
+    var onPrimary = getComputedStyle(document.documentElement).getPropertyValue('--on-primary').trim();
+    Array.from(frameControls.querySelectorAll('button')).forEach(function(btn){
+      var label = (btn.getAttribute('aria-label') || btn.title || '').toLowerCase();
+      var isHome = label === 'home';
+      btn.style.background = isHome
+        ? 'rgba(' + primaryRgb + ',' + (theme === 'dark' ? '0.9' : '0.92') + ')'
+        : (theme === 'dark' ? 'rgba(15,23,42,0.78)' : 'rgba(255,255,255,0.78)');
+      btn.style.color = isHome ? (onPrimary || '#ffffff') : (theme === 'dark' ? '#f8fafc' : '#334155');
+      btn.style.borderColor = isHome
+        ? 'rgba(' + primaryRgb + ',0.5)'
+        : (theme === 'dark' ? 'rgba(255,255,255,0.14)' : 'rgba(148,163,184,0.42)');
+      btn.style.boxShadow = theme === 'dark'
+        ? '0 10px 28px rgba(2,6,23,0.28)'
+        : (isHome ? '0 10px 24px rgba(' + primaryRgb + ',0.22)' : '0 10px 24px rgba(148,163,184,0.18)');
+    });
+  }catch(e){}
+}
 function setTheme(theme){
   root.setAttribute("data-theme", theme);
   localStorage.setItem("jspl-hub-theme", theme);
   themeBtn.innerHTML = theme === "dark"
     ? "<svg viewBox='0 0 24 24' aria-hidden='true'><path d='M12 3v2.5'></path><path d='M12 18.5V21'></path><path d='M4.93 4.93l1.77 1.77'></path><path d='M17.3 17.3l1.77 1.77'></path><path d='M3 12h2.5'></path><path d='M18.5 12H21'></path><path d='M4.93 19.07l1.77-1.77'></path><path d='M17.3 6.7l1.77-1.77'></path><circle cx='12' cy='12' r='4'></circle></svg>"
     : "<svg viewBox='0 0 24 24' aria-hidden='true'><path d='M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z'></path></svg>";
-  try{
-    var frameDoc = pageFrame && pageFrame.contentWindow && pageFrame.contentWindow.document;
-    var frameControls = frameDoc && frameDoc.getElementById('hubFrameHeaderControls');
-    if(frameControls){
-      Array.from(frameControls.querySelectorAll('button')).forEach(function(btn){
-        var label = (btn.getAttribute('aria-label') || btn.title || '').toLowerCase();
-        var isHome = label === 'home';
-        btn.style.background = isHome
-          ? (theme === 'dark' ? 'rgba(0,100,147,0.9)' : 'rgba(2,132,199,0.92)')
-          : (theme === 'dark' ? 'rgba(15,23,42,0.78)' : 'rgba(255,255,255,0.78)');
-        btn.style.color = isHome ? '#ffffff' : (theme === 'dark' ? '#f8fafc' : '#334155');
-        btn.style.borderColor = isHome
-          ? (theme === 'dark' ? 'rgba(141,205,255,0.36)' : 'rgba(125,211,252,0.72)')
-          : (theme === 'dark' ? 'rgba(255,255,255,0.14)' : 'rgba(148,163,184,0.42)');
-        btn.style.boxShadow = theme === 'dark'
-          ? '0 10px 28px rgba(2,6,23,0.28)'
-          : (isHome ? '0 10px 24px rgba(14,116,144,0.22)' : '0 10px 24px rgba(148,163,184,0.18)');
-      });
-    }
-  }catch(e){}
+  syncInjectedFrameHomeAccent();
   // notify iframe(s) about theme change
   try{ if(pageFrame && pageFrame.contentWindow) pageFrame.contentWindow.postMessage({type:'theme', value: theme}, '*'); }catch(e){}
 }
@@ -1706,6 +1721,8 @@ function setAccent(accent){
   document.querySelectorAll(".accent-dot").forEach(function(dot){
     dot.classList.toggle("active", dot.getAttribute("data-accent") === accent);
   });
+  syncInjectedFrameHomeAccent();
+  try{ if(pageFrame && pageFrame.contentWindow) pageFrame.contentWindow.postMessage({type:'accent', value: accent}, '*'); }catch(e){}
 }
 setAccent(localStorage.getItem(ACCENT_KEY) || "blue");
 
