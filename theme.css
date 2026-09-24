@@ -168,6 +168,62 @@
   color-scheme:light;
 }
 
+/* ── Accent color overrides — chosen from the theme button's color
+   picker (index.html). "blue" is the default brand hue defined above
+   and needs no override; the rest just repaint --primary and its
+   dependent tokens, so every page using var(--md-sys-color-primary)/
+   var(--primary) etc repaints without further changes. ── */
+:root[data-accent="green"]{
+  --primary:#34d399; --on-primary:#052e1c; --primary-bg:rgba(52,211,153,.14); --primary-rgb:52,211,153;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#0a3d28; --md-sys-color-on-primary-container:#c3f5dd;
+}
+[data-theme="light"][data-accent="green"]{
+  --primary:#059669; --on-primary:#ffffff; --primary-bg:rgba(5,150,105,.09); --primary-rgb:5,150,105;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#d3f5e6; --md-sys-color-on-primary-container:#00291a;
+}
+:root[data-accent="grey"]{
+  --primary:#94a3b8; --on-primary:#0f172a; --primary-bg:rgba(148,163,184,.14); --primary-rgb:148,163,184;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#334155; --md-sys-color-on-primary-container:#e2e8f0;
+}
+[data-theme="light"][data-accent="grey"]{
+  --primary:#475569; --on-primary:#ffffff; --primary-bg:rgba(71,85,105,.09); --primary-rgb:71,85,105;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#e2e8f0; --md-sys-color-on-primary-container:#0f172a;
+}
+:root[data-accent="violet"]{
+  --primary:#a78bfa; --on-primary:#2e1065; --primary-bg:rgba(167,139,250,.14); --primary-rgb:167,139,250;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#3b1a78; --md-sys-color-on-primary-container:#e9ddff;
+}
+[data-theme="light"][data-accent="violet"]{
+  --primary:#7c3aed; --on-primary:#ffffff; --primary-bg:rgba(124,58,237,.09); --primary-rgb:124,58,237;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#eaddff; --md-sys-color-on-primary-container:#22065a;
+}
+:root[data-accent="rose"]{
+  --primary:#fb7185; --on-primary:#4c0519; --primary-bg:rgba(251,113,133,.14); --primary-rgb:251,113,133;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#6b0b26; --md-sys-color-on-primary-container:#ffd9e1;
+}
+[data-theme="light"][data-accent="rose"]{
+  --primary:#e11d48; --on-primary:#ffffff; --primary-bg:rgba(225,29,72,.09); --primary-rgb:225,29,72;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#ffd9e1; --md-sys-color-on-primary-container:#4c0519;
+}
+:root[data-accent="orange"]{
+  --primary:#fb923c; --on-primary:#431407; --primary-bg:rgba(251,146,60,.14); --primary-rgb:251,146,60;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#7c2d12; --md-sys-color-on-primary-container:#ffe1c7;
+}
+[data-theme="light"][data-accent="orange"]{
+  --primary:#ea580c; --on-primary:#ffffff; --primary-bg:rgba(234,88,12,.09); --primary-rgb:234,88,12;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#ffe1c7; --md-sys-color-on-primary-container:#431407;
+}
+
 /* ── Base body treatment ── */
 body{
   background:var(--bg);

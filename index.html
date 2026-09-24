@@ -182,6 +182,32 @@ input { font: inherit; color: inherit; }
 }
 .user-panel-logout:hover { background: var(--input-hover); }
 
+.theme-menu { position: relative; flex-shrink: 0; }
+.theme-panel {
+  /* Same fixed + body-appended pattern as .user-panel, and for the same
+     reason: nested inside .top-bar's own backdrop-filter stacking context
+     it would only blur that ancestor's layer instead of the real page. */
+  position: fixed; min-width: 200px;
+  background: var(--glass-bg-solid); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border); border-radius: var(--radius-m); box-shadow: var(--glass-shadow);
+  padding: 14px; display: none; flex-direction: column; gap: 10px; z-index: 400;
+}
+.theme-panel.open { display: flex; }
+.theme-panel-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.theme-panel-label { font-size: 11px; font-weight: 700; color: var(--tm); text-transform: uppercase; letter-spacing: 0.4px; }
+.mode-switch { width: 38px; height: 22px; border-radius: var(--radius-pill); background: var(--input-bg); border: var(--glass-border); position: relative; flex-shrink: 0; transition: background 0.15s ease; }
+.mode-switch.on { background: var(--md-sys-color-primary); }
+.mode-switch-knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: left 0.15s ease; }
+.mode-switch.on .mode-switch-knob { left: 18px; }
+.accent-swatches { display: flex; gap: 8px; }
+.accent-dot {
+  width: 24px; height: 24px; border-radius: 50%; background: var(--dot); flex-shrink: 0;
+  border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
+  transition: transform 0.15s cubic-bezier(.22,1,.36,1), border-color 0.15s ease;
+}
+.accent-dot:hover { transform: scale(1.12); }
+.accent-dot.active { border-color: var(--tx); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12), 0 0 0 2px var(--bg-color); }
+
 .login-wrap { display: none; align-items: center; justify-content: center; min-height: 60vh; padding: calc(var(--frame-top, 88px) + 28px) 24px 60px; }
 .login-box {
   background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
@@ -423,7 +449,24 @@ input { font: inherit; color: inherit; }
       <button class="reset-link" id="resetBtn" type="button" title="Refresh EBTP" aria-label="Refresh EBTP">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg>
       </button>
-      <button class="theme-toggle" id="themeToggle" type="button" title="Toggle Dark Mode" aria-label="Toggle theme"></button>
+      <div class="theme-menu" id="themeMenu">
+        <button class="theme-toggle" id="themeToggle" type="button" title="Theme" aria-label="Theme"></button>
+        <div class="theme-panel" id="themePanel">
+          <div class="theme-panel-row">
+            <span class="theme-panel-label">Dark mode</span>
+            <button class="mode-switch" id="modeSwitch" type="button" role="switch" aria-label="Toggle dark mode"><span class="mode-switch-knob"></span></button>
+          </div>
+          <div class="theme-panel-label">Accent color</div>
+          <div class="accent-swatches" id="accentSwatches">
+            <button class="accent-dot" data-accent="blue" style="--dot:#0284c7" title="Blue" aria-label="Blue"></button>
+            <button class="accent-dot" data-accent="green" style="--dot:#059669" title="Green" aria-label="Green"></button>
+            <button class="accent-dot" data-accent="grey" style="--dot:#64748b" title="Grey" aria-label="Grey"></button>
+            <button class="accent-dot" data-accent="violet" style="--dot:#7c3aed" title="Violet" aria-label="Violet"></button>
+            <button class="accent-dot" data-accent="rose" style="--dot:#e11d48" title="Rose" aria-label="Rose"></button>
+            <button class="accent-dot" data-accent="orange" style="--dot:#ea580c" title="Orange" aria-label="Orange"></button>
+          </div>
+        </div>
+      </div>
       <button class="add-btn" id="addBtn" type="button" title="Add Page" aria-label="Add Page">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
       </button>
@@ -627,8 +670,10 @@ function loadItems(){
     if(!raw){ saveItems(DEFAULTS); return DEFAULTS.slice(); }
     var parsed = JSON.parse(raw);
     if(!Array.isArray(parsed)) throw new Error("bad data");
-    var seen = new Set(parsed.map(function(it){ return it && it.id; }).filter(Boolean));
-    var merged = parsed.slice();
+    // AI Chat was retired — prune it from anyone's already-saved layout.
+    var pruned = parsed.filter(function(it){ return !it || it.id !== "ai-chat"; });
+    var seen = new Set(pruned.map(function(it){ return it && it.id; }).filter(Boolean));
+    var merged = pruned.slice();
     DEFAULTS.forEach(function(def){
       if(!seen.has(def.id)) merged.push(def);
     });
@@ -1651,10 +1696,58 @@ function setTheme(theme){
   // notify iframe(s) about theme change
   try{ if(pageFrame && pageFrame.contentWindow) pageFrame.contentWindow.postMessage({type:'theme', value: theme}, '*'); }catch(e){}
 }
-themeBtn.addEventListener("click", function(){
-  setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
-});
 setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
+
+/* ─── Accent color ─── */
+var ACCENT_KEY = "jspl-hub-accent";
+function setAccent(accent){
+  root.setAttribute("data-accent", accent);
+  localStorage.setItem(ACCENT_KEY, accent);
+  document.querySelectorAll(".accent-dot").forEach(function(dot){
+    dot.classList.toggle("active", dot.getAttribute("data-accent") === accent);
+  });
+}
+setAccent(localStorage.getItem(ACCENT_KEY) || "blue");
+
+(function(){
+  var themeMenu = document.getElementById("themeMenu");
+  var themePanel = document.getElementById("themePanel");
+  var modeSwitch = document.getElementById("modeSwitch");
+  if(!themeMenu || !themePanel || !themeBtn) return;
+
+  // Same fixed + body-appended pattern as .user-panel — see CSS note.
+  document.body.appendChild(themePanel);
+  var positionThemePanel = function(){
+    var rect = themeBtn.getBoundingClientRect();
+    themePanel.style.top = (rect.bottom + 10) + "px";
+    themePanel.style.right = Math.max(16, (document.documentElement.clientWidth - rect.right)) + "px";
+  };
+  var syncModeSwitch = function(){
+    modeSwitch.classList.toggle("on", root.getAttribute("data-theme") === "dark");
+  };
+  syncModeSwitch();
+
+  themeBtn.addEventListener("click", function(e){
+    e.stopPropagation();
+    if(!themePanel.classList.contains("open")) positionThemePanel();
+    themePanel.classList.toggle("open");
+  });
+  modeSwitch.addEventListener("click", function(){
+    setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
+    syncModeSwitch();
+  });
+  document.querySelectorAll(".accent-dot").forEach(function(dot){
+    dot.addEventListener("click", function(){ setAccent(dot.getAttribute("data-accent")); });
+  });
+  window.addEventListener("resize", function(){
+    if(themePanel.classList.contains("open")) positionThemePanel();
+  });
+  document.addEventListener("click", function(e){
+    if(!themePanel.contains(e.target) && e.target !== themeBtn){
+      themePanel.classList.remove("open");
+    }
+  });
+})();
 
 (function(){
   var stageEl = document.getElementById('stage');
