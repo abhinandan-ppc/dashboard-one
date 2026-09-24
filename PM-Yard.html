@@ -2825,6 +2825,19 @@ function updateAutoLighting() {
     renderer.shadowMap.needsUpdate = true;
 }
 
+// .header-enter's entrance animation uses `transform` with fill-mode `both`,
+// which leaves `transform: translateY(0)` applied to <header> forever after
+// it finishes. A lingering transform makes header a containing block for
+// position:fixed descendants (per spec) — on mobile, .dropdown-panel becomes
+// position:fixed and gets trapped inside header's compositing layer, so its
+// backdrop-filter samples header's own (mostly transparent) layer instead of
+// the real page behind it, killing the frosted-glass blur on upload/settings
+// dropdowns. Stripping the transform once the animation ends removes header
+// as a containing block and restores normal viewport-relative fixed blur.
+document.querySelector('header.header-enter')?.addEventListener('animationend', function(e){
+  if (e.animationName === 'headerSlideIn') this.style.transform = 'none';
+}, {once:true});
+
 // ─── Dropdown Handlers ───
 function toggleDropdown(id, event) {
   if (event) event.stopPropagation();
