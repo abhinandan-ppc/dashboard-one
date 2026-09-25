@@ -653,9 +653,9 @@ function iconSvg(name, extraAttrs){
 /* ─── Data store (localStorage) ─── */
 var STORAGE_KEY = "jspl-hub-items";
 var DEFAULTS = [
+  // SMS-Heat-Planner.html hosts both the Daily and Monthly planners — the daughter
+  // pages stay unlisted so the hub only ever shows the parent entry.
   {id:"sms-heat-planner", name:"SMS Heat Planner", path:"SMS-Heat-Planner.html", icon:"flame"},
-  {id:"sms-heat-planner-daily", name:"SMS Heat Planner Daily", path:"SMS Heat Planner Daily.html", icon:"calendar"},
-  {id:"sms-heat-planner-monthly", name:"SMS Heat Planner Monthly", path:"SMS Heat Planner Monthly.html", icon:"calendarDays"},
   {id:"rake-planner",     name:"Rake Planner",      path:"Rake-Planner.html",     icon:"train"},
   {id:"pm-yard",          name:"PM Yard",           path:"PM-Yard.html",         icon:"warehouse"},
   {id:"plate-tagging-tool", name:"Plate Tagging Tool", path:"Plate-Tagging-Tool.html", icon:"tag"},
@@ -671,7 +671,10 @@ function loadItems(){
     var parsed = JSON.parse(raw);
     if(!Array.isArray(parsed)) throw new Error("bad data");
     // AI Chat was retired — prune it from anyone's already-saved layout.
-    var pruned = parsed.filter(function(it){ return !it || it.id !== "ai-chat"; });
+    // Retired/hidden pages: AI Chat was removed, and the SMS Heat Planner Daily/Monthly
+    // tiles are folded into the single parent "SMS Heat Planner" card.
+    var RETIRED_IDS = { "ai-chat":1, "sms-heat-planner-daily":1, "sms-heat-planner-monthly":1 };
+    var pruned = parsed.filter(function(it){ return !it || !RETIRED_IDS[it.id]; });
     var seen = new Set(pruned.map(function(it){ return it && it.id; }).filter(Boolean));
     var merged = pruned.slice();
     DEFAULTS.forEach(function(def){
