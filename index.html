@@ -389,6 +389,14 @@ input { font: inherit; color: inherit; }
 .btn-danger { background: rgba(224,70,70,0.12); color: #e04646; }
 .btn-danger:hover { background: rgba(224,70,70,0.22); }
 
+/* theme.css makes the header sticky below 768px — it then occupies normal flow,
+   so the stage must NOT re-add the --frame-top offset (that would double it and
+   push the cards into the middle of the screen). */
+@media (max-width: 768px) {
+  .stage { padding-top: 12px; }
+  .login-wrap { padding-top: 28px; }
+}
+
 @media (max-width: 640px) {
   .top-wrapper { padding: 8px 12px; }
   .top-bar { flex-wrap: wrap; align-items: center; padding: 12px; gap: 10px; }
@@ -398,7 +406,7 @@ input { font: inherit; color: inherit; }
   .jspl-divider { display: none; }
   .jspl-logo { width: 34px; height: 16px; }
   .hdr-r { gap: 8px; flex-basis: 100%; justify-content: center; border-top: 1px solid var(--br); padding-top: 10px; margin-top: 2px; }
-  .stage { padding: calc(var(--frame-top, 88px) + 12px) 14px 40px; }
+  .stage { padding: 12px 14px 40px; }
   .stage-hd { margin-bottom: 14px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
   .card { padding: 16px; gap: 10px; }
@@ -412,7 +420,7 @@ input { font: inherit; color: inherit; }
   .top-bar { padding: 10px; gap: 10px; }
   .hdr-r { gap: 8px; }
   .theme-toggle, .reset-link, .add-btn, .user-btn { height: 44px; width: 44px; }
-  .stage { padding: calc(var(--frame-top, 88px) + 10px) 10px 32px; }
+  .stage { padding: 10px 10px 32px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
   .card { padding: 12px; gap: 8px; }
   .card .card-name { font-size: 13.5px; }
