@@ -450,9 +450,9 @@ button:disabled,.btn:disabled{cursor:not-allowed;transform:none!important;filter
 .page-hub,.page-ai,.page-vdo{--page-header-max:none}
 .page-order .glass-card.header-enter{
   width:100%!important;
-  max-width:1600px!important;
-  margin-left:auto!important;
-  margin-right:auto!important;
+  max-width:none!important;
+  margin-left:0!important;
+  margin-right:0!important;
 }
 .page-rake .glass-card.header-enter{width:100%!important;max-width:none!important;margin-left:auto!important;margin-right:auto!important}
 .page-pm>header{left:max(16px,var(--safe-left))!important;right:max(16px,var(--safe-right))!important;top:calc(20px + var(--safe-top))!important}

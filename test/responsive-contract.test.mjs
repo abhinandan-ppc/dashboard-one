@@ -90,3 +90,12 @@ test('Order Status loading skeleton stays inside a horizontal scroller', async (
   const orderStatus = await read('Order-Status-Report.html');
   assert.match(orderStatus, /<div className="data-table-wrap">\s*<table className="skeleton-table">/);
 });
+
+test('Order Status desktop header spans its dashboard content width', async () => {
+  const theme = await read('theme.css');
+  assert.match(
+    theme,
+    /\.page-order \.glass-card\.header-enter\s*\{[^}]*max-width:\s*none\s*!important/s,
+    'Order Status header must not be narrower than the full-width content below it',
+  );
+});
