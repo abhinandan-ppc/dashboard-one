@@ -1038,6 +1038,15 @@ function findFrameHeaderMount(doc){
   var explicitSlot = doc.getElementById('hubFrameHeaderSlot');
   if(explicitSlot) return explicitSlot;
   var directMatch = doc.querySelector('header, .top-bar, .top-wrapper, .header, .app-header, nav, .h-actions, .hdr-r, .header-actions, .actions');
+  if(directMatch){
+    // A wrapper (.top-wrapper) that merely CONTAINS the real header bar must not
+    // win: controls appended beside .top-bar overflow the bar's right edge, and
+    // wrappers commonly carry pointer-events:none (only the bar re-enables
+    // clicks), which silently kills every injected button. Descend into the
+    // bar instead so the controls live inside the clickable, laid-out header.
+    var innerBar = directMatch.querySelector(':scope > header, :scope > .top-bar');
+    if(innerBar && directMatch.matches('.top-wrapper, .header, .app-header')) return innerBar;
+  }
   if(directMatch) return directMatch;
   try{
     var nodes = Array.from(doc.body.querySelectorAll('div, section, nav'));
@@ -1173,8 +1182,8 @@ function installFrameHeaderControls(){
           var hostLooksInline = !!host;
 
           controls.style.cssText = hostLooksInline
-            ? 'display:flex;align-items:center;gap:8px;flex-shrink:0;position:relative;z-index:5;'
-            : 'position:fixed;top:10px;right:16px;display:flex;align-items:center;gap:8px;z-index:2147483646;';
+            ? 'display:flex;align-items:center;gap:8px;flex-shrink:0;position:relative;z-index:5;pointer-events:auto;'
+            : 'position:fixed;top:10px;right:16px;display:flex;align-items:center;gap:8px;z-index:2147483646;pointer-events:auto;';
 
         // Fixed, page-independent size: these 4 buttons must look identical
         // everywhere they're injected, so nothing here may be derived from

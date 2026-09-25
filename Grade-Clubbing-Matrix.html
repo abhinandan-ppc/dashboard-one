@@ -1468,6 +1468,13 @@
       .board-head { align-items: start; }
       .chips { justify-content: flex-start; }
     }
+
+    /* theme.css switches .top-wrapper from fixed to sticky below 768px, so the
+       header then occupies normal flow — the header-spacer would reserve its
+       height a second time and leave a dead gap above the content. */
+    @media (max-width: 768px) {
+      .header-spacer { height: 8px; }
+    }
   </style>
 </head>
 <body class="page-grade">
