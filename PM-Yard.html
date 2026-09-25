@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Jindal Steel Plate Mill Yard — 3D Live Inventory</title>
 <link rel="icon" type="image/png" href="favicon.png"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
@@ -26,7 +26,7 @@
 
 body, html { 
   font-family: 'Poppins', system-ui, sans-serif; 
-  color: var(--tx); height: 100vh; overflow: hidden; overflow-x: clip;
+  color: var(--tx); height: 100vh; height: 100dvh; overflow: hidden; overflow-x: clip;
   background-color: var(--bg-color);
   transition: background-color 0.3s, color 0.3s;
 }
@@ -554,7 +554,7 @@ aside.collapsed .left-toggle {
   padding: 0 16px; border: var(--glass-border-rule); border-radius: var(--radius-pill); 
   font-size: 12px; font-weight: 800; cursor: pointer; transition: all 0.2s; 
   outline: none; background: var(--input-bg); color: var(--tx); box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  height: 32px; box-sizing: border-box; font-family: inherit; white-space: nowrap; margin: 0;
+  height: 44px; box-sizing: border-box; font-family: inherit; white-space: nowrap; margin: 0;
   -webkit-appearance: none; appearance: none; /* Prevents default OS button styles from interfering */
 }
 .btn:hover { background: var(--input-hover); transform: translateY(-1px); }
@@ -592,9 +592,10 @@ aside.collapsed .left-toggle {
   /* Accurately push side panels down further to clear the new 3-row header */
   .panel { top: var(--panel-top, 183px) !important; }
   .side-toggle-btn { top: 50px; }
+  .left-toggle { right: -12px; }
   
-  aside { width: calc(100% - 24px); left: 12px; bottom: 70px; max-height: calc(100vh - 250px); z-index: 50;}
-  .inspector { width: calc(100% - 24px); right: 12px; bottom: 70px; max-height: calc(100vh - 250px); z-index: 51;}
+  aside { width: calc(100% - 24px); left: 12px; bottom: 70px; max-height: calc(100dvh - var(--panel-top, 183px) - 70px); z-index: 50;}
+  .inspector { width: calc(100% - 24px); right: 12px; bottom: 70px; max-height: calc(100dvh - var(--panel-top, 183px) - 70px); z-index: 51;}
   
   aside.collapsed { transform: translateX(calc(-100% - 10px)); }
   .inspector.collapsed { transform: translateX(calc(100% + 10px)); }
@@ -604,12 +605,12 @@ aside.collapsed .left-toggle {
 
   .dropdown-panel { 
     position: fixed !important;
-    top: 178px !important;
+    top: var(--panel-top, 183px) !important;
     left: 10px !important; 
     right: 10px !important; 
     width: calc(100vw - 20px) !important; /* Forces strict screen fit */
     max-width: calc(100vw - 20px) !important; /* Prevents internal content from stretching it */
-    max-height: calc(100vh - 180px) !important; /* Safe bottom clearance */
+    max-height: calc(100dvh - var(--panel-top, 183px) - 12px) !important; /* Safe bottom clearance */
     overflow-x: hidden !important; /* Stops horizontal bleed */
     overflow-y: auto !important;
   }
@@ -626,9 +627,9 @@ aside.collapsed .left-toggle {
 
   /* Tighten panel padding so boxes don't feel cramped against the screen edge */
   .panel-head { padding: 10px 12px; font-size: 11px; }
-  .panel-body { padding: 12px; gap: 12px; max-height: calc(100vh - 130px); }
+  .panel-body { padding: 12px; gap: 12px; max-height: calc(100dvh - 130px); }
 
-  aside, .inspector { left: 12px; right: 12px; width: calc(100% - 24px); bottom: 64px; max-height: calc(100vh - 235px); }
+  aside, .inspector { left: 12px; right: 12px; width: calc(100% - 24px); bottom: 64px; max-height: calc(100dvh - var(--panel-top, 183px) - 64px); }
 
   /* Legend: reduce padding/gap and allow wrapping without squish */
   .legend { padding: 8px; gap: 2px; }
@@ -646,7 +647,7 @@ aside.collapsed .left-toggle {
   /* Inspector detail sections */
   .insp-head { padding: 12px 14px; }
   .insp-id { font-size: 18px; }
-  .insp-body { padding: 12px 14px; max-height: calc(100vh - 100px); }
+  .insp-body { padding: 12px 14px; max-height: calc(100dvh - 100px); }
   .stack-viz { max-height: 200px; }
   .plate-list { max-height: 180px; }
   .empty-msg { padding: 20px 8px; font-size: 12px; }
@@ -656,7 +657,7 @@ aside.collapsed .left-toggle {
   .tbtn { padding: 7px 10px; font-size: 10px; }
 
   /* Dropdown panels: match tighter panel padding */
-  .dropdown-panel { top: 172px !important; }
+  .dropdown-panel { top: var(--panel-top, 183px) !important; }
   .search-input { padding: 10px 12px; font-size: 12.5px; }
   .chips { gap: 5px; }
   .chip { padding: 5px 10px; font-size: 10px; }

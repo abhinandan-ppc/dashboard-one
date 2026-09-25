@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Jindal Steel Angul — SMS & Mills Simulator (M3)</title>
 <link rel="icon" type="image/png" href="favicon.png"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -88,7 +88,6 @@ body, html {
     radial-gradient(at 0% 100%, var(--sl) 0px, transparent 50%);
   background-attachment: fixed;
   transition: background-color 0.3s, color 0.3s;
-  overflow-x: hidden;
   width: 100%;
 }
 body { padding-top: var(--frame-top, 96px); }
@@ -127,7 +126,7 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
 .btn-header { height: 40px; padding: 0 20px; border-radius: 20px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; background: var(--input-bg); color: var(--tx); border: var(--glass-border); outline: none; }
 .btn-header:hover { background: var(--input-hover); transform: scale(1.02); }
 /* ─── APP SHELL & LAYOUT ─── */
-.app-shell { max-width: 1600px; margin: 0 auto; padding: 16px 24px 24px; display: flex; flex-direction: column; gap: 20px; width: 100%; overflow-x: hidden; box-sizing: border-box; }
+.app-shell { max-width: 1600px; margin: 0 auto; padding: 16px 24px 24px; display: flex; flex-direction: column; gap: 20px; width: 100%; min-width: 0; box-sizing: border-box; }
 
 .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; margin-bottom: 4px; }
 .kpi { 
@@ -148,7 +147,7 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
 
 /* Side-by-Side Layout Grid */
 .main-layout { display: flex; gap: 24px; align-items: flex-start; width: 100%; box-sizing: border-box;}
-.content-area { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; max-width: 100%; overflow-x: hidden; }
+.content-area { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; max-width: 100%; }
 
 /* LEFT SIDEBAR CONTROLS */
 .controls-sidebar { 
@@ -226,7 +225,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 .coll-h:hover { background: var(--input-hover); }
 .coll-h span { font-size: 12px; font-weight: 800; color: var(--md-sys-color-primary); text-transform: uppercase; letter-spacing: 0.5px; }
 .chev { font-size: 10px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); } .chev.op { transform: rotate(180deg); }
-.coll-b { display: none; padding: 16px 18px; animation: slideDown 0.3s ease; border-top: 1px solid var(--br); background: var(--glass-bg); max-height: 400px; overflow-y: auto; overflow-x: hidden; box-sizing: border-box;} 
+.coll-b { display: none; padding: 16px 18px; animation: slideDown 0.3s ease; border-top: 1px solid var(--br); background: var(--glass-bg); max-height: 400px; overflow-y: auto; overflow-x: auto; box-sizing: border-box;}
 .coll-b.op { display: block; }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -241,10 +240,10 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 .tab-btn { padding: 10px 20px; font-size: 13px; font-weight: 700; border: none; background: transparent; border-radius: var(--radius-pill); cursor: pointer; color: var(--tm); transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
 .tab-btn:hover { background: var(--input-hover); color: var(--tx); }
 .tab-btn.act { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
-.tc { display: none; padding: 24px; width: 100%; box-sizing: border-box; overflow-x: hidden;} .tc.act { display: block; animation: fadeIn 0.3s ease; }
+.tc { display: none; padding: 24px; width: 100%; box-sizing: border-box; overflow-x: auto;} .tc.act { display: block; animation: fadeIn 0.3s ease; }
 
 /* ─── TABLES ─── */
-.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-m); border: var(--glass-border); background: var(--input-bg); width: 100%; max-width: 100%; }
+.table-responsive { overflow-x: auto; overflow-y: auto; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; border-radius: var(--radius-m); border: var(--glass-border); background: var(--input-bg); width: 100%; max-width: 100%; }
 .sc-tbl { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: auto; }
 .sc-tbl th { padding: 14px 16px; text-align: right; font-size: 11px; font-weight: 800; color: var(--tm); text-transform: uppercase; border-bottom: 1px solid var(--br); white-space: nowrap; }
 .sc-tbl th:first-child { text-align: left; white-space: normal; }
@@ -341,7 +340,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 /* ─── M3 BOTTOM SHEET DRAWER ─── */
 .drawer-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 9998; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);}
 .drawer-overlay.open { opacity: 1; pointer-events: all; }
-.detail-drawer { position: fixed; bottom: 0; left: 0; right: 0; max-height: 85vh; background: var(--glass-bg-solid); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-radius: var(--radius-xl) var(--radius-xl) 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.3); transform: translateY(105%); transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1); z-index: 9999; display: flex; flex-direction: column; border-top: var(--glass-border-heavy);}
+.detail-drawer { position: fixed; bottom: 0; left: 0; right: 0; max-height: 85vh; max-height: 85dvh; background: var(--glass-bg-solid); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-radius: var(--radius-xl) var(--radius-xl) 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.3); transform: translateY(105%); transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1); z-index: 9999; display: flex; flex-direction: column; border-top: var(--glass-border-heavy);}
 .detail-drawer.open { transform: translateY(0); }
 .drawer-handle { width: 48px; height: 5px; background: var(--tm); opacity: 0.3; border-radius: var(--radius-pill); margin: 16px auto 8px; flex-shrink: 0; }
 .drawer-header { display: flex; align-items: center; gap: 12px; padding: 8px 24px 16px; border-bottom: 1px solid var(--br); flex-shrink: 0; }

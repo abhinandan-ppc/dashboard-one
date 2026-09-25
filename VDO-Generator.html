@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>VDO Generator — Value of Delayed Orders</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -94,8 +94,8 @@ input[type=text]{width:100%}
 .tabbtn{padding:9px 18px;border-radius:var(--radius-pill);font-size:12.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;background:var(--input-bg);color:var(--tm);border:1px solid var(--br);cursor:pointer;transition:.15s}
 .tabbtn:hover{background:var(--input-hover)}
 .tabbtn.on{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border-color:transparent}
-#preview{overflow-x:hidden;overflow-y:auto;border:1px solid var(--br);border-radius:var(--radius-s);max-height:600px}
-#pivotWrap{overflow:auto;border:1px solid var(--br);border-radius:var(--radius-s);max-height:600px}
+#preview{overflow-x:auto;overflow-y:auto;border:1px solid var(--br);border-radius:var(--radius-s);max-height:600px;overscroll-behavior-inline:contain}
+#pivotWrap{overflow:auto;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch;border:1px solid var(--br);border-radius:var(--radius-s);max-height:600px}
 #preview table{table-layout:fixed}
 table{border-collapse:collapse;width:100%;font-size:13px}
 th.chkcol,td.chkcol{width:36px;text-align:center;padding-left:0;padding-right:0}

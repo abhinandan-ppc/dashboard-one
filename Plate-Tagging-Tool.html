@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Plate Free-Stock Tagging</title>
 <link rel="icon" type="image/png" href="favicon.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -266,7 +266,7 @@ button{
 .tabpane{display:none}
 .tabpane.show{display:block}
 .tw{
-  overflow:auto;max-height:560px;border:var(--glass-border-rule);border-radius:var(--radius-m);margin-top:14px;
+  width:100%;max-width:100%;overflow:auto;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch;max-height:560px;border:var(--glass-border-rule);border-radius:var(--radius-m);margin-top:14px;
   background:var(--surface);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);box-shadow:var(--glass-shadow)
 }
 table{border-collapse:collapse;width:100%;font-size:12px}

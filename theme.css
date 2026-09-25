@@ -383,9 +383,14 @@ input::placeholder{color:var(--mute);opacity:1}
   --space-section:16px;
   --space-mobile:12px;
   --touch-target:44px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-right:env(safe-area-inset-right,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --safe-left:env(safe-area-inset-left,0px);
 }
 body{font-family:var(--font-body)!important}
-button,input,select,textarea{font-family:var(--font-body)}
+button,input,select,textarea{font-family:var(--font-body);touch-action:manipulation}
+a{touch-action:manipulation}
 h1,h2,h3{font-family:var(--font-display)!important;text-wrap:balance}
 button,a,input,select,textarea{transition:color .22s var(--ease-standard),background-color .22s var(--ease-standard),border-color .22s var(--ease-standard),box-shadow .22s var(--ease-standard),transform .22s var(--ease-emphasized)}
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid color-mix(in srgb,var(--primary) 72%,white);outline-offset:3px}
@@ -419,6 +424,13 @@ button:disabled,.btn:disabled{cursor:not-allowed;transform:none!important;filter
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}
 }
+@media (pointer:coarse), (max-width:768px){
+  .m3-button,.btn,.hdr-btn,.btn-header,.action-btn,.mini-btn,.tbtn,.tab-btn,.tabbtn,.ctab,.gmOpt,.upload-opt,.select-selected,.theme-opt{min-height:44px!important}
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea{min-height:44px}
+  .page-hub button,.page-admin button,.page-grade button,.page-order button,.page-pm button,.page-plate button,.page-rake button,.page-sms-child button,.page-vdo button{min-height:44px!important}
+  .leaflet-control-zoom a{width:44px!important;height:44px!important;line-height:44px!important}
+  .top-bar,.header-enter,.glass-card{backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+}
 
 /* ── Cross-page visual contract ──
    These selectors deliberately use the existing page vocabulary so the
@@ -443,11 +455,11 @@ button:disabled,.btn:disabled{cursor:not-allowed;transform:none!important;filter
   margin-right:auto!important;
 }
 .page-rake .glass-card.header-enter{width:100%!important;max-width:none!important;margin-left:auto!important;margin-right:auto!important}
-.page-pm>header{left:16px!important;right:16px!important}
+.page-pm>header{left:max(16px,var(--safe-left))!important;right:max(16px,var(--safe-right))!important;top:calc(20px + var(--safe-top))!important}
 .grid,.slots,.kpis,.kpi-row,.stat-row,.row,.tabs{gap:var(--space-section)}
 .panel,.glass-card,.slot,.kpi,.stat,.user-card,.embed{margin-bottom:var(--space-section)}
 .page-pm .panel,.page-pm aside{margin-bottom:0}
-.top-wrapper,.header-fixed,.hdr-wrapper,.sticky-wrapper{padding:18px var(--page-gutter,24px) 0!important}
+.top-wrapper,.header-fixed,.hdr-wrapper,.sticky-wrapper{padding:18px var(--page-gutter,24px) 0!important;padding-top:calc(18px + var(--safe-top))!important}
 .top-bar,header,.top-bar.header-enter{
   background:linear-gradient(145deg,color-mix(in srgb,var(--glass) 94%,white 6%),var(--glass-card))!important;
   border:1px solid var(--glass-border)!important;
@@ -464,14 +476,14 @@ input,select,textarea,.m3-field{border-radius:var(--radius-sm)!important;border-
 button,.btn,.m3-button{font-family:var(--font-body)!important}
 button:not(.tabbtn):not(.gmOpt):not(.view-tabs button):hover,.btn:hover,.m3-button:hover{transform:translateY(-1px)}
 table{font-variant-numeric:tabular-nums}
-.table-wrap,#preview,#pivotWrap,.data-table-wrap{scrollbar-color:var(--bdrHi) transparent}
+.table-wrap,#preview,#pivotWrap,.data-table-wrap,.table-responsive,.tw{overflow-x:auto;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable}
 @media (max-width:768px){
-  .top-wrapper,.header-fixed{width:100%!important;max-width:none!important;padding:8px 12px 0!important}
-  .hdr-wrapper,.sticky-wrapper{width:100%!important;max-width:none!important;padding:0 12px!important}
+  .top-wrapper,.header-fixed{width:100%!important;max-width:none!important;padding-left:max(12px,var(--safe-left))!important;padding-right:max(12px,var(--safe-right))!important;padding-top:calc(8px + var(--safe-top))!important}
+  .hdr-wrapper,.sticky-wrapper{width:100%!important;max-width:none!important;padding:calc(8px + var(--safe-top)) 12px 0!important}
   .page-admin .top-wrapper>.top-bar,
   .page-plate .header-fixed>header,
   .page-vdo .top-wrapper>.top-bar{width:calc(100% + 24px)!important;margin-left:-12px!important;margin-right:-12px!important}
-  .page-pm>header{left:12px!important;right:12px!important}
+  .page-pm>header{left:max(12px,var(--safe-left))!important;right:max(12px,var(--safe-right))!important;top:calc(12px + var(--safe-top))!important}
   .page-pm>header{padding:10px!important;gap:10px!important}
   .page-rake .glass-card.header-enter{width:100%!important;margin-left:0!important;margin-right:0!important;padding:10px 12px!important;gap:10px!important}
   .page-sms-shell .top-bar{width:100%!important;padding:10px 12px!important;gap:8px!important}

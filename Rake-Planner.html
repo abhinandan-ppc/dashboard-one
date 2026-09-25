@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>Angul PlateMill Rake Planner · Jindal Steel</title>
 <link rel="icon" type="image/png" href="favicon.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -18,7 +18,6 @@ html,body,#root{min-height:100%;height:100%}
 body{
   font-size:14px;
   line-height:1.5;
-  overflow-x:hidden;
 }
 
 @keyframes flowDash{to{stroke-dashoffset:-24}}
@@ -1682,15 +1681,15 @@ function STag({code}){
 function KCard({label,value,sub,accent,mob}){
   const ac=accent||C.amber;
   return<div style={{...card,padding:mob?'12px 14px':'16px 18px',flex:1,
-    minWidth:mob?'calc(50% - 4px)':110,maxWidth:mob?'calc(50% - 4px)':'none',
+    minWidth:0,maxWidth:mob?'calc(50% - 4px)':'none',overflow:'hidden',
     borderRadius:'var(--radius-lg)',
     background:`color-mix(in srgb,${ac} 8%,var(--s1))`}}
     onMouseEnter={e=>{e.currentTarget.style.boxShadow='var(--shadow-md)';e.currentTarget.style.transform='translateY(-2px)'}}
     onMouseLeave={e=>{e.currentTarget.style.boxShadow='var(--shadow-xs)';e.currentTarget.style.transform='translateY(0)'}}>
     <div style={{fontSize:10,fontFamily:F.b,letterSpacing:'.08em',textTransform:'uppercase',
       fontWeight:600,color:'var(--mute)',marginBottom:5}}>{label}</div>
-    <div style={{fontSize:mob?22:26,fontFamily:F.m,fontWeight:600,color:ac,lineHeight:1.1}}>{value}</div>
-    {sub&&<div style={{fontSize:11.5,color:'var(--dim)',marginTop:4,fontFamily:F.b,fontWeight:400}}>{sub}</div>}
+    <div style={{fontSize:mob?22:'clamp(20px, 2.2vw, 26px)',fontFamily:F.m,fontWeight:600,color:ac,lineHeight:1.1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{value}</div>
+    {sub&&<div style={{fontSize:11.5,color:'var(--dim)',marginTop:4,fontFamily:F.b,fontWeight:400,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{sub}</div>}
   </div>;
 }
 

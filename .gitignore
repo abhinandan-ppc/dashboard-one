@@ -1,6 +1,7 @@
 node_modules/
 .vercel/
 .claude/
+.playwright-cli/
 .env
 .env.*
 !.env.example

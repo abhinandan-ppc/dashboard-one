@@ -14,12 +14,12 @@ function esc(s) {
 
 function denyPage(title, message, status) {
   const html = `<!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
-  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  body { margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; justify-content: center;
     font-family: 'DM Sans', system-ui, -apple-system, Segoe UI, sans-serif; background: #0f172a; color: #f8fafc; padding: 24px; }
   .card { max-width: 420px; width: 100%; background: rgba(30,41,59,0.75); border: 1px solid rgba(255,255,255,0.1);
     border-radius: 22px; padding: 36px 32px; text-align: center; box-shadow: 0 10px 40px rgba(2,6,23,0.4); }

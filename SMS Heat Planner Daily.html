@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SMS Heat Planning Optimizer</title>
 <link rel="icon" type="image/png" href="favicon.png"/>
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
@@ -122,7 +122,6 @@ body {
     radial-gradient(at 0% 100%, var(--sl) 0px, transparent 50%);
   background-attachment: fixed;
   transition: background-color 0.3s, color 0.3s;
-  overflow-x: hidden;
   width: 100%;
   padding-top: var(--frame-top, 96px);
 }
@@ -136,7 +135,7 @@ button, select { font: inherit; cursor: pointer; transition: all 0.2s; border: n
 ::-webkit-scrollbar-thumb:hover { background: var(--sky); }
 
 /* ---- PREVENT WIDOW BLOWOUTS ON MOBILE ---- */
-.table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; display: block; border-radius: var(--radius-m); border: var(--glass-border); background: var(--input-bg);}
+.table-wrap { width: 100%; max-width: 100%; overflow-x: auto; overflow-y: auto; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; display: block; border-radius: var(--radius-m); border: var(--glass-border); background: var(--input-bg);}
 .main-container, .dashboard-top-section, .dashboard-side-controls, .dashboard-main-summary, .eq-grid, .card {
   min-width: 0; max-width: 100%; 
 }
@@ -274,7 +273,7 @@ tr:hover td { background: var(--stripe-hover); }
 }
 
 /* ---- INTERACTIVE FLOWCHART (ABSOLUTE COORDS) ---- */
-.flow-wrapper { position: relative; height: 75vh; min-height: 650px; background: var(--glass-bg-solid); border-radius: 0 0 var(--radius-m) var(--radius-m); border: var(--glass-border); border-top: none; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--glass-shadow);}
+.flow-wrapper { position: relative; height: 75vh; height: 75dvh; min-height: 650px; background: var(--glass-bg-solid); border-radius: 0 0 var(--radius-m) var(--radius-m); border: var(--glass-border); border-top: none; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--glass-shadow);}
 .flow-wrapper:fullscreen { height: 100vh !important; min-height: 100vh !important; border-radius: 0; border: none; }
 .flow-scroll-content { flex: 1; position: relative; width: 100%; height: 100%; overflow: hidden; cursor: grab; user-select: none; touch-action: none; background: var(--input-bg); box-shadow: inset 0 2px 8px rgba(0,0,0,0.02);}
 .flow-scroll-content:active { cursor: grabbing; }
