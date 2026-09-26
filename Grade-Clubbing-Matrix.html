@@ -1472,17 +1472,20 @@
       .chips { justify-content: flex-start; }
     }
 
-    /* theme.css switches .top-wrapper from fixed to sticky below 768px, so the
-       header then occupies normal flow — the header-spacer would reserve its
-       height a second time and leave a dead gap above the content. */
+    /* The shared header is fixed above 768px, so reserve its measured shell
+       height plus a visual gap. Once sticky, it already occupies normal flow
+       and only the small local breathing room is needed. */
+    .page-grade .header-spacer {
+      height: var(--grade-header-offset, 108px) !important;
+    }
     @media (max-width: 768px) {
-      .header-spacer { height: 8px; }
+      .page-grade .header-spacer { height: 8px !important; }
     }
   </style>
 </head>
 <body class="page-grade">
-  <div class="top-wrapper">
-    <header class="top-bar">
+  <div class="top-wrapper app-header-shell">
+    <header class="top-bar header-enter app-header">
       <div class="top-left">
         <div class="top-brand">
           <img src="favicon.png" alt="Jindal Steel">
@@ -1497,7 +1500,10 @@
           <h2>Grade Clubbing Matrix</h2>
         </div>
       </div>
-      <div class="top-right"><div class="header-status">Workbook connected</div></div>
+      <div class="top-right">
+        <div class="header-status">Workbook connected</div>
+        <div id="hubFrameHeaderSlot"></div>
+      </div>
     </header>
   </div>
   <main class="wrap">
@@ -2098,7 +2104,41 @@
     els.thicknessMaxSlider.addEventListener('input', () => syncThicknessFromSlider('max'));
     bindHandle(els.thicknessMinHandle, 'min');
     bindHandle(els.thicknessMaxHandle, 'max');
-    window.addEventListener('resize', updateRangeVisual);
+
+    const gradeHeaderShell = document.querySelector('.page-grade .app-header-shell');
+    const gradeDesktopHeader = window.matchMedia('(max-width: 768px)');
+    const GRADE_HEADER_GAP = 16;
+    let gradeHeaderFrame = 0;
+
+    function syncGradeHeaderOffset() {
+      gradeHeaderFrame = 0;
+      if (gradeDesktopHeader.matches || !gradeHeaderShell) return;
+      const offset = Math.ceil(gradeHeaderShell.offsetHeight + GRADE_HEADER_GAP);
+      document.documentElement.style.setProperty('--grade-header-offset', `${offset}px`);
+    }
+
+    function scheduleGradeHeaderOffset() {
+      if (gradeHeaderFrame) cancelAnimationFrame(gradeHeaderFrame);
+      gradeHeaderFrame = requestAnimationFrame(syncGradeHeaderOffset);
+    }
+
+    if (gradeHeaderShell && 'ResizeObserver' in window) {
+      new ResizeObserver(scheduleGradeHeaderOffset).observe(gradeHeaderShell);
+    }
+    if (gradeDesktopHeader.addEventListener) {
+      gradeDesktopHeader.addEventListener('change', scheduleGradeHeaderOffset);
+    } else {
+      gradeDesktopHeader.addListener(scheduleGradeHeaderOffset);
+    }
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(scheduleGradeHeaderOffset);
+    }
+    scheduleGradeHeaderOffset();
+
+    window.addEventListener('resize', () => {
+      updateRangeVisual();
+      scheduleGradeHeaderOffset();
+    }, { passive: true });
     els.clear.addEventListener('click', resetInputs);
 
     fetch('Order-Status-Report.html')

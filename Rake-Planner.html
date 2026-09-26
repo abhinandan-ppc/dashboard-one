@@ -1622,21 +1622,22 @@ function getHTC(extGrade, supplyCondition){
 }
 /* ═══════════════════ SHARED STYLES ═══════════════════ */
 const card={
-  background:'var(--glass-card)',
-  backdropFilter:'blur(24px)',
-  WebkitBackdropFilter:'blur(24px)',
-  border:'1px solid var(--glass-border)',
-  borderRadius:'var(--radius-lg)',
-  boxShadow:'var(--shadow-sm)',
-  transition:'box-shadow .22s ease,transform .22s ease,border-color .2s',
+  background:'var(--component-surface)',
+  backdropFilter:'var(--glass-blur)',
+  WebkitBackdropFilter:'var(--glass-blur)',
+  border:'1px solid transparent',
+  borderRadius:'var(--component-radius)',
+  boxShadow:'var(--component-shadow)',
+  transition:'background .22s ease,box-shadow .22s ease,transform .22s ease,border-color .2s',
 };
 const inp={
-  background:'var(--s2)',
-  border:'1px solid var(--bdrHi)',
-  borderRadius:'var(--radius-sm)',color:'var(--text)',
+  background:'var(--input-bg)',
+  border:'1px solid var(--header-border-color)',
+  borderRadius:'var(--radius-pill)',
+  color:'var(--text)',
   fontFamily:F.b,fontSize:14,padding:'9px 13px',
   outline:'none',width:'100%',
-  boxShadow:'var(--shadow-inset)',
+  boxShadow:'none',
   transition:'border-color .18s,box-shadow .18s,background .18s',
 };
 const th0={
@@ -1680,34 +1681,29 @@ function STag({code}){
 }
 function KCard({label,value,sub,accent,mob}){
   const ac=accent||C.amber;
-  return<div style={{...card,padding:mob?'12px 14px':'16px 18px',flex:1,
-    minWidth:0,maxWidth:mob?'calc(50% - 4px)':'none',overflow:'hidden',
-    borderRadius:'var(--radius-lg)',
-    background:`color-mix(in srgb,${ac} 8%,var(--s1))`}}
-    onMouseEnter={e=>{e.currentTarget.style.boxShadow='var(--shadow-md)';e.currentTarget.style.transform='translateY(-2px)'}}
-    onMouseLeave={e=>{e.currentTarget.style.boxShadow='var(--shadow-xs)';e.currentTarget.style.transform='translateY(0)'}}>
+  return<div style={{...card,padding:mob?'12px 14px':'16px 18px',
+    flex:mob?'0 0 auto':'1 0 auto',minWidth:mob?156:undefined,
+    borderRadius:'var(--component-radius)',
+    background:`linear-gradient(145deg,color-mix(in srgb,${ac} 10%,var(--glass-card)),color-mix(in srgb,${ac} 5%,var(--glass-card)))`}}
+    onMouseEnter={e=>{e.currentTarget.style.boxShadow='var(--shadow-xl),var(--shadow-inset)';e.currentTarget.style.transform='translateY(-2px)'}}
+    onMouseLeave={e=>{e.currentTarget.style.boxShadow='var(--component-shadow)';e.currentTarget.style.transform='translateY(0)'}}>
     <div style={{fontSize:10,fontFamily:F.b,letterSpacing:'.08em',textTransform:'uppercase',
       fontWeight:600,color:'var(--mute)',marginBottom:5}}>{label}</div>
-    <div style={{fontSize:mob?22:'clamp(20px, 2.2vw, 26px)',fontFamily:F.m,fontWeight:600,color:ac,lineHeight:1.1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{value}</div>
+    {/* No min-width:0 here on purpose — the default automatic minimum is what
+       holds the value line at its full text width now that the card no longer
+       shrinks, which is what lets the ellipsis be dropped below. */}
+    <div style={{fontSize:mob?22:'clamp(20px, 2.2vw, 26px)',fontFamily:F.m,fontWeight:600,color:ac,lineHeight:1.1,whiteSpace:'nowrap'}}>{value}</div>
     {sub&&<div style={{fontSize:11.5,color:'var(--dim)',marginTop:4,fontFamily:F.b,fontWeight:400,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{sub}</div>}
   </div>;
 }
 
 /* ═══════════════════ JINDAL STEEL LOGO ═══════════════════ */
 function JSPLBadge({compact}){
-  return<div style={{display:'flex',alignItems:'center',gap:compact?4:8,flexShrink:0}}>
-    <div style={{
-      width:compact?36:62,height:compact?16:28,flexShrink:0,
-      display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',
-    }}>
-      <img src={JINDAL_LOGO} alt="Jindal Steel"
-        style={{width:'100%',height:'100%',objectFit:'contain',objectPosition:'left center'}}/>
-    </div>
-    {!compact&&<div style={{lineHeight:1,marginLeft:2}}>
-      <div style={{fontFamily:F.h,fontWeight:900,color:'var(--text)',
-        fontSize:13,letterSpacing:'.12em',textTransform:'uppercase',lineHeight:1.2}}>JINDAL STEEL</div>
-      <div style={{fontFamily:F.b,fontSize:9,color:'var(--dim)',letterSpacing:'.06em',
-        marginTop:2,textTransform:'uppercase',fontWeight:600}}>Angul &middot; Plate Mill</div>
+  return <div className="jspl-badge">
+    <img className="jspl-logo" src={JINDAL_LOGO} alt="Jindal Steel"/>
+    {!compact&&<div className="jspl-brand-text">
+      <div className="jspl-brand-l1">Jindal Steel</div>
+      <div className="jspl-brand-l2">Angul &middot; Plate Mill</div>
     </div>}
   </div>;
 }
@@ -5452,15 +5448,15 @@ function App(){
   // DOM-node handoff for the hub's MutationObserver to race.
   const placeholderHeaderBar=
     <>
-    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 12px 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
-    <div className="glass-card header-enter" style={{position:'relative',padding:mob?'12px 12px':'12px 20px',display:'flex',
+    <div className="app-header-shell" style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 12px 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
+    <div className="glass-card header-enter app-header" style={{position:'relative',padding:mob?'12px 12px':'12px 20px',display:'flex',
       flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
       alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
       minHeight:mob?'auto':64,boxSizing:'border-box'}}>
       <div style={{display:'flex',alignItems:'center',gap:14,justifyContent:mob?'center':'flex-start',flexWrap:'wrap'}}>
         <JSPLBadge compact={mob}/>
         <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0,display:mob?'none':'block'}}/>
-        <div style={{flexShrink:0}}>
+        <div className="app-header-title" style={{flexShrink:0}}>
           <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:mob?'center':'left'}}>Rake Planning</div>
           <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:mob?'center':'left'}}>Rake Planner</div>
         </div>
@@ -5568,13 +5564,13 @@ function App(){
          VDO-Generator.html — the nested independently-scrolling panes are
          self-contained overlays/scroll boxes, not affected by this choice)
          ── */}
-    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 12px 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
-    <div className="glass-card header-enter" style={{position:'relative',padding:mob?'12px 12px':'12px 20px',display:'flex',
+    <div className="app-header-shell" style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 12px 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
+    <div className="glass-card header-enter app-header" style={{position:'relative',padding:mob?'12px 12px':'12px 20px',display:'flex',
       flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
       alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
       minHeight:mob?'auto':64,boxSizing:'border-box'}}>
 
-      <div style={{display:'flex',alignItems:'center',gap:mob?8:14,justifyContent:'flex-start',flexWrap:mob?'nowrap':'wrap'}}>
+      <div className="app-header-brand-row" style={{display:'flex',alignItems:'center',gap:mob?8:14,justifyContent:'flex-start',flexWrap:mob?'nowrap':'wrap'}}>
       {/* Hamburger on narrow */}
       {isNarrow&&<button onClick={()=>setSideOpen(o=>!o)} style={{
         background:'transparent',border:'1px solid var(--bdr)',borderRadius:'var(--radius-sm)',
@@ -5593,7 +5589,7 @@ function App(){
 
         <JSPLBadge compact={mob}/>
         <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0,display:mob?'none':'block'}}/>
-        <div style={{flexShrink:mob?1:0,minWidth:0,flex:mob?'1 1 auto':'0 0 auto'}}>
+        <div className="app-header-title" style={{flexShrink:mob?1:0,minWidth:0,flex:mob?'1 1 auto':'0 0 auto'}}>
           <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:'left'}}>Rake Planning</div>
           <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:'left',overflow:mob?'hidden':'visible',textOverflow:mob?'ellipsis':'clip'}}>Rake Planner</div>
         </div>
@@ -5646,7 +5642,7 @@ function App(){
         <div>{fileDate.toLocaleDateString()}</div>
       </div>}
 
-      <div style={{display:'flex',gap:mob?12:10,flexWrap:'wrap',justifyContent:mob?'center':'flex-start',
+      <div className="app-header-actions" style={{display:'flex',gap:mob?12:10,flexWrap:'wrap',justifyContent:mob?'center':'flex-start',
         alignItems:'center',width:mob?'100%':'auto',paddingTop:mob?8:0,borderTop:mob?'1px solid var(--bdr)':'none'}}>
 
       {!mob&&<button onClick={()=>fileRef.current.click()} style={{height:mob?42:34,padding:'0 16px',
@@ -5686,9 +5682,17 @@ function App(){
       </div>
     </div>}
 
-    {/* ── KPI Strip ── */}
+    {/* ── KPI Strip ──
+        On narrow screens the cards stop sharing the row and the strip scrolls
+        horizontally instead (overflow-x on the strip, not the document, so the
+        page never gains a body-level scrollbar). Each card is sized to its own
+        content via `flex:0 0 auto`, and the default min-width:auto floor keeps a
+        nowrap value from being compressed below its text width — together that
+        removes the ellipsis without hiding a digit. Wide screens keep the
+        wrapping, fill-the-row layout. */}
     <div style={{display:'flex',gap:8,padding:`12px ${mob?12:24}px`,flexShrink:0,
-      flexWrap:'wrap',rowGap:8}}>
+      flexWrap:mob?'nowrap':'wrap',rowGap:8,
+      overflowX:mob?'auto':'visible',overscrollBehaviorX:mob?'contain':'auto'}}>
       <KCard label="Orders"       value={kpis.cnt.toLocaleString()} sub={actCnt?`${actCnt} filter active`:'All orders'} accent="var(--dim)" mob={mob}/>
       <KCard label="Order Qty"    value={fmt(kpis.qty)} sub="MT" accent={C.amber} mob={mob}/>
       <KCard label="Bal to PGI"  value={fmt(kpis.bal)}  sub="MT" accent={C.sky} mob={mob}/>

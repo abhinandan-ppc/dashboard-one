@@ -5,3 +5,5 @@ node_modules/
 .env
 .env.*
 !.env.example
+.claude-flow/neural/stats.json
+.claude-flow/policy/stats.json

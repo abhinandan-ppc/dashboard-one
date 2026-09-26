@@ -179,31 +179,26 @@ const JINDAL_LOGO='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAABKCAMAAAD
 
 /* ═══════════════════ JSPL BRAND BADGE (copied from Rake-Planner) ═══════════════════ */
 function JSPLBadge({compact}){
-  return<div style={{display:'flex',alignItems:'center',gap:compact?4:8,flexShrink:0}}>
-    <div style={{width:compact?36:62,height:compact?16:28,flexShrink:0,
-      display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
-      <img src={JINDAL_LOGO} alt="Jindal Steel"
-        style={{width:'100%',height:'100%',objectFit:'contain',objectPosition:'left center'}}/>
-    </div>
-    {!compact&&<div style={{lineHeight:1,marginLeft:2}}>
-      <div style={{fontFamily:F.h,fontWeight:900,color:'var(--text)',
-        fontSize:13,letterSpacing:'.12em',textTransform:'uppercase',lineHeight:1.2}}>JINDAL STEEL</div>
-      <div style={{fontFamily:F.b,fontSize:9,color:'var(--dim)',letterSpacing:'.06em',
-        marginTop:2,textTransform:'uppercase',fontWeight:600}}>Angul &middot; Plate Mill</div>
+  return <div className="jspl-badge">
+    <img className="jspl-logo" src={JINDAL_LOGO} alt="Jindal Steel"/>
+    {!compact&&<div className="jspl-brand-text">
+      <div className="jspl-brand-l1">Jindal Steel</div>
+      <div className="jspl-brand-l2">Angul &middot; Plate Mill</div>
     </div>}
   </div>;
 }
 
 /* ═══════════════════ SHARED STYLES (copied from Rake-Planner) ═══════════════════ */
 const card={
-  background:'var(--glass-card)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
-  border:'1px solid var(--glass-border)',borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-sm)',
-  transition:'box-shadow .22s ease,transform .22s ease,border-color .2s',
+  background:'var(--component-surface)',backdropFilter:'var(--glass-blur)',WebkitBackdropFilter:'var(--glass-blur)',
+  border:'1px solid transparent',borderRadius:'var(--component-radius)',boxShadow:'var(--component-shadow)',
+  transition:'background .22s ease,box-shadow .22s ease,transform .22s ease,border-color .2s',
 };
 const inp={
-  background:'var(--s2)',border:'1px solid var(--bdrHi)',borderRadius:'var(--radius-sm)',color:'var(--text)',
+  background:'var(--input-bg)',border:'1px solid var(--header-border-color)',
+  borderRadius:'var(--radius-pill)',color:'var(--text)',
   fontFamily:F.b,fontSize:13,padding:'8px 12px',outline:'none',width:'100%',
-  boxShadow:'var(--shadow-inset)',transition:'border-color .18s,box-shadow .18s,background .18s',
+  boxShadow:'none',transition:'border-color .18s,box-shadow .18s,background .18s',
 };
 const th0={
   padding:'9px 12px',fontSize:10.5,fontFamily:F.b,letterSpacing:'.06em',textTransform:'uppercase',
@@ -1407,8 +1402,8 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         On mobile it switches to sticky: sticky occupies real space in the flex flow, so the header's
         own footprint is exactly the spacer's job, structurally, without needing a matching pixel
         height guess for the taller wrapped/column mobile layout — see the spacer below.) ═══ */}
-    <div style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 0 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
-    <div className="glass-card header-enter" style={{position:'relative',padding:mob?'12px 12px':'12px 20px',display:'flex',
+    <div className="app-header-shell" style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 0 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
+    <div className="glass-card header-enter app-header" style={{position:'relative',padding:mob?'12px 12px':'12px 20px',display:'flex',
       flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
       alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
       minHeight:mob?'auto':64,boxSizing:'border-box'}}>
@@ -1416,13 +1411,13 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         <div style={{display:'flex',alignItems:'center',gap:mob?8:14,flexWrap:'nowrap',minWidth:0,flex:mob?'1 1 200px':'0 0 auto'}}>
         <JSPLBadge compact={mob}/>
         <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0,display:mob?'none':'block'}}/>
-        <div style={{flexShrink:mob?1:0,minWidth:0,flex:mob?'1 1 auto':'0 0 auto'}}>
+        <div className="app-header-title" style={{flexShrink:mob?1:0,minWidth:0,flex:mob?'1 1 auto':'0 0 auto'}}>
           <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:'left'}}>Order Status</div>
           <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:'left',overflow:mob?'hidden':'visible',textOverflow:mob?'ellipsis':'clip'}}>Order Status Report</div>
         </div>
         </div>
 
-        {mob&&<div style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,marginLeft:'auto'}}>
+        {mob&&<div className="app-header-filter-actions" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,marginLeft:'auto'}}>
         <button onClick={()=>setReleasedOnly(v=>!v)} title="Released Orders" style={{height:34,width:releasedOnly?40:34,padding:0,borderRadius:'var(--radius-pill)',
           border:`1.5px solid ${releasedOnly?C.sky:'var(--bdrHi)'}`,background:releasedOnly?'var(--sky-bg)':'var(--s2)',
           color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:13,fontWeight:700,cursor:'pointer',
@@ -1454,7 +1449,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         <div>EBTP loaded: <b style={{color:'var(--text)'}}>{ebtpDateLabel}</b></div>
       </div>}
 
-      {!mob&&<div style={{display:'flex',gap:10,flexWrap:'wrap',justifyContent:'flex-start',
+      {!mob&&<div className="app-header-filter-actions" style={{display:'flex',gap:10,flexWrap:'wrap',justifyContent:'flex-start',
         alignItems:'center',width:'auto'}}>
       <button onClick={()=>setReleasedOnly(v=>!v)} style={{height:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
         border:`1.5px solid ${releasedOnly?C.sky:'var(--bdrHi)'}`,background:releasedOnly?'var(--sky-bg)':'var(--s2)',
@@ -1470,7 +1465,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       </button>
       </div>}
 
-      <div style={{display:'flex',gap:mob?12:10,flexWrap:'wrap',justifyContent:mob?'center':'flex-start',
+      <div className="app-header-actions" style={{display:'flex',gap:mob?12:10,flexWrap:'wrap',justifyContent:mob?'center':'flex-start',
         alignItems:'center',width:mob?'100%':'auto',paddingTop:mob?8:0,borderTop:mob?'1px solid var(--bdr)':'none'}}>
       {/* id="hubFrameHeaderSlot" is the mount point the hub (index.html / findFrameHeaderMount) looks
           for first; without it, the hub falls back to floating its Home/Refresh/Theme/User controls
@@ -1804,6 +1799,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
 /* ═══════════════════ APP ROOT ═══════════════════ */
 function App(){
   const{pref,setPref,effective}=useThemeManager();
+  const{mob}=useBreakpoint();
   const[rows,setRows]=useState(null);
   const[headers,setHeaders]=useState(null);
   const[fileName,setFileName]=useState('');
@@ -1899,9 +1895,24 @@ function App(){
     return()=>window.removeEventListener('message',onMsg);
   },[parseCSV]);
 
-  const floatingHeaderSlot=
-    <div id="hubFrameHeaderSlot" style={{position:'fixed',top:14,right:16,zIndex:60,
-      display:'flex',gap:8,alignItems:'center'}}/>;
+  const placeholderHeaderBar=
+    <>
+      <div className="app-header-shell" style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,zIndex:50,boxSizing:'border-box'}}>
+        <div className="glass-card header-enter app-header">
+          <div className="top-l">
+            <JSPLBadge compact={mob}/>
+            <div className="jspl-divider" style={{display:mob?'none':'block'}}/>
+            <div className="app-header-title">
+              <div className="eyebrow">Order Status</div>
+              <h1>Order Status Report</h1>
+            </div>
+          </div>
+          {!mob&&<div style={{flex:1}}/>}
+          <div id="hubFrameHeaderSlot" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,justifyContent:'flex-start'}}/>
+        </div>
+      </div>
+      <div style={{height:mob?0:100,flexShrink:0}}/>
+    </>;
 
   const fetchStatusOverlay=fetchPhase&&
     <div className="fetch-status">
@@ -1920,9 +1931,10 @@ function App(){
     </div>;
 
   if(!rows&&!loading){
-    return<div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-      minHeight:'100dvh',gap:20,padding:'32px 20px',background:'var(--bg)'}}>
-      {floatingHeaderSlot}
+    return<div style={{minHeight:'100dvh',background:'var(--bg)'}}>
+      {placeholderHeaderBar}
+      <div style={{minHeight:'calc(100dvh - 100px)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+        gap:20,padding:'24px 20px 48px'}}>
       {err?<>
         <div style={{fontFamily:F.h,fontSize:14,fontWeight:700,color:C.rose,
           letterSpacing:'.04em',textTransform:'uppercase',textAlign:'center',maxWidth:460}}>
@@ -1947,11 +1959,12 @@ function App(){
         <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:'none'}}
           onChange={e=>e.target.files[0]&&parseFile(e.target.files[0])}/>
       </>:null}
+      </div>
     </div>;
   }
   if(loading||!rows){
-    return<div style={{padding:'24px 20px',maxWidth:1400,margin:'0 auto'}}>
-      {floatingHeaderSlot}
+    return<div style={{maxWidth:1400,margin:'0 auto',padding:'0 20px 60px'}}>
+      {placeholderHeaderBar}
       {fetchStatusOverlay}
       <div className="skeleton skeleton-title" style={{maxWidth:280}}/>
       <div className="skeleton-row" style={{gap:16,marginBottom:20}}>

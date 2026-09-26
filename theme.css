@@ -65,6 +65,12 @@
   --glass-border-hi:rgba(255,255,255,.26);
   --glass-blur:blur(16px);
   --glass-shadow:0 4px 20px rgba(0,0,0,.28);
+  /* Shared content chrome — mirrors the reference header while keeping
+     component geometry owned by each page. */
+  --component-radius:20px;
+  --component-surface:linear-gradient(145deg,color-mix(in srgb,var(--glass) 94%,white 6%),var(--glass-card));
+  --component-shadow:var(--shadow-lg),var(--shadow-inset);
+  --component-primary-hover:color-mix(in srgb,var(--primary) 90%,white 10%);
 
   /* Elevation shadows — soft, diffuse, glass-appropriate */
   --shadow-xs:0 1px 2px rgba(0,0,0,.24);
@@ -433,63 +439,524 @@ button:disabled,.btn:disabled{cursor:not-allowed;transform:none!important;filter
 }
 
 /* ── Cross-page visual contract ──
-   These selectors deliberately use the existing page vocabulary so the
-   redesign can unify the multi-page app without changing tool behavior. */
-.top-wrapper,.header-fixed,.hdr-wrapper,.sticky-wrapper{
+   `index.html` is the header reference. These rules are deliberately scoped
+   to real page headers (and the two React header cards) so dashboard content
+   keeps its page-specific controls while sharing the hub's chrome. */
+:root{
+  --header-shell-pad-block:12px;
+  --header-shell-gutter:24px;
+  --header-min-height:64px;
+  --header-radius:16px;
+  --header-main-radius:20px;
+  --header-gap:16px;
+  --header-control-size:40px;
+  --header-shell-max-width:none;
+  --header-border-color:rgba(255,255,255,.1);
+}
+[data-theme="light"]{--header-border-color:rgba(0,0,0,.08)}
+.page-admin{--header-shell-max-width:1180px}
+.page-grade{--header-shell-max-width:1440px}
+.page-plate{--header-shell-max-width:1720px}
+.page-sms-shell{--header-shell-max-width:1600px}
+.app-header-shell{
+  position:fixed!important;
+  top:0!important;
+  left:50%!important;
+  right:auto!important;
+  z-index:320!important;
   width:100%!important;
-  max-width:var(--page-header-max,1600px)!important;
+  max-width:var(--header-shell-max-width)!important;
+  margin:0 auto!important;
+  transform:translateX(-50%)!important;
+  padding:calc(var(--header-shell-pad-block) + var(--safe-top)) 0 0!important;
+  padding-left:max(var(--header-shell-gutter),var(--safe-left))!important;
+  padding-right:max(var(--header-shell-gutter),var(--safe-right))!important;
+  box-sizing:border-box!important;
+  pointer-events:none!important;
+}
+.app-header-shell>.app-header{pointer-events:auto}
+.app-header,
+.page-order .glass-card.header-enter,
+.page-rake .glass-card.header-enter{
+  position:relative!important;
+  width:100%!important;
+  max-width:none!important;
+  min-height:var(--header-min-height)!important;
+  margin:0!important;
+  box-sizing:border-box!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  flex-wrap:wrap!important;
+  gap:var(--header-gap)!important;
+  padding:12px 20px!important;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--glass) 94%,white 6%),var(--glass-card))!important;
+  backdrop-filter:var(--glass-blur)!important;
+  -webkit-backdrop-filter:var(--glass-blur)!important;
+  border:0!important;
+  border-radius:var(--header-main-radius)!important;
+  box-shadow:var(--shadow-lg),var(--shadow-inset)!important;
+}
+.app-header :is(.jspl-badge,.top-brand){gap:8px!important}
+.app-header .jspl-logo,
+.app-header .top-brand img{
+  width:46px!important;
+  height:21px!important;
+  max-width:none!important;
+  object-fit:contain!important;
+  object-position:left center!important;
+  filter:none!important;
+  border:0!important;
+  border-radius:0!important;
+  flex-shrink:0!important;
+}
+.app-header .jspl-brand-text,
+.app-header .brand-text{line-height:1!important;min-width:0}
+.app-header .jspl-brand-l1,
+.app-header .brand-name{
+  font-family:'Poppins',sans-serif!important;
+  font-size:12px!important;
+  font-weight:900!important;
+  line-height:1!important;
+  letter-spacing:.1em!important;
+  text-transform:uppercase;
+  color:var(--text)!important;
+}
+.app-header :is(.top-l,.top-left,.hdr-l,.brand,.header-brand,.hd,.title-block,.page-copy,.brand-text){min-width:0}
+.app-header .eyebrow,
+.app-header .title-block .eyebrow{
+  color:var(--tm)!important;
+  font-size:11px!important;
+  font-weight:700!important;
+  line-height:1.2!important;
+  letter-spacing:.5px!important;
+  text-transform:uppercase!important;
+  margin:0 0 3px!important;
+}
+.app-header h1,
+.app-header h2,
+.app-header .app-header-title{
+  margin:0!important;
+  color:var(--text)!important;
+  font-family:var(--font-display)!important;
+  font-size:17px!important;
+  font-weight:800!important;
+  line-height:1.2!important;
+  letter-spacing:-.01em!important;
+  white-space:nowrap;
+}
+.app-header :is(.hdr-r,.hd-actions,.h-actions,.top-right){
+  display:flex!important;
+  align-items:center!important;
+  gap:10px!important;
+  flex-shrink:0!important;
+}
+.app-header .top-right{justify-content:flex-end}
+/* The SMS shell centres its Daily/Monthly tabs by absolute positioning, which
+   overlaps the reset/upload controls as soon as the header narrows. Letting the
+   tabs sit in the flex flow and take their own content width, with auto inline
+   margins absorbing the slack, centres them in the gap between the brand and
+   the actions without ever colliding. Auto margins rather than flex growth is
+   deliberate: growing the container would stretch its pill background across the
+   whole gap instead of hugging the buttons. */
+.app-header .view-tabs{
+  position:static!important;
+  transform:none!important;
+  left:auto!important;
+  top:auto!important;
+  flex:0 0 auto!important;
   margin-left:auto!important;
   margin-right:auto!important;
-  box-sizing:border-box!important;
+  justify-content:center!important;
 }
-.page-admin{--page-header-max:1180px}
-.page-grade{--page-header-max:1440px}
-.page-plate{--page-header-max:1720px}
-.page-sms-shell,.page-sms-child{--page-header-max:none}
-.page-sms-shell .top-bar{width:100%!important;max-width:none!important;margin-left:0!important;margin-right:0!important}
-.page-hub,.page-ai,.page-vdo{--page-header-max:none}
+.app-header :is(.top-l,.hdr-r,.h-actions,.top-right)>button,
+.app-header .view-tabs button,
+.app-header .h-actions .dropdown-wrapper>button,
+.app-header :is(.app-header-brand-row,.app-header-filter-actions,.app-header-actions)>button{
+  background:var(--input-bg)!important;
+  color:var(--tx)!important;
+  border:var(--header-border-color)!important;
+  border-style:solid!important;
+  border-width:1px!important;
+  border-radius:var(--radius-pill)!important;
+  box-shadow:none!important;
+}
+.app-header :is(.top-l,.hdr-r,.h-actions,.top-right)>button:hover,
+.app-header .view-tabs button:hover,
+.app-header .h-actions .dropdown-wrapper>button:hover,
+.app-header :is(.app-header-brand-row,.app-header-filter-actions,.app-header-actions)>button:hover{
+  background:var(--input-hover)!important;
+  color:var(--tx)!important;
+  border-color:rgba(255,255,255,.22)!important;
+  box-shadow:0 8px 18px rgba(2,6,23,.12)!important;
+  transform:translateY(-2px) scale(1.03)!important;
+  filter:none!important;
+}
+.app-header :is(.add-btn:not(.home-btn),.upload-btn,.btn-primary),
+.app-header .view-tabs button.on{
+  background:var(--md-sys-color-primary)!important;
+  color:var(--md-sys-color-on-primary)!important;
+  border-color:transparent!important;
+}
+.app-header :is(.add-btn:not(.home-btn),.upload-btn,.btn-primary):hover,
+.app-header .view-tabs button.on:hover{
+  background:var(--md-sys-color-primary)!important;
+  color:var(--md-sys-color-on-primary)!important;
+  box-shadow:0 10px 22px rgba(3,105,161,.18)!important;
+  filter:brightness(1.06)!important;
+}
+#hubFrameHeaderSlot{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:8px!important;
+  flex-shrink:0!important;
+}
+#hubFrameHeaderSlot button{
+  width:var(--header-control-size)!important;
+  height:var(--header-control-size)!important;
+  min-width:var(--header-control-size)!important;
+  min-height:var(--header-control-size)!important;
+  max-width:var(--header-control-size)!important;
+  max-height:var(--header-control-size)!important;
+  padding:0!important;
+  border-radius:var(--radius-pill)!important;
+  box-sizing:border-box!important;
+  overflow:hidden;
+}
+#hubFrameHeaderSlot button img{
+  width:100%!important;
+  height:100%!important;
+  border-radius:50%!important;
+  object-fit:cover!important;
+  object-position:center!important;
+}
+.app-header-shell+.header-spacer,
+.page-grade .header-spacer{height:88px!important}
+.page-pm>header.app-header{
+  position:absolute!important;
+  top:calc(20px + var(--safe-top))!important;
+  left:max(24px,var(--safe-left))!important;
+  right:max(24px,var(--safe-right))!important;
+  width:auto!important;
+  z-index:100!important;
+  background:transparent!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+.page-pm>header.app-header::before{
+  background:linear-gradient(145deg,color-mix(in srgb,var(--glass) 94%,white 6%),var(--glass-card))!important;
+  backdrop-filter:var(--glass-blur)!important;
+  -webkit-backdrop-filter:var(--glass-blur)!important;
+  border-radius:inherit!important;
+}
+
+.app-header .jspl-brand-l2,
+.app-header .brand-site{
+  font-size:9px!important;
+  font-weight:700!important;
+  line-height:1.2!important;
+  letter-spacing:.05em!important;
+  text-transform:uppercase;
+  color:var(--tm)!important;
+  margin-top:2px!important;
+}
+.app-header .jspl-divider,
+.app-header .top-divider{
+  width:1px!important;
+  height:28px!important;
+  background:var(--br)!important;
+  flex-shrink:0!important;
+}
+
+/* Shared non-header visual primitives. Header chrome is scoped to
+   .app-header above so the reference hub and unrelated cards stay distinct. */
 .page-order .glass-card.header-enter{
   width:100%!important;
   max-width:none!important;
   margin-left:0!important;
   margin-right:0!important;
 }
-.page-rake .glass-card.header-enter{width:100%!important;max-width:none!important;margin-left:auto!important;margin-right:auto!important}
-.page-pm>header{left:max(16px,var(--safe-left))!important;right:max(16px,var(--safe-right))!important;top:calc(20px + var(--safe-top))!important}
+.page-rake .glass-card.header-enter{width:100%!important;margin-left:auto!important;margin-right:auto!important}
 .grid,.slots,.kpis,.kpi-row,.stat-row,.row,.tabs{gap:var(--space-section)}
 .panel,.glass-card,.slot,.kpi,.stat,.user-card,.embed{margin-bottom:var(--space-section)}
 .page-pm .panel,.page-pm aside{margin-bottom:0}
-.top-wrapper,.header-fixed,.hdr-wrapper,.sticky-wrapper{padding:18px var(--page-gutter,24px) 0!important;padding-top:calc(18px + var(--safe-top))!important}
-.top-bar,header,.top-bar.header-enter{
-  background:linear-gradient(145deg,color-mix(in srgb,var(--glass) 94%,white 6%),var(--glass-card))!important;
-  border:1px solid var(--glass-border)!important;
-  border-radius:20px!important;
-  box-shadow:var(--shadow-lg),var(--shadow-inset)!important;
+/* Shared content component contract. Every declaration here is paint-only:
+   no display, sizing, spacing, position, or overflow property is changed. */
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) :is(
+  .panel:not(.app-header),
+  .glass-card:not(.app-header),
+  .card:not(.app-header),
+  .hero,
+  .slot,
+  .kpi,
+  .stat,
+  .user-card,
+  .embed,
+  .banner,
+  .sms-blk,
+  .analysis-detail,
+  .pormap-panel,
+  .chartcard,
+  .coll-panel,
+  .pm-card,
+  .best-card,
+  .compat-card,
+  .target-card,
+  .kpi-group,
+  .upload-card,
+  .upload-opt,
+  .toolbar,
+  .frame-pill>.pill,
+  .login-box,
+  .theme-panel,
+  .user-menu,
+  .modal,
+  .flow-toolbar,
+  .flow-scroll-wrapper,
+  .flow-wrapper,
+  .data-table-wrap,
+  .table-wrap,
+  .table-responsive,
+  .tw,
+  .detail-drawer,
+  .m3-popover,
+  .dropdown-panel,
+  .dd-menu,
+  .filterpop
+){
+  background:var(--component-surface)!important;
+  border-color:transparent!important;
+  border-radius:var(--component-radius)!important;
+  box-shadow:var(--component-shadow)!important;
+  backdrop-filter:var(--glass-blur)!important;
+  -webkit-backdrop-filter:var(--glass-blur)!important;
 }
-.panel,.glass-card,.card,.slot,.kpi,.stat,.user-card,.embed,.pormap-panel{
-  background:linear-gradient(145deg,color-mix(in srgb,var(--glass-card) 94%,white 6%),var(--glass-card))!important;
-  border:1px solid var(--glass-border)!important;
-  box-shadow:var(--shadow-md),var(--shadow-inset)!important;
+/* Semantic status cards retain their own colors; state-specific shadows and
+   squared compound joins are restored after the shared surface contract. */
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) :is(.alert,.alert-box,.tot-eb-card){
+  border-radius:var(--component-radius)!important;
+  box-shadow:var(--component-shadow)!important;
+  backdrop-filter:var(--glass-blur)!important;
+  -webkit-backdrop-filter:var(--glass-blur)!important;
 }
-.panel:hover,.glass-card:hover,.card:hover,.slot:hover,.kpi:hover,.stat:hover,.user-card:hover{border-color:var(--glass-border-hi)!important}
+.page-sms-daily .fc-node,
+.page-sms-monthly .fn{
+  border-radius:var(--component-radius)!important;
+  backdrop-filter:var(--glass-blur)!important;
+  -webkit-backdrop-filter:var(--glass-blur)!important;
+}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) :is(.card,.slot,.kpi,.user-card,.best-card,.compat-card,.target-card,.upload-opt,.coll-panel,.pm-card):hover{
+  box-shadow:var(--shadow-xl),var(--shadow-inset)!important;
+}
+/* Preserve established semantic edge cues and compound layouts. */
+body.page-vdo .card{border-left-color:var(--md-sys-color-primary)!important}
+body.page-sms-child .kpi{border-top-color:var(--tm)!important}
+body.page-sms-daily .kpi:nth-child(1){border-top-color:var(--md-sys-color-primary)!important}
+body.page-sms-daily .kpi:nth-child(2){border-top-color:var(--sg)!important}
+body.page-sms-daily .kpi:nth-child(3){border-top-color:var(--md-sys-color-secondary)!important}
+body.page-sms-daily .kpi:nth-child(4){border-top-color:var(--mo)!important}
+body.page-sms-daily .kpi:nth-child(5){border-top-color:var(--pu)!important}
+body.page-sms-monthly .kpi-tot{border-top-color:var(--tx)!important}
+body.page-sms-monthly .kpi-s1{border-top-color:var(--md-sys-color-secondary)!important}
+body.page-sms-monthly .kpi-s2{border-top-color:var(--mo)!important}
+body.page-sms-monthly .kpi-sl{border-top-color:var(--sg)!important}
+body.page-sms-monthly .kpi-bl{border-top-color:var(--pu)!important}
+body.page-sms-monthly .kpi-eb{border-top-color:var(--gd)!important}
+.page-plate .slot.ok{border-color:rgba(74,222,128,.35)!important}
+.page-plate .slot.err{border-color:rgba(248,113,113,.36)!important}
+.page-pm .upload-opt.has-data{border-color:rgba(16,185,129,.3)!important}
+.page-pm .upload-opt.is-loading{border-color:rgba(14,165,233,.4)!important}
+.frame-pill .panel{
+  background:transparent!important;border:0!important;border-radius:0!important;
+  box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+}
+.page-grade .hero>.panel{
+  background:transparent!important;border:0!important;border-radius:0!important;
+  box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+}
+.page-grade .hero>.stats.cad-panel{border-radius:0 var(--component-radius) var(--component-radius) 0!important}
+.page-pm .toolbar,
+.page-pm .flow-controls,
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) .frame-pill>.pill{border-radius:var(--radius-pill)!important}
+.page-sms-monthly .detail-drawer{border-radius:var(--component-radius) var(--component-radius) 0 0!important}
+.page-sms-daily .tab-bar,
+.page-sms-monthly .tabs-hdr,
+.page-pm .ctrl-tabs{
+  border-radius:var(--component-radius) var(--component-radius) 0 0!important;
+}
+.page-sms-daily :is(.tab-pane.card,.tab-pane>.card:first-child,.tab-pane>.eq-grid:first-child>.card){
+  border-top-left-radius:0!important;border-top-right-radius:0!important;
+}
+.page-sms-daily .flow-wrapper{border-radius:0 0 var(--component-radius) var(--component-radius)!important}
+.page-sms-daily .flow-wrapper:fullscreen{border-radius:0!important}
+.page-sms-daily .fc-node.expanded{
+  box-shadow:0 0 0 4px var(--bg-color),0 0 0 7px var(--md-sys-color-primary)!important;
+}
+.page-sms-daily .fc-node.bottleneck{animation:pulseError 2s infinite}
+.page-sms-monthly .fn.fn-selected{
+  box-shadow:0 0 0 4px var(--bg-color),0 0 0 7px var(--md-sys-color-primary)!important;
+}
+@media (max-width:1100px){.page-grade .hero>.stats.cad-panel{border-radius:0 0 var(--component-radius) var(--component-radius)!important}}
 input,select,textarea,.m3-field{border-radius:var(--radius-sm)!important;border-color:var(--bdr)!important}
+/* Controls borrow the header's neutral pills; selected and primary states use
+   the same brand accent. Layout properties remain page-owned. */
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button){
+  background:var(--input-bg);color:var(--tx);border-color:var(--header-border-color);
+  border-radius:var(--radius-pill)!important;box-shadow:none;
+}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button):hover:not(:disabled){
+  background:var(--input-hover);border-color:var(--glass-border-hi);
+  box-shadow:0 8px 18px rgba(2,6,23,.12);
+}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) :is(
+  .view-tabs,.tabs,.tab-bar,.tabs-hdr,.ctrl-tabs,.gradeModeSwitch,.seg,.flow-toolbar,.flow-controls
+){
+  background:var(--component-surface)!important;border-color:transparent!important;
+  box-shadow:var(--component-shadow)!important;backdrop-filter:var(--glass-blur)!important;
+  -webkit-backdrop-filter:var(--glass-blur)!important;
+}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) :is(.view-tabs,.tabs,.gradeModeSwitch,.seg,.flow-controls){border-radius:var(--radius-pill)!important}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) :is(.panel-head,.ph,.coll-h),
+body.page-sms-shell .view-tabs{
+  background:var(--component-surface)!important;border-color:transparent!important;
+  box-shadow:var(--component-shadow)!important;backdrop-filter:var(--glass-blur)!important;
+  -webkit-backdrop-filter:var(--glass-blur)!important;
+}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) :is(.page-chip,.switch-chip,.hchip,.ochip,.theme-opt){
+  background:var(--input-bg);border-color:var(--header-border-color);box-shadow:none;
+}
+.page-admin :is(.page-chip,.switch-chip),.page-sms-daily :is(.hchip,.ochip){border-radius:var(--radius-pill)}
+.page-pm .select-selected{background:var(--input-bg);border-color:var(--header-border-color);box-shadow:none}
+.page-pm .select-selected.open{border-radius:var(--radius-sm) var(--radius-sm) 0 0!important}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button):is(.primary,.btn-primary,.m3-button-primary,#runBtn),
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button):is(.on,.active,.act,[aria-selected="true"],[aria-pressed="true"]),
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) :is(.page-chip.on,.switch-chip:has(input:checked),.dd-item.on){
+  background:var(--md-sys-color-primary)!important;color:var(--md-sys-color-on-primary)!important;
+  border-color:transparent!important;box-shadow:var(--shadow-sm)!important;
+}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button):is(.primary,.btn-primary,.m3-button-primary,#runBtn):hover:not(:disabled),
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button):is(.on,.active,.act,[aria-selected="true"],[aria-pressed="true"]):hover:not(:disabled){
+  background:var(--component-primary-hover)!important;box-shadow:0 10px 22px rgba(3,105,161,.18)!important;
+}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button):is(.btn-danger,.action-btn.bad){
+  background:color-mix(in srgb,var(--danger) 14%,var(--glass-card))!important;
+  color:var(--danger)!important;border-color:transparent!important;
+}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button):is(.action-btn.good,.btn-green){
+  background:color-mix(in srgb,var(--success) 14%,var(--glass-card))!important;color:var(--success)!important;
+}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button):is(.action-btn.warn,.btn-orange,.btn-gold){
+  background:color-mix(in srgb,var(--warning) 14%,var(--glass-card))!important;color:var(--warning)!important;
+}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button).btn-pu{
+  background:color-mix(in srgb,var(--secondary) 16%,var(--glass-card))!important;color:var(--secondary)!important;
+}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button):disabled{
+  background:var(--input-bg)!important;color:var(--mute)!important;border-color:transparent!important;box-shadow:none!important;
+}
+.page-pm .panel-head button:not(.app-header button):hover{
+  background:color-mix(in srgb,var(--md-sys-color-primary) 14%,var(--glass-card))!important;
+  color:var(--md-sys-color-primary)!important;
+}
+.page-grade .suggestion{
+  background:transparent!important;border-color:transparent!important;border-radius:var(--radius-sm)!important;box-shadow:none!important;
+}
 button,.btn,.m3-button{font-family:var(--font-body)!important}
 button:not(.tabbtn):not(.gmOpt):not(.view-tabs button):hover,.btn:hover,.m3-button:hover{transform:translateY(-1px)}
 table{font-variant-numeric:tabular-nums}
 .table-wrap,#preview,#pivotWrap,.data-table-wrap,.table-responsive,.tw{overflow-x:auto;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable}
 @media (max-width:768px){
-  .top-wrapper,.header-fixed{width:100%!important;max-width:none!important;padding-left:max(12px,var(--safe-left))!important;padding-right:max(12px,var(--safe-right))!important;padding-top:calc(8px + var(--safe-top))!important}
-  .hdr-wrapper,.sticky-wrapper{width:100%!important;max-width:none!important;padding:calc(8px + var(--safe-top)) 12px 0!important}
-  .page-admin .top-wrapper>.top-bar,
-  .page-plate .header-fixed>header,
-  .page-vdo .top-wrapper>.top-bar{width:calc(100% + 24px)!important;margin-left:-12px!important;margin-right:-12px!important}
-  .page-pm>header{left:max(12px,var(--safe-left))!important;right:max(12px,var(--safe-right))!important;top:calc(12px + var(--safe-top))!important}
-  .page-pm>header{padding:10px!important;gap:10px!important}
-  .page-rake .glass-card.header-enter{width:100%!important;margin-left:0!important;margin-right:0!important;padding:10px 12px!important;gap:10px!important}
-  .page-sms-shell .top-bar{width:100%!important;padding:10px 12px!important;gap:8px!important}
+  .app-header-shell{
+    --header-shell-gutter:12px;
+    position:sticky!important;
+    /* The desktop rule centres this shell with left:50% + translateX(-50%),
+       which only makes sense while it is position:fixed. Once it becomes a
+       sticky in-flow block those offsets still apply and displace the header
+       half a viewport off-screen, so they are cleared here and the shell is
+       centred by normal flow instead (width:100% + margin:0 auto + max-width).
+       `left/right:auto` also stops them being read as sticky thresholds, which
+       would otherwise pin the header to the horizontal centre on scroll. */
+    left:auto!important;
+    right:auto!important;
+    transform:none!important;
+    padding:calc(8px + var(--safe-top)) 0 8px!important;
+    padding-left:max(var(--header-shell-gutter),var(--safe-left))!important;
+    padding-right:max(var(--header-shell-gutter),var(--safe-right))!important;
+  }
+  .app-header,
+  .page-order .glass-card.header-enter,
+  .page-rake .glass-card.header-enter{
+    padding:12px!important;
+    gap:10px!important;
+    border-radius:var(--header-radius)!important;
+  }
+  .app-header>:is(.hdr-r,.hd-actions,.h-actions,.top-right){gap:8px!important}
+  .app-header :is(.top-l,.hdr-r,.h-actions,.top-right)>button,
+  .app-header .view-tabs button,
+  .app-header .h-actions .dropdown-wrapper>button,
+  .app-header :is(.app-header-brand-row,.app-header-filter-actions,.app-header-actions)>button{
+    min-height:44px!important;
+  }
+  .app-header>#hubFrameHeaderSlot{
+    width:100%!important;
+    flex-basis:100%!important;
+    justify-content:center!important;
+    border-top:1px solid var(--br);
+    padding-top:10px;
+    margin-top:2px;
+  }
+  .app-header-shell+.header-spacer{height:0!important}
+  .page-grade .header-spacer{height:8px!important}
+  .page-grade .top-right{
+    width:100%!important;
+    justify-content:center!important;
+    border-top:1px solid var(--br);
+    padding-top:10px;
+  }
+  .page-grade .header-status{display:none!important}
+  .page-pm>header.app-header{
+    top:calc(12px + var(--safe-top))!important;
+    left:max(12px,var(--safe-left))!important;
+    right:max(12px,var(--safe-right))!important;
+    padding:10px!important;
+    gap:10px!important;
+  }
+  .page-pm>header.app-header #hubFrameHeaderSlot{
+    order:2!important;
+    flex-basis:100%!important;
+    width:100%!important;
+    border-top:1px solid var(--br);
+    padding-top:10px;
+    margin-top:2px;
+  }
+  .page-rake .glass-card.header-enter{margin-left:0!important;margin-right:0!important}
+  .page-sms-shell .top-bar{width:100%!important}
   .grid,.slots,.kpis,.kpi-row,.stat-row,.row,.tabs{gap:var(--space-mobile)}
   .panel,.glass-card,.slot,.kpi,.stat,.user-card,.embed{margin-bottom:var(--space-mobile)}
-  .top-bar,header,.top-bar.header-enter{border-radius:16px!important}
   .panel,.glass-card,.card,.slot,.kpi,.stat,.user-card{box-shadow:var(--shadow-sm),var(--shadow-inset)!important}
-  .top-l h1,.top-bar h1,header h1{max-width:calc(100vw - 150px);overflow:hidden;text-overflow:ellipsis}
+  .app-header h1,
+  .app-header h2{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .page-order .glass-card.header-enter,
+  .page-rake .glass-card.header-enter{
+    flex-direction:column!important;
+    align-items:stretch!important;
+  }
+  .page-pm .brand-text h1,
+  .top-l h1,
+  .top-bar h1,
+  header h1{max-width:calc(100vw - 150px);overflow:hidden;text-overflow:ellipsis}
+}
+@media (max-width:640px){
+  .app-header .jspl-logo,
+  .app-header .top-brand img{width:34px!important;height:16px!important}
+  .app-header .jspl-brand-text,
+  .app-header .jspl-divider,
+  .app-header .top-brand .brand-text{display:none!important}
+}
+
+@media (max-width:400px){
+  .app-header,
+  .page-order .glass-card.header-enter.app-header,
+  .page-rake .glass-card.header-enter.app-header{padding:10px!important}
 }

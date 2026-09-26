@@ -21,8 +21,10 @@ const pages = [
 ];
 const viewports = [
   { name: 'mobile', width: 320, height: 800 },
+  { name: 'mobileLg', width: 390, height: 844 },
   { name: 'tablet', width: 768, height: 900 },
   { name: 'desktop', width: 1440, height: 900 },
+  { name: 'wide', width: 1920, height: 1080 },
 ];
 const cli = process.env.PLAYWRIGHT_CLI || 'playwright-cli';
 const defaultCliJs = process.platform === 'win32' && process.env.APPDATA
@@ -111,10 +113,23 @@ const auditCode = `async page => {
       for (const viewport of viewports) {
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
         await page.waitForTimeout(100);
-        const metrics = await page.evaluate(() => ({
-          scrollWidth: document.documentElement.scrollWidth,
-          clientWidth: document.documentElement.clientWidth,
-        }));
+        const metrics = await page.evaluate(() => {
+          const edges = el => {
+            if (!el) return null;
+            const box = el.getBoundingClientRect();
+            return { left: box.left, right: box.right };
+          };
+          return {
+            scrollWidth: document.documentElement.scrollWidth,
+            clientWidth: document.documentElement.clientWidth,
+            // The shared header chrome's own edges. A header displaced by a stale
+            // fixed-position offset is invisible to scrollWidth — leftward
+            // overflow is not reachable in an LTR document, so scrollWidth stays
+            // equal to clientWidth while half the header sits off-canvas.
+            headerShell: edges(document.querySelector('.app-header-shell')),
+            header: edges(document.querySelector('.app-header')),
+          };
+        });
         results.push({ page: item.name, viewport: viewport.name, ...metrics });
       }
     } catch (error) {
@@ -157,6 +172,18 @@ try {
           failures.push(`${result.page} @ ${result.viewport}: metrics unavailable`);
         } else if (result.scrollWidth > result.clientWidth) {
           failures.push(`${result.page} @ ${result.viewport}: document overflow ${result.scrollWidth}px > ${result.clientWidth}px`);
+        } else {
+          const bleed = [];
+          for (const [label, rect] of [['header shell', result.headerShell], ['header', result.header]]) {
+            if (!rect) continue;
+            if (rect.left < -0.5) bleed.push(`${label} starts ${Math.round(-rect.left)}px off-canvas`);
+            if (rect.right > result.clientWidth + 0.5) {
+              bleed.push(`${label} extends ${Math.round(rect.right - result.clientWidth)}px past the viewport`);
+            }
+          }
+          if (bleed.length) {
+            failures.push(`${result.page} @ ${result.viewport}: ${bleed.join('; ')}`);
+          }
         }
       }
     }
