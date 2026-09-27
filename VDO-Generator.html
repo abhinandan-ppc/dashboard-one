@@ -21,7 +21,57 @@ body{margin:0;min-height:100vh;background-color:var(--bg-color);color:var(--tx);
 ::-webkit-scrollbar-thumb{background:rgba(150,150,150,.35);border-radius:10px}
 .wrap{width:100%;max-width:none;margin:0;padding:0 var(--page-gutter) 60px}
 .top-wrapper{position:fixed;top:0;left:0;right:0;z-index:50;padding:24px var(--page-gutter) 0;box-sizing:border-box}
-.header-spacer{height:104px}
+/* Breathing room under the header bar. The floating header is position:fixed
+   and out of flow on desktop, so this spacer is what separates it from the
+   first content block: it must clear the header card (24px top padding +
+   64px min-height = 88px) and add the requested breathing room on top of it
+   (176 - 88 = 88px of gap). Under 720px the shell becomes sticky/in-flow and
+   the spacer is zeroed, so the mobile gap is driven by .top-wrapper's
+   margin-bottom instead. */
+.header-spacer{height:176px}
+/* The floating header shell is position:fixed (out of flow, full-bleed) on
+   desktop, where its own --page-gutter padding IS the page inset. Under 768px
+   the shared theme flips .app-header-shell to position:sticky, which puts it
+   back IN flow inside .wrap — and .wrap already applies that same gutter. The
+   page inset was therefore counted twice, so the header card came out 16px
+   narrower than every content block below it (measured header left=32 vs panel
+   left=16 at 390px, and left=40 vs 20 at 720/768px).
+
+   The fix is to drop the shell's --header-shell-gutter at this breakpoint and
+   let .wrap be the single source of the inset. Overriding padding-left/right
+   directly does NOT work here: the shared rule sets both with !important, so a
+   plain declaration loses regardless of specificity. Re-declaring the token to
+   0 instead feeds the same max(var(--header-shell-gutter),var(--safe-*))
+   expression, so the safe-area floor still applies in landscape notches while
+   the gutter is cancelled. Block padding is untouched — that is the breathing
+   room above the brand row, not a page inset. */
+@media (max-width:768px){
+  .page-vdo .top-wrapper{--header-shell-gutter:0px}
+}
+/* Breathing room under the header once it is back IN flow. Stepped to the SAME
+   breakpoints as the shared sticky flip (768px) and the panel rhythm
+   (.panel: 18px, then 14px at 560px) for two reasons:
+
+   - The old value was a flat 32px, so the header sat at a completely different
+     distance from the first panel than the panels sit from each other. It now
+     tracks the panel step instead of inventing a third number.
+   - The margin used to live in this page's 720px block, but the shell's flip to
+     position:sticky happens at 768px. Between 721px and 768px the header was
+     already back in flow with no margin at all, so the gap silently vanished
+     over that band. Anchoring it to 768px keeps it continuous across the flip.
+
+   !important is required, not stylistic: the shared theme sets the shell with
+   the `margin:0 auto!important` shorthand, which zeroes margin-bottom at
+   important priority. A plain declaration here loses to it outright and the gap
+   measures 0. The two steps stay correctly ordered because the 560px block
+   comes later in the cascade. */
+@media (max-width:768px){
+  .page-vdo .top-wrapper{margin-bottom:18px!important}
+}
+@media (max-width:560px){
+  .page-vdo .top-wrapper{margin-bottom:14px!important}
+}
+
 .top-bar{position:relative;min-height:64px;background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);padding:12px 20px;border-radius:var(--radius-lg);border:var(--glass-border-rule);box-shadow:var(--shadow-md);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;box-sizing:border-box}
 .top-l{display:flex;align-items:center;gap:14px;min-width:0;flex:1 1 auto}
 .top-l .eyebrow{font-size:11px;color:var(--tm);letter-spacing:.5px;text-transform:uppercase;font-weight:700}
@@ -150,7 +200,10 @@ tr:hover td{background:var(--input-hover)}
 }
 @media (max-width:720px){
   .wrap{padding:0 var(--page-gutter) 40px}
-  .top-wrapper{padding:12px 0 0;margin-bottom:16px}
+  /* Sticky header is back IN flow here, so the gap between the header card and
+     the first panel is the shell's own margin (set at 768px/560px above to track
+     the panel rhythm) — .header-spacer is height:0 at this width. */
+  .top-wrapper{padding:12px 0 0}
   .top-wrapper{position:sticky}
   .top-bar{padding:12px;gap:0}
   .top-l{gap:8px}

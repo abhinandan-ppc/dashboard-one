@@ -27,9 +27,23 @@ const viewports = [
   { name: 'wide', width: 1920, height: 1080 },
 ];
 const cli = process.env.PLAYWRIGHT_CLI || 'playwright-cli';
+// Pages whose header inset is not the shell's own padding.
 // PM Yard's yard view is a full-bleed canvas; its floating HUD is inset by
 // --pm-hud-inset rather than the shared page gutter, so it is not measured here.
-const gutterExemptPages = new Set(['PM-Yard.html']);
+// Plate Tagging and VDO Generator nest their header shell inside .wrap, which
+// already applies the page gutter. Under 768px the shared theme makes that shell
+// position:sticky (in flow), so the shell's padding would be a SECOND gutter and
+// the header rendered 16-20px narrower than the content below it. Order Status
+// nests its shell inside the same kind of gutter-carrying wrapper. All three
+// cancel that padding and let the wrapper own the inset, so the shell padding is
+// legitimately 0 there and only the rendered edge is meaningful. Their
+// alignment is covered by the tests in test/responsive-contract.test.mjs instead.
+const gutterExemptPages = new Set([
+  'PM-Yard.html',
+  'Plate-Tagging-Tool.html',
+  'VDO-Generator.html',
+  'Order-Status-Report.html',
+]);
 const defaultCliJs = process.platform === 'win32' && process.env.APPDATA
   ? join(process.env.APPDATA, 'npm', 'node_modules', '@playwright', 'cli', 'playwright-cli.js')
   : '';

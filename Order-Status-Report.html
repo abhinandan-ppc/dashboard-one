@@ -54,6 +54,51 @@ thead tr th:last-child{border-radius:0 var(--radius-xs) 0 0}
    the plain th0 headers on this page's other tables, while the dropdown
    popovers keep their rounded card surface. */
 .th-frost{background:var(--glass-50);border-radius:0;backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px)}
+/* The floating header shell is position:fixed (out of flow, full-bleed) on
+   desktop, where its own --page-gutter padding IS the page inset. Under 768px
+   the shared theme flips .app-header-shell to position:sticky, which puts it
+   back IN flow inside this page's own gutter-carrying wrapper (the dashboard
+   root div below, padding:0 var(--page-gutter) 60px) — and that wrapper already
+   applies the same gutter. The page inset was therefore counted twice, so the
+   header card came out 16px narrower than every container below it.
+
+   The fix is to drop the shell's --header-shell-gutter at this breakpoint and
+   let the wrapper be the single source of the inset. Overriding padding-left/right
+   directly does NOT work here: the shared rule sets both with !important, so a
+   plain declaration loses regardless of specificity. Re-declaring the token to
+   0 instead feeds the same max(var(--header-shell-gutter),var(--safe-*))
+   expression, so the safe-area floor still applies in landscape notches while
+   the gutter is cancelled. Kept in its own block because the shared contract
+   test asserts this rule is the only declaration in it. */
+@media (max-width:768px){
+  .page-order .app-header-shell{--header-shell-gutter:0px}
+}
+/* Desktop clearance for the fixed header. Declared here (rather than as an
+   inline height) because the shell's sticky flip is a CSS breakpoint (768px)
+   while this page's `mob` flag is a JS one (<640px): between the two, an
+   inline mob?0:100 spacer stayed 100px tall under a header that was already
+   back in flow, leaving a 100px hole above the first panel. The shared theme
+   already zeroes .app-header-shell + .header-spacer under 768px (and does so
+   with !important, which outranks this non-important desktop height), so this
+   single declaration covers both sides of the flip. */
+.page-order .header-spacer{height:100px}
+/* Mobile stack rhythm. Every top-level section on this page (.osr-stack) and
+   the sticky header itself now resolve to ONE step, so the gap under the header
+   bar matches the gap between the containers instead of the header sitting at a
+   different distance from the first panel than the panels sit from each other.
+   Before this, the rhythm was three different values — 18px on the sections
+   that set it inline, 12px from the theme's --space-mobile on the .glass-card
+   ones, and nothing at all under the header (the shell's own 8px bottom
+   padding was the only separation, with the spacer zeroed). !important is
+   required, not stylistic: most of these margins are inline style props, and
+   the shared .app-header-shell rule resets margin with `margin:0 auto!important`.
+   The shell keeps the theme's 8px bottom padding, so the header's total gap is
+   that plus one step — the same way the other sticky-header pages behave. */
+@media (max-width:768px){
+  :root{--osr-stack:14px}
+  .page-order .app-header-shell{margin-bottom:var(--osr-stack)!important}
+  .osr-stack{margin-bottom:var(--osr-stack)!important}
+}
 /* Responsive: two-column panels collapse to a single stacked column below tablet width. Defined as
    real CSS classes (not inline gridTemplateColumns) so a @media rule can actually win — an inline
    style property always beats a media-query-scoped class rule at the same specificity. */
@@ -1523,13 +1568,15 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       </div>
     </div>
     </div>
-    {/* Spacer reserving the fixed header's visual footprint in the flex flow below
+    {/* Spacer reserving the fixed header's visual footprint in the flow below
         (20px outer top padding + 64px minHeight, both border-box, + 16px breathing room
-        before the next bar — see the header above). Not needed on mobile: the header switches to
-        position:sticky there, so it already occupies its own space in the document flow — an
-        additional spacer would just double the gap. */}
-    <div style={{height:mob?0:100}}/>
-    <div className="glass-card" style={mob?{padding:'12px 16px',marginBottom:18,display:'grid',
+        before the next bar — see the header above). Height comes from the stylesheet
+        (.page-order .header-spacer), not from `mob`: the shell's sticky flip is a CSS
+        breakpoint (768px) and this flag is a JS one (<640px), so between the two an
+        inline mob?0:100 spacer stayed 100px tall under a header that was already back
+        in flow. The theme zeroes .app-header-shell + .header-spacer under 768px. */}
+    <div className="header-spacer"/>
+    <div className="glass-card osr-stack" style={mob?{padding:'12px 16px',marginBottom:18,display:'grid',
       gridTemplateColumns:'1fr 1fr',gap:10,position:'relative',zIndex:40,borderRadius:'var(--radius-lg)',
       boxShadow:'var(--shadow-sm)'}:{padding:'12px 16px',marginBottom:18,display:'flex',gap:10,flexWrap:'wrap',
       position:'relative',zIndex:40,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-sm)'}}>
@@ -1550,7 +1597,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         active filters — toggling this in/out of the DOM on every chart click was exactly what
         made the page appear to "jump": everything below it (KPI panel, donut, tables) shifted up
         or down by this box's height each time, even though scroll position itself didn't move. */}
-    <div style={{...card,padding:'10px 16px',marginBottom:18,display:'flex',minHeight:44,
+    <div className="osr-stack" style={{...card,padding:'10px 16px',marginBottom:18,display:'flex',minHeight:44,
       gap:8,flexWrap:'wrap',alignItems:'center'}}>
       {activeChartFilterCount>0?<>
         <span style={{fontFamily:F.h,fontSize:11,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',color:'var(--mute)'}}>
@@ -1573,7 +1620,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     </div>
 
     {/* ═══ PANEL 2: REVERSE-FLOW ORDER PIPELINE ═══ */}
-    <div style={{...card,padding:mob?'12px 14px':'18px 20px',marginBottom:18}}>
+    <div className="osr-stack" style={{...card,padding:mob?'12px 14px':'18px 20px',marginBottom:18}}>
       <div style={{fontFamily:F.h,fontSize:12,fontWeight:800,letterSpacing:'.08em',textTransform:'uppercase',color:'var(--mute)',marginBottom:14}}>
         Order Fulfillment Flow <span style={{color:'var(--dim)',fontWeight:500,letterSpacing:0,textTransform:'none'}}>· Billed ← BTP</span>
       </div>
@@ -1634,7 +1681,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     </div>
 
     {/* ═══ PANEL 3+4+5: Donut / Rake chips / Customer table ═══ */}
-    <div className="grid-donut-cust">
+    <div className="grid-donut-cust osr-stack">
       <div className="glass-card" style={{padding:mob?'10px 12px':'14px 16px',display:'flex',flexDirection:'column',gap:8,
         alignItems:'center',height:'100%',maxHeight:360,boxShadow:'var(--shadow-sm)',borderRadius:'var(--radius-lg)'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',gap:8}}>
@@ -1726,7 +1773,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     </div>
 
     {/* ═══ PANEL 6: Rake-mode summary ═══ */}
-    <div style={{...card,padding:'18px',marginBottom:18,overflow:'hidden'}}>
+    <div className="osr-stack" style={{...card,padding:'18px',marginBottom:18,overflow:'hidden'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12,marginBottom:12}}>
         <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase'}}>Rake-Mode Summary</div>
         <div style={{display:'flex',flexDirection:'column',gap:6,alignItems:'flex-end'}}>
@@ -1769,7 +1816,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     </div>
 
     {/* ═══ PANEL 7+8: India map / Supply Condition x metrics ═══ */}
-    <div className="grid-map-metrics">
+    <div className="grid-map-metrics osr-stack">
       <div style={{...card,padding:mob?'10px':'16px',overflow:'hidden',display:'flex',flexDirection:'column',height:'100%'}}>
         <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',marginBottom:10}}>
           Order Qty by State/City
@@ -1812,7 +1859,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     </div>
 
     {/* ═══ PANEL 9: Online/Offline stacked bars ═══ */}
-    <div className="glass-card" style={{padding:'20px 22px',marginBottom:18,boxShadow:'var(--shadow-sm)',borderRadius:'var(--radius-lg)'}}>
+    <div className="glass-card osr-stack" style={{padding:'20px 22px',marginBottom:18,boxShadow:'var(--shadow-sm)',borderRadius:'var(--radius-lg)'}}>
       <div style={{fontFamily:F.h,fontSize:13,fontWeight:800,letterSpacing:'.06em',textTransform:'uppercase',marginBottom:14,color:'var(--text)'}}>
         Online vs Offline — Finishing Line Split
       </div>
@@ -1957,7 +2004,7 @@ function App(){
           <div id="hubFrameHeaderSlot" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,justifyContent:'flex-start'}}/>
         </div>
       </div>
-      <div style={{height:mob?0:100,flexShrink:0}}/>
+      <div className="header-spacer" style={{flexShrink:0}}/>
     </>;
 
   const fetchStatusOverlay=fetchPhase&&

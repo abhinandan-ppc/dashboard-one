@@ -79,6 +79,215 @@ test('responsive pages do not hide document-level horizontal defects', async () 
   }
 });
 
+test('the Plate header spans the same inset as its content on narrow screens', async () => {
+  const [plate, theme] = await Promise.all([read('Plate-Tagging-Tool.html'), read('theme.css')]);
+
+  // .wrap already applies the page gutter, and the header shell is nested
+  // INSIDE it. Under 768px the shared theme flips .app-header-shell to
+  // position:sticky, which puts the shell back in flow — so the shell's own
+  // --header-shell-gutter padding became a second gutter and the header card
+  // rendered 16px narrower than every content block below it (measured: header
+  // left 32px vs slot left 16px at 390px). The page cancels that token so .wrap
+  // is the single source of the inset.
+  assert.match(
+    plate,
+    /\.page-plate \.header-fixed\{--header-shell-gutter:0px\}/,
+    'Plate must cancel the header shell gutter while nested inside the gated .wrap',
+  );
+  // The token is the only lever available: the shared rule sets the padding with
+  // !important, so a plain padding override would silently lose.
+  assert.doesNotMatch(
+    plate,
+    /\.page-plate \.header-fixed\{[^}]*padding-left/,
+    'Plate must override the gutter token, not the !important padding',
+  );
+  // The cancellation is scoped to the mobile step where the shell goes sticky;
+  // on desktop the shell is position:fixed and its padding IS the page inset,
+  // so it must be left alone.
+  assert.match(
+    plate,
+    /@media\(max-width:768px\)\{\s*\.page-plate \.header-fixed\{--header-shell-gutter:0px\}\s*\}/,
+    'the gutter cancellation must be scoped to the mobile step',
+  );
+
+  // Vertical rhythm: .step is display:none under 640px, so on phones the
+  // header's only separation from the first card was the shell's 8px bottom
+  // padding (measured 8px against 51px on desktop) and the two looked welded
+  // together. One shared stack step restores the same rhythm.
+  assert.match(
+    plate,
+    /\.header-fixed\{margin-bottom:var\(--space-stack\)!important\}/,
+    'the mobile header must keep a stack step of breathing room below it',
+  );
+  // !important is required: the shared .app-header-shell rule sets
+  // `margin:0 auto!important`, which would otherwise reset this to 0.
+  assert.match(
+    theme,
+    /\.app-header-shell\{[\s\S]{0,400}?margin:0 auto!important/,
+    'the shared shell rule is expected to reset margin (guards the !important above)',
+  );
+});
+
+// Every page that nests its header shell inside the already-gated wrapper has the
+// same double-inset defect, and each must cancel the shell's gutter token rather
+// than its padding. Plate Tagging (measured 32 vs 16 at 390px), VDO Generator
+// (measured 32 vs 16 at 320/390px, 40 vs 20 at 720/768px) and Order Status
+// (measured 32 vs 16 at 390px) were all affected.
+const nestedShellPages = [
+  { file: 'Plate-Tagging-Tool.html', pageClass: 'page-plate', shellClass: 'header-fixed' },
+  { file: 'VDO-Generator.html', pageClass: 'page-vdo', shellClass: 'top-wrapper' },
+  { file: 'Order-Status-Report.html', pageClass: 'page-order', shellClass: 'app-header-shell' },
+];
+
+for (const { file, pageClass, shellClass } of nestedShellPages) {
+  const selector = `.${pageClass} .${shellClass}`;
+
+  test(`${file} cancels its nested header shell's duplicate gutter on narrow screens`, async () => {
+    const html = await read(file);
+
+    // .wrap applies the page gutter and the shell is nested INSIDE it, so under
+    // 768px (where the shared theme makes the shell position:sticky and back in
+    // flow) the shell's own --header-shell-gutter became a SECOND gutter and the
+    // header card rendered narrower than every content block below it. Cancelling
+    // the token lets .wrap be the single source of the inset.
+    assert.match(
+      html,
+      new RegExp(`${selector.replace(/\./g, '\\.')}\\{--header-shell-gutter:0px\\}`),
+      `${file} must cancel the header shell gutter while nested inside the gated .wrap`,
+    );
+    // The token is the only lever available: the shared rule sets padding-left and
+    // padding-right with !important, so a plain padding override silently loses.
+    assert.doesNotMatch(
+      html,
+      new RegExp(`${selector.replace(/\./g, '\\.')}\\{[^}]*padding-left`),
+      `${file} must override the gutter token, not the !important padding`,
+    );
+    // Scoped to the mobile step only: on desktop the shell is position:fixed and
+    // its padding IS the page inset, so it must be left alone.
+    assert.match(
+      html,
+      new RegExp(
+        `@media\\s*\\(max-width:768px\\)\\s*\\{\\s*${selector.replace(/\./g, '\\.')}\\{--header-shell-gutter:0px\\}\\s*\\}`,
+      ),
+      `${file} must scope the gutter cancellation to the mobile step`,
+    );
+  });
+}
+
+test('the Order Status mobile stack shares one spacing step from the header down', async () => {
+  const osr = await read('Order-Status-Report.html');
+
+  // Once the shell is sticky it sits IN flow, so the gap under the header bar is
+  // whatever the shell and the first panel each contribute. That used to be an
+  // 8px shell padding with a zeroed spacer and nothing else, against 18px
+  // between the sections and 12px (--space-mobile) on the .glass-card ones —
+  // three different rhythms on one page. The shell and every top-level section
+  // now resolve to a single step.
+  assert.match(
+    osr,
+    /\.page-order \.app-header-shell\{margin-bottom:var\(--osr-stack\)!important\}/,
+    'the sticky header must keep a stack step of its own below it',
+  );
+  assert.match(
+    osr,
+    /\.osr-stack\{margin-bottom:var\(--osr-stack\)!important\}/,
+    'every top-level section must resolve its mobile gap to the same step',
+  );
+  // The step itself must be a token, and it must be the one the page already
+  // used for its cards — not a fourth value.
+  assert.match(osr, /--osr-stack:14px/, 'the mobile step must be a single declared value');
+  // !important is load-bearing, not stylistic: the shared shell rule sets
+  // `margin:0 auto!important`, and the section margins are inline style props.
+  const theme = await read('theme.css');
+  assert.match(
+    theme,
+    /\.app-header-shell\{[\s\S]{0,400}?margin:0 auto!important/,
+    'the shared shell rule is expected to reset margin (guards the !important above)',
+  );
+
+  // The clearance spacer is sized by CSS, not by the page's `mob` JS flag. The
+  // two disagree between 640px and 768px: the theme flips the shell to sticky at
+  // 768px, but mob only turns true below 640px — so an inline mob?0:100 spacer
+  // stayed 100px tall under a header that was already back in flow, opening a
+  // 100px hole above the first panel on every 640-768px screen.
+  assert.doesNotMatch(
+    osr,
+    /height:mob\?0:100/,
+    'the header spacer must be sized by CSS so it tracks the sticky breakpoint',
+  );
+  assert.match(osr, /className="header-spacer"/, 'the dashboard spacer must carry the shared spacer class');
+  assert.match(
+    osr,
+    /\.page-order \.header-spacer\{height:100px\}/,
+    'the desktop clearance must be declared in the stylesheet',
+  );
+  // The theme zeroes .app-header-shell + .header-spacer under 768px with
+  // !important, which is what makes one declaration cover both sides of the flip.
+  assert.match(
+    theme,
+    /\.app-header-shell\+\.header-spacer\{height:0!important\}/,
+    'the theme must zero the spacer next to the sticky shell',
+  );
+
+  // Every top-level section is tagged, so none of them keeps its own 18px.
+  // Split on the tag boundary so each chunk is one opening <div ...>: a section
+  // that still sets marginBottom:18 without carrying the hook is exactly the
+  // thing that would drift back to a second rhythm.
+  const openTags = osr.split('<div').slice(1);
+  const unhooked = openTags.filter(
+    (tag) => tag.includes('marginBottom:18') && !tag.slice(0, tag.indexOf('>')).includes('osr-stack'),
+  );
+  assert.equal(
+    unhooked.length,
+    0,
+    `every section setting marginBottom:18 must carry the osr-stack hook; found ${unhooked.length} unhooked`,
+  );
+  const hooked = osr.split('osr-stack').length - 1;
+  assert.ok(hooked >= 10, `expected the osr-stack hook on every section, found ${hooked - 2} uses`);
+});
+
+test('the VDO Generator header gap tracks its own panel rhythm on mobile', async () => {
+  const vdo = await read('VDO-Generator.html');
+
+  // The header's old gap was a flat 32px while .panel uses 18px (14px under
+  // 560px) — a third number that made the header read as a separate band. It now
+  // resolves to exactly the panel step.
+  assert.match(
+    vdo,
+    /@media\s*\(max-width:768px\)\s*\{\s*\.page-vdo \.top-wrapper\{margin-bottom:18px!important\}\s*\}/,
+    'the mobile header gap must match the 18px panel step',
+  );
+  assert.match(
+    vdo,
+    /@media\s*\(max-width:560px\)\s*\{[\s\S]*?\.page-vdo \.top-wrapper\{margin-bottom:14px!important\}/,
+    'the gap must step down to 14px alongside .panel',
+  );
+  // The !important is load-bearing and the browser proves it: the shared theme
+  // sets the shell via the `margin:0 auto!important` shorthand, so a plain
+  // margin-bottom here is overridden and the gap measures 0px. Assert the cause
+  // too, so the pair can't drift apart.
+  const theme = await read('theme.css');
+  assert.match(
+    theme,
+    /\.app-header-shell\{[\s\S]{0,400}?margin:0 auto!important/,
+    'the shared shell rule is expected to reset margin via shorthand (guards the !important above)',
+  );
+  assert.doesNotMatch(vdo, /margin-bottom:32px/, 'the ad-hoc 32px header gap must be gone');
+  // The margin has to be anchored to 768px, not this page's 720px step: the
+  // shared theme flips the shell to position:sticky at 768px, so across
+  // 721-768px the header was already back in flow with no margin at all and the
+  // gap silently disappeared.
+  const mobile = mediaBlocks(vdo, '@media (max-width:768px)').join('\n');
+  assert.match(mobile, /\.page-vdo \.top-wrapper\{margin-bottom:18px!important\}/, 'the gap must start at the sticky flip');
+  const at720 = mediaBlocks(vdo, '@media (max-width:720px)').join('\n');
+  assert.doesNotMatch(
+    at720,
+    /\.page-vdo \.top-wrapper\{[^}]*margin-bottom/,
+    'the 720px block must not own a competing header margin',
+  );
+});
+
+
 test('shared responsive primitives cover touch and table overflow behavior', async () => {
   const theme = await read('theme.css');
   assert.match(theme, /touch-action\s*:\s*manipulation/);
@@ -259,11 +468,35 @@ test('the Rake KPI strip is as far from the content below as from the header', a
     /setProperty\('--rake-header-clearance',\s*`\$\{Math\.round\(height\+12\)\}px`\)/,
     'the header clearance must keep its 12px of breathing room',
   );
+  // The bottom value carries its own unit. Inside this template string React
+  // serialises the value verbatim and does NOT append "px" the way it does for
+  // a numeric style value, so a bare `12` made the whole padding declaration
+  // invalid — the browser dropped it and the strip rendered with no padding at
+  // all on mobile (measured: computed padding 0px, strip height == card height).
   assert.match(
     rake,
-    /className="kpi-strip"[^}]*padding:`12px \$\{mob\?12:24\}px \$\{mob\?12:'var\(--space-stack\)'\}`/,
-    'the KPI strip bottom padding must match the effective gap above the cards',
+    /className="kpi-strip"[^}]*padding:`12px var\(--page-gutter\) \$\{mob\?'12px':'var\(--space-stack\)'\}`/,
+    'the KPI strip bottom padding must match the effective gap above the cards, with an explicit unit',
   );
+
+  // The strip is a full-width page band, so its horizontal inset has to come
+  // from the same token as the tables below it. It used to branch on a 12/24
+  // literal, which put the cards 8px outboard of every other block on phones
+  // (24px here vs a 16px --page-gutter) — the same class of drift the gutter
+  // contract exists to prevent. As the scroll container's end padding, the
+  // token also keeps the last card off the edge when scrolled fully right.
+  assert.doesNotMatch(
+    rake,
+    /padding:`12px \$\{mob\?12:24\}px/,
+    'the KPI strip must not branch its page gutter on a literal',
+  );
+  // A sideways-scrolling strip needs the affordance that makes it read as
+  // scrollable: no themed scrollbar bar under the cards, and a snap point per
+  // card so a swipe rests on a whole number instead of slicing it.
+  assert.match(rake, /\.page-rake \.kpi-strip\{scroll-snap-type:x proximity;scroll-padding-inline:var\(--page-gutter\)\}/);
+  assert.match(rake, /\.page-rake \.kpi-strip>div\{scroll-snap-align:start\}/);
+  assert.match(rake, /\.page-rake \.kpi-strip\{scrollbar-width:none/);
+  assert.match(rake, /\.page-rake \.kpi-strip::\-webkit-scrollbar\{height:0/);
 
   // The strip takes its column gap from the shared .kpi-strip contract, so no
   // inline gap literal may creep back in (which would also leave wrapped rows
