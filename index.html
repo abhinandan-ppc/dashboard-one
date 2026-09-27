@@ -429,9 +429,298 @@ input { font: inherit; color: inherit; }
   .frame-skeleton .skeleton-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .frame-skeleton-inner { padding: 18px 12px; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   MOTION INTRO — the hub's one-time branded reveal, built as kinetic
+   typography. The brand line is set in LIVE type, one <span> per glyph, so
+   each letter can carry its own transform while its word collapses tracking
+   into place — a flat bitmap cannot be animated per character, and (being
+   dark slate) is all but invisible on the dark surface anyway.
+   Timeline (delays are absolute; TOTAL_MS in the IIFE must match the last
+   keyframe's end so the node is torn down just after the last frame lands):
+     0.00s  framing hairlines draw out from the centre
+     0.04s  crest rises and wipes open on its plate
+     0.12s  "Angul · Plate Mill" — glyphs cascade in
+     0.30s  JINDAL — glyphs rise, counter-rotate and wipe open
+     0.50s  STEEL — same cascade, offset, in the accent colour
+     0.70s  shimmer sweeps the crest silhouette
+     0.95s  accent rule draws L→R between the word and the sub
+     1.06s  "AI Planning Hub" — tighter cascade
+     1.20s  five meter segments fill in sequence, 70ms apart
+     1.84s  core defocuses out (must land before the shutters move at 2.14s,
+            otherwise the fading lockup ghosts over the revealing page)
+     2.14s  shutters part + seam flash  → ends 2.70s
+   Glyph delays and durations are driven from CASCADE in the runtime IIFE so
+   the cascade is defined in exactly one place; the CSS only supplies curves.
+
+   All animation is scoped to `.intro.is-active`, so the markup can sit in a
+   <template> and the styles cost nothing until it is actually cloned in.
+   Opacity is animated ONLY on the overlay's own elements — never on the page
+   underneath. See the header-entrance note above: fading an element whose
+   subtree carries a backdrop-filter permanently breaks that blur, and the
+   hub header/card stack is full of them. The reveal is a transform-only
+   shutter for exactly that reason.
+   ════════════════════════════════════════════════════════════════════════ */
+.intro {
+  position: fixed; inset: 0; z-index: 2000; overflow: hidden;
+  pointer-events: none;
+  font-family: 'Poppins', system-ui, sans-serif;
+}
+.intro.is-active { pointer-events: auto; }
+
+/* Opaque cover. Two halves that part vertically to hand the hub back. */
+.intro-shutter {
+  position: absolute; left: 0; width: 100%; height: 50.4%;
+  background: var(--bg);
+  will-change: transform;
+}
+.intro-shutter-t {
+  top: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 100%, rgba(var(--primary-rgb), .16), transparent 62%),
+    var(--bg);
+}
+.intro-shutter-b {
+  bottom: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 0%, rgba(var(--primary-rgb), .16), transparent 62%),
+    var(--bg);
+}
+/* The line of light that flashes along the seam as the halves part. */
+.intro-seam {
+  position: absolute; left: 0; top: 50%; width: 100%; height: 2px; margin-top: -1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--primary-rgb), .95), transparent);
+  opacity: 0; transform: scaleX(.15);
+  will-change: transform, opacity;
+}
+
+.intro-core {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px; text-align: center;
+  will-change: transform, opacity, filter;
+}
+/* Two hairlines that frame the lockup, drawn out from the centre. */
+.intro-rail {
+  position: absolute; left: 50%; width: min(560px, 84vw); margin-left: calc(min(560px, 84vw) / -2);
+  height: 1px; transform: scaleX(0);
+  background: linear-gradient(90deg, transparent, var(--br) 16%, var(--br) 84%, transparent);
+}
+.intro-rail-t { top: 24%; }
+.intro-rail-b { bottom: 24%; }
+.intro-lockup {
+  display: flex; flex-direction: column; align-items: center;
+  max-width: 100%;
+}
+/* The crest keeps its light steel plate: the bitmap's own wordmark is dark
+   slate and vanishes on the dark surface, so a plate reads correctly in BOTH
+   themes without needing a per-theme filter swap. */
+.intro-crest {
+  position: relative; display: block; margin-bottom: clamp(16px, 2.6vw, 24px);
+  padding: 10px 16px; border-radius: 10px;
+  background: linear-gradient(158deg, #fbfdff 0%, #e2e8f0 100%);
+  /* The plate is near-white, so on the light theme it needs an edge of its own
+     or the crest reads as a floating mark. Invisible against the dark theme. */
+  border: 1px solid rgba(15, 23, 42, .1);
+  box-shadow: 0 14px 34px rgba(2, 6, 23, .42), inset 0 1px 0 rgba(255, 255, 255, .95);
+}
+[data-theme="light"] .intro-crest {
+  box-shadow: 0 12px 28px rgba(15, 23, 42, .16), inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+.intro-logo-box { position: relative; display: block; width: clamp(56px, 14vw, 104px); }
+.intro-logo { display: block; width: 100%; height: auto; }
+/* The rule sits between the word and the sub, so it reads as a typographic
+   divider rather than a flourish above the lockup. */
+.intro-rule {
+  display: block; width: min(240px, 58vw); height: 2px; border-radius: 2px;
+  margin: clamp(16px, 2.6vw, 24px) 0 clamp(14px, 2.4vw, 20px);
+  background: linear-gradient(90deg, transparent, rgba(var(--primary-rgb), .95) 20%, rgba(var(--primary-rgb), .95) 80%, transparent);
+  box-shadow: 0 0 18px rgba(var(--primary-rgb), .55);
+  transform: scaleX(0); transform-origin: left center;
+}
+.intro-eyebrow {
+  margin-bottom: clamp(12px, 2.2vw, 20px);
+  font-size: clamp(9px, 1.9vw, 11px); font-weight: 700;
+  letter-spacing: .32em; text-transform: uppercase; color: var(--tm);
+  text-indent: .32em;            /* absorb the trailing tracking */
+}
+.intro-hero {
+  font-size: clamp(36px, 11.5vw, 92px); font-weight: 800; line-height: .95;
+  letter-spacing: .04em; text-transform: uppercase; color: var(--tx);
+  text-indent: .04em; white-space: nowrap;
+}
+.intro-hero-2 { color: var(--primary); margin-top: -.06em; }
+/* Every glyph is its own inline-block so it can be transformed on its own. */
+.intro-ch { display: inline-block; will-change: transform, opacity; }
+/* Masked to the logo's own alpha, so the sheen only paints the mark. */
+.intro-sheen {
+  position: absolute; inset: 0; opacity: 0; transform: translateX(-115%);
+  background: linear-gradient(100deg, transparent 38%, rgba(255, 255, 255, .9) 50%, transparent 62%);
+  -webkit-mask-image: var(--intro-logo-url); mask-image: var(--intro-logo-url);
+  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  will-change: transform, opacity;
+}
+.intro-sub {
+  font-size: clamp(10px, 2.2vw, 12px); font-weight: 600;
+  letter-spacing: .3em; text-transform: uppercase; color: var(--tm);
+  text-indent: .3em;
+}
+/* Segmented rather than one bar: five beats that fill in sequence land far
+   more crisply than a single continuous sweep, and each one is a plain
+   transform on a pseudo-element (no layout, no paint). */
+.intro-meter {
+  display: flex; gap: 5px; width: min(240px, 62vw);
+  margin-top: clamp(18px, 3vw, 28px);
+}
+.intro-meter > i {
+  position: relative; flex: 1; height: 2px; border-radius: 2px;
+  background: var(--br); overflow: hidden;
+}
+.intro-meter > i::before {
+  content: ""; position: absolute; inset: 0; border-radius: 2px;
+  background: rgba(var(--primary-rgb), .95);
+  transform: scaleX(0); transform-origin: left center;
+}
+.intro-skip {
+  position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
+  min-height: 44px; padding: 0 20px; border-radius: var(--radius-pill);
+  background: var(--glass-hi); color: var(--tm); border: 1px solid var(--bdr);
+  font-family: inherit; font-size: 11.5px; font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase; cursor: pointer;
+  opacity: 0; pointer-events: none;
+  transition: opacity .25s ease, transform .2s var(--ease-emphasized), color .2s ease;
+}
+.intro.is-active .intro-skip { pointer-events: auto; }
+.intro-skip:hover { color: var(--tx); transform: translateY(-2px); }
+
+/* ── Beats (only while the intro is actually running) ──
+   The hero words carry TWO animations each: the tracking collapse and the
+   focus-pull, which have to be separate because the tracking curve and the
+   blur curve want different easing. Glyph timings are not listed here — they
+   are written per span by kineticize() from the CASCADE table in the IIFE. */
+.intro.is-active .intro-ch         { animation-name: kChar; animation-timing-function: cubic-bezier(.16,1,.3,1); animation-fill-mode: both; }
+.intro.is-active .intro-rail-t     { animation: kRail .50s cubic-bezier(.22,1,.36,1) both; }
+.intro.is-active .intro-rail-b     { animation: kRail .50s cubic-bezier(.22,1,.36,1) .06s both; }
+.intro.is-active .intro-crest      { animation: kCrest .60s cubic-bezier(.22,1,.36,1) .04s both; }
+.intro.is-active .intro-sheen      { animation: kSheen .70s ease .70s both; }
+.intro.is-active .intro-hero-1     { animation: kTrack .62s cubic-bezier(.16,1,.3,1) .30s both, kFocus .62s cubic-bezier(.2,0,.2,1) .30s both; }
+.intro.is-active .intro-hero-2     { animation: kTrack .62s cubic-bezier(.16,1,.3,1) .50s both, kFocus .62s cubic-bezier(.2,0,.2,1) .50s both; }
+.intro.is-active .intro-rule       { animation: kRule .50s cubic-bezier(.22,1,.36,1) .95s both; }
+/* Five segments, 70ms apart, each 300ms — last one lands at 1.78s, just
+   clear of the 1.84s core exit. */
+.intro.is-active .intro-meter > i::before { animation: kFill .30s cubic-bezier(.4,0,.2,1) both; }
+.intro.is-active .intro-meter > i:nth-child(1)::before { animation-delay: 1.20s; }
+.intro.is-active .intro-meter > i:nth-child(2)::before { animation-delay: 1.27s; }
+.intro.is-active .intro-meter > i:nth-child(3)::before { animation-delay: 1.34s; }
+.intro.is-active .intro-meter > i:nth-child(4)::before { animation-delay: 1.41s; }
+.intro.is-active .intro-meter > i:nth-child(5)::before { animation-delay: 1.48s; }
+.intro.is-active .intro-skip       { animation: kSkip .35s ease .55s both; }
+.intro.is-active .intro-core       { animation: kOut .30s ease 1.84s both; }
+.intro.is-active .intro-seam       { animation: kSeam .56s ease 2.14s both; }
+.intro.is-active .intro-shutter-t  { animation: kPart  .56s cubic-bezier(.76,0,.24,1) 2.14s both; }
+.intro.is-active .intro-shutter-b  { animation: kPartB .56s cubic-bezier(.76,0,.24,1) 2.14s both; }
+
+/* The signature beat. A glyph rises out of its own baseline, tilts, and is
+   revealed by a clip that opens upward — so it reads as being *set* rather
+   than faded in. transform + clip-path + opacity only; no layout, and the
+   per-glyph blur is deliberately NOT here (41 simultaneously blurring spans
+   would be the one genuinely expensive thing in this animation). */
+@keyframes kChar {
+  0%   { opacity: 0; transform: translateY(.42em) rotate(4deg); clip-path: inset(0 0 100% 0) }
+  55%  { opacity: 1 }
+  100% { opacity: 1; transform: none; clip-path: inset(0 0 -.24em 0) }
+}
+/* Tracking collapses from loose to tight as the word lands — the other half
+   of the kinetic-typography read, and what live type can do that the bitmap
+   never could. */
+@keyframes kTrack { from { letter-spacing: .17em } to { letter-spacing: .04em } }
+/* A short focus-pull so each word resolves as a unit once its glyphs arrive. */
+@keyframes kFocus {
+  0%   { filter: blur(9px) }
+  60%, 100% { filter: blur(0) }
+}
+@keyframes kRail  { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+@keyframes kRule  { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+@keyframes kFill  { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+@keyframes kCrest {
+  0%   { opacity: 0; transform: translateY(-10px) scale(.94); clip-path: inset(0 0 100% 0) }
+  100% { opacity: 1; transform: none; clip-path: inset(0 0 -24% 0) }
+}
+@keyframes kSheen {
+  0%   { opacity: 0; transform: translateX(-115%) }
+  18%  { opacity: 1 }
+  100% { opacity: 0; transform: translateX(115%) }
+}
+@keyframes kSkip { from { opacity: 0; transform: translateY(8px) } to { opacity: .85; transform: none } }
+/* Unified exit: the whole lockup defocuses and drifts up as one object. */
+@keyframes kOut  { from { opacity: 1; transform: none; filter: blur(0) } to { opacity: 0; transform: translateY(-10px) scale(1.03); filter: blur(7px) } }
+@keyframes kSeam {
+  0%   { opacity: 0; transform: scaleX(.15) }
+  22%  { opacity: 1; transform: scaleX(1) }
+  100% { opacity: 0; transform: scaleX(1) }
+}
+@keyframes kPart  { from { transform: translateY(0) } to { transform: translateY(-101%) } }
+@keyframes kPartB { from { transform: translateY(0) } to { transform: translateY(101%) } }
+
+/* Hub cards settle in behind the header once the shutters clear. Transform-only
+   for the same backdrop-filter reason as the header entrance above.
+   The fill is `backwards`, NOT `both`, and that matters: `both` would keep the
+   finished keyframe applied for the rest of the stagger window, and a filled
+   animation outranks the inline transform that animateCardReflow() writes to
+   reorder these same cards — freezing a drag for ~0.9s. `backwards` only holds
+   the from-state during the stagger delay and releases the moment each card
+   lands, so the reflow transform takes over immediately. */
+@keyframes introCardIn { from { transform: translateY(14px) } to { transform: translateY(0) } }
+.intro-card-in {
+  /* Duration + stagger step are mirrored by CARD_DUR_MS / CARD_STAGGER_MS in
+     the runtime IIFE, which times this to land as the shutters part. */
+  animation: introCardIn .38s cubic-bezier(.22,1,.36,1) backwards;
+  animation-delay: calc(var(--intro-i, 0) * 34ms);
+}
 </style>
 </head>
 <body class="page-hub">
+<!-- ── Motion intro ──────────────────────────────────────────────────────
+     A one-time branded reveal that plays over the hub on the first load of
+     each browser session. Held in a <template> so the runtime IIFE (bottom of
+     this file) can clone it in on demand and remove it again afterwards —
+     replaying the intro leaves no permanent overlay in the document.
+     The logo <img> ships WITHOUT a src on purpose: the IIFE copies the
+     resolved src of the header's inline base64 logo so those ~78 KB of
+     base64 are never duplicated. -->
+<template id="intro-tpl">
+  <div id="intro" class="intro" aria-hidden="true">
+    <div class="intro-shutter intro-shutter-t"></div>
+    <div class="intro-shutter intro-shutter-b"></div>
+    <div class="intro-seam"></div>
+    <div class="intro-core">
+      <span class="intro-rail intro-rail-t"></span>
+      <span class="intro-rail intro-rail-b"></span>
+      <div class="intro-lockup">
+        <!-- The logo bitmap's own "JINDAL" wordmark is dark slate, which all but
+             vanishes on the dark surface, so the crest is presented on a light
+             steel plate. That reads correctly in BOTH themes without needing a
+             per-theme filter swap. The bitmap supplies the crest only — the
+             wordmark below is live type, because a flat image cannot be
+             animated one character at a time. -->
+        <div class="intro-crest">
+          <div class="intro-logo-box">
+            <img class="intro-logo" alt="" decoding="async">
+            <span class="intro-sheen"></span>
+          </div>
+        </div>
+        <div class="intro-eyebrow">Angul &middot; Plate Mill</div>
+        <div class="intro-hero intro-hero-1">Jindal</div>
+        <div class="intro-hero intro-hero-2">Steel</div>
+        <span class="intro-rule"></span>
+        <div class="intro-sub">AI Planning Hub</div>
+      </div>
+      <div class="intro-meter"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+    <button class="intro-skip" type="button">Skip</button>
+  </div>
+</template>
 <a class="skip-link" href="#stage">Skip to content</a>
 
 <div class="top-wrapper app-header-shell">
@@ -2174,6 +2463,230 @@ function fetchAndCacheSegment(force){
   })();
   return segmentFetchInFlight;
 }
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     MOTION INTRO RUNTIME
+     Mounts the <template> intro on the first hub load of each browser
+     session, then tears it down again. Replaying it (click the header
+     logo) clones a fresh copy, so no overlay is ever left in the document.
+     Placed last so `setTheme()` above has already resolved data-theme and
+     the header's base64 logo is in the DOM — both are read from here.
+     ════════════════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  "use strict";
+
+  var SESSION_KEY = "jspl-intro-seen";
+  // Must match the last keyframe's end in the CSS (2.14s delay + .56s run),
+  // plus a beat of slack so the overlay is never torn off mid-frame.
+  var TOTAL_MS = 2800;
+  // The hub's own chrome starts settling as the shutters part, NOT after they
+  // finish. Sequencing it afterwards would leave a ~0.8s tail where a card's
+  // introCardIn animation is still running, and a running animation outranks
+  // the inline transform animateCardReflow() writes — freezing a drag. Started
+  // here, the last card lands at 2140 + 6*34 + 380 = 2724ms, just inside
+  // TOTAL_MS, and by then the overlay was blocking the grid anyway.
+  var CHROME_AT_MS = 2140;
+  var CARD_STAGGER_MS = 34;
+  var CARD_DUR_MS = 380;
+
+  /* Kinetic cascade, as [selector, base delay, per-glyph step, duration] in ms.
+     This is the single source of truth for the choreography — the CSS only
+     supplies the curves, so retiming the sequence means editing this table
+     rather than hunting through the stylesheet. Times must stay under the
+     1.84s core exit, or the type is still landing as the shutters start to
+     part. Spaces are preserved as text nodes and still consume an index, so
+     a gap widens at the same rate as the letters around it. */
+  var CASCADE = [
+    [".intro-eyebrow", 120, 15, 480],
+    [".intro-hero-1", 300, 30, 620],
+    [".intro-hero-2", 500, 32, 620],
+    [".intro-sub",    1060, 16, 460]
+  ];
+
+  /* Splits each cascade host into one inline-block span per glyph and writes
+     that glyph's own delay/duration inline. Runs on the freshly cloned node
+     every replay, and is a no-op-safe no-op if a host is ever missing — the
+     CSS keyframe only applies to .intro-ch, so a host that failed to split
+     would simply stay legible instead of collapsing to nothing. */
+  function kineticize(root) {
+    CASCADE.forEach(function (row) {
+      var host = root.querySelector(row[0]);
+      if (!host) return;
+      var base = row[1], step = row[2], dur = row[3];
+      var frag = document.createDocumentFragment();
+      Array.prototype.forEach.call(host.textContent, function (ch, i) {
+        if (ch === " ") { frag.appendChild(document.createTextNode(" ")); return; }
+        var span = document.createElement("span");
+        span.className = "intro-ch";
+        span.textContent = ch;
+        span.style.animationDuration = dur + "ms";
+        span.style.animationDelay = (base + i * step) + "ms";
+        frag.appendChild(span);
+      });
+      host.textContent = "";
+      host.appendChild(frag);
+    });
+  }
+
+  var tpl = document.getElementById("intro-tpl");
+  var headerLogo = document.querySelector(".jspl-logo");
+  if (!tpl || !headerLogo) return;
+
+  var logoSrc = headerLogo.currentSrc || headerLogo.src || "";
+  if (!logoSrc) return;
+
+  var reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+  var node = null;      // the live overlay, while it is running
+  var timers = [];      // per-run timers, cleared on settle
+  var offs = [];        // per-run listeners, removed on settle
+  var running = false;
+  var chromeDone = false;
+  var stripTimer = 0;
+
+  function bind(target, type, fn, opts) {
+    target.addEventListener(type, fn, opts);
+    offs.push(function () { target.removeEventListener(type, fn, opts); });
+  }
+
+  function settleChrome(animateCards) {
+    if (chromeDone) return;
+    chromeDone = true;
+
+    /* Replay the header's own entrance so it lands as the shutters part. It
+       already ran once behind the overlay while the page was loading. The
+       forced reflow is what makes the restart actually take. */
+    var bar = document.querySelector(".top-bar");
+    if (bar) {
+      bar.classList.remove("header-enter");
+      void bar.offsetWidth;
+      bar.classList.add("header-enter");
+    }
+    // Transform-only, staggered. This timer is deliberately NOT pushed onto
+    // `timers`: settle() clears that array, and it would cancel the strip
+    // exactly when it is most needed.
+    var cards = document.querySelectorAll("#grid .card");
+    if (!animateCards) {
+      // Skipped early, so the stagger never got to run. Staging it in now would
+      // leave every card mid-animation for ~0.6s, and a running animation
+      // outranks the inline transform a drag writes — so the grid would look
+      // alive but feel dead to the pointer. Someone who pressed Skip wants
+      // control immediately, so the cards are simply left settled.
+      stripTimer && clearTimeout(stripTimer);
+      stripTimer = 0;
+      return;
+    }
+    Array.prototype.forEach.call(cards, function (card, i) {
+      card.style.setProperty("--intro-i", i);
+      card.classList.add("intro-card-in");
+    });
+    clearTimeout(stripTimer);
+    stripTimer = setTimeout(function () {
+      Array.prototype.forEach.call(cards, function (card) {
+        card.classList.remove("intro-card-in");
+        card.style.removeProperty("--intro-i");
+      });
+    }, cards.length * CARD_STAGGER_MS + CARD_DUR_MS + 80);
+  }
+
+  function settle() {
+    if (!running) return;
+    running = false;
+    timers.forEach(clearTimeout);
+    timers = [];
+    offs.forEach(function (off) { try { off(); } catch (e) {} });
+    offs = [];
+    if (node && node.parentNode) node.parentNode.removeChild(node);
+    node = null;
+    // Skipping early means the scheduled chrome beat never fired, so run it now
+    // to keep the reveal intact — but without the card stagger, so the grid is
+    // draggable the instant it is handed over.
+    if (!reduce) settleChrome(false);
+  }
+
+  function run() {
+    if (running) return;
+    running = true;
+    chromeDone = false;
+
+    node = tpl.content.firstElementChild.cloneNode(true);
+    node.classList.add("is-active");
+    // The base64 is a plain data URI with no quotes, so this is safe to embed
+    // in a url() token; it keeps the ~78 KB of base64 in exactly one place.
+    node.style.setProperty("--intro-logo-url", 'url("' + logoSrc + '")');
+    var img = node.querySelector(".intro-logo");
+    if (img) img.src = logoSrc;
+    // Split the type into per-glyph spans on the fresh clone, before the
+    // node is in the document — so nothing is ever seen half-split.
+    kineticize(node);
+    document.body.appendChild(node);
+
+    // Failsafe: the teardown is timer-driven rather than animationend-driven so
+    // the hub can never be left sitting behind a dead overlay.
+    timers.push(setTimeout(settle, TOTAL_MS));
+    if (!reduce) timers.push(setTimeout(function () { settleChrome(true); }, CHROME_AT_MS));
+
+    // Any interaction skips. The overlay stops the click from reaching the page
+    // underneath, so stopping propagation here is what keeps a skip-click from
+    // also activating whatever happens to sit behind it.
+    bind(node, "click", function (e) { e.stopPropagation(); settle(); });
+    bind(document, "keydown", function (e) {
+      if (e.key === "Escape" || e.key === "Enter" || e.key === " " || e.key === "Spacebar") settle();
+    });
+    // Swallow wheel/touch scrolling for the couple of seconds the intro is up,
+    // rather than locking <html> overflow — that would perturb the document
+    // metrics the responsive browser audit reads.
+    bind(document, "wheel", function (e) { e.preventDefault(); }, { passive: false });
+    bind(document, "touchmove", function (e) { e.preventDefault(); }, { passive: false });
+  }
+
+  // A deep link to /Some-Page.html restores straight into the in-frame view, so
+  // a homepage intro would be in the wrong place entirely. The hub's own
+  // document must be excluded: it is served as /index.html on static hosts, and
+  // the restore IIFE above only opens a frame when the path matches a known
+  // item — which "index.html" never does.
+  var selfPath = (window.location.pathname || "").replace(/^\/+/, "");
+  var isDeepLink = /\.html$/i.test(selfPath) && selfPath.toLowerCase() !== "index.html";
+
+  function seen() {
+    try { return sessionStorage.getItem(SESSION_KEY) === "1"; } catch (e) { return false; }
+  }
+  function markSeen() {
+    try { sessionStorage.setItem(SESSION_KEY, "1"); } catch (e) {}
+  }
+
+  if (!reduce && !isDeepLink && !seen()) {
+    markSeen();
+    run();
+  }
+
+  // Replay affordance. These listeners are intentionally NOT registered through
+  // bind(), so settle() does not tear them down — they must outlive every run.
+  headerLogo.setAttribute("title", "Replay intro");
+  headerLogo.setAttribute("role", "button");
+  headerLogo.setAttribute("tabindex", "0");
+  headerLogo.style.cursor = "pointer";
+  headerLogo.addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    run();
+  });
+  headerLogo.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+      e.preventDefault();
+      /* stopPropagation is load-bearing here, not defensive tidiness. run()
+         binds a document-level keydown that settles on Enter/Space, and a
+         listener added to a node already in the propagation path still fires
+         for that SAME event — so without this the replay starts and instantly
+         self-skips, and Enter/Space appear to do nothing. The click handler
+         above needs it for the mirror-image reason. */
+      e.stopPropagation();
+      run();
+    }
+  });
+})();
 </script>
 
 </body>
