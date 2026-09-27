@@ -128,11 +128,13 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
 /* ─── APP SHELL & LAYOUT ─── */
 /* Section/row gaps come from the shared vertical-rhythm contract in theme.css
    (.app-shell/.main-layout/.content-area/.controls-sidebar/.ov-grid/.pm-grid ->
-   --space-stack; .kpi-row/.tabs-hdr -> --space-section). Restating them here is
-   what let this page drift to eight different gaps for the same role. */
-.app-shell { max-width: 1600px; margin: 0 auto; padding: 16px var(--page-gutter) 24px; display: flex; flex-direction: column; width: 100%; min-width: 0; box-sizing: border-box; }
+   --space-stack; .kpi-row -> --space-section). Restating them here is what let
+   this page drift to eight different gaps for the same role. Where a container is
+   gap-stacked its children must NOT also carry a margin, or the two add up
+   (24+4=28, 24+16=40) and the page gets a second, invisible rhythm. */
+.app-shell { max-width: 1600px; margin: 0 auto; padding: var(--space-section) var(--page-gutter) var(--space-stack); display: flex; flex-direction: column; width: 100%; min-width: 0; box-sizing: border-box; }
 
-.kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); margin-bottom: 4px; }
+.kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); }
 .kpi { 
     background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
     border-radius: var(--radius-l); padding: 18px 20px; border: var(--glass-border); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; box-shadow: var(--glass-shadow); transition: transform 0.2s, background 0.3s; cursor: pointer; border-top: 4px solid var(--tm);
@@ -159,7 +161,6 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
     flex-shrink: 0; 
     display: flex; 
     flex-direction: column; 
-    padding-bottom: 20px;
 }
 #panel-bottom-controls { display: flex; flex-direction: column; gap: var(--space-section); width: 100%; box-sizing: border-box; }
 
@@ -190,7 +191,7 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
 .btn-green { background: var(--sg); color: white; }
 .btn-orange { background: var(--mo); color: white; }
 .btn-gold { background: var(--gd); color: white; }
-.btn-pu { background: var(--pu); color: white; width:100%; margin-top:8px;}
+.btn-pu { background: var(--pu); color: white; width:100%; }
 
 /* ─── INPUTS ─── */
 .f3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -281,7 +282,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 .flow-tbl .subtotal td { background: var(--sl); font-weight: 800; color: var(--sg); text-transform: uppercase; font-size: 11px; padding: 12px 16px; border-radius: 6px; }
 
 /* ─── COMPONENTS ─── */
-.alert { border-radius: var(--radius-m); padding: 12px 16px; font-size: 13px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; background: var(--sl); color: var(--sg); box-shadow: var(--glass-shadow); border: 1px solid rgba(22, 163, 74, 0.2);}
+.alert { border-radius: var(--radius-m); padding: 12px 16px; font-size: 13px; font-weight: 700; margin-bottom: var(--space-stack); display: flex; align-items: center; gap: 10px; background: var(--sl); color: var(--sg); box-shadow: var(--glass-shadow); border: 1px solid rgba(22, 163, 74, 0.2);}
 .sec-lbl { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.8px; color: var(--md-sys-color-primary); margin-bottom: 12px; margin-top: 20px; }
 .sec-lbl:first-child { margin-top: 0; }
 
@@ -333,7 +334,9 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 
 /* ─── PRODUCT MIX ─── */
 .pm-grid { display: grid; grid-template-columns: 1fr 1fr; width: 100%; min-width: 0; }
-.pm-card { background: var(--input-bg); border-radius: var(--radius-m); padding: 18px; margin-bottom: 16px; border: var(--glass-border); width: 100%; max-width: 100%; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.02);}
+/* .pm-grid is gap-stacked by the shared contract (--space-stack), so this card
+   must not carry a margin as well — 24+16=40px between product-mix cards. */
+.pm-card { background: var(--input-bg); border-radius: var(--radius-m); padding: 18px; margin-bottom: 0; border: var(--glass-border); width: 100%; max-width: 100%; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.02);}
 .pm-blended { font-size: 12px; font-weight: 800; padding: 6px 12px; border-radius: var(--radius-pill); background: var(--glass-bg-solid); color: var(--sg); border: 1px solid var(--sl); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 .pm-tbl { width: 100%; border-collapse: collapse; font-size: 12px; background: var(--glass-bg-solid); border-radius: var(--radius-s); min-width: 450px; overflow: hidden;}
 .pm-tbl th { font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--tm); padding: 10px; border-bottom: 1px solid var(--br); text-align: right; background: var(--input-bg); white-space: nowrap;}
@@ -363,7 +366,10 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 @media(max-width:1200px){ 
   .main-layout { flex-direction: column; }
   .controls-sidebar { width: 100%; position: static; max-height: none; flex-direction: row; flex-wrap: wrap; padding-right: 0;}
-  .controls-sidebar > .panel, .controls-sidebar > .coll-panel { flex: 1 1 calc(50% - 16px); min-width: 300px; }
+  /* The sidebar wraps into a row here, so the basis has to account for the gap it
+     sits in: two items plus one --space-stack gap must fill the row exactly.
+     Deriving it from the token keeps it correct if the gap ever steps down. */
+  .controls-sidebar > .panel, .controls-sidebar > .coll-panel { flex: 1 1 calc(50% - var(--space-stack) / 2); min-width: 300px; }
   .kpi-row { grid-template-columns: repeat(3, 1fr); } 
   .pm-grid { grid-template-columns: 1fr; }
   .ov-grid { grid-template-columns: 1fr; } 
@@ -375,10 +381,12 @@ select option { background-color: var(--bg-color); color: var(--tx); }
   /* structural overrides to force controls to bottom */
   .main-layout { display: contents; }
   .controls-sidebar { display: contents; }
-  .app-shell { display: flex; flex-direction: column; padding: 16px var(--page-gutter); }
+  .app-shell { display: flex; flex-direction: column; padding: var(--space-section) var(--page-gutter); }
   #panel-plan { order: 1; }
   #panel-sms { order: 2; }
-  #main-content { order: 3; width: 100%; box-sizing: border-box; margin-bottom: 24px; padding: 0;}
+  /* .main-layout is display:contents here, so #main-content becomes a direct child
+     of the gap-stacked .app-shell. Its margin would stack on the shared gap. */
+  #main-content { order: 3; width: 100%; box-sizing: border-box; padding: 0;}
   #panel-bottom-controls { order: 4; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: var(--space-section); }
 
   .sticky-wrapper { padding: 0 var(--page-gutter); top: 8px;}
@@ -406,7 +414,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 
   .btn-pu { padding: 16px; font-size: 14px; width: 100%; flex: none; box-sizing: border-box; }
 
-  .app-shell { padding: 16px var(--page-gutter); }
+  .app-shell { padding: var(--space-section) var(--page-gutter); }
   .panel, .coll-panel { margin-bottom: 0; }
   .pb { padding: 14px; }
   .tc { padding: 16px; }
@@ -420,11 +428,10 @@ select option { background-color: var(--bg-color); color: var(--tx); }
   .tot-eb-card { flex-direction: column; align-items: flex-start; gap: 4px; padding: 16px; }
   .tot-eb-lbl { font-size: 12px; }
   .tot-eb-val { font-size: 20px; }
-  .app-shell { padding: 12px var(--page-gutter); }
+  .app-shell { padding: var(--space-mobile) var(--page-gutter); }
   .pm-card { padding: 10px; }
   .tc { padding: 12px; }
   .pb { padding: 12px; }
-  #main-content { margin-bottom: 16px; }
 }
 </style>
 </head>

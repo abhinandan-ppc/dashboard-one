@@ -156,7 +156,7 @@ button, select { font: inherit; cursor: pointer; transition: all 0.2s; border: n
 .hdr-btn:hover { background: var(--input-hover); transform: scale(1.02); }
 
 /* ---- ALERTS ---- */
-.alert-banner { max-width: 1600px; margin: 16px auto 0; padding: 0 var(--page-gutter); display: none; width: 100%; }
+.alert-banner { max-width: 1600px; margin: var(--space-section) auto 0; padding: 0 var(--page-gutter); display: none; width: 100%; }
 .alert-box { 
     padding: 12px 16px; border-radius: var(--radius-m); display: flex; align-items: center; 
     gap: 10px; font-weight: 700; font-size: 13px; box-shadow: var(--glass-shadow); border: 1px solid transparent; 
@@ -166,7 +166,14 @@ button, select { font: inherit; cursor: pointer; transition: all 0.2s; border: n
 .alert-box.alert-error { background: var(--error-bg); color: var(--error); border-color: var(--error); }
 
 /* ---- KPIS ---- */
-.kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); padding: 16px 24px 24px; max-width: 1600px; margin: 0 auto; width: 100%; }
+/* Vertical rhythm: this strip is a top-level section block, so the gap between
+   the cards and whatever sits above them (the alert banner) and the gap down to
+   .main-container are the same --space-stack step. It was asymmetric before —
+   16px up, 24px down — which left the strip looking welded to the tables under
+   it. The horizontal inset is the shared page gutter, so the cards line up with
+   the alert banner and the cards below; it used to be restated as a 24px/16px/12px
+   literal that drifted off the 24/20/16 gutter scale on small screens. */
+.kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); padding: var(--space-stack) var(--page-gutter); max-width: 1600px; margin: 0 auto; width: 100%; }
 .kpi { 
     background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
     border-radius: var(--radius-l); padding: 18px 20px; border: var(--glass-border); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; box-shadow: var(--glass-shadow); transition: transform 0.2s, background 0.3s; border-top: 4px solid var(--tm);
@@ -188,7 +195,9 @@ button, select { font: inherit; cursor: pointer; transition: all 0.2s; border: n
 .kpi .s { font-size: 10px; color: var(--tm); margin-top: 4px; font-weight: 700; line-height: 1.2; transition: color 0.3s; }
 
 /* ---- LAYOUT & TABLES ---- */
-.main-container { display: flex; flex-direction: column; padding: 0 var(--page-gutter); max-width: 1600px; margin: 0 auto 40px; }
+/* 40px sat off the 24/16 rhythm entirely; the footer now sits one stack step
+   below the last card instead of nearly twice as far. */
+.main-container { display: flex; flex-direction: column; padding: 0 var(--page-gutter); max-width: 1600px; margin: 0 auto var(--space-stack); }
 .card { 
     display: flex; flex-direction: column; 
     background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
@@ -239,14 +248,16 @@ tr:hover td { background: var(--stripe-hover); }
 .ubar-track { width: 40px; height: 6px; background: var(--input-bg); border-radius: var(--radius-pill); overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
 .ubar-fill { height: 100%; background: var(--md-sys-color-primary); border-radius: var(--radius-pill); }
 .ubar-pct { font-family: inherit; font-size: 12px; font-weight: 800; width: 3em; text-align: right; color: var(--tx);}
-.eq-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin-bottom: 24px;}
+.eq-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);}
 @media(max-width: 1400px) { .eq-grid { grid-template-columns: minmax(0, 1fr); } }
 .hroom { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .hchip { padding: 8px 16px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 700; letter-spacing: 0.3px; border: var(--glass-border); background: var(--input-bg); box-shadow: 0 2px 4px rgba(0,0,0,0.02); white-space: nowrap; color: var(--tm);}
 .hchip b { color: var(--tx); font-family: inherit; font-weight: 800; }
 
 /* ---- TABS & EXPANDABLE PANELS ---- */
-.tabs-container { margin-top: 16px; width: 100%; min-width: 0; }
+/* No margin of its own: .main-container's stack gap already separates this from
+   the insights card above it, so the old margin-top:16px added a phantom 40px. */
+.tabs-container { width: 100%; min-width: 0; }
 .tab-bar { display: flex; gap: 8px; border-bottom: 1px solid var(--br); margin-bottom: 0; padding: 12px 24px; background: var(--input-bg); overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-l) var(--radius-l) 0 0; }
 .tab-bar::-webkit-scrollbar { display: none; }
 .tab-bar button { padding: 10px 20px; font-size: 13px; font-weight: 700; border: none; background: transparent; border-radius: var(--radius-pill); cursor: pointer; color: var(--tm); transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
@@ -260,6 +271,12 @@ tr:hover td { background: var(--stripe-hover); }
   border-top-left-radius: 0; border-top-right-radius: 0; border-top: none;
 }
 .tab-pane { display: none; width: 100%; min-width: 0;} .tab-pane.on { display: block; animation: fadeIn 0.3s ease; }
+/* A tab pane is a block, not a flex stack, so it cannot take the shared
+   container gap the way .main-container does. Its children carry the same
+   --space-stack rhythm as a margin instead — that replaces the per-child
+   `margin-bottom: 24px` literals (.eq-grid, the allocations card) which had
+   already drifted to 16px at the mobile step while their parent kept 24px. */
+.tab-pane > * + * { margin-top: var(--space-stack); }
 @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
 
 /* Smooth Collapse/Expand for Insights */
@@ -407,16 +424,17 @@ div.google-visualization-tooltip {
   .hdr-l h1 { font-size: 15px; white-space: normal; line-height: 1.3; text-align: center;}
   .hdr-r { width: 100%; justify-content: center; flex-wrap: wrap; gap: 8px; }
   .hdr-btn { flex: 1; justify-content: center;}
-  .kpi-strip { grid-template-columns: 1fr 1fr; padding: 16px; }
+  .kpi-strip { grid-template-columns: 1fr 1fr; }
   .main-container { padding: 0 var(--page-gutter); }
   .card { padding: 16px; }
   .compact-inputs { grid-template-columns: 1fr; gap: 12px; }
   .alert-banner { padding: 0 var(--page-gutter); }
   .flow-controls button { padding: 6px 10px; font-size: 12px; }
-  .tabs-container { margin-top: 8px; }
   .tab-bar { display: grid; grid-template-columns: 1fr 1fr; padding: 12px; gap: 8px; }
   .tab-bar button { font-size: 12px; padding: 10px 12px; text-align: center; white-space: normal; line-height: 1.2; }
-  .eq-grid { margin-bottom: 16px; }
+  /* Matches the --space-stack-sm step the shared container gap drops to here, so
+     the pane contents stay on the same rhythm as the sections around them. */
+  .tab-pane > * + * { margin-top: var(--space-stack-sm); }
   .hroom { gap: 6px; margin-top: 12px; }
   .hchip { padding: 8px 12px; }
   .flow-wrapper { height: 60vh; min-height: 420px; }
@@ -428,7 +446,6 @@ div.google-visualization-tooltip {
   .kpi-strip { grid-template-columns: 1fr; }
   .card { padding: 14px; }
   .main-container { padding: 0 var(--page-gutter); }
-  .kpi-strip { padding: 12px; }
   .flow-wrapper { height: 55vh; min-height: 380px; }
   .fc-node { width: 130px; padding: 10px 14px; }
   .fc-node.expanded { width: 200px; }
@@ -540,7 +557,7 @@ div.google-visualization-tooltip {
         <div id="tab-sankey" class="tab-pane card"><div id="sankey_div" style="width: 100%; height: 750px;"></div></div>
 
         <div id="tab-details" class="tab-pane">
-            <div class="card" style="margin-bottom: 24px;">
+            <div class="card">
               <div class="card-hd">Mill heat allocation results</div>
               <div class="table-wrap">
                 <table class="atbl">

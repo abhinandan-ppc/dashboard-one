@@ -5715,9 +5715,18 @@ function App(){
         content via `flex:0 0 auto`, and the default min-width:auto floor keeps a
         nowrap value from being compressed below its text width — together that
         removes the ellipsis without hiding a digit. Wide screens keep the
-        wrapping, fill-the-row layout. */}
-    <div className="kpi-strip" style={{display:'flex',padding:`12px ${mob?12:24}px`,flexShrink:0,
-      flexWrap:mob?'nowrap':'wrap',rowGap:8,
+        wrapping, fill-the-row layout.
+
+        Vertical rhythm: the desktop clearance spacer already appends 12px of
+        breathing room below the fixed header, so this strip's own 12px top
+        padding stacks on top of it and the effective gap above the cards is
+        24px. The bottom padding therefore has to be 24px too, or the cards sit
+        half as far from the tables below as from the header — that mismatch is
+        what made the strip read as attached to the content under it. On mobile
+        the header is sticky and in flow with a 0 spacer, so the gap above is
+        just the 12px top padding and the bottom stays 12px. */}
+    <div className="kpi-strip" style={{display:'flex',padding:`12px ${mob?12:24}px ${mob?12:'var(--space-stack)'}`,flexShrink:0,
+      flexWrap:mob?'nowrap':'wrap',
       overflowX:mob?'auto':'visible',overscrollBehaviorX:mob?'contain':'auto'}}>
       <KCard label="Orders"       value={kpis.cnt.toLocaleString()} sub={actCnt?`${actCnt} filter active`:'All orders'} accent="var(--dim)" mob={mob}/>
       <KCard label="Order Qty"    value={fmt(kpis.qty)} sub="MT" accent={C.amber} mob={mob}/>

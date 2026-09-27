@@ -245,6 +245,149 @@ test('section spacing comes from one shared vertical-rhythm contract', async () 
   assert.doesNotMatch(rake, /marginTop:40/, 'the 40px footer outlier must sit on the shared rhythm');
 });
 
+test('the Rake KPI strip is as far from the content below as from the header', async () => {
+  const rake = await read('Rake-Planner.html');
+
+  // On desktop the fixed header is out of flow, so a spacer of
+  // --rake-header-clearance stands in for it. That token already carries 12px of
+  // breathing room (the ResizeObserver publishes shellHeight + 12), and the KPI
+  // strip adds its own 12px top padding on top of it — so the gap above the
+  // cards is 24px, and the bottom padding must match or the strip reads as
+  // welded to the tables below it.
+  assert.match(
+    rake,
+    /setProperty\('--rake-header-clearance',\s*`\$\{Math\.round\(height\+12\)\}px`\)/,
+    'the header clearance must keep its 12px of breathing room',
+  );
+  assert.match(
+    rake,
+    /className="kpi-strip"[^}]*padding:`12px \$\{mob\?12:24\}px \$\{mob\?12:'var\(--space-stack\)'\}`/,
+    'the KPI strip bottom padding must match the effective gap above the cards',
+  );
+
+  // The strip takes its column gap from the shared .kpi-strip contract, so no
+  // inline gap literal may creep back in (which would also leave wrapped rows
+  // on a different axis spacing from columns).
+  const strip = rake.slice(rake.indexOf('className="kpi-strip"'), rake.indexOf('<KCard'));
+  assert.doesNotMatch(strip, /\bgap:\s*\d/, 'the strip must not restate its gap inline');
+  assert.doesNotMatch(strip, /rowGap:/, 'a rowGap override would unbalance wrapped rows');
+});
+
+test('the SMS Daily KPI strip is balanced and on the shared rhythm', async () => {
+  const daily = await read('SMS Heat Planner Daily.html');
+
+  // The strip's top padding is the gap from the alert banner above it and its
+  // bottom padding is the gap down to .main-container. Both are the same
+  // stack step, so neither axis can drift on its own, and the horizontal inset
+  // is the shared page gutter so the cards line up with everything below them.
+  assert.match(
+    daily,
+    /\.kpi-strip\s*\{[^}]*padding:\s*var\(--space-stack\)\s+var\(--page-gutter\)/,
+    'the Daily KPI strip must take both axes from the shared scale',
+  );
+  // A one-sided literal is what left it reading as welded to the tables below.
+  assert.doesNotMatch(
+    daily,
+    /\.kpi-strip\s*\{[^}]*padding:\s*16px\s+24px/,
+    'the strip must not restate an asymmetric top/bottom padding',
+  );
+  // --page-gutter already steps 24/20/16 per breakpoint, so a per-breakpoint
+  // literal here pulled the cards outboard of every other block on small phones.
+  for (const block of mediaBlocks(daily, '@media')) {
+    assert.doesNotMatch(
+      block,
+      /\.kpi-strip\s*\{[^}]*padding/,
+      'no breakpoint may restate the KPI strip padding',
+    );
+  }
+
+  // .main-container gap-stacks its sections, so a margin on one of its children
+  // adds a second, invisible rhythm (24+16=40px) that no other page has.
+  assert.doesNotMatch(
+    daily,
+    /\.tabs-container\s*\{\s*margin-top/,
+    'the tab strip must rely on .main-container gap for its separation',
+  );
+  assert.doesNotMatch(
+    daily,
+    /\.main-container\s*\{[^}]*margin:\s*0 auto 40px/,
+    'the 40px footer outlier must sit on the shared rhythm',
+  );
+  assert.doesNotMatch(
+    daily,
+    /class="card" style="margin-bottom: 24px;"/,
+    'tab pane children must not carry a per-child spacing literal',
+  );
+  assert.match(
+    daily,
+    /\.alert-banner\s*\{[^}]*margin:\s*var\(--space-section\) auto 0/,
+    'the header clearance above the alert must come from the shared token',
+  );
+
+  // A tab pane is a block, not a flex stack, so it cannot take the shared
+  // container gap. Its children carry the same step as a margin instead, and
+  // that step has to drop with the container gap at the mobile breakpoint.
+  assert.match(
+    daily,
+    /\.tab-pane > \* \+ \* \{ margin-top: var\(--space-stack\); \}/,
+    'tab pane contents must sit on the desktop stack step',
+  );
+  assert.match(
+    daily,
+    /\.tab-pane > \* \+ \* \{ margin-top: var\(--space-stack-sm\); \}/,
+    'tab pane contents must step down with the container gap on mobile',
+  );
+});
+
+test('the SMS Monthly page does not stack margins on its gap-stacked columns', async () => {
+  const monthly = await read('SMS Heat Planner Monthly.html');
+
+  // .app-shell gap-stacks the KPI row and the main layout, so the row's own
+  // margin-bottom used to add 4px on top of the 24px gap — 28px to a role that
+  // is 24px everywhere else.
+  assert.doesNotMatch(
+    monthly,
+    /\.kpi-row\s*\{[^}]*margin-bottom/,
+    'the KPI row must rely on the .app-shell gap for its separation',
+  );
+  // .pm-grid is gap-stacked too, and the product-mix cards added another 16px,
+  // so those cards sat 40px apart on both axes.
+  assert.doesNotMatch(
+    monthly,
+    /\.pm-card\s*\{[^}]*margin-bottom:\s*(?!0\s*;)[1-9]\d*px/,
+    'a product-mix card must not add a non-zero margin to the .pm-grid gap',
+  );
+  // At <=768px .main-layout is display:contents, which promotes #main-content to
+  // a direct child of the gap-stacked shell, so its margin doubled the gap.
+  assert.doesNotMatch(
+    monthly,
+    /#main-content\s*\{[^}]*margin-bottom/,
+    'the content column must rely on the .app-shell gap for its separation',
+  );
+  // The sidebar's trailing 20px was off-rhythm dead space, and the button's
+  // margin-top:8px turned a 16px group gap into 24px mid-list.
+  assert.doesNotMatch(monthly, /\.controls-sidebar\s*\{[^}]*padding-bottom/, 'the sidebar must not add an off-rhythm trailing inset');
+  assert.doesNotMatch(monthly, /\.btn-pu\s*\{[^}]*margin-top/, 'the action button must rely on its group gap');
+
+  // The wrapped sidebar basis has to account for the gap it sits in, or the row
+  // does not fill: two items plus one --space-stack gap must equal 100%.
+  assert.match(
+    monthly,
+    /flex:\s*1 1 calc\(50% - var\(--space-stack\) \/ 2\)/,
+    'the sidebar wrap basis must be derived from the shared gap',
+  );
+  assert.doesNotMatch(monthly, /calc\(50% - 16px\)/, 'the wrap basis must not assume a 16px gap');
+
+  // Shell padding: clear the header, gutter the sides, one stack step below.
+  assert.match(
+    monthly,
+    /\.app-shell\s*\{[^}]*padding:\s*var\(--space-section\)\s+var\(--page-gutter\)\s+var\(--space-stack\)/,
+    'the shell must take its padding from the shared scale',
+  );
+  // .alert sat above a box with a 24px bottom inset, so 20px read as a seam.
+  assert.doesNotMatch(monthly, /\.alert\s*\{[^}]*margin-bottom:\s*20px/, 'the alert must sit on the stack step like its sibling');
+});
+
 test('the PM Yard panel header keeps the panel rounded at the top', async () => {
   const theme = await read('theme.css');
   const pmYard = await read('PM-Yard.html');
