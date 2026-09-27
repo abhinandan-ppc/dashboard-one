@@ -126,9 +126,13 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
 .btn-header { height: 40px; padding: 0 20px; border-radius: 20px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; background: var(--input-bg); color: var(--tx); border: var(--glass-border); outline: none; }
 .btn-header:hover { background: var(--input-hover); transform: scale(1.02); }
 /* ─── APP SHELL & LAYOUT ─── */
-.app-shell { max-width: 1600px; margin: 0 auto; padding: 16px var(--page-gutter) 24px; display: flex; flex-direction: column; gap: 20px; width: 100%; min-width: 0; box-sizing: border-box; }
+/* Section/row gaps come from the shared vertical-rhythm contract in theme.css
+   (.app-shell/.main-layout/.content-area/.controls-sidebar/.ov-grid/.pm-grid ->
+   --space-stack; .kpi-row/.tabs-hdr -> --space-section). Restating them here is
+   what let this page drift to eight different gaps for the same role. */
+.app-shell { max-width: 1600px; margin: 0 auto; padding: 16px var(--page-gutter) 24px; display: flex; flex-direction: column; width: 100%; min-width: 0; box-sizing: border-box; }
 
-.kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; margin-bottom: 4px; }
+.kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); margin-bottom: 4px; }
 .kpi { 
     background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
     border-radius: var(--radius-l); padding: 18px 20px; border: var(--glass-border); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; box-shadow: var(--glass-shadow); transition: transform 0.2s, background 0.3s; cursor: pointer; border-top: 4px solid var(--tm);
@@ -146,8 +150,8 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
 .kpi-sub { font-size: 10px; color: var(--tm); margin-top: 4px; font-weight: 700; line-height: 1.2; transition: color 0.3s;}
 
 /* Side-by-Side Layout Grid */
-.main-layout { display: flex; gap: 24px; align-items: flex-start; width: 100%; box-sizing: border-box;}
-.content-area { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; max-width: 100%; }
+.main-layout { display: flex; align-items: flex-start; width: 100%; box-sizing: border-box;}
+.content-area { flex: 1; min-width: 0; display: flex; flex-direction: column; max-width: 100%; }
 
 /* LEFT SIDEBAR CONTROLS */
 .controls-sidebar { 
@@ -155,10 +159,9 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
     flex-shrink: 0; 
     display: flex; 
     flex-direction: column; 
-    gap: 16px; 
     padding-bottom: 20px;
 }
-#panel-bottom-controls { display: flex; flex-direction: column; gap: 12px; width: 100%; box-sizing: border-box; }
+#panel-bottom-controls { display: flex; flex-direction: column; gap: var(--space-section); width: 100%; box-sizing: border-box; }
 
 /* ─── PANELS & BUTTONS ─── */
 .panel { 
@@ -167,6 +170,11 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
     border-radius: var(--radius-l); border: var(--glass-border); box-shadow: var(--glass-shadow); 
     transition: background 0.3s, border-color 0.3s; flex-shrink: 0; overflow: hidden; max-width: 100%;
 }
+/* Gap-stacked here, so clear the shared contract's margin-bottom on these
+   children; keeping both would give the sidebar 24+16=40px between panels. */
+.controls-sidebar > .panel,
+#main-content > .panel,
+.kpi-row > .kpi{margin-bottom:0}
 .ph { flex-shrink: 0; padding: 14px 18px; border-bottom: 1px solid var(--br); display: flex; align-items: center; gap: 10px; background: var(--input-bg); }
 .pi { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; flex-shrink: 0; background: var(--glass-bg-solid); box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
 .pi-b { color: var(--sb); } .pi-g { color: var(--sg); } 
@@ -324,7 +332,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 .fn-bmp { background: #fffbeb; border-color: rgba(255,255,255,0.1); color: #78350f; }
 
 /* ─── PRODUCT MIX ─── */
-.pm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; min-width: 0; }
+.pm-grid { display: grid; grid-template-columns: 1fr 1fr; width: 100%; min-width: 0; }
 .pm-card { background: var(--input-bg); border-radius: var(--radius-m); padding: 18px; margin-bottom: 16px; border: var(--glass-border); width: 100%; max-width: 100%; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.02);}
 .pm-blended { font-size: 12px; font-weight: 800; padding: 6px 12px; border-radius: var(--radius-pill); background: var(--glass-bg-solid); color: var(--sg); border: 1px solid var(--sl); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 .pm-tbl { width: 100%; border-collapse: collapse; font-size: 12px; background: var(--glass-bg-solid); border-radius: var(--radius-s); min-width: 450px; overflow: hidden;}
@@ -349,7 +357,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 .drawer-close:hover { background: var(--input-hover); color: var(--tx); }
 
 /* ─── RESPONSIVE BREAKPOINTS ─── */
-.ov-grid { display:grid; grid-template-columns: 1fr 1fr; gap:24px; width: 100%; min-width: 0; box-sizing: border-box; }
+.ov-grid { display:grid; grid-template-columns: 1fr 1fr; width: 100%; min-width: 0; box-sizing: border-box; }
 .ov-grid > div, .pm-grid > div { min-width: 0; max-width: 100%; }
 
 @media(max-width:1200px){ 
@@ -371,7 +379,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
   #panel-plan { order: 1; }
   #panel-sms { order: 2; }
   #main-content { order: 3; width: 100%; box-sizing: border-box; margin-bottom: 24px; padding: 0;}
-  #panel-bottom-controls { order: 4; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; }
+  #panel-bottom-controls { order: 4; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: var(--space-section); }
 
   .sticky-wrapper { padding: 0 var(--page-gutter); top: 8px;}
   .site-header { flex-direction: column; align-items: stretch; border-radius: 16px; padding: 16px; gap: 16px;}
@@ -398,10 +406,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 
   .btn-pu { padding: 16px; font-size: 14px; width: 100%; flex: none; box-sizing: border-box; }
 
-  .app-shell { gap: 14px; padding: 16px var(--page-gutter); }
-  .content-area { gap: 14px; }
-  .kpi-row { gap: 10px; }
-  .ov-grid, .pm-grid { gap: 14px; }
+  .app-shell { padding: 16px var(--page-gutter); }
   .panel, .coll-panel { margin-bottom: 0; }
   .pb { padding: 14px; }
   .tc { padding: 16px; }
@@ -415,7 +420,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
   .tot-eb-card { flex-direction: column; align-items: flex-start; gap: 4px; padding: 16px; }
   .tot-eb-lbl { font-size: 12px; }
   .tot-eb-val { font-size: 20px; }
-  .app-shell { padding: 12px var(--page-gutter); gap: 12px; }
+  .app-shell { padding: 12px var(--page-gutter); }
   .pm-card { padding: 10px; }
   .tc { padding: 12px; }
   .pb { padding: 12px; }

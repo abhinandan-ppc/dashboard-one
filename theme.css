@@ -394,6 +394,14 @@ input::placeholder{color:var(--mute);opacity:1}
   --page-side:var(--page-gutter);
   --space-section:16px;
   --space-mobile:12px;
+  /* Major section stack — the vertical rhythm between top-level content blocks
+     (page shell, main column, dashboard section, multi-column grid). One step
+     above --space-section, which is reserved for the denser tier: card rows,
+     KPI strips, chip/segment rows and card internals. Declared as a pair rather
+     than stepped in a media query so the responsive swap happens at the single
+     place the contract is applied, exactly like --space-section/--space-mobile. */
+  --space-stack:24px;
+  --space-stack-sm:16px;
   --touch-target:44px;
   --safe-top:env(safe-area-inset-top,0px);
   --safe-right:env(safe-area-inset-right,0px);
@@ -698,8 +706,14 @@ button:disabled,.btn:disabled{cursor:not-allowed;transform:none!important;filter
   margin-right:0!important;
 }
 .page-rake .glass-card.header-enter{width:100%!important;margin-left:auto!important;margin-right:auto!important}
-.grid,.slots,.kpis,.kpi-row,.stat-row,.row,.tabs{gap:var(--space-section)}
+/* Shared vertical rhythm. Two tiers, so pages stop restating gaps as literals
+   that drift apart (SMS Monthly alone had 8 different values for the same role):
+   --space-stack for top-level section blocks, --space-section for the denser
+   row/card-internal tier. */
+.grid,.slots,.kpis,.kpi-row,.kpi-strip,.stat-row,.row,.tabs{gap:var(--space-section)}
 .panel,.glass-card,.slot,.kpi,.stat,.user-card,.embed{margin-bottom:var(--space-section)}
+.app-shell,.main-container,.content-area,.controls-sidebar,.main-layout,
+.dashboard-top-section,.dashboard-side-controls,.ov-grid,.pm-grid,.eq-grid{gap:var(--space-stack)}
 /* Edge-anchored side panel (Rake-Planner's mobile filter drawer). Deliberately
    NOT in the card-surface contract above: that contract pins the full 20px
    radius with !important, which would round the corners that sit flush against
@@ -859,6 +873,16 @@ body.page-sms-shell .view-tabs{
   box-shadow:var(--component-shadow)!important;backdrop-filter:var(--glass-blur)!important;
   -webkit-backdrop-filter:var(--glass-blur)!important;
 }
+/* Compound join (PM Yard only). .panel deliberately keeps overflow:visible so the
+   collapse toggle can overhang its outer edge, which also means the panel does
+   NOT clip its first child. The opaque .panel-head band therefore painted over
+   the panel's own rounded top corners and squared them off. The band has to
+   carry the matching top radii itself. .ph/.coll-h are excluded: their panels
+   clip (overflow:hidden), so they are already round-capped and matching them
+   here would double-round the join. .insp-head is transparent and needs none. */
+body.page-pm .panel-head{
+  border-radius:var(--component-radius) var(--component-radius) 0 0!important;
+}
 body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) :is(.page-chip,.switch-chip,.hchip,.ochip,.theme-opt){
   background:var(--input-bg);border-color:var(--header-border-color);box-shadow:none;
 }
@@ -972,8 +996,10 @@ table{font-variant-numeric:tabular-nums}
   }
   .page-rake .glass-card.header-enter{margin-left:0!important;margin-right:0!important}
   .page-sms-shell .top-bar{width:100%!important}
-  .grid,.slots,.kpis,.kpi-row,.stat-row,.row,.tabs{gap:var(--space-mobile)}
+  .grid,.slots,.kpis,.kpi-row,.kpi-strip,.stat-row,.row,.tabs{gap:var(--space-mobile)}
   .panel,.glass-card,.slot,.kpi,.stat,.user-card,.embed{margin-bottom:var(--space-mobile)}
+  .app-shell,.main-container,.content-area,.controls-sidebar,.main-layout,
+  .dashboard-top-section,.dashboard-side-controls,.ov-grid,.pm-grid,.eq-grid{gap:var(--space-stack-sm)}
   .panel,.glass-card,.card,.slot,.kpi,.stat,.user-card{box-shadow:var(--shadow-sm),var(--shadow-inset)!important}
   .app-header h1,
   .app-header h2{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

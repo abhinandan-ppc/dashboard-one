@@ -30,9 +30,9 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
   max-width: 1600px; margin: 0 auto;
   background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   padding: 12px 20px; border-radius: var(--radius-lg); border: var(--glass-border-rule); box-shadow: var(--shadow-md);
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-section);
 }
-.top-l { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.top-l { display: flex; align-items: center; gap: var(--space-section); min-width: 0; }
 .top-l .eyebrow { font-size: 10px; color: var(--tm); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; }
 .top-l h1 { font-size: 17px; font-weight: 800; color: var(--tx); letter-spacing: -0.01em; margin: 0; white-space: nowrap; }
 
@@ -54,7 +54,7 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 .view-tabs button:hover { color: var(--tx); background: var(--input-hover); }
 .view-tabs button.on { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 
-.hdr-r { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.hdr-r { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 #hubFrameHeaderSlot { display: flex; align-items: center; justify-content: center; gap: 8px; }
 /* Normalize the hub-injected Home/Refresh/Theme/User icon buttons to a
    uniform 40x40 circle — without this the user-avatar icon in particular

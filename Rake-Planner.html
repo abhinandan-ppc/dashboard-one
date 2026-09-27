@@ -1868,13 +1868,13 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding}){
   const rc=C.region.Actual||C.region.Unknown;
 
   if(!data.length)return(
-    <div style={{...card,marginBottom:14,padding:'48px 24px',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12}}>
+    <div style={{...card,padding:'48px 24px',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12}}>
       <div style={{fontSize:44,opacity:.4}}>🚉</div>
       <div style={{fontFamily:F.h,fontSize:17,color:'var(--dim)',letterSpacing:'.03em',textTransform:'uppercase'}}>No actual plan found (Column C "Mode" is blank for all orders)</div>
     </div>
   );
 
-  return<div style={{...card,marginBottom:14,boxShadow:'var(--shadow-sm)',display:'flex',flexDirection:'column',animation:'fadeUp .3s ease-out',overflow:'hidden'}}>
+  return<div style={{...card,boxShadow:'var(--shadow-sm)',display:'flex',flexDirection:'column',animation:'fadeUp .3s ease-out',overflow:'hidden'}}>
     <div style={{padding:'14px 18px',borderBottom:'1px solid var(--bdr)',
       background:`linear-gradient(135deg,var(--s2),var(--s1))`,
       borderRadius:'var(--radius-lg) var(--radius-lg) 0 0',
@@ -3993,7 +3993,7 @@ function RakePredictor({rows}){
   const combineRakeA=rkCombine?data[rkCombine.selA.sid]?.rakes[rkCombine.selA.idx]:null;
   const combineRakeB=rkCombine?data[rkCombine.selB.sid]?.rakes[rkCombine.selB.idx]:null;
 
-  return<div style={{...card,marginTop:14,overflow:'hidden',boxShadow:'var(--shadow-sm)'}}>
+  return<div style={{...card,overflow:'hidden',boxShadow:'var(--shadow-sm)'}}>
     <div onClick={()=>setOpen(o=>!o)} style={{padding:'14px 20px',cursor:'pointer',
       display:'flex',alignItems:'center',gap:14,
       borderBottom:`1px solid ${open?C.bdr:'transparent'}`,
@@ -5716,7 +5716,7 @@ function App(){
         nowrap value from being compressed below its text width — together that
         removes the ellipsis without hiding a digit. Wide screens keep the
         wrapping, fill-the-row layout. */}
-    <div style={{display:'flex',gap:8,padding:`12px ${mob?12:24}px`,flexShrink:0,
+    <div className="kpi-strip" style={{display:'flex',padding:`12px ${mob?12:24}px`,flexShrink:0,
       flexWrap:mob?'nowrap':'wrap',rowGap:8,
       overflowX:mob?'auto':'visible',overscrollBehaviorX:mob?'contain':'auto'}}>
       <KCard label="Orders"       value={kpis.cnt.toLocaleString()} sub={actCnt?`${actCnt} filter active`:'All orders'} accent="var(--dim)" mob={mob}/>
@@ -5733,7 +5733,7 @@ function App(){
     </div>
 
     {/* ── Body ── */}
-    <div style={{display:'flex',gap:16,padding:`0 var(--page-gutter) 28px`,flex:1,minHeight:0,position:'relative'}}>
+    <div style={{display:'flex',gap:'var(--space-stack)',padding:`0 var(--page-gutter) 28px`,flex:1,minHeight:0,position:'relative'}}>
 
       {/* Desktop sidebar — a glass side panel carrying the shared card radius
           (theme.css .app-side-panel) instead of a bare, square-edged column, so
@@ -5781,7 +5781,7 @@ function App(){
       </>}
 
       {/* Main content */}
-      <div style={{flex:1,display:'flex',flexDirection:'column',minWidth:0,gap:0}}>
+      <div style={{flex:1,display:'flex',flexDirection:'column',minWidth:0,gap:'var(--space-stack)'}}>
         <ActualRakePlan
           data={actualPlanData}
           activeSiding={actDrill}
@@ -5795,7 +5795,7 @@ function App(){
           onDrill={(region,siding)=>setDrill(d=>d?.region===region&&d?.siding===siding?null:{region,siding})}
         />
         <RakePredictor rows={pivSrc}/>
-        <div style={{marginTop:40,marginBottom:8,color:'var(--mute)',fontSize:11.5,textAlign:'center',fontFamily:F.m}}>
+        <div style={{marginTop:8,marginBottom:8,color:'var(--mute)',fontSize:11.5,textAlign:'center',fontFamily:F.m}}>
           Rake Planner · self-contained offline tool
         </div>
       </div>

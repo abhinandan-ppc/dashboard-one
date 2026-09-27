@@ -125,6 +125,163 @@ test('Rake KPI values stay whole on narrow screens via a scrolling strip', async
   assert.doesNotMatch(cardRoot, /minWidth:0/);
 });
 
+test('section spacing comes from one shared vertical-rhythm contract', async () => {
+  const theme = await read('theme.css');
+  // Two tiers, so pages stop restating gaps as literals: a section tier for the
+  // top-level content blocks and a denser tier for rows/card internals.
+  assert.match(theme, /--space-stack:\s*24px/);
+  assert.match(theme, /--space-stack-sm:\s*16px/);
+  assert.match(theme, /--space-section:\s*16px/);
+  assert.match(theme, /--space-mobile:\s*12px/);
+
+  // Every stack container the four dashboards actually use must be in the
+  // contract, at the desktop step AND at the responsive step, or it keeps its
+  // own literal and drifts apart again.
+  const stacks = [
+    '.app-shell', '.main-container', '.content-area', '.controls-sidebar',
+    '.main-layout', '.dashboard-top-section', '.dashboard-side-controls',
+    '.ov-grid', '.pm-grid', '.eq-grid',
+  ];
+  const rows = ['.grid', '.kpis', '.kpi-row', '.kpi-strip', '.row', '.tabs'];
+  // The mobile step must re-declare the same selector list, or a page that
+  // dropped its literal reverts to the desktop gap on small screens. Parse the
+  // rules rather than slicing the file, so the declaration is matched to the
+  // selector list it actually belongs to.
+  const rulesFor = (rawSrc) => {
+    // Strip comments first: a comment sitting above a rule becomes part of the
+    // captured selector text, and any comma inside it splits the list.
+    const src = rawSrc.replace(/\/\*[\s\S]*?\*\//g, ' ');
+    // Walk the source tracking brace depth. A regex over `[^{}]+` mis-associates
+    // declarations with selectors once two rules share a selector, so scan.
+    const map = new Map();
+    let depth = 0, selStart = 0, blockStart = -1;
+    for (let i = 0; i < src.length; i++) {
+      const ch = src[i];
+      if (ch === '{') {
+        if (depth === 0) blockStart = i;
+        depth++;
+      } else if (ch === '}') {
+        depth--;
+        if (depth === 0 && blockStart > -1) {
+          const selText = src.slice(selStart, blockStart);
+          const decls = src.slice(blockStart + 1, i);
+          for (const sel of selText.split(',')) {
+            const name = sel.replace(/\s+/g, ' ').trim();
+            if (name) map.set(name, (map.get(name) || '') + ';' + decls);
+          }
+          selStart = i + 1;
+          blockStart = -1;
+        }
+      }
+    }
+    return map;
+  };
+  const desktop = rulesFor(theme);
+  for (const sel of stacks) {
+    assert.match(
+      desktop.get(sel) || '',
+      /gap:\s*var\(--space-stack\)/,
+      `${sel} must resolve its gap to --space-stack at the desktop step`,
+    );
+  }
+  for (const sel of rows) {
+    assert.match(
+      desktop.get(sel) || '',
+      /gap:\s*var\(--space-section\)/,
+      `${sel} must resolve its gap to --space-section`,
+    );
+  }
+  // Slice from just inside the enclosing @media block: starting at `@media`
+  // would make the scanner capture the whole media query as a single selector
+  // and swallow every rule inside it.
+  const mobileUsage = theme.indexOf('--space-stack-sm)');
+  const mobileMedia = theme.lastIndexOf('@media', mobileUsage);
+  const mobile = rulesFor(theme.slice(theme.indexOf('{', mobileMedia) + 1));
+  for (const sel of stacks) {
+    assert.match(
+      mobile.get(sel) || '',
+      /gap:\s*var\(--space-stack-sm\)/,
+      `${sel} must resolve to --space-stack-sm at the mobile step`,
+    );
+  }
+  for (const sel of rows) {
+    assert.match(
+      mobile.get(sel) || '',
+      /gap:\s*var\(--space-mobile\)/,
+      `${sel} must resolve to --space-mobile at the mobile step`,
+    );
+  }
+
+  // The pages must not reintroduce literals for those containers.
+  const files = [
+    'Rake-Planner.html', 'SMS-Heat-Planner.html',
+    'SMS Heat Planner Daily.html', 'SMS Heat Planner Monthly.html',
+  ];
+  const owned = [...stacks, ...rows];
+  // Match class names exactly, not as substrings: `.tabs` would otherwise also
+  // match `.tabs-hdr`, which is a tab strip with its own dense-tier gap.
+  const ownedPattern = new RegExp(
+    owned.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\w-])').join('|'),
+  );
+  for (const file of files) {
+    const src = await read(file);
+    for (const line of src.split('\n')) {
+      if (!/gap:/.test(line)) continue;
+      if (!ownedPattern.test(line)) continue;
+      assert.doesNotMatch(
+        line,
+        /gap:\s*\d+px/,
+        `${file} must not hardcode a gap for a contract-owned container: ${line.trim().slice(0, 80)}`,
+      );
+    }
+  }
+
+  // Rake used to stack its main column with gap:0 plus per-card margins, which
+  // produced three different separations for the same role.
+  const rake = await read('Rake-Planner.html');
+  assert.doesNotMatch(rake, /flexDirection:'column',minWidth:0,gap:0/);
+  assert.doesNotMatch(rake, /marginBottom:14/, 'the main column gap now owns card separation');
+  assert.doesNotMatch(rake, /marginTop:14/, 'the main column gap now owns card separation');
+  assert.doesNotMatch(rake, /marginTop:40/, 'the 40px footer outlier must sit on the shared rhythm');
+});
+
+test('the PM Yard panel header keeps the panel rounded at the top', async () => {
+  const theme = await read('theme.css');
+  const pmYard = await read('PM-Yard.html');
+
+  // The panel does NOT clip its children, so an opaque first child paints over
+  // the panel's own rounded corners. Assert both halves of that chain so the
+  // fix cannot be "simplified" away one side at a time.
+  assert.match(
+    pmYard,
+    /\.panel\s*\{[^}]*overflow:\s*visible\s*!important/,
+    'the panel must stay overflow:visible so the collapse toggle can overhang',
+  );
+  assert.match(
+    theme,
+    /body:is\([^)]*\.page-pm[^)]*\)[\s\S]*?\.panel:not\(\.app-header\)[\s\S]*?border-radius:\s*var\(--component-radius\)\s*!important/,
+    'the shared surface contract must still round .panel',
+  );
+  // The header band carries the shared surface, so it must carry the radius too.
+  assert.match(
+    theme,
+    /body:is\([^)]*\.page-pm[^)]*\)\s*:is\(\s*\.panel-head[^}]*?background:\s*var\(--component-surface\)\s*!important/,
+    'the panel header still receives an opaque shared surface',
+  );
+  assert.match(
+    theme,
+    /body\.page-pm\s+\.panel-head\s*\{\s*border-radius:\s*var\(--component-radius\)\s+var\(--component-radius\)\s+0\s+0\s*!important/,
+    'the PM Yard panel header must round its own top corners to match the panel',
+  );
+  // And it must not round the bottom, or the join to the body would break.
+  const band = theme.slice(theme.indexOf('body.page-pm .panel-head'));
+  assert.doesNotMatch(
+    band.slice(0, band.indexOf('}')),
+    /var\(--component-radius\)\s+var\(--component-radius\)\s+var\(--component-radius\)/,
+    'the header must not round its bottom corners — the body continues below it',
+  );
+});
+
 test('the shared content gutter is a single three-step scale', async () => {
   const theme = await read('theme.css');
   assert.match(theme, /--page-gutter:\s*24px/, 'desktop gutter must be 24px');
@@ -312,14 +469,20 @@ test('the shared card-surface contract does not claim flat PM Yard KPI groups', 
   }
 });
 
-test('the PM Yard left filter menu keeps square corners', async () => {
+test('the PM Yard side panels keep the shared card radius', async () => {
   const pmYard = await read('PM-Yard.html');
-  // theme.css's card-surface contract gives every .panel a 20px radius with
-  // !important, which reads as an unintended rounded card on the full-height
-  // left HUD menu. The override has to be !important AND out-specify that rule
-  // (0,3,1), which is why it is id-scoped.
-  assert.match(pmYard, /body\.page-pm aside#sidebar\.panel\s*\{\s*border-radius:\s*0\s*!important/);
-  // The right inspector is a separate transient panel and stays rounded.
+  // Both PM Yard panels float inside --pm-hud-inset on every side, so neither is
+  // flush with the viewport edge. theme.css's card-surface contract already
+  // supplies a 20px radius to every .panel with !important, and the page must
+  // leave it alone: the previous override zeroed the aside to read it as a HUD
+  // surface, which required id-scoping to (1,2,2) just to beat the contract's
+  // (0,3,1). Neither panel may pin its radius to square.
+  assert.doesNotMatch(
+    pmYard,
+    /aside[^{]*\{[^}]*border-radius:\s*0\s*!important/,
+    'the left filter menu must keep the shared card radius',
+  );
+  // The right inspector is a separate transient panel and stays rounded too.
   assert.doesNotMatch(pmYard, /\.inspector[^{]*\{[^}]*border-radius:\s*0\s*!important/);
 });
 

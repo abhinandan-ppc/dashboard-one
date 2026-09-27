@@ -246,13 +246,12 @@ input[type=range] { flex: 1; accent-color: var(--md-sys-color-secondary); height
 
 aside { left: var(--pm-hud-inset); width: 300px; bottom: var(--pm-hud-inset); }
 
-/* The left filter menu is a full-height HUD panel flush against the yard view,
-   not a card. The shared card-surface contract in theme.css gives every .panel
-   a 20px radius and does so with !important, so beating it needs both
-   !important and a higher specificity: that selector resolves to (0,3,1)
-   because :is() takes its most specific argument, whereas this id-scoped rule
-   is (1,2,2). */
-body.page-pm aside#sidebar.panel { border-radius: 0 !important; }
+/* The left filter menu keeps the shared card radius from theme.css instead of
+   overriding it to square. It is a floating panel: --pm-hud-inset holds it off
+   the viewport on all four sides, so it reads as a card rather than as a HUD
+   surface flush with the screen edge. Letting the shared contract (0,3,1) supply
+   the radius also drops the id-scoped (1,2,2) override that existed only to beat
+   it, and matches the aside to every other .panel in the app. */
 aside.collapsed { transform: translateX(calc(-100% - 24px)); }
 
 .inspector { right: var(--pm-hud-inset); width: 440px; max-height: calc(100vh - 100px); display: none; }
