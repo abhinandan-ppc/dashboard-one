@@ -101,7 +101,7 @@ body { padding-top: var(--frame-top, 96px); }
 div.google-visualization-tooltip { border: none !important; box-shadow: none !important; background: transparent !important; }
 
 /* ─── STICKY HEADER ─── */
-.sticky-wrapper { position: sticky; top: 12px; z-index: 100; padding: 0 24px; max-width: 1600px; margin: 0 auto; width: 100%; box-sizing: border-box;}
+.sticky-wrapper { position: sticky; top: 12px; z-index: 100; padding: 0 var(--page-gutter); max-width: 1600px; margin: 0 auto; width: 100%; box-sizing: border-box;}
 .site-header { 
     background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
     padding: 16px 32px; border-radius: var(--radius-m); border: var(--glass-border); box-shadow: var(--glass-shadow);
@@ -126,7 +126,7 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
 .btn-header { height: 40px; padding: 0 20px; border-radius: 20px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; background: var(--input-bg); color: var(--tx); border: var(--glass-border); outline: none; }
 .btn-header:hover { background: var(--input-hover); transform: scale(1.02); }
 /* ─── APP SHELL & LAYOUT ─── */
-.app-shell { max-width: 1600px; margin: 0 auto; padding: 16px 24px 24px; display: flex; flex-direction: column; gap: 20px; width: 100%; min-width: 0; box-sizing: border-box; }
+.app-shell { max-width: 1600px; margin: 0 auto; padding: 16px var(--page-gutter) 24px; display: flex; flex-direction: column; gap: 20px; width: 100%; min-width: 0; box-sizing: border-box; }
 
 .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; margin-bottom: 4px; }
 .kpi { 
@@ -367,13 +367,13 @@ select option { background-color: var(--bg-color); color: var(--tx); }
   /* structural overrides to force controls to bottom */
   .main-layout { display: contents; }
   .controls-sidebar { display: contents; }
-  .app-shell { display: flex; flex-direction: column; padding: 16px 12px; }
+  .app-shell { display: flex; flex-direction: column; padding: 16px var(--page-gutter); }
   #panel-plan { order: 1; }
   #panel-sms { order: 2; }
   #main-content { order: 3; width: 100%; box-sizing: border-box; margin-bottom: 24px; padding: 0;}
   #panel-bottom-controls { order: 4; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; }
 
-  .sticky-wrapper { padding: 0 12px; top: 8px;}
+  .sticky-wrapper { padding: 0 var(--page-gutter); top: 8px;}
   .site-header { flex-direction: column; align-items: stretch; border-radius: 16px; padding: 16px; gap: 16px;}
   .brand { justify-content: center; width: 100%; margin-bottom: 4px; }
   .hbadges { justify-content: stretch; gap: 8px; width: 100%; }
@@ -398,7 +398,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 
   .btn-pu { padding: 16px; font-size: 14px; width: 100%; flex: none; box-sizing: border-box; }
 
-  .app-shell { gap: 14px; padding: 16px 12px; }
+  .app-shell { gap: 14px; padding: 16px var(--page-gutter); }
   .content-area { gap: 14px; }
   .kpi-row { gap: 10px; }
   .ov-grid, .pm-grid { gap: 14px; }
@@ -415,7 +415,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
   .tot-eb-card { flex-direction: column; align-items: flex-start; gap: 4px; padding: 16px; }
   .tot-eb-lbl { font-size: 12px; }
   .tot-eb-val { font-size: 20px; }
-  .app-shell { padding: 12px 10px; gap: 12px; }
+  .app-shell { padding: 12px var(--page-gutter); gap: 12px; }
   .pm-card { padding: 10px; }
   .tc { padding: 12px; }
   .pb { padding: 12px; }

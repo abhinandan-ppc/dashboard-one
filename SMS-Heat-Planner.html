@@ -23,7 +23,7 @@ body {
 }
 button { font: inherit; cursor: pointer; border: none; outline: none; }
 
-.top-wrapper { position: absolute; top: 0; left: 0; right: 0; padding: 20px 24px 16px; z-index: 50; pointer-events: none; }
+.top-wrapper { position: absolute; top: 0; left: 0; right: 0; padding: 20px var(--page-gutter) 16px; z-index: 50; pointer-events: none; }
 .top-wrapper > * { pointer-events: auto; }
 .top-bar {
   position: relative; min-height: 64px; box-sizing: border-box;
@@ -86,7 +86,7 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
 .frame-skeleton.done { display: none; }
 
 @media (max-width: 768px) {
-  .top-wrapper { padding: 8px 12px; }
+  .top-wrapper { padding: 8px var(--page-gutter); }
   .top-bar { align-items: center; padding: 12px; gap: 10px; }
   .top-l { flex: 1 1 auto; justify-content: flex-start; min-width: 0; }
   .top-l > div:last-child { flex: 1; min-width: 0; text-align: left; }

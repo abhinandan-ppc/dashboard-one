@@ -385,7 +385,13 @@ input::placeholder{color:var(--mute);opacity:1}
   --font-body:'Manrope','Poppins',system-ui,sans-serif;
   --ease-emphasized:cubic-bezier(.2,0,0,1);
   --ease-standard:cubic-bezier(.2,0,0,1);
+  /* Shared content gutter — the single source of truth for the horizontal
+     inset of every page's content wrapper and its floating header shell, so
+     the same width produces the same inset on every dashboard.
+     Steps: desktop 24px, tablet 20px (<=1024px), mobile 16px (<=640px).
+     --page-side is the legacy alias name some pages still reference. */
   --page-gutter:24px;
+  --page-side:var(--page-gutter);
   --space-section:16px;
   --space-mobile:12px;
   --touch-target:44px;
@@ -417,8 +423,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .skip-link:focus{transform:translateY(0)}
 [aria-live]{min-height:1em}
 button:disabled,.btn:disabled{cursor:not-allowed;transform:none!important;filter:none!important;opacity:.58}
+@media (max-width:1024px){:root{--page-gutter:20px}}
+@media (max-width:640px){:root{--page-gutter:16px}}
 @media (max-width:768px){
-  :root{--page-gutter:16px}
   .desktop-only{display:none!important}
   .mobile-stack{display:flex!important;flex-direction:column!important;align-items:stretch!important}
   .mobile-full{width:100%!important;max-width:none!important}
@@ -444,7 +451,7 @@ button:disabled,.btn:disabled{cursor:not-allowed;transform:none!important;filter
    keeps its page-specific controls while sharing the hub's chrome. */
 :root{
   --header-shell-pad-block:12px;
-  --header-shell-gutter:24px;
+  --header-shell-gutter:var(--page-gutter);
   --header-min-height:64px;
   --header-radius:16px;
   --header-main-radius:20px;
@@ -592,6 +599,16 @@ button:disabled,.btn:disabled{cursor:not-allowed;transform:none!important;filter
   transform:translateY(-2px) scale(1.03)!important;
   filter:none!important;
 }
+/* The Daily/Monthly switcher is a pill nested inside a pill (4px of padding in
+   a 999px-radius container). The shared hover lift above grew the tab 3% and
+   pushed it 2px up, so the highlight slid past its padding slot and broke
+   through the container's rounded edge; its 18px shadow bled out too. Tabs keep
+   the colour/border hover cue but drop the geometry change so the highlight
+   stays inside the pill. */
+.app-header .view-tabs button:hover:not(:disabled){
+  transform:none!important;
+  box-shadow:none!important;
+}
 .app-header :is(.add-btn:not(.home-btn),.upload-btn,.btn-primary),
 .app-header .view-tabs button.on{
   background:var(--md-sys-color-primary)!important;
@@ -636,8 +653,11 @@ button:disabled,.btn:disabled{cursor:not-allowed;transform:none!important;filter
 .page-pm>header.app-header{
   position:absolute!important;
   top:calc(20px + var(--safe-top))!important;
-  left:max(24px,var(--safe-left))!important;
-  right:max(24px,var(--safe-right))!important;
+  /* The floating HUD panels bracket this bar (PM-Yard's --pm-hud-inset, used by
+     aside/.inspector/.compass-wrapper), so the header's own inset must be the
+     same value or its edges sit inboard of the panels it spans. */
+  left:max(var(--pm-hud-inset),var(--safe-left))!important;
+  right:max(var(--pm-hud-inset),var(--safe-right))!important;
   width:auto!important;
   z-index:100!important;
   background:transparent!important;
@@ -680,6 +700,18 @@ button:disabled,.btn:disabled{cursor:not-allowed;transform:none!important;filter
 .page-rake .glass-card.header-enter{width:100%!important;margin-left:auto!important;margin-right:auto!important}
 .grid,.slots,.kpis,.kpi-row,.stat-row,.row,.tabs{gap:var(--space-section)}
 .panel,.glass-card,.slot,.kpi,.stat,.user-card,.embed{margin-bottom:var(--space-section)}
+/* Edge-anchored side panel (Rake-Planner's mobile filter drawer). Deliberately
+   NOT in the card-surface contract above: that contract pins the full 20px
+   radius with !important, which would round the corners that sit flush against
+   the viewport edge and visually detach the panel from the screen. Only the
+   outward corners are rounded here. */
+.app-side-drawer{
+  background:var(--glass);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-right:1px solid var(--glass-border);
+  border-radius:0 var(--component-radius) var(--component-radius) 0;
+  box-shadow:var(--shadow-xl);
+}
 .page-pm .panel,.page-pm aside{margin-bottom:0}
 /* Shared content component contract. Every declaration here is paint-only:
    no display, sizing, spacing, position, or overflow property is changed. */
@@ -703,7 +735,6 @@ body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page
   .best-card,
   .compat-card,
   .target-card,
-  .kpi-group,
   .upload-card,
   .upload-opt,
   .toolbar,
@@ -715,6 +746,7 @@ body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page
   .flow-toolbar,
   .flow-scroll-wrapper,
   .flow-wrapper,
+  .app-side-panel,
   .data-table-wrap,
   .table-wrap,
   .table-responsive,
@@ -780,9 +812,13 @@ body.page-sms-monthly .kpi-eb{border-top-color:var(--gd)!important}
 .page-pm .flow-controls,
 body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) .frame-pill>.pill{border-radius:var(--radius-pill)!important}
 .page-sms-monthly .detail-drawer{border-radius:var(--component-radius) var(--component-radius) 0 0!important}
+/* Only the tab bars that sit flush at the top of their own card inherit the
+   card's top corners. PM Yard's .ctrl-tabs is deliberately absent: its panel
+   already paints a .dd-head band above the strip, so rounding the strip's top
+   corners drew a second, floating rounded box inside the panel instead of
+   continuing the card edge. */
 .page-sms-daily .tab-bar,
-.page-sms-monthly .tabs-hdr,
-.page-pm .ctrl-tabs{
+.page-sms-monthly .tabs-hdr{
   border-radius:var(--component-radius) var(--component-radius) 0 0!important;
 }
 .page-sms-daily :is(.tab-pane.card,.tab-pane>.card:first-child,.tab-pane>.eq-grid:first-child>.card){
@@ -868,7 +904,11 @@ table{font-variant-numeric:tabular-nums}
 .table-wrap,#preview,#pivotWrap,.data-table-wrap,.table-responsive,.tw{overflow-x:auto;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable}
 @media (max-width:768px){
   .app-header-shell{
-    --header-shell-gutter:12px;
+    /* Tracks --page-gutter so the floating header stays flush with the page
+       content at every breakpoint; a fixed value here desynchronises the bar
+       from the content below it. max(...,var(--safe-*)) still floors it for
+       notches in landscape. */
+    --header-shell-gutter:var(--page-gutter);
     position:sticky!important;
     /* The desktop rule centres this shell with left:50% + translateX(-50%),
        which only makes sense while it is position:fixed. Once it becomes a
@@ -917,8 +957,8 @@ table{font-variant-numeric:tabular-nums}
   .page-grade .header-status{display:none!important}
   .page-pm>header.app-header{
     top:calc(12px + var(--safe-top))!important;
-    left:max(12px,var(--safe-left))!important;
-    right:max(12px,var(--safe-right))!important;
+    left:max(var(--pm-hud-inset),var(--safe-left))!important;
+    right:max(var(--pm-hud-inset),var(--safe-right))!important;
     padding:10px!important;
     gap:10px!important;
   }

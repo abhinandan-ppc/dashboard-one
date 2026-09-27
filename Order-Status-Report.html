@@ -42,6 +42,18 @@ thead tr th:last-child{border-radius:0 var(--radius-xs) 0 0}
    backdrop-filter has the highest CSS specificity and was overriding/short-circuiting the blur in
    this environment; a real stylesheet rule on a className does not have that problem. */
 .m3-popover{background:var(--glass-50);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);}
+/* Frozen table-header / grand-total frost layer. This used to reuse .m3-popover,
+   but the shared card-surface contract in theme.css paints every .m3-popover as
+   a 20px-rounded card with a large drop shadow — with !important, and at
+   specificity (0,3,1) because :is() takes its most specific argument, so a plain
+   `thead th .m3-popover` override can never win. On a sticky header cell that
+   turned every column into its own rounded blob with a pinched gap between
+   neighbours (so the row read as a row of buttons) and bled a card shadow over
+   the rows underneath. A dedicated flat class sidesteps the fight entirely: no
+   shared rule claims it, so the header is one continuous square band matching
+   the plain th0 headers on this page's other tables, while the dropdown
+   popovers keep their rounded card surface. */
+.th-frost{background:var(--glass-50);border-radius:0;backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px)}
 /* Responsive: two-column panels collapse to a single stacked column below tablet width. Defined as
    real CSS classes (not inline gridTemplateColumns) so a @media rule can actually win — an inline
    style property always beats a media-query-scoped class rule at the same specificity. */
@@ -827,29 +839,32 @@ const tdDrillNum={...td0,fontFamily:F.m,textAlign:'right',whiteSpace:'nowrap'};
 
 /* Sticky lives on the <thead> (position:'sticky',top:0,zIndex:2). Two stacked blur layers: the
    inline background+backdrop-filter directly on the <th> (matches Rake-Planner's DrillPanel), plus
-   a second independent .m3-popover <div> layer underneath the text — compounding into a stronger,
-   more opaque frost than either layer alone. */
+   a second independent .th-frost <div> layer underneath the text — compounding into a stronger,
+   more opaque frost than either layer alone. The layer is deliberately its own flat, square class
+   (see .th-frost in the page's <style>) rather than .m3-popover: the shared card surface rounds
+   and shadows every .m3-popover with !important, which turned each sticky header cell into a
+   separate rounded blob with a gap to its neighbour. */
 function GlassTh({children,onClick,title,align='left',color}){
   return<th onClick={onClick} title={title} style={{padding:0,fontSize:10.5,
     fontFamily:F.b,letterSpacing:'.06em',textTransform:'uppercase',color:color||'var(--mute)',fontWeight:800,
     whiteSpace:'nowrap',userSelect:'none',textAlign:align,boxShadow:'0 1px 0 var(--bdrHi)',
     background:'var(--glass-hi)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
     cursor:onClick?'pointer':'default',position:'relative'}}>
-    <div className="m3-popover" style={{position:'absolute',inset:0}}/>
+    <div className="th-frost" style={{position:'absolute',inset:0}}/>
     <div style={{position:'relative',padding:'9px 12px'}}>{children}</div>
   </th>;
 }
 
-/* Frozen Grand Total row cell — same double-blur treatment as GlassTh, used inside a
-   <tfoot style={{position:'sticky',bottom:0,zIndex:2}}> so totals stay visible while scrolling
-   and regardless of pagination (totals are always computed off the full filtered set, not the
-   current page). */
+/* Frozen Grand Total row cell — same double-blur treatment (and the same flat .th-frost layer) as
+   GlassTh, used inside a <tfoot style={{position:'sticky',bottom:0,zIndex:2}}> so totals stay
+   visible while scrolling and regardless of pagination (totals are always computed off the full
+   filtered set, not the current page). */
 function GlassTotalTd({children,align='left'}){
   return<td style={{padding:0,fontFamily:F.m,fontWeight:800,textAlign:align,
     borderTop:'2px solid var(--bdrHi)',color:'var(--text)',
     background:'var(--glass-hi)',backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
     position:'relative'}}>
-    <div className="m3-popover" style={{position:'absolute',inset:0}}/>
+    <div className="th-frost" style={{position:'absolute',inset:0}}/>
     <div style={{position:'relative',padding:'9px 12px'}}>{children}</div>
   </td>;
 }
@@ -1360,10 +1375,17 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     const L=window.L;
     const map=L.map(mapRef.current,{center:[22,80],zoom:4.4,zoomControl:true,preferCanvas:true});
     mapInst.current=map;
-    L.tileLayer(C.isDark
-      ?'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      :'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-      {attribution:'©CARTO ©OSM',subdomains:'abcd',maxZoom:19}).addTo(map);
+    // The previous CARTO basemaps now require an API key and return "API KEY
+    // REQUIRED" watermark tiles instead of imagery, which left this panel
+    // showing watermarks over an empty background. Dark mode is a CSS filter on
+    // the tile pane rather than a keyed dark-tile set — exactly how Rake-Planner's
+    // RakeMapModal/OverviewMapModal already do it — so both themes share one
+    // keyless provider.
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      {attribution:'© OpenStreetMap contributors',maxZoom:19}).addTo(map);
+    if(C.isDark){
+      map.getPane('tilePane').style.filter='invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9)';
+    }
     const maxQty=Math.max(1,...stateAgg.list.map(s=>s.qty));
     // magnitude-scaled M3 color: low→sky, mid→amber, high→green (matches rest of dashboard's token palette)
     function markerColor(frac){
@@ -1385,6 +1407,28 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     return()=>{ if(mapInst.current){mapInst.current.remove();mapInst.current=null;} };
   },[stateAgg,C.isDark]);
 
+  /* Leaflet caches its size at init. This map lives in a flex:1 box whose width
+     changes whenever .grid-map-metrics collapses from 1.4fr/1fr to a single
+     column below 900px, and the card's own height changes with its sibling
+     column. With no explicit invalidateSize() the tile layer keeps the previous
+     viewport's layout after that flip (offset/blank edges) until the user
+     nudges zoom. A ResizeObserver on the map box covers the breakpoint flip, any
+     container resize, and the initial mount in one place. Declared after the
+     map-creating effect so it runs against the instance it just built. */
+  useEffect(()=>{
+    const map=mapInst.current,el=mapRef.current;
+    if(!map||!el)return undefined;
+    map.invalidateSize();
+    if(typeof ResizeObserver==='undefined')return undefined;
+    let raf=0;
+    const ro=new ResizeObserver(()=>{
+      cancelAnimationFrame(raf);
+      raf=requestAnimationFrame(()=>{ if(mapInst.current)mapInst.current.invalidateSize(); });
+    });
+    ro.observe(el);
+    return()=>{ cancelAnimationFrame(raf); ro.disconnect(); };
+  },[stateAgg,C.isDark]);
+
   const sortHeader=(label,key)=>(
     <GlassTh onClick={()=>setCustSort(s=>({key,dir:s.key===key&&s.dir==='desc'?'asc':'desc'}))}>
       {label}{custSort.key===key?(custSort.dir==='desc'?' ▼':' ▲'):''}
@@ -1397,7 +1441,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     return latestDate||'—';
   },[fileName,latestDate]);
 
-  return<div style={{padding:mob?'0 12px 60px':'0 24px 60px',width:'100%',maxWidth:'none',boxSizing:'border-box'}}>
+  return<div style={{padding:'0 var(--page-gutter) 60px',width:'100%',maxWidth:'none',boxSizing:'border-box'}}>
     {/* ═══ HEADER (fixed on desktop — floats in place regardless of ancestor scroll containers.
         On mobile it switches to sticky: sticky occupies real space in the flex flow, so the header's
         own footprint is exactly the spacer's job, structurally, without needing a matching pixel
@@ -1435,10 +1479,11 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         </div>}
 
         {mob&&<div style={{width:'100%',fontSize:11,fontFamily:F.m,color:'var(--mute)',textAlign:'left',lineHeight:1.5,
-          maxHeight:scrolled?0:32,opacity:scrolled?0:1,overflow:'hidden',
+          maxHeight:scrolled?0:50,opacity:scrolled?0:1,overflow:'hidden',
           transition:'max-height .2s ease,opacity .2s ease'}}>
           <div style={{color:'var(--dim)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{fileName}</div>
           <div>EBTP loaded: <b style={{color:'var(--text)'}}>{ebtpDateLabel}</b></div>
+          <div>{fmt(filtered.length,0)} / {fmt(rows.length,0)} rows</div>
         </div>}
       </div>
 
@@ -1447,6 +1492,9 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       {!mob&&<div style={{fontSize:11,fontFamily:F.m,color:'var(--mute)',textAlign:'right',lineHeight:1.6,flexShrink:0}}>
         <div style={{color:'var(--dim)',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{fileName}</div>
         <div>EBTP loaded: <b style={{color:'var(--text)'}}>{ebtpDateLabel}</b></div>
+        {/* Row count lives with the EBTP status rather than at the end of the filter
+            bar: it describes the loaded dataset (filtered / total), not a filter. */}
+        <div>{fmt(filtered.length,0)} / {fmt(rows.length,0)} rows</div>
       </div>}
 
       {!mob&&<div className="app-header-filter-actions" style={{display:'flex',gap:10,flexWrap:'wrap',justifyContent:'flex-start',
@@ -1493,10 +1541,8 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       <MultiSelect label="Insp By" options={inspByOptions} selected={inspBySel} onChange={setInspBySel}/>
       <MultiSelect label="Line" options={lineOptions} selected={lineSel} onChange={setLineSel}/>
       <DateTreeSelect label="SO Date" rows={baseRows} selected={dateSel} onChange={setDateSel} latestDate={latestDate}/>
-      <div style={{marginLeft:mob?0:'auto',gridColumn:mob?'1 / -1':'auto',textAlign:mob?'center':'left',
-        fontFamily:F.m,fontSize:11,color:'var(--mute)',alignSelf:'center'}}>
-        {fmt(filtered.length,0)} / {fmt(rows.length,0)} rows
-      </div>
+      {/* The filtered/total row count used to sit here; it now renders with the EBTP
+          status block in the header (see the header's fileName/status group). */}
     </div>
 
     {/* ═══ Active cross-filter chip row (chart-click filters — separate from dropdown filters above) ═══ */}
@@ -1963,7 +2009,7 @@ function App(){
     </div>;
   }
   if(loading||!rows){
-    return<div style={{maxWidth:1400,margin:'0 auto',padding:'0 20px 60px'}}>
+    return<div style={{maxWidth:1400,margin:'0 auto',padding:'0 var(--page-gutter) 60px'}}>
       {placeholderHeaderBar}
       {fetchStatusOverlay}
       <div className="skeleton skeleton-title" style={{maxWidth:280}}/>

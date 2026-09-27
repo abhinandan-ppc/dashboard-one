@@ -19,8 +19,8 @@ body{margin:0;min-height:100vh;background-color:var(--bg-color);color:var(--tx);
 ::-webkit-scrollbar{width:8px;height:8px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(150,150,150,.35);border-radius:10px}
-.wrap{width:100%;max-width:none;margin:0;padding:0 24px 60px}
-.top-wrapper{position:fixed;top:0;left:0;right:0;z-index:50;padding:24px 24px 0;box-sizing:border-box}
+.wrap{width:100%;max-width:none;margin:0;padding:0 var(--page-gutter) 60px}
+.top-wrapper{position:fixed;top:0;left:0;right:0;z-index:50;padding:24px var(--page-gutter) 0;box-sizing:border-box}
 .header-spacer{height:104px}
 .top-bar{position:relative;min-height:64px;background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);padding:12px 20px;border-radius:var(--radius-lg);border:var(--glass-border-rule);box-shadow:var(--shadow-md);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;box-sizing:border-box}
 .top-l{display:flex;align-items:center;gap:14px;min-width:0;flex:1 1 auto}
@@ -43,7 +43,11 @@ body{margin:0;min-height:100vh;background-color:var(--bg-color);color:var(--tx);
 #hubFrameHeaderSlot button{width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;max-width:40px!important;max-height:40px!important;padding:0!important;border-radius:50%!important;box-sizing:border-box!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
 #hubFrameHeaderSlot button img{width:100%!important;height:100%!important;border-radius:50%!important;object-fit:cover!important}
 #themeToggle{width:40px;padding:0;border-radius:50%;justify-content:center}
-#uploadBtn{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border-color:transparent;position:relative;margin-left:auto;flex-shrink:0}
+/* The upload action lives in .hdr-r with the theme/hub controls (it used to sit
+   at the end of .top-l, pushed right by margin-left:auto, which stranded the
+   Live EBTP badge past the buttons). No auto margin is needed now: .hdr-r is
+   already the right-hand group, and on mobile it is centred as one unit. */
+#uploadBtn{background:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border-color:transparent;position:relative;margin-left:0;flex-shrink:0}
 .hdr-r .upload-btn:hover{filter:brightness(1.08);background:var(--md-sys-color-primary)}
 .hdr-r .upload-btn:disabled{opacity:.7;cursor:default;transform:none}
 .file-badge{display:none;flex-direction:column;font-size:11px;font-family:var(--mono, monospace);color:var(--tm);line-height:1.5;text-align:right;flex-shrink:0;max-width:260px;overflow:hidden;max-height:60px;transition:max-height .22s ease,opacity .22s ease,margin-top .22s ease}
@@ -145,7 +149,7 @@ tr:hover td{background:var(--input-hover)}
   th .thlabel{white-space:nowrap}
 }
 @media (max-width:720px){
-  .wrap{padding:0 12px 40px}
+  .wrap{padding:0 var(--page-gutter) 40px}
   .top-wrapper{padding:12px 0 0;margin-bottom:16px}
   .top-wrapper{position:sticky}
   .top-bar{padding:12px;gap:0}
@@ -206,20 +210,24 @@ tr:hover td{background:var(--input-hover)}
         <div class="eyebrow">Value of Delayed Orders</div>
         <h1>VDO Generator</h1>
       </div>
+    </div>
+    <!-- Live EBTP / Loaded status sits immediately LEFT of every header button, matching
+         Order-Status-Report.html's header order (brand/title → status block → controls):
+         the upload action moved into .hdr-r so the badge is no longer stranded on the far
+         side of the buttons. -->
+    <div class="file-badge" id="fileBadge" style="display:none">
+      <div id="fname"></div>
+      <div>EBTP loaded: <b id="fSnapshot"></b></div>
+    </div>
+    <div class="hdr-r">
       <button class="reset-btn upload-btn" id="uploadBtn" type="button" title="Upload EBTP" aria-label="Upload EBTP">
         <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M4 21h16"/></svg>
         <span>Upload EBTP</span>
         <span class="spinner" id="uploadSpinner"></span>
       </button>
       <input type="file" id="file" accept=".xlsx,.xlsm" style="display:none">
-    </div>
-    <div class="hdr-r">
       <button id="themeToggle" type="button" title="Theme" aria-label="Toggle theme"><svg id="themeIcon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path></svg></button>
       <div id="hubFrameHeaderSlot" style="display:flex;gap:8px;align-items:center;flex-shrink:0"></div>
-    </div>
-    <div class="file-badge" id="fileBadge" style="display:none">
-      <div id="fname"></div>
-      <div>EBTP loaded: <b id="fSnapshot"></b></div>
     </div>
   </div>
 </div>

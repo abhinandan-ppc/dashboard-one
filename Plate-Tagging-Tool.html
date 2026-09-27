@@ -72,7 +72,7 @@ body{
 }
 button,input,select{font:inherit}
 button{cursor:pointer;border:none;outline:none;background:none}
-:root{--page-side:24px}
+:root{--page-side:var(--page-gutter)}
 .wrap{max-width:1720px;margin:0 auto;padding:0 var(--page-side) 72px}
 .header-fixed{
   position:fixed;top:0;left:0;right:0;z-index:50;
@@ -97,7 +97,7 @@ header{
 #hubFrameHeaderSlot button{width:40px !important;height:40px !important;min-width:40px !important;min-height:40px !important;max-width:40px !important;max-height:40px !important;padding:0 !important;border-radius:999px !important;box-sizing:border-box !important}
 #hubFrameHeaderSlot button img{width:100% !important;height:100% !important;border-radius:50% !important;object-fit:cover !important}
 @media(max-width:640px){
-:root{--page-side:12px}
+/* the mobile step is --page-gutter's job now (theme.css) */
 .wrap{padding:0 var(--page-side) 56px}
 .header-fixed{position:sticky;padding:8px 0 0;margin-bottom:14px}
 header{padding:10px 12px;gap:10px;flex-direction:row;justify-content:flex-start;align-items:center;text-align:left}

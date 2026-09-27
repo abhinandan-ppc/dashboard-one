@@ -36,7 +36,7 @@ body {
 button { font: inherit; cursor: pointer; border: none; outline: none; background: none; }
 input { font: inherit; color: inherit; }
 
-.top-wrapper { position: fixed; top: 0; left: 0; right: 0; padding: 12px 24px; z-index: 320; }
+.top-wrapper { position: fixed; top: 0; left: 0; right: 0; padding: 12px var(--page-gutter); z-index: 320; }
 .top-wrapper.hidden-in-frame { display: none !important; }
 /* Frame pill: small pill at top-center when a page is opened in-frame (shows Home/Reset/Theme on hover/touch) */
 .frame-pill { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 330; opacity: 0; pointer-events: none; transition: opacity 0.18s ease, transform 0.18s ease; transform-origin: center top; }
@@ -225,7 +225,7 @@ input { font: inherit; color: inherit; }
 .google-btn:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.14); transform: translateY(-1px); }
 .google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
 
-.stage { width: 100%; max-width: none; margin: 0; padding: calc(var(--frame-top, 88px) + 12px) 24px 60px; }
+.stage { width: 100%; max-width: none; margin: 0; padding: calc(var(--frame-top, 88px) + 12px) var(--page-gutter) 60px; }
 .stage-hd { margin-bottom: 20px; }
 .stage-hd h2 { font-size: 15px; font-weight: 700; color: var(--tm); text-transform: uppercase; letter-spacing: 0.6px; }
 .stage-sub { font-size: 13px; color: var(--tm); margin-top: 4px; }
@@ -242,7 +242,7 @@ input { font: inherit; color: inherit; }
 @media (max-width: 768px) { .frame-skeleton .skeleton-row { grid-template-columns: repeat(2, 1fr); } }
 
 /* keep stage aligned to the same page gutters as the fixed header */
-.stage { width: 100%; max-width: none; margin: 0; padding: calc(var(--frame-top, 88px) + 12px) 24px 60px; }
+.stage { width: 100%; max-width: none; margin: 0; padding: calc(var(--frame-top, 88px) + 12px) var(--page-gutter) 60px; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
 
@@ -398,7 +398,7 @@ input { font: inherit; color: inherit; }
 }
 
 @media (max-width: 640px) {
-  .top-wrapper { padding: 8px 12px; }
+  .top-wrapper { padding: 8px var(--page-gutter); }
   .top-bar { flex-wrap: wrap; align-items: center; padding: 12px; gap: 10px; }
   .top-l { flex: 1 1 auto; min-width: 0; justify-content: flex-start; gap: 10px; }
   .top-l h1 { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -406,7 +406,7 @@ input { font: inherit; color: inherit; }
   .jspl-divider { display: none; }
   .jspl-logo { width: 34px; height: 16px; }
   .hdr-r { gap: 8px; flex-basis: 100%; justify-content: center; border-top: 1px solid var(--br); padding-top: 10px; margin-top: 2px; }
-  .stage { padding: 12px 14px 40px; }
+  .stage { padding: 12px var(--page-gutter) 40px; }
   .stage-hd { margin-bottom: 14px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
   .card { padding: 16px; gap: 10px; }
@@ -420,7 +420,7 @@ input { font: inherit; color: inherit; }
   .top-bar { padding: 10px; gap: 10px; }
   .hdr-r { gap: 8px; }
   .theme-toggle, .reset-link, .add-btn, .user-btn { height: 44px; width: 44px; }
-  .stage { padding: 10px 10px 32px; }
+  .stage { padding: 10px var(--page-gutter) 32px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
   .card { padding: 12px; gap: 8px; }
   .card .card-name { font-size: 13.5px; }

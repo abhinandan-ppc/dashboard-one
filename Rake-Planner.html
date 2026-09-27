@@ -5132,6 +5132,29 @@ function App(){
   // Close drawer on desktop resize
   useEffect(()=>{if(!mob&&!tab)setSideOpen(false);},[mob,tab]);
 
+  // On desktop the header shell is position:fixed, so the KPI strip's clearance
+  // is reserved by a spacer instead of by the header's own flow. A hardcoded
+  // 100px only matches a single-row bar: between roughly 780px and 1100px the
+  // bar wraps to two rows (measured 126-144px tall) and the fixed bar then sat
+  // on top of the first row of KPI cards. Publish the measured shell height
+  // (plus the same 12px breathing room the 100px spacer encoded) as a custom
+  // property the spacer consumes, so the strip always lands just below the bar.
+  useEffect(()=>{
+    if(mob)return undefined;
+    const shells=[...document.querySelectorAll('.app-header-shell')];
+    if(!shells.length)return undefined;
+    const apply=()=>{
+      const height=shells.reduce((tallest,el)=>Math.max(tallest,el.getBoundingClientRect().height),0);
+      if(height>0)document.documentElement.style.setProperty('--rake-header-clearance',`${Math.round(height+12)}px`);
+    };
+    apply();
+    window.addEventListener('resize',apply);
+    if(typeof ResizeObserver==='undefined')return ()=>window.removeEventListener('resize',apply);
+    const observer=new ResizeObserver(apply);
+    shells.forEach(el=>observer.observe(el));
+    return ()=>{observer.disconnect();window.removeEventListener('resize',apply);};
+  },[mob,rows.length,tab]);
+
   const parseFile=useCallback(f=>{
     setLoading(true);
     const rd=new FileReader();
@@ -5448,7 +5471,7 @@ function App(){
   // DOM-node handoff for the hub's MutationObserver to race.
   const placeholderHeaderBar=
     <>
-    <div className="app-header-shell" style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 12px 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
+    <div className="app-header-shell" style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?`10px var(--page-gutter) 0`:`20px var(--page-gutter) 0`,zIndex:50,boxSizing:'border-box'}}>
     <div className="glass-card header-enter app-header" style={{position:'relative',padding:mob?'12px 12px':'12px 20px',display:'flex',
       flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
       alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
@@ -5564,7 +5587,7 @@ function App(){
          VDO-Generator.html — the nested independently-scrolling panes are
          self-contained overlays/scroll boxes, not affected by this choice)
          ── */}
-    <div className="app-header-shell" style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 12px 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
+    <div className="app-header-shell" style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?`10px var(--page-gutter) 0`:`20px var(--page-gutter) 0`,zIndex:50,boxSizing:'border-box'}}>
     <div className="glass-card header-enter app-header" style={{position:'relative',padding:mob?'12px 12px':'12px 20px',display:'flex',
       flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
       alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
@@ -5662,8 +5685,11 @@ function App(){
           onChange={e=>e.target.files[0]&&parseFile(e.target.files[0])}/>
     </div>
     </div>
-    {/* Spacer reserving the fixed header's visual footprint in the flex flow below (mobile header is sticky, so it reserves its own space and needs no spacer) */}
-    <div style={{height:mob?0:100,flexShrink:0}}/>
+    {/* Spacer reserving the fixed header's visual footprint in the flex flow below (mobile header is sticky, so it reserves its own space and needs no spacer).
+        Desktop height comes from the measured shell (--rake-header-clearance, published by the
+        ResizeObserver in App) rather than a fixed 100px: a wrapped 2-row bar is taller than that
+        constant, which used to leave the first KPI card row sitting under the fixed header. */}
+    <div style={{height:mob?0:'var(--rake-header-clearance, 100px)',flexShrink:0}}/>
 
     {/* ── Mobile Search + Theme ── */}
     {mob&&<div style={{padding:'10px 14px',background:'var(--s0)',
@@ -5707,10 +5733,22 @@ function App(){
     </div>
 
     {/* ── Body ── */}
-    <div style={{display:'flex',gap:16,padding:`0 ${mob?12:24}px 28px`,flex:1,minHeight:0,position:'relative'}}>
+    <div style={{display:'flex',gap:16,padding:`0 var(--page-gutter) 28px`,flex:1,minHeight:0,position:'relative'}}>
 
-      {/* Desktop sidebar */}
-      {!isNarrow&&<div style={{width:248,flexShrink:0,display:'flex',flexDirection:'column',overflowY:'auto'}}>
+      {/* Desktop sidebar — a glass side panel carrying the shared card radius
+          (theme.css .app-side-panel) instead of a bare, square-edged column, so
+          it matches the rounded surfaces everywhere else in the app. The contract
+          owns radius/surface/elevation; only structure is set here.
+          Bounded + sticky rather than stretched: as a flex child it otherwise
+          takes the full height of the content column (measured 8387px), which
+          both reads as a strip rather than a panel and leaves its own
+          overflowY:auto inert. --rake-header-clearance is the height the fixed
+          header actually occupies (published by the ResizeObserver in App), so
+          the panel stays clear of it and scrolls within the remaining viewport. */}
+      {!isNarrow&&<div className="app-side-panel" style={{width:248,flexShrink:0,alignSelf:'flex-start',
+        position:'sticky',top:'calc(var(--rake-header-clearance, 100px) + 8px)',
+        maxHeight:'calc(100dvh - var(--rake-header-clearance, 100px) - 24px)',
+        display:'flex',flexDirection:'column',overflowY:'auto',padding:'14px 12px 4px',boxSizing:'border-box'}}>
         <FilterPanel {...filterProps}/>
       </div>}
 
@@ -5719,14 +5757,11 @@ function App(){
         <div onClick={()=>setSideOpen(false)} style={{
           position:'fixed',inset:0,background:'rgba(0,0,0,.6)',zIndex:200,
           backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}/>
-        <div style={{
+        <div className="app-side-drawer" style={{
           position:'fixed',left:0,top:0,bottom:0,zIndex:201,
           width:tab?310:288,
-          background:'var(--glass)',
-          backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
-          borderRight:'1px solid var(--glass-border)',
           display:'flex',flexDirection:'column',
-          boxShadow:'var(--shadow-xl)',
+          overflow:'hidden',
           animation:'slideIn .22s cubic-bezier(.4,0,.2,1)'}}>
           <div style={{padding:'16px 18px',borderBottom:'1px solid var(--bdr)',
             background:'var(--s1)',

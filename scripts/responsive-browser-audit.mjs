@@ -27,6 +27,9 @@ const viewports = [
   { name: 'wide', width: 1920, height: 1080 },
 ];
 const cli = process.env.PLAYWRIGHT_CLI || 'playwright-cli';
+// PM Yard's yard view is a full-bleed canvas; its floating HUD is inset by
+// --pm-hud-inset rather than the shared page gutter, so it is not measured here.
+const gutterExemptPages = new Set(['PM-Yard.html']);
 const defaultCliJs = process.platform === 'win32' && process.env.APPDATA
   ? join(process.env.APPDATA, 'npm', 'node_modules', '@playwright', 'cli', 'playwright-cli.js')
   : '';
@@ -114,11 +117,13 @@ const auditCode = `async page => {
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
         await page.waitForTimeout(100);
         const metrics = await page.evaluate(() => {
+          const vw = document.documentElement.clientWidth;
           const edges = el => {
             if (!el) return null;
             const box = el.getBoundingClientRect();
             return { left: box.left, right: box.right };
           };
+          const shell = document.querySelector('.app-header-shell');
           return {
             scrollWidth: document.documentElement.scrollWidth,
             clientWidth: document.documentElement.clientWidth,
@@ -128,6 +133,9 @@ const auditCode = `async page => {
             // equal to clientWidth while half the header sits off-canvas.
             headerShell: edges(document.querySelector('.app-header-shell')),
             header: edges(document.querySelector('.app-header')),
+            // The shell's horizontal padding resolves directly from
+            // --page-gutter, so it is an exact reading of the shared gutter.
+            shellGutter: shell ? Math.round(parseFloat(getComputedStyle(shell).paddingLeft)) : null,
           };
         });
         results.push({ page: item.name, viewport: viewport.name, ...metrics });
@@ -165,6 +173,7 @@ try {
         failures.push(`browser audit returned malformed metrics: ${error.message}`);
         results = [];
       }
+      const expectedGutter = (width) => (width <= 640 ? 16 : width <= 1024 ? 20 : 24);
       for (const result of results) {
         if (result.error) {
           failures.push(`${result.page}: ${result.error}`);
@@ -183,6 +192,29 @@ try {
           }
           if (bleed.length) {
             failures.push(`${result.page} @ ${result.viewport}: ${bleed.join('; ')}`);
+          }
+
+          // Content spacing must be identical on every dashboard at a given width.
+          // The pages used to hardcode 10/12/20/24px gutters independently, and the
+          // floating header was pinned at 12px while the content below it was 24px.
+          //
+          // Only the header shell is measured here: it is a single element whose
+          // padding resolves straight from the token, so it is an exact check at
+          // every width. Content wrappers are verified at the source level in
+          // test/responsive-contract.test.mjs instead — their rendered inset
+          // cannot be read exactly here, because a page that centres a max-width
+          // container (admin 1180px, GCM 1440px, Plate-Tagging 1720px) legitimately
+          // starts far from the viewport edge.
+          // PM Yard is exempt: its canvas is full-bleed and the floating HUD is
+          // inset by its own --pm-hud-inset token.
+          if (!gutterExemptPages.has(result.page)) {
+            const width = viewports.find((v) => v.name === result.viewport)?.width;
+            const expected = expectedGutter(width);
+            if (result.shellGutter !== null && result.shellGutter !== expected) {
+              failures.push(
+                `${result.page} @ ${result.viewport}: header shell gutter ${result.shellGutter}px, expected ${expected}px`,
+              );
+            }
           }
         }
       }

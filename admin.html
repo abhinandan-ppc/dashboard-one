@@ -15,9 +15,8 @@
      theme.css's color-only --glass-border, so it must stay locally defined. */
   --glass-border: 1px solid rgba(0,0,0,0.08);
   --good: #15803d; --bad: #b91c1c; --warn: #b45309;
-  --page-side: 24px;
+  --page-side: var(--page-gutter);
 }
-@media (max-width: 640px) { :root { --page-side: 12px; } }
 [data-theme="dark"] {
   --glass-border: 1px solid rgba(255,255,255,0.1);
   --good: #4ade80; --bad: #f87171; --warn: #fbbf24;

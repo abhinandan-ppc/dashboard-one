@@ -20,7 +20,14 @@
    for both themes via the canonical color var. */
 :root {
   --glass-border-rule: 1px solid var(--glass-border);
+  /* Inset shared by every floating HUD element (header bar, aside, inspector,
+     compass). Deliberately NOT --page-gutter: the yard canvas is full-bleed and
+     the HUD brackets it, so this is its own scale — a 24px page gutter left the
+     header visibly out of line with the panels below it. One token keeps the
+     four elements from drifting apart. */
+  --pm-hud-inset: 16px;
 }
+@media (max-width: 768px) { :root { --pm-hud-inset: 12px; } }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -48,8 +55,11 @@ body { position: fixed; inset: 0; width: 100%; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(150,150,150,0.6); }
 
 /* ─── HEADER ─── */
+/* Every floating HUD element is inset by --pm-hud-inset from the viewport edge
+   (aside at the left, .inspector and the compass at the right), so the floating
+   header bar spans the same edges as the panels it sits above. */
 header {
-  position: absolute; top: 20px; left: 24px; right: 24px; min-height: 64px;
+  position: absolute; top: 20px; left: var(--pm-hud-inset); right: var(--pm-hud-inset); min-height: 64px;
   border: var(--glass-border-rule); border-radius: var(--radius-lg); box-shadow: 0 8px 18px rgba(0,0,0,.22);
   display: flex; align-items: center; justify-content: space-between; z-index: 100;
   padding: 12px 20px; pointer-events: auto; gap: 14px;
@@ -234,10 +244,18 @@ input[type=range] { flex: 1; accent-color: var(--md-sys-color-secondary); height
 .panel-head { padding: 14px 18px; border-bottom: 1px solid var(--br); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: var(--md-sys-color-secondary); display: flex; justify-content: space-between; align-items: center; }
 .panel-body { padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px; max-height: calc(100vh - 140px);}
 
-aside { left: 16px; width: 300px; bottom: 16px; }
+aside { left: var(--pm-hud-inset); width: 300px; bottom: var(--pm-hud-inset); }
+
+/* The left filter menu is a full-height HUD panel flush against the yard view,
+   not a card. The shared card-surface contract in theme.css gives every .panel
+   a 20px radius and does so with !important, so beating it needs both
+   !important and a higher specificity: that selector resolves to (0,3,1)
+   because :is() takes its most specific argument, whereas this id-scoped rule
+   is (1,2,2). */
+body.page-pm aside#sidebar.panel { border-radius: 0 !important; }
 aside.collapsed { transform: translateX(calc(-100% - 24px)); }
 
-.inspector { right: 16px; width: 440px; max-height: calc(100vh - 100px); display: none; }
+.inspector { right: var(--pm-hud-inset); width: 440px; max-height: calc(100vh - 100px); display: none; }
 .inspector.show { display: flex; }
 .inspector.collapsed { transform: translateX(calc(100% + 24px)); }
 
@@ -449,9 +467,17 @@ aside.collapsed .left-toggle {
 .cust-item input[type="checkbox"] { 
   cursor: pointer; width: 14px; height: 14px; accent-color: var(--md-sys-color-secondary); 
 }
+/* `justify-content` must stay flex-start: with the groups now non-shrinking the
+   strip genuinely overflows at narrow widths, and a centred flex container puts
+   that overflow on BOTH sides — the left portion sits at a negative offset that
+   no scroll position can reach (scrollLeft cannot go below 0 in an LTR
+   document), so the first KPI group was clipped and permanently unreachable.
+   Left-aligned, the overflow all lands to the right where scrolling reveals it.
+   `min-width:0` keeps the strip from imposing its content width on the header
+   row, so the excess is scrolled inside the strip instead of widening the bar. */
 .kpi-dashboard {
-  display: flex; align-items: center; justify-content: center; gap: 12px; 
-  flex: 1; overflow-x: auto; scrollbar-width: none; pointer-events: auto;
+  display: flex; align-items: center; justify-content: flex-start; gap: 12px; 
+  flex: 1 1 0; min-width: 0; overflow-x: auto; scrollbar-width: none; pointer-events: auto;
   position: static; transform: none; left: auto; top: auto;
   padding: 6px 4px; 
   margin: -6px 0; 
@@ -461,24 +487,35 @@ aside.collapsed .left-toggle {
 .kpi-pill {
   display: flex; align-items: center; gap: 8px;
   padding: 0; background: transparent; border: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+  flex-shrink: 0;
 }
 
+/* Flat KPI groups. The shared card-surface contract in theme.css used to list
+   .kpi-group, which forced a 20px radius, a drop shadow and a filled surface
+   onto it (with !important) and made the header read as a row of buttons; it
+   has been removed from that list. These are plain text groups, so no radius,
+   border, shadow or lift — `flex-shrink: 0` keeps each group at its natural
+   width so a title like LOADED is never clipped, and the .kpi-dashboard
+   scroller absorbs the excess instead. */
 .kpi-group {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
-  cursor: pointer; padding: 4px 8px; border-radius: 8px;
-  transition: all 0.2s ease; border: 1px solid transparent;
+  cursor: pointer; padding: 4px 8px; border-radius: 0;
+  background: transparent; border: none; box-shadow: none;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  flex-shrink: 0; transition: opacity 0.15s ease;
 }
-
-.kpi-group:hover { background: var(--input-hover); border-color: var(--br); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-.kpi-group:active { transform: translateY(0); }
+/* Hover/active stay as plain state cues — deliberately no background, border,
+   shadow or translate, so nothing here reads as a button. */
+.kpi-group:hover { opacity: 0.72; }
+.kpi-group:active { opacity: 0.55; }
 
 .kpi-group-title { font-size: 9px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; line-height: 1; }
 .kpi-stats { display: flex; align-items: center; gap: 16px; }
-.kpi-stat { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.kpi-stat { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; }
 .kpi-stat .val { font-size: 14px; font-weight: 800; color: var(--tx); line-height: 1; font-variant-numeric: tabular-nums; }
 .kpi-stat .lbl { font-size: 8px; font-weight: 700; color: var(--tm); text-transform: uppercase; letter-spacing: 0.5px; line-height: 1; }
 
-.kpi-divider { width: 1px; height: 24px; background-color: var(--br); }
+.kpi-divider { width: 1px; height: 24px; background-color: var(--br); flex-shrink: 0; }
 
 /* ─── LOADING OVERLAY ─── */
 /* Inline card spinner (replaces full-screen blur overlay) */
@@ -515,7 +552,7 @@ aside.collapsed .left-toggle {
   /* Force KPIs to their own full-width row below the buttons */
   .kpi-dashboard {
     order: 3; width: 100%; flex-basis: 100%; margin-top: 8px;
-    justify-content: flex-start; padding: 4px 4px 14px 4px; /* Space for shadow */
+    justify-content: flex-start; padding: 4px; /* no shadow to clear since the groups are flat */
     -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory;
   }
   .kpi-pill { scroll-snap-align: start; flex-shrink: 0; }
@@ -527,7 +564,7 @@ aside.collapsed .left-toggle {
 
 /* Mobile Devices */
 @media (max-width: 768px) {
-  header { padding: 12px; gap: 12px; justify-content: flex-start; flex-wrap: wrap; left: 12px; right: 12px; }
+  header { padding: 12px; gap: 12px; justify-content: flex-start; flex-wrap: wrap; left: var(--page-gutter); right: var(--page-gutter); }
 
   /* Row 1: Logo (left, fixed) + Title (left-aligned next to logo, flex-grows) + this page's
      own action buttons (right, fixed) — one non-wrapping row. */
@@ -624,9 +661,9 @@ aside.collapsed .left-toggle {
   }
   .hint { display: none !important; }
 
-  .toolbar { width: calc(100% - 24px); bottom: 12px; overflow-x: auto; justify-content: flex-start; border-radius: var(--radius-s); }
+  .toolbar { width: calc(100% - var(--pm-hud-inset) * 2); bottom: 12px; overflow-x: auto; justify-content: flex-start; border-radius: var(--radius-s); }
   .tbtn { flex-shrink: 0; padding: 8px 14px; font-size: 10.5px; }
-  .compass-wrapper { bottom: 80px; width: 44px; height: 44px; right: 16px;}
+  .compass-wrapper { bottom: 80px; width: 44px; height: 44px; right: var(--pm-hud-inset);}
 }
 
 /* Small Phones (320-480px) */
