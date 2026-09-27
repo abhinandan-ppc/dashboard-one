@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="theme-boot.js"></script>
 <title>SMS Heat Planner &middot; Jindal Steel Angul</title>
 <link rel="icon" type="image/png" href="favicon.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -253,7 +254,28 @@ setTimeout(broadcastFrameTop, 400);
 dailyFrame.addEventListener('load', broadcastFrameTop);
 monthlyFrame.addEventListener('load', broadcastFrameTop);
 
-setTheme(localStorage.getItem('smsPlannerTheme') || 'dark');
+// This page keeps its own `smsPlannerTheme` key, which used to be the only
+// source of truth here and so always won — the hub's theme was applied by
+// theme-boot.js a moment earlier and then immediately overwritten with this
+// page's default. Fall back to the hub's stored theme first (theme-boot.js has
+// already resolved it onto <html>), and only use this page's legacy key when
+// the hub has no stored preference at all.
+(function initThemeFromHub(){
+  var hubTheme = null;
+  try { hubTheme = localStorage.getItem('jspl-hub-theme'); } catch(e){}
+  if(hubTheme !== 'light' && hubTheme !== 'dark'){
+    try {
+      var attr = document.documentElement.getAttribute('data-theme');
+      if(attr === 'light' || attr === 'dark') hubTheme = attr;
+    } catch(e){}
+  }
+  if(hubTheme !== 'light' && hubTheme !== 'dark'){
+    try { hubTheme = localStorage.getItem('smsPlannerTheme'); } catch(e){}
+  }
+  setTheme(hubTheme || 'dark');
+  // Keep this page's legacy key in step so nothing downstream reads a stale one.
+  try { localStorage.setItem('smsPlannerTheme', hubTheme || 'dark'); } catch(e){}
+})();
 </script>
 
 <script>

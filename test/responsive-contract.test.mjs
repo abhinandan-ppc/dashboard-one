@@ -751,6 +751,48 @@ test('the Rake side menus are rounded surfaces', async () => {
   assert.doesNotMatch(theme, /\.app-side-drawer\s*\{[^}]*!important/, 'the drawer must stay out of the !important card contract');
 });
 
+test('every Rake overlay stacks above the shared sticky header', async () => {
+  const theme = await read('theme.css');
+  const rake = await read('Rake-Planner.html');
+
+  // The shared theme pins the header shell to 320 !important, and on mobile
+  // that shell is position:sticky — so on narrow screens it is a plain sibling
+  // of the page's own overlays in one stacking context. Any overlay numbered
+  // below 320 therefore paints UNDER the header bar. That is what put the bar
+  // across the top of the open filter drawer (it was 200/201), leaving the
+  // drawer's own header and close button unreachable, and did the same to the
+  // rake map dialog (300).
+  const headerZ = Number(theme.match(/\.app-header-shell\{[^}]*z-index:(\d+)!important/)?.[1]);
+  assert.equal(headerZ, 320, 'the shared header shell z-index moved; re-derive the overlay floors below');
+
+  // (scrim, drawer) — the drawer must also clear the scrim it is dismissed by.
+  assert.match(rake, /setSideOpen\(false\)\}\s*style=\{\{[^}]*zIndex:340/s, 'the drawer scrim must clear the header');
+  assert.match(rake, /className="app-side-drawer" style=\{\{[^}]*zIndex:341/s, 'the drawer must clear both the header and its scrim');
+
+  // Every full-screen overlay the page can raise must clear the header too.
+  // Bottom-anchored layers (fetch-status at 250, the combine-selection bar) are
+  // excluded: they sit at the bottom of the viewport and can never overlap the
+  // top header, so numbering them below 320 is harmless.
+  const overlays = [...rake.matchAll(/position:'fixed',inset:0,zIndex:(\d+)/g)].map((m) => Number(m[1]));
+  assert.ok(overlays.length >= 4, `expected the full-screen dialogs, found ${overlays.length}`);
+  for (const z of overlays) {
+    assert.ok(z > headerZ, `full-screen overlay at z-index ${z} would paint under the header bar (${headerZ})`);
+  }
+
+  // A drill-down panel is opened from INSIDE the map dialogs, so it has to
+  // paint above every full-screen overlay on the page — not just one of them.
+  // Asserting against the max is what caught the rake map (520) and the
+  // overview map (600) disagreeing, which a single hardcoded number missed.
+  const drillPanels = [...rake.matchAll(/position:'fixed',bottom:0,left:0,right:0,zIndex:(\d+)/g)].map((m) => Number(m[1]));
+  assert.ok(drillPanels.length === 2, `expected both drill panels, found ${drillPanels.length}`);
+  for (const d of drillPanels) {
+    assert.ok(d > Math.max(...overlays), `drill panel at ${d} must paint above every dialog (max ${Math.max(...overlays)})`);
+  }
+
+  // And the drawer must stay below those panels so it can never bury a dialog.
+  assert.ok(341 < Math.min(...drillPanels), 'the filter drawer must not cover an open drill panel');
+});
+
 test('the Order Status map re-measures itself and uses keyless tiles', async () => {
   const osr = await read('Order-Status-Report.html');
   assert.doesNotMatch(
@@ -1111,4 +1153,100 @@ test('Order Status table headers stay a flat band instead of popover cards', asy
   // ...and .m3-popover is left to the one place that really is a popover.
   const cells = osr.slice(osr.indexOf('function GlassTh'), osr.indexOf('function KpiDrillPanel'));
   assert.ok(!cells.includes('m3-popover'), 'header/total cells must not paint the popover surface');
+});
+
+// ── Theme: the hub is the single source of truth, and it reaches every page ──
+test('the theme switch keeps its 22px track on mobile despite the tap-target rule', async () => {
+  const hub = await read('index.html');
+  // theme.css's `.page-hub button{min-height:44px!important}` reaches every
+  // button on the hub, including the 22px-tall light/dark switch, which
+  // rendered as a 44px pill with the knob stranded at the top. The override has
+  // to be scoped under .theme-panel AND carry !important, because a bare
+  // .mode-switch rule cannot outrank an !important declaration.
+  assert.ok(
+    hub.includes('.theme-panel .mode-switch') && hub.includes('min-height: 22px !important'),
+    'the switch must re-pin its height under .theme-panel with !important'
+  );
+  // The 44px touch target is preserved by a pseudo-element rather than by
+  // stretching the visible track.
+  assert.ok(hub.includes('.mode-switch::before'), 'the switch must keep a 44px hit area via ::before');
+  assert.ok(/height:\s*44px/.test(hub.slice(hub.indexOf('.mode-switch::before'), hub.indexOf('.theme-panel .mode-switch'))),
+    'the ::before hit area must be 44px tall');
+  // The knob is centred with a negative margin rather than a fixed top offset,
+  // so it stays put at either track height.
+  assert.ok(hub.includes('margin-top: -8px'), 'the knob must be vertically centred, not offset from the top');
+});
+
+test('the hub pushes theme and accent to every page over all three channels', async () => {
+  const hub = await read('index.html');
+  // postMessage carries BOTH values. Accent used to be broadcast but handled by
+  // no page at all, so the accent never left the hub.
+  assert.ok(hub.includes('type: "accent"'), 'accent must be pushed to pages');
+  assert.ok(hub.includes('type: "theme"'), 'theme must be pushed to pages');
+  // A `storage` listener is the only way to see a change made in another tab.
+  assert.ok(hub.includes("addEventListener('storage'"), 'the hub must listen for cross-tab storage changes');
+  // The frame load path must go through the shared push (it previously sent
+  // theme only, and read the raw localStorage key rather than the live value).
+  const load = hub.slice(hub.indexOf('function handleFrameLoad'), hub.indexOf("pageFrame.addEventListener('load'"));
+  assert.ok(load.includes('pushThemeToPages()'), 'frame load must push the full theme, not just data-theme');
+  assert.ok(!load.includes('jspl-hub-theme'), 'frame load must not re-read the raw storage key');
+});
+
+test('a page that changes its own theme pushes it back to the hub', async () => {
+  const hub = await read('index.html');
+  // Without this the hub's switch can read "dark" while the open dashboard is
+  // light, and the next page opened flips back to the hub's stale value.
+  const msg = hub.slice(hub.indexOf("window.addEventListener('message'"), hub.indexOf("addEventListener('storage'"));
+  assert.ok(/e\.data\.type === 'theme'/.test(msg), 'the hub must accept a theme message from a page');
+  assert.ok(/e\.source === pageFrame\.contentWindow/.test(msg), 'that message must be scoped to the embedded frame');
+  assert.ok(msg.includes('setTheme('), 'the hub must adopt the page-sent theme');
+});
+
+test('logging out forgets the stored theme and accent', async () => {
+  const hub = await read('index.html');
+  // Persistence is per device, so it must be cleared on logout or a shared
+  // machine hands the previous user's theme to the next person.
+  assert.ok(hub.includes('function clearStoredTheme'), 'a theme-clearing helper must exist');
+  const clear = hub.slice(hub.indexOf('function clearStoredTheme'), hub.indexOf('function bindLogoutThemeReset'));
+  assert.ok(clear.includes('removeItem(THEME_KEY)'), 'the theme key must be removed');
+  assert.ok(clear.includes('removeItem(ACCENT_KEY)'), 'the accent key must be removed');
+  // Bound to submit so it also runs when the logout request itself fails.
+  assert.ok(hub.includes('indexOf("/api/auth/logout")'), 'clearing must be bound to the logout form');
+});
+
+test('every page boots on the hub theme and accent before it first paints', async () => {
+  const boot = await read('theme-boot.js');
+  assert.ok(boot.includes('jspl-hub-theme') && boot.includes('jspl-hub-accent'),
+    'the boot script must read both stored preferences');
+  assert.ok(boot.includes('addEventListener("message"'), 'the boot script must accept a live push');
+  assert.ok(boot.includes('addEventListener("storage"'), 'the boot script must react to other tabs');
+  for (const page of pages) {
+    if (page === 'index.html') continue;
+    const src = await read(page);
+    assert.ok(src.includes('theme-boot.js'), `${page} must load theme-boot.js`);
+    // Loaded in <head> before the body renders, so the attributes are set on
+    // <html> before first paint rather than flipping a frame later.
+    const at = src.indexOf('theme-boot.js');
+    assert.ok(at < src.indexOf('</head>'), `${page} must load theme-boot.js in <head>`);
+  }
+});
+
+test('the pages with their own theme managers let the boot script drive them', async () => {
+  // Rake Planner and Order Status Report re-assert their own React state right
+  // after mount, which would stomp the attribute theme-boot.js just set. They
+  // opt in so their state settles on the hub's theme instead.
+  for (const page of ['Rake-Planner.html', 'Order-Status-Report.html']) {
+    const src = await read(page);
+    assert.ok(src.includes('__hub_apply_theme'), `${page} must expose __hub_apply_theme to theme-boot.js`);
+  }
+});
+
+test('the SMS planner no longer overrides the hub theme on load', async () => {
+  const sms = await read('SMS-Heat-Planner.html');
+  // This page kept its own smsPlannerTheme key and applied it unconditionally
+  // at the end of its script, so it always reverted to its own default and
+  // ignored the hub — the one page that visibly refused the chosen theme.
+  assert.ok(!/setTheme\(localStorage\.getItem\('smsPlannerTheme'\) \|\| 'dark'\);/.test(sms),
+    'the page must not unconditionally re-apply its legacy key at load');
+  assert.ok(sms.includes("localStorage.getItem('jspl-hub-theme')"), 'it must adopt the hub theme first');
 });

@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<script src="theme-boot.js"></script>
 <title>Plate Free-Stock Tagging</title>
 <link rel="icon" type="image/png" href="favicon.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -96,10 +97,40 @@ header{
    inline style attributes. */
 #hubFrameHeaderSlot button{width:40px !important;height:40px !important;min-width:40px !important;min-height:40px !important;max-width:40px !important;max-height:40px !important;padding:0 !important;border-radius:999px !important;box-sizing:border-box !important}
 #hubFrameHeaderSlot button img{width:100% !important;height:100% !important;border-radius:50% !important;object-fit:cover !important}
+/* The floating header shell is position:fixed (out of flow, full-bleed) on
+   desktop, where its own --page-gutter padding IS the page inset. Under 768px
+   the shared theme flips .app-header-shell to position:sticky, which puts it
+   back IN flow inside .wrap — and .wrap already applies that same gutter. The
+   page inset was therefore counted twice, so the header card came out 16px
+   narrower than every content block below it (measured header left=32 vs slot
+   left=16 on a 390px phone).
+
+   The fix is to drop the shell's --header-shell-gutter at this breakpoint and
+   let .wrap be the single source of the inset. Overriding padding-left/right
+   directly does NOT work here: the shared rule sets both with !important, so a
+   plain declaration loses regardless of specificity. Re-declaring the token to
+   0 instead feeds the same max(var(--header-shell-gutter),var(--safe-*))
+   expression, so the safe-area floor still applies in landscape notches while
+   the gutter is cancelled. The block padding is untouched — that is the
+   breathing room above the brand row, not a page inset. */
+@media(max-width:768px){
+  .page-plate .header-fixed{--header-shell-gutter:0px}
+}
+
 @media(max-width:640px){
 /* the mobile step is --page-gutter's job now (theme.css) */
 .wrap{padding:0 var(--page-side) 56px}
-.header-fixed{position:sticky;padding:8px 0 0;margin-bottom:14px}
+/* Breathing room between the sticky header and the first content block.
+   .step is display:none at this width, so on phones the shell's own 8px bottom
+   padding was the ONLY separation (measured 8px, against 51px on desktop) and
+   the header read as welded to the upload card. A single stack step restores
+   the same rhythm the desktop layout gets from the .step margin it hides.
+   --space-stack is the shared section tier in theme.css.
+   !important is required, not stylistic: the shared .app-header-shell rule
+   sets `margin:0 auto!important`, which would otherwise reset this to 0. This
+   mirrors how the theme itself overrides the sibling .header-spacer height for
+   .page-grade. */
+.header-fixed{margin-bottom:var(--space-stack)!important}
 header{padding:10px 12px;gap:10px;flex-direction:row;justify-content:flex-start;align-items:center;text-align:left}
 .header-brand{flex-direction:row;align-items:center;text-align:left;gap:8px;justify-content:flex-start}
 #hubFrameHeaderSlot{width:100%;justify-content:center;border-top:1px solid var(--br);padding-top:10px;margin-top:2px}

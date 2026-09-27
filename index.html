@@ -108,7 +108,7 @@ input { font: inherit; color: inherit; }
 }
 .theme-toggle {
   height: 40px; width: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
-  border-radius: var(--radius-pill); font-size: 16px; background: var(--input-bg); color: var(--tx); border: var(--glass-border);
+  border-radius: var(--radius-pill); font-size: 13px; background: var(--input-bg); color: var(--tx); border: var(--glass-border);
   box-shadow: none;
 }
 .reset-link {
@@ -188,6 +188,10 @@ input { font: inherit; color: inherit; }
      reason: nested inside .top-bar's own backdrop-filter stacking context
      it would only blur that ancestor's layer instead of the real page. */
   position: fixed; min-width: 200px;
+  /* Never wider than the viewport minus a gutter: the 200px minimum plus 14px
+     padding each side plus the 6 accent dots overflowed the right edge once
+     the panel was clamped to the left on a 320px screen. */
+  max-width: calc(100vw - 24px);
   background: var(--glass-bg-solid); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   border: var(--glass-border); border-radius: var(--radius-m); box-shadow: var(--glass-shadow);
   padding: 14px; display: none; flex-direction: column; gap: 10px; z-index: 400;
@@ -195,11 +199,29 @@ input { font: inherit; color: inherit; }
 .theme-panel.open { display: flex; }
 .theme-panel-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .theme-panel-label { font-size: 11px; font-weight: 700; color: var(--tm); text-transform: uppercase; letter-spacing: 0.4px; }
+/* The switch is a <button>, so theme.css's mobile tap-target rule
+   (`.page-hub button{min-height:44px!important}`) stretched this 22px-tall
+   track to 44px on mobile — the knob then sat at top:2px of a twice-as-tall
+   pill, so the control read as a broken, oversized toggle. The `!important`
+   there means a bare .mode-switch rule cannot win, so both the track height
+   and the min-height are re-pinned under .theme-panel.
+   The 44px touch target is NOT given up: .mode-switch::before extends the
+   hit area to a full 44px centred box around the visible track, so the
+   control is still comfortably tappable on a phone. */
 .mode-switch { width: 38px; height: 22px; border-radius: var(--radius-pill); background: var(--input-bg); border: var(--glass-border); position: relative; flex-shrink: 0; transition: background 0.15s ease; }
+.mode-switch::before {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  width: 44px; height: 44px; transform: translate(-50%, -50%);
+}
+.theme-panel .mode-switch { height: 22px !important; min-height: 22px !important; }
 .mode-switch.on { background: var(--md-sys-color-primary); }
-.mode-switch-knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: left 0.15s ease; }
+.mode-switch-knob { position: absolute; top: 50%; left: 2px; width: 16px; height: 16px; margin-top: -8px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: left 0.15s ease; }
 .mode-switch.on .mode-switch-knob { left: 18px; }
-.accent-swatches { display: flex; gap: 8px; }
+/* align-items:center is load-bearing, not cosmetic. This is a flex ROW, so the
+   cross axis is vertical and the default `stretch` would override each dot's
+   explicit height:24px, stretching every swatch to the row's height (~44px) and
+   rendering the circular colour dots as tall rounded pills. */
+.accent-swatches { display: flex; gap: 8px; align-items: center; }
 .accent-dot {
   width: 24px; height: 24px; border-radius: 50%; background: var(--dot); flex-shrink: 0;
   border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
@@ -207,6 +229,13 @@ input { font: inherit; color: inherit; }
 }
 .accent-dot:hover { transform: scale(1.12); }
 .accent-dot.active { border-color: var(--tx); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12), 0 0 0 2px var(--bg-color); }
+/* theme.css's mobile tap-target rule (`.page-hub button{min-height:44px!important}`)
+   applies to EVERY button on this page, including these 24px colour dots, which
+   overrode the height above and stretched each dot into a tall pill. The
+   `!important` in theme.css means a plain `.accent-dot` rule cannot win, so this
+   is scoped under .theme-panel with `!important` to match. Scoping it keeps the
+   shared 44px accessibility floor intact for every other control in the hub. */
+.theme-panel .accent-dot { min-height: 24px !important; }
 
 .login-wrap { display: none; align-items: center; justify-content: center; min-height: 60vh; padding: calc(var(--frame-top, 88px) + 28px) 24px 60px; }
 .login-box {
@@ -397,6 +426,21 @@ input { font: inherit; color: inherit; }
   .login-wrap { padding-top: 28px; }
 }
 
+/* The four header buttons must stay perfectly circular on touch layouts.
+   theme.css's tap-target block (`@media (pointer:coarse), (max-width:768px)`)
+   raises every `.page-hub button` to `min-height:44px !important`, but the
+   buttons are authored at a fixed 40x40. Height therefore jumped to 44 while
+   width stayed 40, and a `border-radius: 999px` on a non-square box clamps to
+   20px on the short axis — so the circles rendered as ovals. That block keys
+   partly off `pointer:coarse`, so it also fires on tablets and any coarse
+   pointer above 768px; matching its condition exactly (rather than guessing a
+   width) is what keeps the four buttons square at every size.
+
+   `.home-btn` is omitted on purpose: #homeBtn already carries `.add-btn`. */
+@media (pointer: coarse), (max-width: 768px) {
+  .theme-toggle, .reset-link, .add-btn, .user-btn { height: 44px; width: 44px; }
+}
+
 @media (max-width: 640px) {
   .top-wrapper { padding: 8px var(--page-gutter); }
   .top-bar { flex-wrap: wrap; align-items: center; padding: 12px; gap: 10px; }
@@ -419,7 +463,6 @@ input { font: inherit; color: inherit; }
 @media (max-width: 400px) {
   .top-bar { padding: 10px; gap: 10px; }
   .hdr-r { gap: 8px; }
-  .theme-toggle, .reset-link, .add-btn, .user-btn { height: 44px; width: 44px; }
   .stage { padding: 10px var(--page-gutter) 32px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
   .card { padding: 12px; gap: 8px; }
@@ -438,18 +481,21 @@ input { font: inherit; color: inherit; }
    dark slate) is all but invisible on the dark surface anyway.
    Timeline (delays are absolute; TOTAL_MS in the IIFE must match the last
    keyframe's end so the node is torn down just after the last frame lands):
-     0.00s  framing hairlines draw out from the centre
-     0.04s  crest rises and wipes open on its plate
-     0.12s  "Angul · Plate Mill" — glyphs cascade in
-     0.30s  JINDAL — glyphs rise, counter-rotate and wipe open
-     0.50s  STEEL — same cascade, offset, in the accent colour
-     0.70s  shimmer sweeps the crest silhouette
-     0.95s  accent rule draws L→R between the word and the sub
-     1.06s  "AI Planning Hub" — tighter cascade
-     1.20s  five meter segments fill in sequence, 70ms apart
-     1.84s  core defocuses out (must land before the shutters move at 2.14s,
-            otherwise the fading lockup ghosts over the revealing page)
-     2.14s  shutters part + seam flash  → ends 2.70s
+      0.00s  a soft bloom opens behind the lockup, then the framing
+             hairlines draw out from the centre
+      0.04s  crest rises out of a soft blur onto its plate
+      0.10s  "Angul · Plate Mill" — glyphs cascade in
+      0.30s  JINDAL — glyphs rise and wipe open
+      0.50s  STEEL — same cascade, offset, in the accent colour
+      0.86s  accent rule draws L→R between the word and the sub
+      0.98s  "AI Planning Hub" — tighter cascade
+      1.12s  five meter segments fill in sequence, 62ms apart
+      1.72s  the bloom breathes back out
+      1.80s  core defocuses out. It now begins while the meter is still
+             filling, so the lockup is never left sitting static before it
+             leaves — the old build stalled dead between the last segment
+             (~1.8s) and the exit starting at 1.84s.
+      2.05s  shutters part + seam flash  → ends 2.60s
    Glyph delays and durations are driven from CASCADE in the runtime IIFE so
    the cascade is defined in exactly one place; the CSS only supplies curves.
 
@@ -486,12 +532,13 @@ input { font: inherit; color: inherit; }
     radial-gradient(ellipse 70% 60% at 50% 0%, rgba(var(--primary-rgb), .16), transparent 62%),
     var(--bg);
 }
-/* The line of light that flashes along the seam as the halves part. */
+/* The line of light that flashes along the seam as the halves part. `filter` is
+   in the will-change list because kSeam now defocuses it on the way out. */
 .intro-seam {
   position: absolute; left: 0; top: 50%; width: 100%; height: 2px; margin-top: -1px;
   background: linear-gradient(90deg, transparent, rgba(var(--primary-rgb), .95), transparent);
   opacity: 0; transform: scaleX(.15);
-  will-change: transform, opacity;
+  will-change: transform, opacity, filter;
 }
 
 .intro-core {
@@ -508,6 +555,18 @@ input { font: inherit; color: inherit; }
 }
 .intro-rail-t { top: 24%; }
 .intro-rail-b { bottom: 24%; }
+/* A soft accent bloom behind the lockup. It gives the whole reveal a light
+   source to grow from instead of type materialising out of flat black, and
+   the slow breath on the way out is what stops the lockup looking frozen
+   while the last meter segments are still filling. Radial-gradient only:
+   no filter, so it costs one paint and never blurs a large area. */
+.intro-bloom {
+  position: absolute; left: 50%; top: 46%;
+  width: min(720px, 128vw); height: min(520px, 92vh);
+  transform: translate(-50%, -50%) scale(.72);
+  background: radial-gradient(ellipse at center, rgba(var(--primary-rgb), .20) 0%, rgba(var(--primary-rgb), .07) 38%, transparent 68%);
+  opacity: 0; will-change: transform, opacity;
+}
 .intro-lockup {
   display: flex; flex-direction: column; align-items: center;
   max-width: 100%;
@@ -552,15 +611,6 @@ input { font: inherit; color: inherit; }
 .intro-hero-2 { color: var(--primary); margin-top: -.06em; }
 /* Every glyph is its own inline-block so it can be transformed on its own. */
 .intro-ch { display: inline-block; will-change: transform, opacity; }
-/* Masked to the logo's own alpha, so the sheen only paints the mark. */
-.intro-sheen {
-  position: absolute; inset: 0; opacity: 0; transform: translateX(-115%);
-  background: linear-gradient(100deg, transparent 38%, rgba(255, 255, 255, .9) 50%, transparent 62%);
-  -webkit-mask-image: var(--intro-logo-url); mask-image: var(--intro-logo-url);
-  -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
-  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
-  will-change: transform, opacity;
-}
 .intro-sub {
   font-size: clamp(10px, 2.2vw, 12px); font-weight: 600;
   letter-spacing: .3em; text-transform: uppercase; color: var(--tm);
@@ -602,63 +652,97 @@ input { font: inherit; color: inherit; }
 .intro.is-active .intro-ch         { animation-name: kChar; animation-timing-function: cubic-bezier(.16,1,.3,1); animation-fill-mode: both; }
 .intro.is-active .intro-rail-t     { animation: kRail .50s cubic-bezier(.22,1,.36,1) both; }
 .intro.is-active .intro-rail-b     { animation: kRail .50s cubic-bezier(.22,1,.36,1) .06s both; }
-.intro.is-active .intro-crest      { animation: kCrest .60s cubic-bezier(.22,1,.36,1) .04s both; }
-.intro.is-active .intro-sheen      { animation: kSheen .70s ease .70s both; }
+.intro.is-active .intro-bloom      { animation: kBloom 1.72s cubic-bezier(.33,0,.2,1) both; }
+.intro.is-active .intro-crest      { animation: kCrest .68s cubic-bezier(.16,1,.3,1) .04s both; }
 .intro.is-active .intro-hero-1     { animation: kTrack .62s cubic-bezier(.16,1,.3,1) .30s both, kFocus .62s cubic-bezier(.2,0,.2,1) .30s both; }
 .intro.is-active .intro-hero-2     { animation: kTrack .62s cubic-bezier(.16,1,.3,1) .50s both, kFocus .62s cubic-bezier(.2,0,.2,1) .50s both; }
-.intro.is-active .intro-rule       { animation: kRule .50s cubic-bezier(.22,1,.36,1) .95s both; }
-/* Five segments, 70ms apart, each 300ms — last one lands at 1.78s, just
-   clear of the 1.84s core exit. */
+.intro.is-active .intro-rule       { animation: kRule .50s cubic-bezier(.22,1,.36,1) .86s both; }
+/* Five segments, 62ms apart, each 300ms: the last one now lands at 1.53s,
+   leaving a clear 270ms of the core exit already in flight before it fires. */
 .intro.is-active .intro-meter > i::before { animation: kFill .30s cubic-bezier(.4,0,.2,1) both; }
-.intro.is-active .intro-meter > i:nth-child(1)::before { animation-delay: 1.20s; }
-.intro.is-active .intro-meter > i:nth-child(2)::before { animation-delay: 1.27s; }
-.intro.is-active .intro-meter > i:nth-child(3)::before { animation-delay: 1.34s; }
-.intro.is-active .intro-meter > i:nth-child(4)::before { animation-delay: 1.41s; }
-.intro.is-active .intro-meter > i:nth-child(5)::before { animation-delay: 1.48s; }
+.intro.is-active .intro-meter > i:nth-child(1)::before { animation-delay: 1.12s; }
+.intro.is-active .intro-meter > i:nth-child(2)::before { animation-delay: 1.182s; }
+.intro.is-active .intro-meter > i:nth-child(3)::before { animation-delay: 1.244s; }
+.intro.is-active .intro-meter > i:nth-child(4)::before { animation-delay: 1.306s; }
+.intro.is-active .intro-meter > i:nth-child(5)::before { animation-delay: 1.368s; }
 .intro.is-active .intro-skip       { animation: kSkip .35s ease .55s both; }
-.intro.is-active .intro-core       { animation: kOut .30s ease 1.84s both; }
-.intro.is-active .intro-seam       { animation: kSeam .56s ease 2.14s both; }
-.intro.is-active .intro-shutter-t  { animation: kPart  .56s cubic-bezier(.76,0,.24,1) 2.14s both; }
-.intro.is-active .intro-shutter-b  { animation: kPartB .56s cubic-bezier(.76,0,.24,1) 2.14s both; }
+/* Exit overlaps the meter instead of queueing behind it, and the longer 340ms
+   ramp (was 300ms) with a gentler end state keeps the lockup from visibly
+   snapping out from under the reader. */
+.intro.is-active .intro-core       { animation: kOut .34s cubic-bezier(.4,0,.6,1) 1.80s both; }
+.intro.is-active .intro-seam       { animation: kSeam .55s ease 2.05s both; }
+.intro.is-active .intro-shutter-t  { animation: kPart  .55s cubic-bezier(.76,0,.24,1) 2.05s both; }
+.intro.is-active .intro-shutter-b  { animation: kPartB .55s cubic-bezier(.76,0,.24,1) 2.05s both; }
 
-/* The signature beat. A glyph rises out of its own baseline, tilts, and is
-   revealed by a clip that opens upward — so it reads as being *set* rather
-   than faded in. transform + clip-path + opacity only; no layout, and the
-   per-glyph blur is deliberately NOT here (41 simultaneously blurring spans
-   would be the one genuinely expensive thing in this animation). */
+/* The signature beat. A glyph rises out of its own baseline and is revealed
+   by a clip that opens upward, so it reads as being *set* rather than faded
+   in. The rotation is gone: at a 30ms per-glyph step a 4deg tilt made the
+   word read as a wobble rather than a settle, and it fought the tracking
+   collapse running on the parent. transform + clip-path + opacity only, and
+   the per-glyph blur is deliberately NOT here (41 simultaneously blurring
+   spans would be the one genuinely expensive thing in this animation). */
 @keyframes kChar {
-  0%   { opacity: 0; transform: translateY(.42em) rotate(4deg); clip-path: inset(0 0 100% 0) }
+  0%   { opacity: 0; transform: translateY(.42em); clip-path: inset(0 0 100% 0) }
   55%  { opacity: 1 }
   100% { opacity: 1; transform: none; clip-path: inset(0 0 -.24em 0) }
 }
-/* Tracking collapses from loose to tight as the word lands — the other half
+/* Tracking collapses from loose to tight as the word lands: the other half
    of the kinetic-typography read, and what live type can do that the bitmap
    never could. */
 @keyframes kTrack { from { letter-spacing: .17em } to { letter-spacing: .04em } }
-/* A short focus-pull so each word resolves as a unit once its glyphs arrive. */
+/* A short focus-pull so each word resolves as a unit once its glyphs arrive.
+   Held longer past the halfway mark (was 60%) so the last glyphs to land do
+   not resolve out of focus while the first ones are already sharp. */
 @keyframes kFocus {
   0%   { filter: blur(9px) }
-  60%, 100% { filter: blur(0) }
+  75%, 100% { filter: blur(0) }
 }
 @keyframes kRail  { from { transform: scaleX(0) } to { transform: scaleX(1) } }
 @keyframes kRule  { from { transform: scaleX(0) } to { transform: scaleX(1) } }
 @keyframes kFill  { from { transform: scaleX(0) } to { transform: scaleX(1) } }
-@keyframes kCrest {
-  0%   { opacity: 0; transform: translateY(-10px) scale(.94); clip-path: inset(0 0 100% 0) }
-  100% { opacity: 1; transform: none; clip-path: inset(0 0 -24% 0) }
-}
-@keyframes kSheen {
-  0%   { opacity: 0; transform: translateX(-115%) }
+/* The bloom opens with the type and eases back out on its own, so there is
+   always something in motion. The final scale is very slightly under 1, which
+   reads as the light receding rather than the element being switched off. */
+@keyframes kBloom {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(.72) }
   18%  { opacity: 1 }
-  100% { opacity: 0; transform: translateX(115%) }
+  62%  { opacity: 1; transform: translate(-50%, -50%) scale(1.04) }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(.92) }
+}
+/* The crest joins the kinetic cascade instead of getting its own entrance.
+   It used to arrive on a separate timeline via a "shimmer" — a white bar
+   masked to the logo and swept with translateX(-115%) -> 115%. Two problems:
+   it travelled against a 100px-wide element, so it started ~115px off to the
+   left and read as a bright rectangle sliding in from the edge of the screen
+   rather than a highlight on the mark; and a hard-edged bar crossing a
+   rounded plate is not motion typography, it is a wipe. The lockup is one
+   typographic object, so the crest now resolves in the same language as the
+   words: a soft focus-pull up out of blur with a slight settle, timed to land
+   just ahead of the eyebrow so the whole block assembles in one gesture. */
+@keyframes kCrest {
+  0%   { opacity: 0; transform: translateY(-10px) scale(.94); filter: blur(8px) }
+  60%  { opacity: 1 }
+  100% { opacity: 1; transform: none; filter: blur(0) }
 }
 @keyframes kSkip { from { opacity: 0; transform: translateY(8px) } to { opacity: .85; transform: none } }
-/* Unified exit: the whole lockup defocuses and drifts up as one object. */
-@keyframes kOut  { from { opacity: 1; transform: none; filter: blur(0) } to { opacity: 0; transform: translateY(-10px) scale(1.03); filter: blur(7px) } }
+/* Unified exit: the whole lockup defocuses and drifts up as one object. The
+   end state stays closer to neutral (was scale 1.03 / blur 7px) so the exit
+   reads as a soft dissolve instead of a jump-cut away from the reader. */
+@keyframes kOut  { from { opacity: 1; transform: none; filter: blur(0) } to { opacity: 0; transform: translateY(-8px) scale(1.015); filter: blur(5px) } }
+/* The seam flash. It has to leave the same way the lockup does, or it reads as
+   a hard accent rule hanging in mid-air while the type dissolves around it:
+   kSeam used to hold a crisp `scaleX(1)` from 22% to 100% and only fade, so the
+   sharpest thing on screen was the last thing still resolvable. The flash itself
+   is unchanged (that part is correct and reads as light escaping the seam), but
+   the release now widens and defocuses it: the line opens out past the viewport
+   and blurs away in sympathy with kOut, so nothing on screen stays crisp after
+   the shutter has begun to move. scaleY is animated too so the 2px rule has
+   some vertical mass to disperse rather than thinning as it goes. */
 @keyframes kSeam {
-  0%   { opacity: 0; transform: scaleX(.15) }
-  22%  { opacity: 1; transform: scaleX(1) }
-  100% { opacity: 0; transform: scaleX(1) }
+  0%   { opacity: 0; transform: scaleX(.15) scaleY(1); filter: blur(0) }
+  22%  { opacity: 1; transform: scaleX(1) scaleY(1); filter: blur(0) }
+  60%  { opacity: .85; transform: scaleX(1.5) scaleY(2.4); filter: blur(2px) }
+  100% { opacity: 0; transform: scaleX(2.4) scaleY(5); filter: blur(9px) }
 }
 @keyframes kPart  { from { transform: translateY(0) } to { transform: translateY(-101%) } }
 @keyframes kPartB { from { transform: translateY(0) } to { transform: translateY(101%) } }
@@ -694,6 +778,10 @@ input { font: inherit; color: inherit; }
     <div class="intro-shutter intro-shutter-t"></div>
     <div class="intro-shutter intro-shutter-b"></div>
     <div class="intro-seam"></div>
+    <!-- Behind the lockup: a soft accent glow the type appears to be lit by.
+         Sits above the shutters (so the reveal shows it) but below .intro-core,
+         which carries its own opacity animation. -->
+    <div class="intro-bloom"></div>
     <div class="intro-core">
       <span class="intro-rail intro-rail-t"></span>
       <span class="intro-rail intro-rail-b"></span>
@@ -707,7 +795,6 @@ input { font: inherit; color: inherit; }
         <div class="intro-crest">
           <div class="intro-logo-box">
             <img class="intro-logo" alt="" decoding="async">
-            <span class="intro-sheen"></span>
           </div>
         </div>
         <div class="intro-eyebrow">Angul &middot; Plate Mill</div>
@@ -1780,9 +1867,12 @@ function installFrameHeaderControls(){
 }
 
 function handleFrameLoad(){
-  try{
-    pageFrame.contentWindow.postMessage({type:'theme', value: localStorage.getItem('jspl-hub-theme') || root.getAttribute('data-theme')}, '*');
-  }catch(e){}
+  // Push theme AND accent, from the in-memory values rather than re-reading
+  // localStorage. The old line only sent `theme` and read the raw key, so a
+  // page's accent never followed the hub and an unrecognised stored value could
+  // be broadcast verbatim. pushThemeToPages() re-applies shortly after load
+  // too, which covers pages that render their header asynchronously.
+  pushThemeToPages();
   installFrameHeaderControls();
   requestAnimationFrame(updateFrameTop);
   var fs = document.getElementById('frameSkeleton');
@@ -1802,6 +1892,45 @@ window.addEventListener('message', function(e){
     if(e.data && e.data.type === 'request-ebtp-fetch'){
       try{ fetchAndCacheEBTP(!!e.data.force); }catch(err){}
       try{ fetchAndCacheSegment(!!e.data.force); }catch(err){}
+    }
+    // A page that changed its OWN theme (e.g. Rake Planner's dark/light/auto
+    // control) tells the hub, so the hub adopts it and propagates it onward to
+    // every other page and tab. Without this the hub's switch could still read
+    // "dark" while the open dashboard is light, and the next page opened would
+    // flip back to the hub's stale value.
+    if(e.data && e.data.type === 'theme' && e.data.value && e.source === pageFrame.contentWindow){
+      try{
+        if(root.getAttribute('data-theme') !== e.data.value) setTheme(e.data.value);
+      }catch(err){}
+    }
+    if(e.data && e.data.type === 'accent' && e.data.value && e.source === pageFrame.contentWindow){
+      try{
+        if(root.getAttribute('data-accent') !== e.data.value) setAccent(e.data.value);
+      }catch(err){}
+    }
+  }catch(err){}
+});
+
+// Cross-tab: localStorage's `storage` event fires in OTHER tabs of the same
+// origin when a key changes, which neither a storage read nor postMessage can
+// observe. This is what keeps a second open tab (or a page opened standalone)
+// in step with a theme change made in the hub. `e.newValue` is null when the
+// key is removed — the logout path — so that case is handled too.
+window.addEventListener('storage', function(e){
+  if(!e || !e.key) return;
+  try{
+    if(e.key === THEME_KEY){
+      if(e.newValue === null){
+        if(root.getAttribute('data-theme') !== 'dark') setTheme('dark');
+      } else if(VALID_THEMES.indexOf(e.newValue) !== -1 && root.getAttribute('data-theme') !== e.newValue){
+        setTheme(e.newValue);
+      }
+    } else if(e.key === ACCENT_KEY){
+      if(e.newValue === null){
+        if(root.getAttribute('data-accent') !== 'blue') setAccent('blue');
+      } else if(ACCENTS.indexOf(e.newValue) !== -1 && root.getAttribute('data-accent') !== e.newValue){
+        setAccent(e.newValue);
+      }
     }
   }catch(err){}
 });
@@ -2010,30 +2139,162 @@ function syncInjectedFrameHomeAccent(){
     });
   }catch(e){}
 }
+/* ═══════════ Theme propagation (hub is the single source of truth) ═══════════
+   The hub owns the theme. Every other page is a consumer: it adopts the
+   hub's value on load, and stays in step while it is open, whether the user
+   changes the theme in the hub, in a page, or in another browser tab.
+
+   Three channels, each covering a case the others cannot:
+     1. localStorage  — survives reloads and full page navigations (a page
+        opened directly still reads the stored value on boot).
+     2. postMessage   — pushes live into the embedded iframe and its nested
+        frames, including pages that mount their UI asynchronously.
+     3. storage event — catches changes made in ANOTHER tab, which neither
+        storage reads nor postMessage can see (they are per-document).
+   Channels 1 and 3 are why the theme persists per device; both are cleared
+   on logout so the next person to sign in on a shared machine starts fresh. */
+
+var THEME_KEY = "jspl-hub-theme";
+var ACCENT_KEY = "jspl-hub-accent";
+var ACCENTS = ["blue","green","grey","violet","rose","orange"];
+var LEGACY_THEME_KEYS = ["jspl-theme", "jspl-osr-theme"];
+var VALID_THEMES = ["light", "dark"];
+
+function readStoredTheme(){
+  var t = null;
+  try{ t = localStorage.getItem(THEME_KEY); }catch(e){}
+  if(VALID_THEMES.indexOf(t) === -1) t = null;
+  // Rake Planner and Order Status Report historically kept their own pref
+  // keys. If one of those is set and the shared key never was, adopt it so
+  // opening that page standalone doesn't silently disagree with the hub.
+  if(!t){
+    for(var i = 0; i < LEGACY_THEME_KEYS.length; i++){
+      var legacy = null;
+      try{ legacy = localStorage.getItem(LEGACY_THEME_KEYS[i]); }catch(e){}
+      if(VALID_THEMES.indexOf(legacy) !== -1){ t = legacy; break; }
+    }
+  }
+  return t || "dark";
+}
+function readStoredAccent(){
+  var a = null;
+  try{ a = localStorage.getItem(ACCENT_KEY); }catch(e){}
+  return (ACCENTS && ACCENTS.indexOf(a) !== -1) ? a : "blue";
+}
+
+// Mirror the hub's current theme/accent onto a page document. Applied as a
+// direct attribute write rather than only via the page's own handler, so it
+// works for pages that expose no __hub_handle_theme at all.
+function applyThemeToDocument(doc){
+  if(!doc || !doc.documentElement) return;
+  try{ doc.documentElement.setAttribute("data-theme", root.getAttribute("data-theme")); }catch(e){}
+  try{ doc.documentElement.setAttribute("data-accent", root.getAttribute("data-accent") || "blue"); }catch(e){}
+}
+
+// Push the current theme to the embedded page and everything nested in it.
+// Re-applies on a short delay because pages that render their header from an
+// async fetch (Order Status Report) mount their markup after first paint and
+// would otherwise repaint back to their own default.
+function pushThemeToPages(){
+  var theme = root.getAttribute("data-theme");
+  var accent = root.getAttribute("data-accent") || "blue";
+  try{
+    if(!pageFrame || !pageFrame.contentWindow) return;
+    applyThemeToDocument(pageFrame.contentWindow.document);
+    var post = function(win){
+      try{ win.postMessage({ type: "theme", value: theme }, "*"); }catch(e){}
+      try{ win.postMessage({ type: "accent", value: accent }, "*"); }catch(e){}
+    };
+    post(pageFrame.contentWindow);
+    try{
+      Array.prototype.forEach.call(pageFrame.contentWindow.frames || [], function(f){ post(f); });
+    }catch(e){}
+  }catch(e){}
+  clearTimeout(pushThemeToPages._t);
+  pushThemeToPages._t = setTimeout(pushThemeToPages, 400);
+}
+
+// Keep the panel's switch showing the real current state, whichever path
+// changed the theme last. Guarded because setTheme() runs before this panel's
+// own setup has bound it.
+function syncModeSwitchControl(){
+  try{
+    var modeSwitch = document.getElementById("modeSwitch");
+    if(!modeSwitch) return;
+    var isDark = root.getAttribute("data-theme") === "dark";
+    modeSwitch.classList.toggle("on", isDark);
+    modeSwitch.setAttribute("aria-checked", isDark ? "true" : "false");
+  }catch(e){}
+}
+
+// Forget the stored theme/accent so the next sign-in on a shared device starts
+// from the default instead of inheriting the previous user's choice. Bound to
+// the logout submit (see bindLogoutThemeReset) rather than to the response, so
+// it runs even if the logout request itself fails — leaving a stale theme
+// behind would be the one outcome the user is trying to avoid. The local
+// values are reset to match, so the page being unloaded is also consistent.
+function clearStoredTheme(){
+  try{
+    localStorage.removeItem(THEME_KEY);
+    localStorage.removeItem(ACCENT_KEY);
+  }catch(e){}
+  try{
+    root.setAttribute("data-theme", "dark");
+    root.setAttribute("data-accent", "blue");
+  }catch(e){}
+}
+
+function bindLogoutThemeReset(){
+  // Both logout entry points are forms posting to /api/auth/logout: the hub's
+  // own user panel, and the one the hub injects into an in-frame dashboard.
+  // Binding on 'submit' covers a click, Enter in a text field, and any future
+  // programmatic form.submit() alike.
+  try{
+    document.addEventListener("submit", function(e){
+      var form = e.target;
+      if(!form || !form.action) return;
+      if(form.action.indexOf("/api/auth/logout") !== -1) clearStoredTheme();
+    }, true);
+  }catch(e){}
+}
+bindLogoutThemeReset();
+
 function setTheme(theme){
+  // Normalise at the boundary: every other page in the hub treats anything
+  // that isn't exactly "light" as dark, so an unexpected value must never be
+  // written to storage or broadcast — it would leave one page light and the
+  // rest dark.
+  theme = theme === "light" ? "light" : "dark";
   root.setAttribute("data-theme", theme);
-  localStorage.setItem("jspl-hub-theme", theme);
+  try{ localStorage.setItem("jspl-hub-theme", theme); }catch(e){}
   themeBtn.innerHTML = theme === "dark"
     ? "<svg viewBox='0 0 24 24' aria-hidden='true'><path d='M12 3v2.5'></path><path d='M12 18.5V21'></path><path d='M4.93 4.93l1.77 1.77'></path><path d='M17.3 17.3l1.77 1.77'></path><path d='M3 12h2.5'></path><path d='M18.5 12H21'></path><path d='M4.93 19.07l1.77-1.77'></path><path d='M17.3 6.7l1.77-1.77'></path><circle cx='12' cy='12' r='4'></circle></svg>"
     : "<svg viewBox='0 0 24 24' aria-hidden='true'><path d='M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z'></path></svg>";
+  themeBtn.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+  themeBtn.setAttribute("aria-label", theme === "dark" ? "Theme: dark. Switch to light" : "Theme: light. Switch to dark");
   syncInjectedFrameHomeAccent();
-  // notify iframe(s) about theme change
-  try{ if(pageFrame && pageFrame.contentWindow) pageFrame.contentWindow.postMessage({type:'theme', value: theme}, '*'); }catch(e){}
+  // Keep the panel's own switch in step when the theme changes from anywhere
+  // else (a message from a page, another tab) and not just from its click.
+  syncModeSwitchControl();
+  pushThemeToPages();
 }
-setTheme(localStorage.getItem("jspl-hub-theme") || "dark");
+setTheme(readStoredTheme());
 
 /* ─── Accent color ─── */
-var ACCENT_KEY = "jspl-hub-accent";
 function setAccent(accent){
+  // Same reasoning as setTheme: only ever persist a value theme.css actually
+  // defines an :root[data-accent=...] block for, so no page can end up on an
+  // attribute that silently falls back to the default blue.
+  if(ACCENTS.indexOf(accent) === -1) accent = "blue";
   root.setAttribute("data-accent", accent);
-  localStorage.setItem(ACCENT_KEY, accent);
+  try{ localStorage.setItem(ACCENT_KEY, accent); }catch(e){}
   document.querySelectorAll(".accent-dot").forEach(function(dot){
     dot.classList.toggle("active", dot.getAttribute("data-accent") === accent);
   });
   syncInjectedFrameHomeAccent();
-  try{ if(pageFrame && pageFrame.contentWindow) pageFrame.contentWindow.postMessage({type:'accent', value: accent}, '*'); }catch(e){}
+  pushThemeToPages();
 }
-setAccent(localStorage.getItem(ACCENT_KEY) || "blue");
+setAccent(readStoredAccent());
 
 (function(){
   var themeMenu = document.getElementById("themeMenu");
@@ -2044,23 +2305,65 @@ setAccent(localStorage.getItem(ACCENT_KEY) || "blue");
   // Same fixed + body-appended pattern as .user-panel — see CSS note.
   document.body.appendChild(themePanel);
   var positionThemePanel = function(){
+    var vw = document.documentElement.clientWidth;
+    var vh = document.documentElement.clientHeight;
     var rect = themeBtn.getBoundingClientRect();
-    themePanel.style.top = (rect.bottom + 10) + "px";
-    themePanel.style.right = Math.max(16, (document.documentElement.clientWidth - rect.right)) + "px";
+    var gutter = 12;
+    // Measure WITHOUT depending on the panel being open. This runs before
+    // .open is applied (and again from the resize handler, where it is open),
+    // and a closed panel is `display:none`, so both offsetWidth and
+    // getBoundingClientRect() return a zero box — the clamp below would then
+    // be computed against width 0 and the panel would still run off-screen.
+    // Apply .open for the duration of the measurement, then put it back, so
+    // the real laid-out size is read in both the opening and resize paths.
+    var wasOpen = themePanel.classList.contains("open");
+    if(!wasOpen) themePanel.classList.add("open");
+    var box = themePanel.getBoundingClientRect();
+    if(!wasOpen) themePanel.classList.remove("open");
+    var panelW = box.width;
+    var panelH = box.height;
+    // Clamp the panel's left edge to the viewport. Anchoring purely to the
+    // button's right edge (the old behaviour) is correct on desktop, where the
+    // button hugs the screen edge, but wrong on mobile: .hdr-r is
+    // `justify-content:center`, so the theme button sits mid-row and the panel's
+    // right edge landed mid-screen, running the panel off the LEFT edge
+    // entirely (measured panelLeft=-6 at 320px). Left-aligning to the button,
+    // then clamping so the panel can never cross either viewport edge, makes
+    // the panel screen-relative at every breakpoint.
+    var left = Math.min(
+      Math.max(gutter, rect.left),
+      Math.max(gutter, vw - panelW - gutter)
+    );
+    themePanel.style.left = left + "px";
+    themePanel.style.right = "auto";
+    // Keep the panel on screen vertically too: on a short viewport (or a
+    // landscape phone) the button can sit low enough that top+height would
+    // fall past the bottom edge, hiding the accent row entirely.
+    var top = rect.bottom + 10;
+    if (top + panelH > vh - gutter) {
+      top = Math.max(gutter, rect.top - panelH - 10);
+    }
+    themePanel.style.top = top + "px";
   };
-  var syncModeSwitch = function(){
-    modeSwitch.classList.toggle("on", root.getAttribute("data-theme") === "dark");
-  };
-  syncModeSwitch();
+  syncModeSwitchControl();
 
   themeBtn.addEventListener("click", function(e){
     e.stopPropagation();
     if(!themePanel.classList.contains("open")) positionThemePanel();
     themePanel.classList.toggle("open");
   });
+  // The switch is a real <button>, so Enter/Space already fire `click` and are
+  // handled below. Only the arrow-key affordance a real switch is expected to
+  // have is added here, so keyboard users can flip it without hunting for Tab.
   modeSwitch.addEventListener("click", function(){
     setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
-    syncModeSwitch();
+  });
+  modeSwitch.addEventListener("keydown", function(e){
+    if(e.key === "ArrowLeft" || e.key === "ArrowRight"){
+      e.preventDefault();
+      // ArrowRight drives it on, ArrowLeft off, regardless of current state.
+      setTheme(e.key === "ArrowRight" ? "dark" : "light");
+    }
   });
   document.querySelectorAll(".accent-dot").forEach(function(dot){
     dot.addEventListener("click", function(){ setAccent(dot.getAttribute("data-accent")); });
@@ -2478,31 +2781,31 @@ function fetchAndCacheSegment(force){
   "use strict";
 
   var SESSION_KEY = "jspl-intro-seen";
-  // Must match the last keyframe's end in the CSS (2.14s delay + .56s run),
+  // Must match the last keyframe's end in the CSS (2.05s delay + .55s run),
   // plus a beat of slack so the overlay is never torn off mid-frame.
-  var TOTAL_MS = 2800;
+  var TOTAL_MS = 2700;
   // The hub's own chrome starts settling as the shutters part, NOT after they
   // finish. Sequencing it afterwards would leave a ~0.8s tail where a card's
   // introCardIn animation is still running, and a running animation outranks
-  // the inline transform animateCardReflow() writes — freezing a drag. Started
-  // here, the last card lands at 2140 + 6*34 + 380 = 2724ms, just inside
+  // the inline transform animateCardReflow() writes - freezing a drag. Started
+  // here, the last card lands at 2050 + 6*34 + 380 = 2634ms, just inside
   // TOTAL_MS, and by then the overlay was blocking the grid anyway.
-  var CHROME_AT_MS = 2140;
+  var CHROME_AT_MS = 2050;
   var CARD_STAGGER_MS = 34;
   var CARD_DUR_MS = 380;
 
   /* Kinetic cascade, as [selector, base delay, per-glyph step, duration] in ms.
-     This is the single source of truth for the choreography — the CSS only
+     This is the single source of truth for the choreography - the CSS only
      supplies the curves, so retiming the sequence means editing this table
-     rather than hunting through the stylesheet. Times must stay under the
-     1.84s core exit, or the type is still landing as the shutters start to
+     rather than hunting through the stylesheet. Times must stay clear of the
+     1.80s core exit, or the type is still landing as the shutters start to
      part. Spaces are preserved as text nodes and still consume an index, so
      a gap widens at the same rate as the letters around it. */
   var CASCADE = [
-    [".intro-eyebrow", 120, 15, 480],
+    [".intro-eyebrow", 100, 15, 480],
     [".intro-hero-1", 300, 30, 620],
     [".intro-hero-2", 500, 32, 620],
-    [".intro-sub",    1060, 16, 460]
+    [".intro-sub",     980, 16, 460]
   ];
 
   /* Splits each cascade host into one inline-block span per glyph and writes
@@ -2613,9 +2916,6 @@ function fetchAndCacheSegment(force){
 
     node = tpl.content.firstElementChild.cloneNode(true);
     node.classList.add("is-active");
-    // The base64 is a plain data URI with no quotes, so this is safe to embed
-    // in a url() token; it keeps the ~78 KB of base64 in exactly one place.
-    node.style.setProperty("--intro-logo-url", 'url("' + logoSrc + '")');
     var img = node.querySelector(".intro-logo");
     if (img) img.src = logoSrc;
     // Split the type into per-glyph spans on the fresh clone, before the

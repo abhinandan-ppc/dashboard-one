@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<script src="theme-boot.js"></script>
 <title>Angul PlateMill Rake Planner · Jindal Steel</title>
 <link rel="icon" type="image/png" href="favicon.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -26,6 +27,25 @@ body{
 
 /* ── Interaction states (page-specific !important override) ── */
 input:focus{outline:none;border-color:var(--amber) !important;box-shadow:var(--shadow-glow-amber);background:var(--s0);}
+
+/* ── KPI strip: horizontal scroll affordance ──
+   On narrow screens the KPI strip scrolls sideways (see the strip in App).
+   Two things made that read as a broken layout rather than a scrollable strip:
+   the themed 5px scrollbar drew a grey bar directly under the cards, and a
+   swipe could come to rest at any offset, so a card's number was routinely
+   sliced by the viewport edge ("1,35,96…" instead of "1,35,960"). Suppressing
+   the bar and snapping to whole cards fixes both: the card peeking in from the
+   right now unambiguously means "more KPIs this way". `proximity` (not
+   `mandatory`) is deliberate — it only snaps when a swipe is already close to a
+   card boundary, so it never traps a fast flick that was meant to skip ahead.
+   scroll-padding-inline mirrors the strip's own inline padding: the snapport
+   starts inside the scroll container, so without it the first card would snap
+   flush to the viewport edge and the strip would lose its gutter alignment.
+   Scoped to .page-rake so no other page's scrollers inherit it. */
+.page-rake .kpi-strip{scroll-snap-type:x proximity;scroll-padding-inline:var(--page-gutter)}
+.page-rake .kpi-strip>div{scroll-snap-align:start}
+.page-rake .kpi-strip::-webkit-scrollbar{height:0;width:0}
+.page-rake .kpi-strip{scrollbar-width:none;-ms-overflow-style:none}
 
 /* ── Table ── */
 table{border-collapse:collapse}
@@ -2853,7 +2873,15 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
   // Reset the search pin when switching to a different rake/siding
   useEffect(()=>{setSearchResult(null);setSearchQ('');setSearchErr('');},[rakePlan.siding,rakeIdx]);
 
-  return<><div style={{position:'fixed',inset:0,zIndex:300,background:'rgba(2,5,18,.88)',
+  // zIndex must clear the shared .app-header-shell (320 !important in theme.css).
+  // At the old 300 this full-screen map dialog was painted UNDER the page's
+  // sticky header on narrow screens, so the bar and its buttons floated on top
+  // of the map. The overlay stack is now, bottom to top: header 320, filter
+  // drawer scrim/panel 340/341, analysis dialogs 400, combine 500, this map
+  // 520, the overview map 600, and the drill panels 620 — so a drill-down
+  // opened from either map still paints on top, which is why neither map can
+  // simply take the highest number.
+  return<><div style={{position:'fixed',inset:0,zIndex:520,background:'rgba(2,5,18,.88)',
     backdropFilter:'blur(5px)',display:'flex',alignItems:'center',justifyContent:'center',
     animation:'fadeUp .18s ease-out'}}
     onClick={e=>e.target===e.currentTarget&&onClose()}>
@@ -3765,7 +3793,10 @@ function RakeDrillPanel({rakePlan,rakeIdx,onClose,mob}){
     return undefined;
   };
 
-  return<div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:500,
+  // 620, not 500: drill panels are opened from INSIDE the map dialogs (520 and
+  // 600), so they must paint above every full-screen overlay on the page —
+  // otherwise the panel they open from covers its own drill-down.
+  return<div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:620,
     background:'rgba(13,18,28,.88)',
     backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
     borderTop:`1px solid ${rc.bdr}`,
@@ -4437,7 +4468,10 @@ function DrillPanel({rows,info,onClose,mob}){
     return()=>{handle.removeEventListener('mousedown',onDown);handle.removeEventListener('touchstart',onDown);};
   },[mob]);
 
-  return<div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:500,
+  // 620, not 500: drill panels are opened from INSIDE the map dialogs (520 and
+  // 600), so they must paint above every full-screen overlay on the page —
+  // otherwise the panel they open from covers its own drill-down.
+  return<div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:620,
     background:'var(--glass-hi)',
     backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
     borderTop:'1px solid var(--glass-border-hi)',
@@ -5053,6 +5087,15 @@ function App(){
       if(normalized !== 'dark' && normalized !== 'light' && normalized !== 'auto') return;
       setPref(normalized);
       try{ localStorage.setItem('jspl-hub-theme', normalized); }catch(err){}
+    };
+    // theme-boot.js applies the hub's stored theme to <html> before first paint,
+    // but this page's own effect (above) re-asserts its React state right after
+    // mount and would stomp that attribute back to this page's default. Handing
+    // the boot script our state setter lets it drive `pref` instead, so the page
+    // boots on the hub's theme rather than flipping to it a frame later.
+    window.__hub_apply_theme = function(themeValue){
+      var normalized = String(themeValue || '').toLowerCase();
+      if(normalized === 'dark' || normalized === 'light') setPref(normalized);
     };
     return ()=>{
       try{ delete window.__hub_handle_theme; }catch(err){ window.__hub_handle_theme = undefined; }
@@ -5717,6 +5760,14 @@ function App(){
         removes the ellipsis without hiding a digit. Wide screens keep the
         wrapping, fill-the-row layout.
 
+        Horizontal inset comes from --page-gutter, NOT a 12/24 literal branch:
+        this strip is a full-width page band, so a hardcoded inset put the cards
+        8px outboard of the Actual Rake Plan / Order Release Summary tables on
+        phones (measured 24px here vs a 16px gutter below) and 4px outboard on
+        tablet. The token already steps 16/20/24 to match every other block, and
+        it doubles as the scroll container's end padding, so the last card keeps
+        its breathing room when the strip is scrolled fully right.
+
         Vertical rhythm: the desktop clearance spacer already appends 12px of
         breathing room below the fixed header, so this strip's own 12px top
         padding stacks on top of it and the effective gap above the cards is
@@ -5724,8 +5775,13 @@ function App(){
         half as far from the tables below as from the header — that mismatch is
         what made the strip read as attached to the content under it. On mobile
         the header is sticky and in flow with a 0 spacer, so the gap above is
-        just the 12px top padding and the bottom stays 12px. */}
-    <div className="kpi-strip" style={{display:'flex',padding:`12px ${mob?12:24}px ${mob?12:'var(--space-stack)'}`,flexShrink:0,
+        just the 12px top padding and the bottom stays 12px.
+
+        Scroll affordance lives in the page stylesheet (.page-rake .kpi-strip):
+        the 5px themed scrollbar is suppressed and scroll-snap makes a swipe
+        rest on a whole card, so the card peeking in from the right reads as
+        "more KPIs this way" instead of a number sliced in half. */}
+    <div className="kpi-strip" style={{display:'flex',padding:`12px var(--page-gutter) ${mob?'12px':'var(--space-stack)'}`,flexShrink:0,
       flexWrap:mob?'nowrap':'wrap',
       overflowX:mob?'auto':'visible',overscrollBehaviorX:mob?'contain':'auto'}}>
       <KCard label="Orders"       value={kpis.cnt.toLocaleString()} sub={actCnt?`${actCnt} filter active`:'All orders'} accent="var(--dim)" mob={mob}/>
@@ -5761,28 +5817,39 @@ function App(){
         <FilterPanel {...filterProps}/>
       </div>}
 
-      {/* Mobile/Tablet Drawer (glassmorphic) */}
+      {/* Mobile/Tablet Drawer (glassmorphic)
+          Both layers must stack ABOVE the shared sticky header bar
+          (.app-header-shell, z-index:320 !important in theme.css) — see the
+          comment on the scrim below. */}
       {isNarrow&&sideOpen&&<>
+        {/* Scrim sits just above the header so the drawer is never overlapped
+            by it. The shared theme pins .app-header-shell to z-index:320
+            !important, and on mobile that shell is position:sticky, so it is
+            a sibling in the same stacking context as this scrim: at the old
+            zIndex:200/201 the header bar painted straight through the top of
+            the open drawer and over its own hamburger button, leaving the
+            drawer unusable. 340/341 clears the header while staying below the
+            page's dialogs (analysis 400, combine 500, maps 520/600) and well
+            below the drill panels (620), so a drawer can never bury an open
+            dialog or its drill-down. */}
         <div onClick={()=>setSideOpen(false)} style={{
-          position:'fixed',inset:0,background:'rgba(0,0,0,.6)',zIndex:200,
+          position:'fixed',inset:0,background:'rgba(0,0,0,.6)',zIndex:340,
           backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}/>
         <div className="app-side-drawer" style={{
-          position:'fixed',left:0,top:0,bottom:0,zIndex:201,
+          position:'fixed',left:0,top:0,bottom:0,zIndex:341,
           width:tab?310:288,
           display:'flex',flexDirection:'column',
           overflow:'hidden',
           animation:'slideIn .22s cubic-bezier(.4,0,.2,1)'}}>
-          <div style={{padding:'16px 18px',borderBottom:'1px solid var(--bdr)',
-            background:'var(--s1)',
-            display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
-            <JSPLBadge compact={true}/>
-            <div style={{display:'flex',alignItems:'center',gap:8}}>
-              <span style={{fontFamily:F.h,fontSize:13,fontWeight:700,color:C.amber,
-                letterSpacing:'.1em',textTransform:'uppercase'}}>
-                {actCnt>0?`Filters (${actCnt})`:'Filters'}
-              </span>
-            </div>
-          </div>
+          {/* No title bar here. This row existed only to hold the brand mark and a
+              "Filters (N)" label, both of which are redundant on mobile: the
+              page's own sticky header (directly behind the drawer at z-index 320)
+              already carries the Jindal logo one screen-width away, and
+              FilterPanel — the drawer's only child, rendered immediately below —
+              opens with its own "Filters" label, the same "Clear N" action, and
+              the ✕ dismiss button. Keeping a second header here just stacked a
+              near-identical label pair (with and without the count) before the
+              real content. The drawer is still dismissible via that ✕. */}
           <div style={{flex:1,overflowY:'auto',padding:'14px 16px'}}>
             <FilterPanel {...filterProps} mob onClose={()=>setSideOpen(false)}/>
           </div>

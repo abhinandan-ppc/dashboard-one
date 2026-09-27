@@ -584,9 +584,18 @@ button:disabled,.btn:disabled{cursor:not-allowed;transform:none!important;filter
   margin-right:auto!important;
   justify-content:center!important;
 }
+/* The theme toggle is wrapped in .theme-menu (it owns the popover), so it is
+   NOT a direct `>button` child of .hdr-r and used to fall outside this rule
+   entirely. It then painted its own border from the page's local
+   `--glass-border`, which resolves to a different alpha than
+   `--header-border-color` in light mode — so on the hub the theme button's
+   ring was visibly darker than its Home/Reset neighbours (measured
+   rgba(0,0,0,.12) vs rgba(0,0,0,.08)). `.theme-menu>button` is listed here so
+   the four header buttons resolve from one shared source of truth. */
 .app-header :is(.top-l,.hdr-r,.h-actions,.top-right)>button,
 .app-header .view-tabs button,
 .app-header .h-actions .dropdown-wrapper>button,
+.app-header .theme-menu>button,
 .app-header :is(.app-header-brand-row,.app-header-filter-actions,.app-header-actions)>button{
   background:var(--input-bg)!important;
   color:var(--tx)!important;
@@ -597,6 +606,7 @@ button:disabled,.btn:disabled{cursor:not-allowed;transform:none!important;filter
   box-shadow:none!important;
 }
 .app-header :is(.top-l,.hdr-r,.h-actions,.top-right)>button:hover,
+.app-header .theme-menu>button:hover,
 .app-header .view-tabs button:hover,
 .app-header .h-actions .dropdown-wrapper>button:hover,
 .app-header :is(.app-header-brand-row,.app-header-filter-actions,.app-header-actions)>button:hover{
