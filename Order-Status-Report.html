@@ -1089,6 +1089,44 @@ function useBreakpoint(){
   },[]);
   return bp;
 }
+
+/* Desktop clearance for the fixed header.
+   Above 768px the shell is position:fixed, so it is out of flow and the spacer
+   below it is the only thing holding the content down. A fixed pixel height on
+   that spacer cannot work, because the bar is not a fixed height: it measures
+   77px on a wide screen but wraps to 127px between 769 and 899px, where the
+   status block, the Released/Clear buttons and the hub's control slot no longer
+   fit on one row. The 88px the shared theme applies then sits ABOVE the bar's
+   real bottom edge — the first panel tucks up under the header on wide screens
+   and is completely covered in the 769-899px band. So the spacer tracks the
+   measured shell height instead, plus one rhythm step, and steps aside whenever
+   the shell is sticky (under 768px), where it occupies flow space itself and
+   theme.css zeroes the spacer with !important. The stylesheet's 100px stays as
+   the pre-measurement fallback, and the gap matches the 18px the top-level
+   sections use on desktop so the header reads as part of the same stack. */
+const OSR_HEADER_GAP=18;
+function useHeaderClearance(){
+  const shellRef=useRef();
+  const spacerRef=useRef();
+  useEffect(()=>{
+    const shell=shellRef.current,spacer=spacerRef.current;
+    if(!shell||!spacer)return undefined;
+    const sync=()=>{
+      if(getComputedStyle(shell).position!=='fixed'){spacer.style.removeProperty('height');return;}
+      spacer.style.setProperty('height',Math.round(shell.getBoundingClientRect().height)+OSR_HEADER_GAP+'px','important');
+    };
+    sync();
+    // The bar grows and shrinks as its own contents wrap, so observe the shell
+    // rather than trusting a one-off measurement. It cannot feed back into
+    // itself: the shell is out of flow on desktop, so resizing the spacer never
+    // changes the height being measured.
+    const ro=typeof ResizeObserver!=='undefined'?new ResizeObserver(sync):null;
+    if(ro)ro.observe(shell);
+    window.addEventListener('resize',sync);
+    return()=>{if(ro)ro.disconnect();window.removeEventListener('resize',sync);};
+  },[]);
+  return{shellRef,spacerRef};
+}
 function isReleasedRow(r){
   const v=String(r['Remarks']||'').trim().toLowerCase();
   return RELEASED_REMARKS.has(v);
@@ -1097,6 +1135,7 @@ function isReleasedRow(r){
 /* ═══════════════════ MAIN DASHBOARD ═══════════════════ */
 function Dashboard({rawRows,rawArr,headers,fileName}){
   const{mob}=useBreakpoint();
+  const{shellRef,spacerRef}=useHeaderClearance();
   const[scrolled,setScrolled]=useState(false);
   useEffect(()=>{
     const h=()=>setScrolled(window.scrollY>20);
@@ -1498,7 +1537,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         On mobile it switches to sticky: sticky occupies real space in the flex flow, so the header's
         own footprint is exactly the spacer's job, structurally, without needing a matching pixel
         height guess for the taller wrapped/column mobile layout — see the spacer below.) ═══ */}
-    <div className="app-header-shell" style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 0 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
+    <div className="app-header-shell" ref={shellRef} style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 0 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
     <div className="glass-card header-enter app-header" style={{position:'relative',padding:mob?'12px 12px':'12px 20px',display:'flex',
       flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
       alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
@@ -1582,7 +1621,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         breakpoint (768px) and this flag is a JS one (<640px), so between the two an
         inline mob?0:100 spacer stayed 100px tall under a header that was already back
         in flow. The theme zeroes .app-header-shell + .header-spacer under 768px. */}
-    <div className="header-spacer"/>
+    <div className="header-spacer" ref={spacerRef}/>
     <div className="glass-card osr-stack" style={mob?{padding:'12px 16px',marginBottom:18,display:'grid',
       gridTemplateColumns:'1fr 1fr',gap:10,position:'relative',zIndex:40,borderRadius:'var(--radius-lg)',
       boxShadow:'var(--shadow-sm)'}:{padding:'12px 16px',marginBottom:18,display:'flex',gap:10,flexWrap:'wrap',
@@ -1995,9 +2034,13 @@ function App(){
     return()=>window.removeEventListener('message',onMsg);
   },[parseCSV]);
 
+  // The loading / fetch-failed placeholder renders its own shell+spacer pair, so
+  // it needs its own refs — the hook reads position:fixed off the element it is
+  // given, and this bar has the same wrapping behaviour as the loaded one.
+  const ph=useHeaderClearance();
   const placeholderHeaderBar=
     <>
-      <div className="app-header-shell" style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,zIndex:50,boxSizing:'border-box'}}>
+      <div className="app-header-shell" ref={ph.shellRef} style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,zIndex:50,boxSizing:'border-box'}}>
         <div className="glass-card header-enter app-header">
           <div className="top-l">
             <JSPLBadge compact={mob}/>
@@ -2011,7 +2054,7 @@ function App(){
           <div id="hubFrameHeaderSlot" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,justifyContent:'flex-start'}}/>
         </div>
       </div>
-      <div className="header-spacer" style={{flexShrink:0}}/>
+      <div className="header-spacer" ref={ph.spacerRef} style={{flexShrink:0}}/>
     </>;
 
   const fetchStatusOverlay=fetchPhase&&
