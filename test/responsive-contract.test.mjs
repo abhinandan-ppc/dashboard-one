@@ -1010,6 +1010,55 @@ test('the Grade Clubbing intro is one container with a single divider', async ()
   );
 });
 
+// The Admin page's gap under the header and its gaps between blocks must be
+// the same value. This regressed because the page set a flat 108px spacer while
+// theme.css pinned that same element to 88px with !important, so the page's
+// number never applied and the real gap drifted to ~12px against 18-24px between
+// blocks. These assertions pin the shared token and the runtime measurement so
+// the two cannot silently diverge again.
+test('the Admin page header clearance matches its container spacing', async () => {
+  const admin = await read('admin.html');
+  const theme = await read('theme.css');
+
+  // The rhythm derives from the shared tokens rather than being redeclared.
+  assert.match(admin, /--admin-block-gap:\s*var\(--space-stack\)/);
+  assert.match(admin, /--admin-list-gap:\s*var\(--space-section\)/);
+
+  // Every top-level block reads that one token. A hardcoded px margin here is
+  // exactly what let the two tiers drift apart in the first place.
+  for (const selector of ['.banner', '.panel', '.stat-row']) {
+    assert.match(
+      admin,
+      new RegExp(`${selector.replace('.', '\\.')}\\s*\\{[^}]*margin-bottom:\\s*var\\(--admin-block-gap\\)`),
+      `${selector} must separate blocks with --admin-block-gap`,
+    );
+  }
+  assert.match(admin, /\.users\s*\{[^}]*gap:\s*var\(--admin-list-gap\)/);
+
+  // The gap under the header IS the block gap, measured rather than guessed.
+  assert.match(
+    admin,
+    /getBoundingClientRect\(\)\.height\)\s*\+\s*gap\(\)/,
+    'the header spacer must be the measured bar height plus the block gap',
+  );
+  assert.match(
+    admin,
+    /ResizeObserver[\s\S]*?schedule/,
+    'the spacer must react to the bar changing height as its contents wrap',
+  );
+  // theme.css zeroes the spacer under 768px because the shell is sticky and
+  // occupies flow space; the page must hand control back at that width.
+  assert.match(theme, /\.app-header-shell\+\.header-spacer\{height:0!important\}/);
+  assert.match(admin, /desktop\.matches/);
+
+  // The small-screen step moves the token rather than re-hardcoding a value.
+  assert.doesNotMatch(
+    admin,
+    /\.panel\s*\{[^}]*margin-bottom:\s*\d+px/,
+    'small-screen spacing must step the token rather than re-hardcode a pixel value',
+  );
+});
+
 test('shared content surfaces and controls reuse the header material', async () => {
   const theme = await read('theme.css');
   assert.match(theme, /--component-radius:20px/);

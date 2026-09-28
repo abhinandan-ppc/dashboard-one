@@ -17,6 +17,16 @@
   --glass-border: 1px solid rgba(0,0,0,0.08);
   --good: #15803d; --bad: #b91c1c; --warn: #b45309;
   --page-side: var(--page-gutter);
+  /* Vertical rhythm. The gap under the header bar and the gaps between the
+     top-level blocks are all read from these two tokens, so they cannot drift
+     apart the way the previous mix of 18px / 20px / 24px / 10px did.
+     --admin-block-gap separates top-level blocks (the tier theme.css documents
+     as --space-stack); --admin-list-gap is the denser card-row tier. */
+  --admin-block-gap: var(--space-stack);
+  --admin-list-gap: var(--space-section);
+}
+@media (max-width: 480px) {
+  :root { --admin-block-gap: var(--space-stack-sm); }
 }
 [data-theme="dark"] {
   --glass-border: 1px solid rgba(255,255,255,0.1);
@@ -52,6 +62,19 @@ a { color: var(--primary); }
 .wrap { max-width: 1180px; margin: 0 auto; padding: 0 var(--page-side) 80px; }
 @media (max-width: 640px) { .wrap{padding:0 var(--page-side) 60px} }
 .top-wrapper { position: fixed; top: 0; left: 0; right: 0; z-index: 50; max-width: 1180px; margin: 0 auto; padding: 28px var(--page-side) 0; box-sizing: border-box; }
+/* Clearance under the fixed header.
+
+   The old value here was a flat 108px, which could not be right: the bar is
+   not a fixed height, and the shared theme pins this same element to 88px
+   with !important, so the page's own number never actually applied. The
+   visible gap therefore came out near 12px while the blocks below were 18-24px
+   apart, which is the mismatch being fixed.
+
+   The bar is now measured at runtime (see syncHeaderClearance) and the gap
+   added on top of it is the SAME --admin-block-gap the blocks use, so the
+   spacing under the header equals the spacing between blocks. theme.css zeroes
+   this element under 768px because the shell is sticky there and occupies flow
+   space itself, so the mobile rule below is what owns the gap in that range. */
 .header-spacer { height: 108px; }
 .top-bar {
   position: relative; min-height: 64px; box-sizing: border-box;
@@ -96,7 +119,10 @@ a { color: var(--primary); }
   .top-wrapper.app-header-shell{
     padding-left:0!important;
     padding-right:0!important;
-    padding-bottom:var(--space-section)!important;
+    /* Was --space-section, which is a different step from the --space-stack the
+       blocks below use, so the gap under the header did not match the gap
+       between them. Same token as the blocks now. */
+    padding-bottom:var(--admin-block-gap)!important;
   }
   #bannerHost{margin-top:0}
 }
@@ -125,18 +151,18 @@ a { color: var(--primary); }
 .btn:hover { filter: brightness(1.05); }
 .btn.primary { background: var(--primary); color: var(--on-primary); }
 
-.banner { padding: 14px 18px; border-radius: var(--radius-m); background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: var(--glass-border); margin-bottom: 18px; font-size: 13px; color: var(--tm); }
+.banner { padding: 14px 18px; border-radius: var(--radius-m); background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: var(--glass-border); margin-bottom: var(--admin-block-gap); font-size: 13px; color: var(--tm); }
 .banner.error { color: var(--bad); border-color: var(--bad); }
 
-.panel { background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--glass-shadow); padding: 18px; margin-bottom: 20px; }
+.panel { background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--glass-shadow); padding: 18px; margin-bottom: var(--admin-block-gap); }
 .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--tm); margin: 0 0 12px; }
 
-.stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: var(--admin-block-gap); }
 .stat { flex: 1; min-width: 120px; background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: var(--glass-border); border-radius: var(--radius-m); padding: 14px 16px; }
 .stat .num { font-size: 24px; font-weight: 800; }
 .stat .lbl { font-size: 11.5px; color: var(--tm); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
 
-.users { display: flex; flex-direction: column; gap: 10px; }
+.users { display: flex; flex-direction: column; gap: var(--admin-list-gap); }
 .user-card { position: relative; background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--glass-shadow); padding: 12px 44px 12px 14px; }
 .user-top { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .user-info { min-width: 0; flex: 1; }
@@ -198,12 +224,14 @@ a { color: var(--primary); }
 
 @media (max-width: 480px) {
   .top-bar { padding: 10px; gap: 10px; }
-  .panel { padding: 14px; margin-bottom: 14px; }
-  .stat-row { gap: 8px; margin-bottom: 14px; }
+  /* Padding tightens on small screens, but the vertical RHYTHM keeps tracking
+     --admin-block-gap / --admin-list-gap (stepped down in :root above) so the
+     gap under the header still matches the gap between blocks here too. */
+  .panel { padding: 14px; }
+  .stat-row { gap: 8px; }
   .stat { min-width: calc(50% - 4px); padding: 10px 12px; }
   .stat .num { font-size: 19px; }
   .stat .lbl { font-size: 10.5px; }
-  .users { gap: 10px; }
   .user-card { padding: 12px 40px 12px 12px; }
   .user-top { gap: 10px; }
   .user-actions { margin-top: 8px; }
@@ -299,7 +327,7 @@ a { color: var(--primary); }
     <div class="skeleton-row"><div class="skeleton skeleton-circle"></div><div style="flex:1"><div class="skeleton skeleton-text medium"></div><div class="skeleton skeleton-text short"></div></div></div>
   </div>
 
-  <div style="margin-top:24px;margin-bottom:8px;color:var(--tm);font-size:11.5px;text-align:center;font-family:'JetBrains Mono',monospace">User &amp; Access Management · self-contained offline tool</div>
+  <div style="margin-top:var(--admin-block-gap);margin-bottom:8px;color:var(--tm);font-size:11.5px;text-align:center;font-family:'JetBrains Mono',monospace">User &amp; Access Management · self-contained offline tool</div>
 </div>
 
 <script>
@@ -374,6 +402,47 @@ async function loadMe(){
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll);
   onScroll();
+})();
+
+// Desktop clearance for the fixed header shell.
+//
+// Above 768px the shell is position:fixed, so it is out of flow and the spacer
+// below it is the only thing holding the content down. That spacer cannot be a
+// fixed pixel height: the bar is not a fixed height, and theme.css pins this
+// same element to 88px with !important, so the page's own 108px never applied
+// and the real gap drifted to roughly 12px against 18-24px between blocks.
+//
+// The spacer is set to the measured shell height plus --admin-block-gap — the
+// same token the blocks are separated by — so the spacing under the header
+// equals the spacing between containers. Under 768px the shell is sticky and
+// occupies flow space itself, where theme.css zeroes the spacer, so the
+// override is removed and the CSS owns the gap.
+//
+// The observer cannot feed back into itself: the shell is out of flow on
+// desktop, so resizing the spacer never changes the height being measured.
+(function syncHeaderClearance(){
+  var shell = document.querySelector('.app-header-shell');
+  var spacer = document.querySelector('.header-spacer');
+  if(!shell || !spacer) return;
+
+  var desktop = window.matchMedia('(min-width: 769px)');
+  function gap(){
+    var v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--admin-block-gap'));
+    return isFinite(v) ? v : 24;
+  }
+  function sync(){
+    if(!desktop.matches){ spacer.style.removeProperty('height'); return; }
+    var h = Math.ceil(shell.getBoundingClientRect().height) + gap();
+    spacer.style.setProperty('height', h + 'px', 'important');
+  }
+  function schedule(){ requestAnimationFrame(sync); }
+
+  if(typeof ResizeObserver !== 'undefined') new ResizeObserver(schedule).observe(shell);
+  window.addEventListener('resize', schedule, { passive: true });
+  if(desktop.addEventListener) desktop.addEventListener('change', schedule);
+  else if(desktop.addListener) desktop.addListener(schedule);
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+  schedule();
 })();
 
 // Permission edits (page checkboxes, "all pages", "dev access") are staged
