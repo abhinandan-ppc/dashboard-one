@@ -963,6 +963,53 @@ test('standalone dashboard headers opt into the shared hub chrome', async () => 
   assert.match(gradeClubbing, /ResizeObserver[\s\S]*?scheduleGradeHeaderOffset/, 'Grade Clubbing header clearance must react to header size changes');
 });
 
+// The Grade Clubbing intro reads as one box. It previously regressed twice
+// because an `!important` radius in the shared theme re-rounded a pane that
+// the page had flattened, so the outer corners were cut twice. These
+// assertions pin both halves of the contract: the page keeps the panes flat
+// and draws a single divider, and the shared theme stops re-rounding them.
+test('the Grade Clubbing intro is one container with a single divider', async () => {
+  const theme = await read('theme.css');
+  const grade = await read('Grade-Clubbing-Matrix.html');
+
+  assert.match(
+    theme,
+    /\.page-grade \.hero>\.panel\{[^}]*border-radius:0!important/,
+    'shared theme must keep Grade Clubbing hero panes flat',
+  );
+  // The flattening rule above legitimately carries a zero radius, so this
+  // only rejects a rule that re-rounds a pane with a NON-zero radius.
+  assert.doesNotMatch(
+    theme,
+    /\.page-grade \.hero>[^{,]*\{[^}]*border-radius:(?!0!important)[^;}]*!important/,
+    'no shared rule may re-round an individual Grade Clubbing hero pane',
+  );
+
+  assert.match(
+    grade,
+    /\.page-grade \.hero \{[^}]*overflow: hidden/,
+    'the hero must clip its own corners',
+  );
+  assert.match(
+    grade,
+    /\.page-grade \.hero > \.panel \{[^}]*border-radius: 0/,
+    'hero panes must not carry their own radius',
+  );
+  assert.match(
+    grade,
+    /\.page-grade \.hero > \.stats\.cad-panel \{[^}]*linear-gradient\(180deg/,
+    'the seam between the panes must be a single accent divider',
+  );
+
+  // The page must not reintroduce a per-pane box with !important, which
+  // would outrank the shared contract in either direction.
+  assert.doesNotMatch(
+    grade,
+    /\.hero-copy[^{]*\{[^}]*!important/,
+    'hero panes must not use !important to fight the shared surface contract',
+  );
+});
+
 test('shared content surfaces and controls reuse the header material', async () => {
   const theme = await read('theme.css');
   assert.match(theme, /--component-radius:20px/);
