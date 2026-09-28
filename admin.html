@@ -62,7 +62,6 @@ a { color: var(--primary); }
 @media (max-width: 640px) {
   .top-wrapper{padding:8px 0 0;position:sticky}
   .header-spacer{display:none}
-  #bannerHost{margin-top:18px}
   .top-bar{padding:12px;gap:12px;flex-wrap:wrap;align-items:center}
   .hd h1{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .jspl-divider{display:none}
@@ -72,6 +71,34 @@ a { color: var(--primary); }
   .jspl-logo{width:34px;height:16px}
   .hd .sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #hubFrameHeaderSlot{justify-content:center;width:100%;border-top:1px solid var(--br);padding-top:12px}
+}
+/* Mobile header geometry. Two problems, both from this page being the only one
+   that nests .top-wrapper (which is also .app-header-shell) INSIDE the padded
+   .wrap, where every other page has the shell as a direct child of body.
+
+   1. Width. theme.css flips the shell from a viewport-fixed bar to an in-flow
+      sticky block at 768px and gives it the same --page-gutter side padding it
+      uses everywhere else. That is right for a body-level shell, but here .wrap
+      had already applied that gutter, so the two stacked: at 390px the bar
+      started at 32px while the panels below it started at 16px, leaving the
+      header 16px narrower than its own content on each side. Dropping the
+      shell's side padding makes .wrap the single source of the gutter, so the
+      bar is flush with the content at every width and stays correct if the
+      gutter token ever changes. Needs !important to outrank theme.css.
+   2. Spacing beneath. The gap was 8px from the shared rule PLUS an extra 18px
+      off #bannerHost, but that banner margin only existed under 640px — so the
+      gap jumped from 26px to 8px between 640 and 768. The shell's own bottom
+      padding is the one gap under a sticky header, so it now carries the whole
+      value from the shared rhythm token at every mobile width, and the ad-hoc
+      banner margin is gone. (The banner keeps its own 18px margin-bottom, so
+      it still separates itself from the panel that follows.) */
+@media (max-width: 768px) {
+  .top-wrapper.app-header-shell{
+    padding-left:0!important;
+    padding-right:0!important;
+    padding-bottom:var(--space-section)!important;
+  }
+  #bannerHost{margin-top:0}
 }
 .jspl-badge { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 /* Normalize the hub-injected Home/Refresh/Theme/User icon buttons to a

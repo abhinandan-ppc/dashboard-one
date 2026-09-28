@@ -909,15 +909,52 @@ body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page
 body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button):is(.on,.active,.act,[aria-selected="true"],[aria-pressed="true"]):hover:not(:disabled){
   background:var(--component-primary-hover)!important;box-shadow:0 10px 22px rgba(3,105,161,.18)!important;
 }
-body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button):is(.btn-danger,.action-btn.bad){
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button):is(.btn-danger){
   background:color-mix(in srgb,var(--danger) 14%,var(--glass-card))!important;
   color:var(--danger)!important;border-color:transparent!important;
 }
-body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button):is(.action-btn.good,.btn-green){
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button):is(.btn-green){
   background:color-mix(in srgb,var(--success) 14%,var(--glass-card))!important;color:var(--success)!important;
 }
-body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button):is(.action-btn.warn,.btn-orange,.btn-gold){
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button):is(.btn-orange,.btn-gold){
   background:color-mix(in srgb,var(--warning) 14%,var(--glass-card))!important;color:var(--warning)!important;
+}
+/* ── Segmented permission pill (admin.html .user-actions) ──
+   The five Approve / Set pending / Block / Make admin / Remove segments are ONE
+   control that sits neutral until you engage it, then tints to say what the
+   press will do. Two shared rules above were flattening that: the generic
+   button rule forces border-radius:var(--radius-pill) and --input-bg, and the
+   generic hover rule forces --input-hover. Both carry a nine-class :is() list,
+   so together they outrank any page-local .action-btn.good:hover and repainted
+   the row as five separate grey pills that never changed colour. Restoring the
+   segmented look needs the same specificity, so it has to live here rather than
+   in the page's own stylesheet. The tint is on :hover AND :active so it also
+   fires on touch, where there is no hover state to rely on. */
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button).action-btn{
+  background:transparent!important;
+  color:var(--tx)!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button).action-btn:is(:hover,:active,:focus-visible){
+  background:rgba(var(--primary-rgb),.14)!important;
+  color:var(--primary)!important;
+  box-shadow:inset 0 0 14px rgba(var(--primary-rgb),.22)!important;
+}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button).action-btn.good:is(:hover,:active,:focus-visible){
+  background:var(--success-bg)!important;
+  color:var(--success)!important;
+  box-shadow:inset 0 0 14px color-mix(in srgb,var(--success) 28%,transparent)!important;
+}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button).action-btn.warn:is(:hover,:active,:focus-visible){
+  background:var(--warning-bg)!important;
+  color:var(--warning)!important;
+  box-shadow:inset 0 0 14px color-mix(in srgb,var(--warning) 28%,transparent)!important;
+}
+body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button).action-btn.bad:is(:hover,:active,:focus-visible){
+  background:var(--danger-bg)!important;
+  color:var(--danger)!important;
+  box-shadow:inset 0 0 14px color-mix(in srgb,var(--danger) 28%,transparent)!important;
 }
 body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) button:not(.app-header button).btn-pu{
   background:color-mix(in srgb,var(--secondary) 16%,var(--glass-card))!important;color:var(--secondary)!important;
