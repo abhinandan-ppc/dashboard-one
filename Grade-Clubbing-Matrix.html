@@ -10,27 +10,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="theme.css">
   <style>
+    /* Page-local roles only. Surfaces, text and the accent are owned by
+       theme.css and re-aliased in the shared block at the end of this
+       file, so they are left undefined here on purpose. */
     :root {
-      --bg: #07111f;
-      --bg2: #0b1730;
-      --card: rgba(10, 18, 34, 0.78);
-      --card-strong: rgba(12, 21, 41, 0.94);
+      --bg2: color-mix(in srgb, var(--bg) 72%, var(--text));
       --card-soft: rgba(255, 255, 255, 0.04);
-      --border: rgba(157, 190, 255, 0.16);
-      --border-strong: rgba(157, 190, 255, 0.28);
-      --text: #edf4ff;
-      --muted: #a7b7d1;
-      --muted-2: #7f91b1;
-      --accent: #87c8ff;
-      --accent-2: #54e3c0;
-      --warn: #f5b94f;
-      --bad: #f67c7c;
-      --good: #73e39f;
-      --shadow: 0 28px 80px rgba(0, 0, 0, 0.35);
-      --radius-xl: 28px;
-      --radius-lg: 20px;
-      --radius-md: 16px;
-      --radius-sm: 12px;
+      --radius-lg: 16px;
       --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       --sans: 'Poppins', system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif;
     }
@@ -122,15 +108,13 @@
       display: grid;
       grid-template-columns: minmax(0, 1.08fr) minmax(520px, 0.92fr);
       gap: 0;
-      align-items: start;
+      align-items: stretch;
       margin-bottom: 16px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-xl);
-      background: var(--card);
-      box-shadow: var(--shadow);
-      overflow: visible;
     }
 
+    /* `.panel` is used both standalone (the results board) and as a region
+       inside `.hero`. Its own box styling is neutralised for hero panes by
+       the single-container block at the end of this file. */
     .panel {
       position: relative;
       background: var(--card);
@@ -152,16 +136,12 @@
       pointer-events: none;
     }
 
+    /* Pane geometry is owned by the single-container block at the end of
+       this file; nothing here may reintroduce a per-pane border or radius. */
     .hero-copy {
       padding: 18px 20px 16px;
       min-height: 0;
-      overflow: visible;
       z-index: 3;
-      border: 0;
-      border-right: 0;
-      border-right: 1px solid rgba(157, 190, 255, 0.15);
-      border-bottom: 0;
-      border-radius: var(--radius-xl) 0 0 var(--radius-xl);
       background: transparent;
       box-shadow: none;
     }
@@ -519,9 +499,8 @@
       padding: 20px;
       min-height: 0;
       overflow: hidden;
-      background: linear-gradient(145deg, rgba(17, 31, 54, 0.86), rgba(7, 16, 32, 0.92));
+      background: transparent;
       border: 0;
-      border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
       box-shadow: none;
     }
 
@@ -1120,7 +1099,6 @@
 
     @media (max-width: 1100px) {
       .hero { grid-template-columns: 1fr; }
-      .hero-copy { border-right: 0; border-bottom: 1px solid rgba(157, 190, 255, 0.15); }
       .search-row { grid-template-columns: 1fr 1fr; }
       .search-row .span-2 { grid-column: span 2; }
     }
@@ -1145,20 +1123,25 @@
       h1 { max-width: none; }
     }
 
-    /* Shared Jindal Steel surface language used by the hub pages. */
+    /* Shared Jindal Steel surface language used by the hub pages.
+
+       These are ALIASES onto the shared theme roles, not literals. The page
+       loads theme.css first, so re-declaring hardcoded values here would
+       silently defeat both the light/dark switch and the hub's accent
+       picker (theme-boot.js sets data-theme / data-accent on <html>). */
     :root {
-      --bg: #0f172a;
-      --bg2: #111d32;
-      --card: rgba(30, 41, 59, 0.68);
-      --card-strong: rgba(15, 23, 42, 0.94);
-      --border: rgba(255, 255, 255, 0.12);
-      --border-strong: rgba(255, 255, 255, 0.22);
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --muted-2: #64748b;
-      --accent: #29b6f6;
-      --accent-2: #22d889;
-      --shadow: 0 8px 26px rgba(2, 6, 23, 0.28), 0 3px 8px rgba(2, 6, 23, 0.18);
+      --card: var(--glass-card);
+      --card-strong: var(--glass-hi);
+      --border: var(--glass-border);
+      --border-strong: var(--glass-border-hi);
+      --muted: var(--dim);
+      --muted-2: var(--mute);
+      --accent: var(--primary);
+      --accent-2: var(--success);
+      --warn: var(--warning);
+      --bad: var(--danger);
+      --good: var(--success);
+      --shadow: var(--shadow-lg);
       --sans: 'Poppins', system-ui, sans-serif;
       --mono: 'JetBrains Mono', ui-monospace, monospace;
     }
@@ -1298,12 +1281,15 @@
       .metrics-strip .cad-stat:nth-child(2) { padding-right: 0; }
     }
 
+    /* Page canvas follows the shared theme so light mode is not forced back
+       to a dark wash. The accent glows are derived from --primary/--success
+       so they follow the hub's accent picker. */
     body {
-      background-color: #0b1424;
+      background-color: var(--bg);
       background-image:
-        radial-gradient(ellipse 70% 45% at 8% 0%, rgba(41, 182, 246, 0.11), transparent 62%),
-        radial-gradient(ellipse 55% 50% at 92% 18%, rgba(34, 216, 137, 0.07), transparent 64%),
-        linear-gradient(180deg, #0b1424 0%, #101b2d 100%);
+        radial-gradient(ellipse 70% 45% at 8% 0%, color-mix(in srgb, var(--primary) 12%, transparent), transparent 62%),
+        radial-gradient(ellipse 55% 50% at 92% 18%, color-mix(in srgb, var(--success) 8%, transparent), transparent 64%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
     }
 
     .top-wrapper {
@@ -1347,26 +1333,6 @@
       padding: 0 var(--page-gutter) 64px;
     }
 
-    .hero {
-      min-height: 360px;
-      margin-bottom: 20px;
-      border-radius: 20px;
-      background: rgba(22, 34, 54, 0.78);
-      border-color: rgba(255, 255, 255, 0.15);
-      box-shadow: 0 20px 56px rgba(2, 6, 23, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    }
-
-    .hero-copy {
-      display: flex;
-      flex-direction: column;
-      padding: 24px;
-      background: transparent !important;
-      border: 0 !important;
-      box-shadow: none;
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
-    }
-
     .search-row { gap: 22px; }
     .grade-search { margin-bottom: 2px; }
     .field label { margin-bottom: 9px; font-size: 10px; letter-spacing: 0.13em; }
@@ -1403,35 +1369,20 @@
       line-height: 1.55;
     }
 
-    .stats.cad-panel {
-      height: auto;
-      min-height: 100%;
-      padding: 24px;
-      border-radius: 0 20px 20px 0;
-      background: rgba(15, 27, 45, 0.32) !important;
-    }
-
     .cad-head { align-items: start; }
     .cad-title { font-size: 20px; }
     .cad-drawing {
       min-height: 196px;
       margin: 20px 0 10px;
       border-radius: 14px;
-      background-color: rgba(4, 14, 29, 0.62);
-    }
-
-    .stats.cad-panel .cad-foot {
-      margin-top: auto;
-      padding-top: 16px;
-      border-top-color: rgba(255, 255, 255, 0.14);
     }
 
     .board {
       padding: 24px;
-      border-radius: 20px;
-      background: rgba(22, 34, 54, 0.66);
-      border-color: rgba(255, 255, 255, 0.15);
-      box-shadow: 0 18px 48px rgba(2, 6, 23, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      border-radius: var(--component-radius);
+      background: var(--component-surface);
+      border-color: var(--glass-border);
+      box-shadow: var(--component-shadow);
     }
 
     .board-head { align-items: end; margin-bottom: 20px; }
@@ -1443,14 +1394,9 @@
     .target-grid { gap: 14px; }
     .target-card, .compat-card {
       border-radius: 16px;
-      background: rgba(30, 43, 65, 0.72);
-      border-color: rgba(255, 255, 255, 0.13);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 12px 28px rgba(4, 13, 32, 0.16);
-    }
-
-    @media (max-width: 1100px) {
-      .hero { min-height: 0; }
-      .stats.cad-panel { border-radius: 0 0 20px 20px; }
+      background: var(--glass-card);
+      border-color: var(--glass-border);
+      box-shadow: var(--shadow-md);
     }
 
     @media (max-width: 720px) {
@@ -1471,6 +1417,146 @@
       .cad-drawing { min-height: 174px; }
       .board-head { align-items: start; }
       .chips { justify-content: flex-start; }
+    }
+
+    /* ── Intro: ONE container, ONE divider ─────────────────────────────
+       .hero is the only box. It owns the border, the radius, the clip and
+       the surface, so the outer corners are cut exactly once. The two
+       panes are flattened to bare regions (no border, no radius, no
+       shadow, no independent backdrop-filter) and are separated only by
+       the hairline on .cad-panel — that is what removes the doubled
+       rounded corners where two overlapping panels used to meet.
+
+       Scoped to .page-grade and placed last so it wins over the legacy
+       per-pane rules above without needing !important. */
+    .page-grade .hero {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(520px, 0.92fr);
+      gap: 0;
+      align-items: stretch;
+      min-height: 360px;
+      margin-bottom: 20px;
+      padding: 0;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--component-radius);
+      background: var(--component-surface);
+      box-shadow: var(--component-shadow);
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    /* Panes become plain regions of the shared surface. */
+    .page-grade .hero > .panel {
+      min-width: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    .page-grade .hero > .hero-copy {
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+    }
+
+    .page-grade .hero > .stats.cad-panel {
+      display: flex;
+      flex-direction: column;
+      align-self: stretch;
+      height: auto;
+      min-height: 0;
+      padding: 24px;
+      /* The single divider between the panes. A gradient rather than a flat
+         hairline so the seam picks up the live accent instead of reading as
+         a second box edge. */
+      border-left: 1px solid transparent;
+      background:
+        linear-gradient(180deg,
+          color-mix(in srgb, var(--primary) 26%, transparent),
+          color-mix(in srgb, var(--primary) 8%, transparent) 55%,
+          color-mix(in srgb, var(--primary) 22%, transparent)) left top / 1px 100% no-repeat;
+    }
+
+    /* Keep the metric row inside the pane and off the divider. */
+    .page-grade .hero .cad-foot {
+      margin-top: auto;
+      margin-bottom: 0;
+      margin-left: 0;
+      margin-right: 0;
+      padding: 16px 0 0;
+      background: transparent;
+      border-top: 1px solid var(--glass-border);
+    }
+
+    .page-grade .hero .hint {
+      margin-top: auto;
+      padding-top: 22px;
+    }
+
+    /* Accent presence inside the drawing, so the single container still
+       carries the theme's accent rather than the old hardcoded hues. */
+    .page-grade .cad-drawing {
+      background-color: color-mix(in srgb, var(--bg) 82%, black);
+      background-image:
+        linear-gradient(color-mix(in srgb, var(--primary) 14%, transparent) 1px, transparent 1px),
+        linear-gradient(90deg, color-mix(in srgb, var(--primary) 14%, transparent) 1px, transparent 1px);
+      border-color: color-mix(in srgb, var(--primary) 26%, transparent);
+    }
+
+    .page-grade .cad-plate {
+      border-color: color-mix(in srgb, var(--text) 78%, transparent);
+      background: linear-gradient(90deg,
+        color-mix(in srgb, var(--primary) 26%, transparent),
+        color-mix(in srgb, var(--success) 14%, transparent));
+    }
+
+    .page-grade .cad-dimension,
+    .page-grade .cad-dimension::before,
+    .page-grade .cad-dimension::after { border-color: var(--success); }
+    .page-grade .cad-arrow.top { border-bottom-color: var(--success); }
+    .page-grade .cad-arrow.bottom { border-top-color: var(--success); }
+    .page-grade .cad-measure { color: var(--success); }
+
+    .page-grade .field input {
+      background: var(--input-bg);
+      border-color: var(--glass-border);
+    }
+    .page-grade .field input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+    }
+    .page-grade .grade-input-row .btn { background: var(--input-hover); }
+    .page-grade .suggestions { background: var(--glass-hi); }
+    .page-grade .best-card .tag,
+    .page-grade .badge.good { color: var(--success); }
+
+    /* Stacked layout: the divider rotates to horizontal, still one box. */
+    @media (max-width: 1100px) {
+      .page-grade .hero {
+        grid-template-columns: 1fr;
+        min-height: 0;
+      }
+      .page-grade .hero > .stats.cad-panel {
+        border-left: 0;
+        background:
+          linear-gradient(90deg,
+            color-mix(in srgb, var(--primary) 26%, transparent),
+            color-mix(in srgb, var(--primary) 8%, transparent) 55%,
+            color-mix(in srgb, var(--primary) 22%, transparent)) left top / 100% 1px no-repeat;
+      }
+    }
+
+    /* Mobile: these pane selectors are more specific than the shared
+       720px padding rule, so the tighter inset is restated here. */
+    @media (max-width: 720px) {
+      .page-grade .hero > .hero-copy,
+      .page-grade .hero > .stats.cad-panel,
+      .page-grade .board { padding: 18px; }
+      .page-grade .cad-drawing { min-height: 174px; }
     }
 
     /* The shared header is fixed above 768px, so reserve its measured shell
