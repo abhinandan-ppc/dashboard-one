@@ -963,19 +963,33 @@ test('standalone dashboard headers opt into the shared hub chrome', async () => 
   assert.match(gradeClubbing, /ResizeObserver[\s\S]*?scheduleGradeHeaderOffset/, 'Grade Clubbing header clearance must react to header size changes');
 });
 
-// The Grade Clubbing intro reads as one box. It previously regressed twice
-// because an `!important` radius in the shared theme re-rounded a pane that
-// the page had flattened, so the outer corners were cut twice. These
-// assertions pin both halves of the contract: the page keeps the panes flat
-// and draws a single divider, and the shared theme stops re-rounding them.
+// The Grade Clubbing intro reads as one box. It has now regressed three
+// times, always the same way: an `!important` in the shared surface contract
+// re-decorated a pane that the page had flattened, so the outer corners were
+// cut twice. The third regression was subtler -- the flatten rule existed and
+// carried `!important`, but at (0,3,0) while the contract sits at (0,3,1), so
+// it lost on specificity and the panes came back rounded anyway.
+//
+// These assertions therefore pin the SELECTORS, not just the presence of a
+// zero radius: a bare `.page-grade .hero>.panel` reads as correct and is not.
 test('the Grade Clubbing intro is one container with a single divider', async () => {
   const theme = await read('theme.css');
   const grade = await read('Grade-Clubbing-Matrix.html');
 
+  // The shared contract resolves to (0,3,1):
+  //   body:is(.page-grade,...)      -> (0,1,1)
+  //   :is(.panel:not(.app-header))  -> (0,2,0)
+  // The flatten rule must clear that. `body.` plus `:not(.app-header)` takes
+  // it to (0,4,1) and it wins outright.
   assert.match(
     theme,
-    /\.page-grade \.hero>\.panel\{[^}]*border-radius:0!important/,
-    'shared theme must keep Grade Clubbing hero panes flat',
+    /body\.page-grade \.hero>\.panel:not\(.app-header\)\{[^}]*border-radius:0!important/,
+    'shared theme must flatten Grade Clubbing hero panes at a specificity that outranks the surface contract',
+  );
+  assert.doesNotMatch(
+    theme,
+    /(?<!:not\(.app-header\))\.page-grade \.hero>\.panel\{/,
+    'the flatten rule must not drop the :not(.app-header) bump, or the contract wins on specificity',
   );
   // The flattening rule above legitimately carries a zero radius, so this
   // only rejects a rule that re-rounds a pane with a NON-zero radius.
@@ -995,10 +1009,26 @@ test('the Grade Clubbing intro is one container with a single divider', async ()
     /\.page-grade \.hero > \.panel \{[^}]*border-radius: 0/,
     'hero panes must not carry their own radius',
   );
+  // The seam rides a pseudo-element. As a background on the pane it sat at
+  // (0,3,0) against the contract's (0,3,1) !important background and was
+  // discarded, so the divider silently never rendered.
   assert.match(
     grade,
-    /\.page-grade \.hero > \.stats\.cad-panel \{[^}]*linear-gradient\(180deg/,
-    'the seam between the panes must be a single accent divider',
+    /\.page-grade \.hero > \.stats\.cad-panel::before \{[^}]*linear-gradient\(180deg/,
+    'the seam between the panes must be an immune pseudo-element, not a pane background',
+  );
+  assert.match(
+    grade,
+    /\.page-grade \.hero > \.stats\.cad-panel \{[^}]*position: relative/,
+    'the seam pseudo-element needs a positioned ancestor',
+  );
+  // Stacked layout must rotate the same pseudo-element, not reintroduce a
+  // competing background on the pane.
+  const stacked = mediaBlocks(grade, '@media (max-width: 1100px)').join('\n');
+  assert.match(
+    stacked,
+    /\.page-grade \.hero > \.stats\.cad-panel::before \{[^}]*linear-gradient\(90deg/,
+    'the stacked seam must rotate to horizontal on the same pseudo-element',
   );
 
   // The page must not reintroduce a per-pane box with !important, which
@@ -1007,6 +1037,12 @@ test('the Grade Clubbing intro is one container with a single divider', async ()
     grade,
     /\.hero-copy[^{]*\{[^}]*!important/,
     'hero panes must not use !important to fight the shared surface contract',
+  );
+  // The legacy rule that rounded the seam-side corners outright.
+  assert.doesNotMatch(
+    grade,
+    /\.stats\.cad-panel \{[^}]*border-radius/,
+    'no unscoped per-pane radius may return',
   );
 });
 

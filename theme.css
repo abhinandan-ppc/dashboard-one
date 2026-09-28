@@ -827,15 +827,24 @@ body.page-sms-monthly .kpi-eb{border-top-color:var(--gd)!important}
   background:transparent!important;border:0!important;border-radius:0!important;
   box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
 }
-.page-grade .hero>.panel{
+/* The Grade Clubbing intro is ONE container: .hero owns the border, the
+   radius, the clip and the surface, and its two panes are flattened so the
+   outer corners are cut exactly once.
+
+   This has to out-specify the shared surface contract, not merely follow it.
+   That contract reads
+     body:is(.page-grade,...) :is(.panel:not(.app-header),...)
+   which resolves to (0,3,1) -- body:is(...) is (0,1,1) and
+   :is(.panel:not(.app-header)) is (0,2,0) -- and sets border-radius and
+   background with !important. A plain `.page-grade .hero>.panel` is only
+   (0,3,0), so the contract won on specificity and re-rounded and re-surfaced
+   every pane, bringing back the two inner corners. :not(.app-header) both
+   mirrors the contract's own exclusion and lifts this to (0,4,1), which wins
+   outright. Do not drop it, and do not re-round an individual pane. */
+body.page-grade .hero>.panel:not(.app-header){
   background:transparent!important;border:0!important;border-radius:0!important;
   box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
 }
-/* The Grade Clubbing intro is ONE container: .hero owns the border, the
-   radius, the clip and the surface, and its panes stay flat so the outer
-   corners are cut exactly once. The rule above already flattens every
-   pane; nothing may re-round an individual pane, or the two-box corners
-   come back. */
 .page-pm .toolbar,
 .page-pm .flow-controls,
 body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo) .frame-pill>.pill{border-radius:var(--radius-pill)!important}

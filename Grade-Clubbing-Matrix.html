@@ -1196,20 +1196,13 @@
       overflow: hidden;
     }
     .hero-copy { padding: 20px; }
-    .stats.cad-panel {
-      background: transparent !important;
-      padding-bottom: 20px;
-      display: flex;
-      flex-direction: column;
-      align-self: stretch;
-      height: 100%;
-      min-height: 100%;
-      box-shadow: none;
-      border: 0;
-      border-radius: 0 20px 20px 0;
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
-    }
+    /* The former per-pane rule that carried `border-radius: 0 20px 20px 0` and
+       `background: transparent !important` is gone. Those declarations are
+       what cut the two inner corners in the first place: the right-hand
+       radius rounded the seam-side corners of the right pane, and the
+       !important fought the shared surface contract in the wrong direction.
+       The intro is one container now -- see the scoped .page-grade .hero
+       block below and the matching flatten rule in theme.css. */
 
     .stats.cad-panel .cad-foot {
       margin-top: 0;
@@ -1462,15 +1455,32 @@
       height: auto;
       min-height: 0;
       padding: 24px;
-      /* The single divider between the panes. A gradient rather than a flat
-         hairline so the seam picks up the live accent instead of reading as
-         a second box edge. */
-      border-left: 1px solid transparent;
-      background:
-        linear-gradient(180deg,
-          color-mix(in srgb, var(--primary) 26%, transparent),
-          color-mix(in srgb, var(--primary) 8%, transparent) 55%,
-          color-mix(in srgb, var(--primary) 22%, transparent)) left top / 1px 100% no-repeat;
+      /* Anchor for the ::before seam below. `position` is not one of the
+         properties the shared surface contract touches. */
+      position: relative;
+    }
+
+    /* The single divider between the panes. A gradient rather than a flat
+       hairline so the seam picks up the live accent instead of reading as a
+       second box edge.
+
+       It has to be a pseudo-element, not a background on the pane. The
+       shared surface contract sets `background: var(--component-surface) !important`
+       on .panel at (0,3,1), which outranks any page-level background on
+       .stats.cad-panel, so a background here was silently discarded and the
+       seam never rendered. A pseudo-element is not matched by the contract's
+       :is(.panel:not(.app-header), ...) list, so it is immune. */
+    .page-grade .hero > .stats.cad-panel::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 1px;
+      background: linear-gradient(180deg,
+        color-mix(in srgb, var(--primary) 26%, transparent),
+        color-mix(in srgb, var(--primary) 8%, transparent) 55%,
+        color-mix(in srgb, var(--primary) 22%, transparent));
     }
 
     /* Keep the metric row inside the pane and off the divider. */
@@ -1532,13 +1542,17 @@
         grid-template-columns: 1fr;
         min-height: 0;
       }
-      .page-grade .hero > .stats.cad-panel {
-        border-left: 0;
-        background:
-          linear-gradient(90deg,
-            color-mix(in srgb, var(--primary) 26%, transparent),
-            color-mix(in srgb, var(--primary) 8%, transparent) 55%,
-            color-mix(in srgb, var(--primary) 22%, transparent)) left top / 100% 1px no-repeat;
+      .page-grade .hero > .stats.cad-panel::before {
+        top: 0;
+        right: 0;
+        bottom: auto;
+        left: 0;
+        width: auto;
+        height: 1px;
+        background: linear-gradient(90deg,
+          color-mix(in srgb, var(--primary) 26%, transparent),
+          color-mix(in srgb, var(--primary) 8%, transparent) 55%,
+          color-mix(in srgb, var(--primary) 22%, transparent));
       }
     }
 
