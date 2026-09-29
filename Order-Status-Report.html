@@ -210,7 +210,10 @@ function useThemeManager(){
   },[]);
   const effective=pref==='auto'?(systemDark?'dark':'light'):pref;
   useEffect(()=>{
-    C=effective==='dark'?DARK_C:LIGHT_C;
+    // 'contrast' is dark-family (near-black surfaces), so it must take the DARK
+    // canvas palette. Testing only for 'dark' would hand it light colours and
+    // the charts would invert against the dark chrome.
+    C=effective==='light'?LIGHT_C:DARK_C;
     document.documentElement.setAttribute('data-theme',effective);
     localStorage.setItem('jspl-osr-theme',pref);
   },[effective,pref]);
@@ -219,13 +222,13 @@ function useThemeManager(){
   // hub's postMessage({type:'theme',...}), so switching theme from the hub never had any effect
   // here. Mirrors Rake-Planner's handleHubMessage/window.__hub_handle_theme convention.
   useEffect(()=>{
-    window.__hub_handle_theme=value=>{ if(value==='dark'||value==='light'||value==='auto')setPref(value); };
+    window.__hub_handle_theme=value=>{ if(value==='dark'||value==='light'||value==='contrast'||value==='auto')setPref(value); };
     // theme-boot.js applies the hub's stored theme to <html> before first paint,
     // but this page's own effect re-asserts its React state right after mount
     // and would stomp that attribute back to this page's default. Handing the
     // boot script our state setter lets it drive `pref` instead, so the page
     // boots on the hub's theme rather than flipping to it a frame later.
-    window.__hub_apply_theme=value=>{ if(value==='dark'||value==='light')setPref(value); };
+    window.__hub_apply_theme=value=>{ if(value==='dark'||value==='light'||value==='contrast')setPref(value); };
     const onMsg=e=>{
       const d=e.data;
       if(d&&d.type==='theme'&&d.value)window.__hub_handle_theme(d.value);

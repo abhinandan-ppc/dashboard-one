@@ -335,14 +335,18 @@ a { color: var(--primary); }
 // (this page previously had no theme JS at all — data-theme="dark" was a
 // static attribute that never changed, so switching to light theme from
 // the hub silently had no effect here.)
+// A bare "is it light, else dark" test here would silently swallow the hub's
+// third theme and repaint this page dark while the hub stayed on contrast, so
+// unknown values pass through unchanged and only genuinely unknown ones fall
+// back. theme.css defines the tokens for every value theme-boot.js accepts.
 function setTheme(theme){
-  var t = theme === 'light' ? 'light' : 'dark';
+  var t = (theme === 'light' || theme === 'dark' || theme === 'contrast') ? theme : 'dark';
   document.documentElement.setAttribute('data-theme', t);
   try { localStorage.setItem('jspl-hub-theme', t); } catch(e){}
 }
 window.__hub_handle_theme = function(themeValue){
   var normalized = String(themeValue || '').toLowerCase();
-  if(normalized === 'light' || normalized === 'dark') setTheme(normalized);
+  if(normalized === 'light' || normalized === 'dark' || normalized === 'contrast') setTheme(normalized);
 };
 window.addEventListener('message', function(e){
   var d = e.data;

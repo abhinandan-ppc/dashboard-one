@@ -199,29 +199,40 @@ input { font: inherit; color: inherit; }
 .theme-panel.open { display: flex; }
 .theme-panel-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .theme-panel-label { font-size: 11px; font-weight: 700; color: var(--tm); text-transform: uppercase; letter-spacing: 0.4px; }
-/* The switch is a <button>, so theme.css's mobile tap-target rule
-   (`.page-hub button{min-height:44px!important}`) stretched this 22px-tall
-   track to 44px on mobile — the knob then sat at top:2px of a twice-as-tall
-   pill, so the control read as a broken, oversized toggle. The `!important`
-   there means a bare .mode-switch rule cannot win, so both the track height
-   and the min-height are re-pinned under .theme-panel.
-   The 44px touch target is NOT given up: .mode-switch::before extends the
-   hit area to a full 44px centred box around the visible track, so the
-   control is still comfortably tappable on a phone. */
-.mode-switch { width: 38px; height: 22px; border-radius: var(--radius-pill); background: var(--input-bg); border: var(--glass-border); position: relative; flex-shrink: 0; transition: background 0.15s ease; }
-.mode-switch::before {
-  content: ""; position: absolute; left: 50%; top: 50%;
-  width: 44px; height: 44px; transform: translate(-50%, -50%);
+/* The theme control is three <button>s, so theme.css's mobile tap-target rule
+   (`.page-hub button{min-height:44px!important}`) stretches them too. The
+   segment row is pinned to its own compact height under .theme-panel with
+   !important, because a bare rule cannot outrank an !important declaration.
+   The 44px touch target is NOT given up: .theme-seg::before extends the hit
+   area to a full 44px-tall centred box, so each option stays comfortably
+   tappable on a phone without the pill rendering twice as tall. */
+.theme-seg {
+  display: flex; gap: 2px; padding: 2px; border-radius: var(--radius-pill);
+  background: var(--input-bg); border: var(--glass-border);
+  position: relative; align-self: flex-start;
 }
-.theme-panel .mode-switch { height: 22px !important; min-height: 22px !important; }
-.mode-switch.on { background: var(--md-sys-color-primary); }
-.mode-switch-knob { position: absolute; top: 50%; left: 2px; width: 16px; height: 16px; margin-top: -8px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: left 0.15s ease; }
-.mode-switch.on .mode-switch-knob { left: 18px; }
+.theme-seg::before {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  width: 100%; height: 44px; transform: translate(-50%, -50%);
+}
+.theme-panel .theme-seg { height: 28px !important; min-height: 28px !important; align-items: stretch; }
+.theme-seg-btn {
+  flex: 1; min-width: 0; padding: 0 10px; border: none; border-radius: var(--radius-pill);
+  background: transparent; color: var(--tm); cursor: pointer;
+  font-family: var(--sans); font-size: 11.5px; font-weight: 700; white-space: nowrap;
+  position: relative; transition: background-color .15s ease, color .15s ease;
+}
+.theme-panel .theme-seg-btn { min-height: 24px !important; height: 24px !important; }
+.theme-seg-btn:hover { color: var(--tx); }
+.theme-seg-btn.active { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+.theme-seg-btn:focus-visible { outline: 2px solid var(--md-sys-color-primary); outline-offset: 1px; }
 /* align-items:center is load-bearing, not cosmetic. This is a flex ROW, so the
    cross axis is vertical and the default `stretch` would override each dot's
    explicit height:24px, stretching every swatch to the row's height (~44px) and
-   rendering the circular colour dots as tall rounded pills. */
-.accent-swatches { display: flex; gap: 8px; align-items: center; }
+   rendering the circular colour dots as tall rounded pills. The row also wraps,
+   because there are now twelve accents rather than six and a single unwrapped
+   line overflows the panel on a narrow phone. */
+.accent-swatches { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .accent-dot {
   width: 24px; height: 24px; border-radius: 50%; background: var(--dot); flex-shrink: 0;
   border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
@@ -836,9 +847,11 @@ input { font: inherit; color: inherit; }
       <div class="theme-menu" id="themeMenu">
         <button class="theme-toggle" id="themeToggle" type="button" title="Theme" aria-label="Theme"></button>
         <div class="theme-panel" id="themePanel">
-          <div class="theme-panel-row">
-            <span class="theme-panel-label">Dark mode</span>
-            <button class="mode-switch" id="modeSwitch" type="button" role="switch" aria-label="Toggle dark mode"><span class="mode-switch-knob"></span></button>
+          <div class="theme-panel-label">Theme</div>
+          <div class="theme-seg" id="themeSeg" role="radiogroup" aria-label="Theme">
+            <button class="theme-seg-btn" type="button" role="radio" data-theme-opt="light" aria-checked="false">Light</button>
+            <button class="theme-seg-btn" type="button" role="radio" data-theme-opt="dark" aria-checked="false">Dark</button>
+            <button class="theme-seg-btn" type="button" role="radio" data-theme-opt="contrast" aria-checked="false">Contrast</button>
           </div>
           <div class="theme-panel-label">Accent color</div>
           <div class="accent-swatches" id="accentSwatches">
@@ -848,6 +861,12 @@ input { font: inherit; color: inherit; }
             <button class="accent-dot" data-accent="violet" style="--dot:#7c3aed" title="Violet" aria-label="Violet"></button>
             <button class="accent-dot" data-accent="rose" style="--dot:#e11d48" title="Rose" aria-label="Rose"></button>
             <button class="accent-dot" data-accent="orange" style="--dot:#ea580c" title="Orange" aria-label="Orange"></button>
+            <button class="accent-dot" data-accent="teal" style="--dot:#0d9488" title="Teal" aria-label="Teal"></button>
+            <button class="accent-dot" data-accent="cyan" style="--dot:#0891b2" title="Cyan" aria-label="Cyan"></button>
+            <button class="accent-dot" data-accent="amber" style="--dot:#b45309" title="Amber" aria-label="Amber"></button>
+            <button class="accent-dot" data-accent="indigo" style="--dot:#4f46e5" title="Indigo" aria-label="Indigo"></button>
+            <button class="accent-dot" data-accent="lime" style="--dot:#4d7c0f" title="Lime" aria-label="Lime"></button>
+            <button class="accent-dot" data-accent="magenta" style="--dot:#db2777" title="Magenta" aria-label="Magenta"></button>
           </div>
         </div>
       </div>
@@ -1742,10 +1761,9 @@ function installFrameHeaderControls(){
         });
         themeBtn.addEventListener('click', function(){
           // Clicking the real #themeToggle now opens its color-picker popover
-          // rather than instantly toggling dark/light, so drive the mode
-          // switch inside it directly instead of simulating a toggle click.
-          var modeSwitch = document.getElementById('modeSwitch');
-          if(modeSwitch) modeSwitch.click();
+          // rather than instantly changing the theme, so drive the cycle
+          // directly instead of simulating a toggle click.
+          cycleTheme();
           var theme = document.documentElement.getAttribute('data-theme');
           syncInjectedThemeIcon(theme);
           applyInjectedThemeStyles(theme);
@@ -2156,9 +2174,9 @@ function syncInjectedFrameHomeAccent(){
 
 var THEME_KEY = "jspl-hub-theme";
 var ACCENT_KEY = "jspl-hub-accent";
-var ACCENTS = ["blue","green","grey","violet","rose","orange"];
+var ACCENTS = ["blue","green","grey","violet","rose","orange","teal","cyan","amber","indigo","lime","magenta"];
 var LEGACY_THEME_KEYS = ["jspl-theme", "jspl-osr-theme"];
-var VALID_THEMES = ["light", "dark"];
+var VALID_THEMES = ["light", "dark", "contrast"];
 
 function readStoredTheme(){
   var t = null;
@@ -2214,18 +2232,24 @@ function pushThemeToPages(){
   pushThemeToPages._t = setTimeout(pushThemeToPages, 400);
 }
 
-// Keep the panel's switch showing the real current state, whichever path
+// Keep the panel's theme buttons showing the real current state, whichever path
 // changed the theme last. Guarded because setTheme() runs before this panel's
 // own setup has bound it.
-function syncModeSwitchControl(){
+function syncThemeSegmented(){
   try{
-    var modeSwitch = document.getElementById("modeSwitch");
-    if(!modeSwitch) return;
-    var isDark = root.getAttribute("data-theme") === "dark";
-    modeSwitch.classList.toggle("on", isDark);
-    modeSwitch.setAttribute("aria-checked", isDark ? "true" : "false");
+    var seg = document.getElementById("themeSeg");
+    if(!seg) return;
+    var current = root.getAttribute("data-theme");
+    seg.querySelectorAll("[data-theme-opt]").forEach(function(btn){
+      var on = btn.getAttribute("data-theme-opt") === current;
+      btn.classList.toggle("active", on);
+      btn.setAttribute("aria-checked", on ? "true" : "false");
+    });
   }catch(e){}
 }
+// Back-compat alias: the old binary switch is gone, but anything still calling
+// this name just syncs the replacement.
+window.syncModeSwitchControl = syncThemeSegmented;
 
 // Forget the stored theme/accent so the next sign-in on a shared device starts
 // from the default instead of inheriting the previous user's choice. Bound to
@@ -2260,23 +2284,32 @@ function bindLogoutThemeReset(){
 bindLogoutThemeReset();
 
 function setTheme(theme){
-  // Normalise at the boundary: every other page in the hub treats anything
-  // that isn't exactly "light" as dark, so an unexpected value must never be
-  // written to storage or broadcast — it would leave one page light and the
-  // rest dark.
-  theme = theme === "light" ? "light" : "dark";
+  // Normalise at the boundary: only ever persist a value theme.css actually
+  // defines a [data-theme=...] block for, so no page can end up on an attribute
+  // that silently falls back to the default dark. This used to be a bare
+  // light-vs-dark test, which would have quietly swallowed the new "contrast".
+  if(VALID_THEMES.indexOf(theme) === -1) theme = "dark";
   root.setAttribute("data-theme", theme);
   try{ localStorage.setItem("jspl-hub-theme", theme); }catch(e){}
-  themeBtn.innerHTML = theme === "dark"
-    ? "<svg viewBox='0 0 24 24' aria-hidden='true'><path d='M12 3v2.5'></path><path d='M12 18.5V21'></path><path d='M4.93 4.93l1.77 1.77'></path><path d='M17.3 17.3l1.77 1.77'></path><path d='M3 12h2.5'></path><path d='M18.5 12H21'></path><path d='M4.93 19.07l1.77-1.77'></path><path d='M17.3 6.7l1.77-1.77'></path><circle cx='12' cy='12' r='4'></circle></svg>"
-    : "<svg viewBox='0 0 24 24' aria-hidden='true'><path d='M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z'></path></svg>";
-  themeBtn.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
-  themeBtn.setAttribute("aria-label", theme === "dark" ? "Theme: dark. Switch to light" : "Theme: light. Switch to dark");
+  themeBtn.innerHTML = theme === "light"
+    ? "<svg viewBox='0 0 24 24' aria-hidden='true'><path d='M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z'></path></svg>"
+    : theme === "contrast"
+      ? "<svg viewBox='0 0 24 24' aria-hidden='true'><circle cx='12' cy='12' r='9'></circle><path d='M12 3a9 9 0 0 1 0 18Z' fill='currentColor'></path></svg>"
+      : "<svg viewBox='0 0 24 24' aria-hidden='true'><path d='M12 3v2.5'></path><path d='M12 18.5V21'></path><path d='M4.93 4.93l1.77 1.77'></path><path d='M17.3 17.3l1.77 1.77'></path><path d='M3 12h2.5'></path><path d='M18.5 12H21'></path><path d='M4.93 19.07l1.77-1.77'></path><path d='M17.3 6.7l1.77-1.77'></path><circle cx='12' cy='12' r='4'></circle></svg>";
+  themeBtn.setAttribute("aria-label", "Theme: " + theme);
   syncInjectedFrameHomeAccent();
-  // Keep the panel's own switch in step when the theme changes from anywhere
+  // Keep the panel's own buttons in step when the theme changes from anywhere
   // else (a message from a page, another tab) and not just from its click.
-  syncModeSwitchControl();
+  syncThemeSegmented();
   pushThemeToPages();
+}
+// Step to the next theme in VALID_THEMES order. Used by the compact pill the
+// hub injects into a dashboard's header, which is too small for a 3-way
+// control and so cycles instead.
+function cycleTheme(){
+  var cur = root.getAttribute("data-theme");
+  var i = VALID_THEMES.indexOf(cur);
+  setTheme(VALID_THEMES[(i === -1 ? 0 : i + 1) % VALID_THEMES.length]);
 }
 setTheme(readStoredTheme());
 
@@ -2299,7 +2332,6 @@ setAccent(readStoredAccent());
 (function(){
   var themeMenu = document.getElementById("themeMenu");
   var themePanel = document.getElementById("themePanel");
-  var modeSwitch = document.getElementById("modeSwitch");
   if(!themeMenu || !themePanel || !themeBtn) return;
 
   // Same fixed + body-appended pattern as .user-panel — see CSS note.
@@ -2345,26 +2377,29 @@ setAccent(readStoredAccent());
     }
     themePanel.style.top = top + "px";
   };
-  syncModeSwitchControl();
+  syncThemeSegmented();
 
   themeBtn.addEventListener("click", function(e){
     e.stopPropagation();
     if(!themePanel.classList.contains("open")) positionThemePanel();
     themePanel.classList.toggle("open");
   });
-  // The switch is a real <button>, so Enter/Space already fire `click` and are
-  // handled below. Only the arrow-key affordance a real switch is expected to
-  // have is added here, so keyboard users can flip it without hunting for Tab.
-  modeSwitch.addEventListener("click", function(){
-    setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
-  });
-  modeSwitch.addEventListener("keydown", function(e){
-    if(e.key === "ArrowLeft" || e.key === "ArrowRight"){
+  // Enter/Space already fire `click` on these buttons, so only the arrow-key
+  // affordance a radio group is expected to have is added here — keyboard users
+  // can move between the three themes without hunting for Tab.
+  var seg = document.getElementById("themeSeg");
+  if(seg){
+    seg.querySelectorAll("[data-theme-opt]").forEach(function(btn){
+      btn.addEventListener("click", function(){ setTheme(btn.getAttribute("data-theme-opt")); });
+    });
+    seg.addEventListener("keydown", function(e){
+      if(e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       e.preventDefault();
-      // ArrowRight drives it on, ArrowLeft off, regardless of current state.
-      setTheme(e.key === "ArrowRight" ? "dark" : "light");
-    }
-  });
+      var i = VALID_THEMES.indexOf(root.getAttribute("data-theme"));
+      var next = e.key === "ArrowRight" ? i + 1 : i - 1;
+      setTheme(VALID_THEMES[(next + VALID_THEMES.length) % VALID_THEMES.length]);
+    });
+  }
   document.querySelectorAll(".accent-dot").forEach(function(dot){
     dot.addEventListener("click", function(){ setAccent(dot.getAttribute("data-accent")); });
   });

@@ -1288,25 +1288,27 @@ test('Order Status table headers stay a flat band instead of popover cards', asy
 });
 
 // ── Theme: the hub is the single source of truth, and it reaches every page ──
-test('the theme switch keeps its 22px track on mobile despite the tap-target rule', async () => {
+test('the theme control keeps its compact height on mobile despite the tap-target rule', async () => {
   const hub = await read('index.html');
   // theme.css's `.page-hub button{min-height:44px!important}` reaches every
-  // button on the hub, including the 22px-tall light/dark switch, which
-  // rendered as a 44px pill with the knob stranded at the top. The override has
-  // to be scoped under .theme-panel AND carry !important, because a bare
-  // .mode-switch rule cannot outrank an !important declaration.
+  // button on the hub, including the compact light/dark/contrast segment row,
+  // which rendered as a 44px-tall pill. The override has to be scoped under
+  // .theme-panel AND carry !important, because a bare .theme-seg rule cannot
+  // outrank an !important declaration.
   assert.ok(
-    hub.includes('.theme-panel .mode-switch') && hub.includes('min-height: 22px !important'),
-    'the switch must re-pin its height under .theme-panel with !important'
+    hub.includes('.theme-panel .theme-seg') && hub.includes('min-height: 28px !important'),
+    'the segment row must re-pin its height under .theme-panel with !important'
   );
   // The 44px touch target is preserved by a pseudo-element rather than by
   // stretching the visible track.
-  assert.ok(hub.includes('.mode-switch::before'), 'the switch must keep a 44px hit area via ::before');
-  assert.ok(/height:\s*44px/.test(hub.slice(hub.indexOf('.mode-switch::before'), hub.indexOf('.theme-panel .mode-switch'))),
+  assert.ok(hub.includes('.theme-seg::before'), 'the segment row must keep a 44px hit area via ::before');
+  assert.ok(/height:\s*44px/.test(hub.slice(hub.indexOf('.theme-seg::before'), hub.indexOf('.theme-panel .theme-seg'))),
     'the ::before hit area must be 44px tall');
-  // The knob is centred with a negative margin rather than a fixed top offset,
-  // so it stays put at either track height.
-  assert.ok(hub.includes('margin-top: -8px'), 'the knob must be vertically centred, not offset from the top');
+  // One option per theme, so the control actually offers all of them.
+  const seg = hub.slice(hub.indexOf('id="themeSeg"'), hub.indexOf('id="accentSwatches"'));
+  for (const t of ['light', 'dark', 'contrast']) {
+    assert.ok(seg.includes(`data-theme-opt="${t}"`), `the segment control must offer "${t}"`);
+  }
 });
 
 test('the hub pushes theme and accent to every page over all three channels', async () => {
@@ -1360,6 +1362,73 @@ test('every page boots on the hub theme and accent before it first paints', asyn
     // <html> before first paint rather than flipping a frame later.
     const at = src.indexOf('theme-boot.js');
     assert.ok(at < src.indexOf('</head>'), `${page} must load theme-boot.js in <head>`);
+  }
+});
+
+test('every theme and accent the hub offers is actually defined in theme.css', async () => {
+  // The hub normalises against these lists, so a value listed here but missing
+  // from theme.css would silently fall back to the default dark/blue while the
+  // picker showed it as selected. Both lists are duplicated in theme-boot.js by
+  // necessity (it is the pre-paint script and cannot import anything), so pin
+  // all three copies together here.
+  const hub = await read('index.html');
+  const boot = await read('theme-boot.js');
+  const css = await read('theme.css');
+
+  const listOf = (src, name) => {
+    const m = src.match(new RegExp(name + '\\s*=\\s*\\[([^\\]]*)\\]'));
+    assert.ok(m, `${name} must be declared as an array`);
+    return [...m[1].matchAll(/["']([^"']+)["']/g)].map(x => x[1]);
+  };
+
+  const themes = listOf(hub, 'VALID_THEMES');
+  const hubAccents = listOf(hub, 'ACCENTS');
+  const bootThemes = listOf(boot, 'VALID_THEMES');
+  const bootAccents = listOf(boot, 'ACCENTS');
+
+  assert.deepEqual(bootThemes, themes, 'theme-boot.js and the hub must accept the same themes');
+  assert.deepEqual(bootAccents, hubAccents, 'theme-boot.js and the hub must offer the same accents');
+
+  for (const t of themes) {
+    // "dark" is the :root default and needs no explicit block.
+    if (t === 'dark') continue;
+    assert.ok(css.includes(`[data-theme="${t}"]`), `theme.css must define [data-theme="${t}"]`);
+  }
+  for (const a of hubAccents) {
+    if (a === 'blue') continue; // the default brand hue, defined on :root
+    assert.ok(css.includes(`[data-accent="${a}"]`), `theme.css must define [data-accent="${a}"]`);
+  }
+  // Each accent must be selectable in the picker, or it is unreachable.
+  const swatches = hub.slice(hub.indexOf('id="accentSwatches"'), hub.indexOf('</div>', hub.indexOf('id="accentSwatches"')));
+  for (const a of hubAccents) {
+    assert.ok(swatches.includes(`data-accent="${a}"`), `the picker must offer a swatch for "${a}"`);
+  }
+});
+
+test('no page coerces a theme it does not recognise back to dark', async () => {
+  // The bug this guards: a page written as `theme === 'light' ? 'light' : 'dark'`
+  // silently discards any new theme. The user picks "contrast" in the hub and
+  // that one page stays dark while everything around it repaints — the exact
+  // class of silent desync the hub's single-source-of-truth design exists to
+  // prevent. Every page that narrows the value must name "contrast" too.
+  const narrowers = [
+    'admin.html',
+    'VDO-Generator.html',
+    'Plate-Tagging-Tool.html',
+    'SMS-Heat-Planner.html',
+    'PM-Yard.html',
+    'Rake-Planner.html',
+    'Order-Status-Report.html',
+  ];
+  for (const page of narrowers) {
+    const src = await read(page);
+    // Find every `=== 'light' ? ... : 'dark'` style coercion still present.
+    const coercions = [...src.matchAll(/===\s*'light'\s*\?[^:]{0,40}:\s*'dark'/g)];
+    for (const c of coercions) {
+      // A ternary that also tests for 'contrast' is not a narrowing coercion.
+      assert.ok(/contrast/.test(c[0]),
+        `${page} narrows the theme with \`${c[0]}\`, which would discard "contrast"`);
+    }
   }
 });
 

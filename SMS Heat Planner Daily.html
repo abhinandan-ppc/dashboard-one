@@ -1712,7 +1712,10 @@ el("tabBar").addEventListener("click", e=>{
 
 // Theme is controlled by the parent shell (SMS Heat Planner.html) via postMessage
 function applyTheme(mode){
-  document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
+  // The parent shell can now send any theme theme.css defines, not just the two
+  // it could before, so don't collapse an unrecognised value to light here.
+  document.documentElement.setAttribute('data-theme',
+    (mode === 'dark' || mode === 'contrast') ? mode : 'light');
   var st = el("tab-sankey");
   if(st && st.classList.contains("on") && currentResult) drawSankey(currentResult);
 }

@@ -1017,7 +1017,9 @@ function bestEbtpParse(wb){
     raw:{headers:best.headers,grid:best.grid,hr:best.hr,sheet:best.name}};
 }
 function setTheme(theme){
-  const next=theme==='light'?'light':'dark';
+  // Pass the hub's third theme through instead of collapsing it to dark, which
+  // would leave this page disagreeing with every other page in the frame.
+  const next=(theme==='light'||theme==='dark'||theme==='contrast')?theme:'dark';
   document.documentElement.setAttribute('data-theme',next);
   try{ localStorage.setItem('jspl-hub-theme',next); }catch{}
   if(RESULT) renderDashboard(RESULT);

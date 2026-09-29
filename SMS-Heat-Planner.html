@@ -198,8 +198,11 @@ function sendTheme(frame, theme){
   if(frame && frame.contentWindow) frame.contentWindow.postMessage({type: 'set-theme', theme: theme}, '*');
 }
 function broadcastTheme(){
-  var theme = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-  if(themeBtn) themeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+  // Pass any theme theme.css actually defines straight through to the child
+  // frames. Coercing to dark/light here left the two embedded tabs disagreeing
+  // with the parent as soon as a third theme was selected.
+  var theme = root.getAttribute('data-theme') || 'dark';
+  if(themeBtn) themeBtn.textContent = theme === 'light' ? '🌙' : (theme === 'contrast' ? '◐' : '☀️');
   sendTheme(dailyFrame, theme);
   sendTheme(monthlyFrame, theme);
 }
@@ -211,7 +214,7 @@ function setTheme(theme){
 
 window.__hub_handle_theme = function(themeValue){
   var normalized = String(themeValue || '').toLowerCase();
-  if(normalized === 'light' || normalized === 'dark'){
+  if(normalized === 'light' || normalized === 'dark' || normalized === 'contrast'){
     setTheme(normalized);
     try { localStorage.setItem('jspl-hub-theme', normalized); } catch(err){}
   }

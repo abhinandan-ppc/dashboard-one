@@ -2703,6 +2703,16 @@ function applyTheme(themeName) {
   const root = document.documentElement;
   
   const themes = {
+    'contrast': {
+      // Same night lighting as 'midnight', but the chrome paints via the
+      // hub's high-contrast token set instead of the default dark one.
+      dataTheme: 'contrast', bg: 0x000000, groundCol: 0x05070c,
+      ambCol: 0x334155, ambInt: 1.2,
+      hemiSky: 0x64748b, hemiGround: 0x000000, hemiInt: 1.0,
+      sunCol: 0x94a3b8, sunInt: 3.5, sunPos: [40, 80, -40],
+      fillCol: 0x38bdf8, fillInt: 2.0, fillPos: [-60, 20, 40],
+      exposure: 1.2, textCol: '#ffffff', subTextCol: '#c3cbd9'
+    },
     'midnight': {
       dataTheme: 'dark', bg: 0x020617, groundCol: 0x0f172a,
       ambCol: 0x334155, ambInt: 1.2,
@@ -2799,6 +2809,11 @@ window.__hub_handle_theme = function(themeValue) {
   if (normalized === 'dark') {
     setEnvironment('midnight');
     try { localStorage.setItem('jspl-page-theme', 'dark'); } catch(err) {}
+    return;
+  }
+  if (normalized === 'contrast') {
+    setEnvironment('contrast');
+    try { localStorage.setItem('jspl-page-theme', 'contrast'); } catch(err) {}
     return;
   }
   if (normalized === 'auto') {

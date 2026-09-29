@@ -163,7 +163,10 @@ function useThemeManager(){
   },[]);
   const effective=pref==='auto'?(systemDark?'dark':'light'):pref;
   useEffect(()=>{
-    C=effective==='dark'?DARK_C:LIGHT_C;
+    // 'contrast' is dark-family (near-black surfaces), so it must take the DARK
+    // canvas palette, not the light one. Testing only for 'dark' would hand it
+    // light canvas colours and the plots would invert against the dark chrome.
+    C=effective==='light'?LIGHT_C:DARK_C;
     document.documentElement.setAttribute('data-theme',effective);
     localStorage.setItem('jspl-theme',pref);
     document.body.classList.add('data-switching');
@@ -5084,7 +5087,7 @@ function App(){
   useEffect(()=>{
     window.__hub_handle_theme = function(themeValue){
       var normalized = String(themeValue || '').toLowerCase();
-      if(normalized !== 'dark' && normalized !== 'light' && normalized !== 'auto') return;
+      if(normalized !== 'dark' && normalized !== 'light' && normalized !== 'contrast' && normalized !== 'auto') return;
       setPref(normalized);
       try{ localStorage.setItem('jspl-hub-theme', normalized); }catch(err){}
     };

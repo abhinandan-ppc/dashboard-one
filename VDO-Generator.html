@@ -1300,11 +1300,14 @@ async function downloadFiltered(){
 // ── theme (works standalone, and syncs with the hub when opened in-frame) ──
 const SUN_ICON='<path d="M12 3v2.5"/><path d="M12 18.5V21"/><path d="M4.93 4.93l1.77 1.77"/><path d="M17.3 17.3l1.77 1.77"/><path d="M3 12h2.5"/><path d="M18.5 12H21"/><path d="M4.93 19.07l1.77-1.77"/><path d="M17.3 6.7l1.77-1.77"/><circle cx="12" cy="12" r="4"/>';
 const MOON_ICON='<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>';
+const HALF_ICON='<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor"/>';
 function setTheme(t){
-  const theme = t==='light' ? 'light' : 'dark';
+  // Pass the hub's third theme through instead of collapsing it to dark, which
+  // would leave this page disagreeing with every other page in the frame.
+  const theme = (t==='light'||t==='dark'||t==='contrast') ? t : 'dark';
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('jspl-hub-theme', theme);
-  $('#themeIcon').innerHTML = theme==='dark' ? SUN_ICON : MOON_ICON;
+  $('#themeIcon').innerHTML = theme==='light' ? MOON_ICON : (theme==='contrast' ? HALF_ICON : SUN_ICON);
 }
 window.__hub_handle_theme = function(t){ setTheme(t); };
 window.__hub_handle_reset = function(){ location.reload(); };

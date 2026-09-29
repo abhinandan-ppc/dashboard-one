@@ -742,7 +742,10 @@ let currentFlowView = 'flow';
 
 /* ─── Theme Logic (controlled by the parent shell via postMessage) ─── */
 function applyTheme(mode) {
-    document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
+    // The parent shell can now send any theme theme.css defines, not just the two
+    // it could before, so don't collapse an unrecognised value to light here.
+    document.documentElement.setAttribute('data-theme',
+        (mode === 'dark' || mode === 'contrast') ? mode : 'light');
     if (currentFlowView === 'sankey') renderSankey();
 }
 window.addEventListener("message", (e) => {

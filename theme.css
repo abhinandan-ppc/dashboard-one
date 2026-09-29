@@ -174,6 +174,77 @@
   color-scheme:light;
 }
 
+/* ── Contrast — a third base theme, dark-family like the default. Near-black
+   surfaces, pure-white text and stronger borders, for control-room screens,
+   older panels and glare. It reuses the default dark accent blocks
+   (:root[data-accent=...]) unchanged, so every accent works here for free and
+   no [data-theme="contrast"][data-accent=...] pairs are needed. ── */
+[data-theme="contrast"]{
+  --bg:#000000;
+  --s0:rgba(10,12,18,.92);
+  --s1:rgba(18,22,32,.88);
+  --s2:rgba(24,29,41,.84);
+  --s3:rgba(32,38,52,.80);
+  --s4:rgba(40,48,64,.76);
+  --bdr:rgba(255,255,255,.28);
+  --bdrHi:rgba(255,255,255,.46);
+
+  --text:#ffffff;
+  --text-hi:#ffffff;
+  --dim:#c3cbd9;
+  --mute:#94a3b8;
+
+  --primary:#4cc9f0;     --on-primary:#001219;   --primary-bg:rgba(76,201,240,.20); --primary-rgb:76,201,240;
+  --secondary:#b8b0e0;   --on-secondary:#0d0a18; --secondary-bg:rgba(184,176,224,.16);
+  --success:#3ef2a4;     --success-bg:rgba(62,242,164,.18);
+  --warning:#ffb570;     --warning-bg:rgba(255,181,112,.18);
+  --danger:#ff6b8a;      --danger-bg:rgba(255,107,138,.18);
+
+  --amber:var(--warning);        --amber-bg:var(--warning-bg);
+  --sky:var(--primary);          --sky-bg:var(--primary-bg);
+  --green:var(--success);        --green-bg:var(--success-bg);
+  --rose:var(--danger);          --rose-bg:var(--danger-bg);
+  --violet:var(--secondary);     --violet-bg:var(--secondary-bg);
+  --orange:var(--warning);       --orange-bg:var(--warning-bg);
+  --teal:#4fd6cc;
+
+  --md-sys-color-primary:var(--primary);
+  --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#0b3a4d;
+  --md-sys-color-on-primary-container:#cdefff;
+  --md-sys-color-secondary:var(--secondary);
+
+  --glass:rgba(12,15,22,.88);
+  --glass-card:rgba(18,22,32,.84);
+  --glass-hi:rgba(26,31,43,.96);
+  --glass-border:rgba(255,255,255,.26);
+  --glass-border-hi:rgba(255,255,255,.44);
+  --glass-blur:blur(12px);
+  --glass-shadow:0 4px 20px rgba(0,0,0,.6);
+
+  --shadow-xs:0 1px 2px rgba(0,0,0,.6);
+  --shadow-sm:0 2px 8px rgba(0,0,0,.66),0 1px 2px rgba(0,0,0,.5);
+  --shadow-md:0 4px 14px rgba(0,0,0,.7),0 1px 4px rgba(0,0,0,.5);
+  --shadow-lg:0 8px 26px rgba(0,0,0,.75),0 3px 8px rgba(0,0,0,.55);
+  --shadow-xl:0 16px 44px rgba(0,0,0,.8),0 6px 16px rgba(0,0,0,.6);
+  --shadow-inset:inset 0 1px 0 rgba(255,255,255,.10);
+  --shadow-glow-amber:0 0 0 2px rgba(255,181,112,.3),0 3px 12px rgba(255,181,112,.2);
+
+  --s1-80:rgba(18,22,32,.88); --s2-50:rgba(24,29,41,.5); --s2-80:rgba(24,29,41,.8);
+  --bdr-10:rgba(255,255,255,.14);
+
+  --bg-color:var(--bg);
+  --tx:var(--text); --tm:var(--dim);
+  --br:var(--bdr);
+  --input-bg:rgba(255,255,255,.10);
+  --input-hover:rgba(255,255,255,.16);
+  --glass-bg:var(--glass);
+  --glass-bg-solid:var(--glass-hi);
+  --glass-bg-hover:rgba(38,45,60,.94);
+  --radius-s:var(--radius-sm); --radius-m:var(--radius-md); --radius-l:var(--radius-lg);
+  color-scheme:dark;
+}
+
 /* ── Accent color overrides — chosen from the theme button's color
    picker (index.html). "blue" is the default brand hue defined above
    and needs no override; the rest just repaint --primary and its
@@ -228,6 +299,66 @@
   --primary:#ea580c; --on-primary:#ffffff; --primary-bg:rgba(234,88,12,.09); --primary-rgb:234,88,12;
   --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
   --md-sys-color-primary-container:#ffe1c7; --md-sys-color-on-primary-container:#431407;
+}
+:root[data-accent="teal"]{
+  --primary:#2dd4bf; --on-primary:#04302b; --primary-bg:rgba(45,212,191,.14); --primary-rgb:45,212,191;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#0b4a42; --md-sys-color-on-primary-container:#c4f7f1;
+}
+[data-theme="light"][data-accent="teal"]{
+  --primary:#0d9488; --on-primary:#ffffff; --primary-bg:rgba(13,148,136,.09); --primary-rgb:13,148,136;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#c9f5f0; --md-sys-color-on-primary-container:#03302b;
+}
+:root[data-accent="cyan"]{
+  --primary:#22d3ee; --on-primary:#04323d; --primary-bg:rgba(34,211,238,.14); --primary-rgb:34,211,238;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#0b4a58; --md-sys-color-on-primary-container:#c6f4fb;
+}
+[data-theme="light"][data-accent="cyan"]{
+  --primary:#0891b2; --on-primary:#ffffff; --primary-bg:rgba(8,145,178,.09); --primary-rgb:8,145,178;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#c4edf6; --md-sys-color-on-primary-container:#032f3a;
+}
+:root[data-accent="amber"]{
+  --primary:#fbbf24; --on-primary:#3b2600; --primary-bg:rgba(251,191,36,.14); --primary-rgb:251,191,36;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#5c3d00; --md-sys-color-on-primary-container:#ffe9b0;
+}
+[data-theme="light"][data-accent="amber"]{
+  --primary:#b45309; --on-primary:#ffffff; --primary-bg:rgba(180,83,9,.09); --primary-rgb:180,83,9;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#fde8c8; --md-sys-color-on-primary-container:#3b2600;
+}
+:root[data-accent="indigo"]{
+  --primary:#818cf8; --on-primary:#1e1b4b; --primary-bg:rgba(129,140,248,.14); --primary-rgb:129,140,248;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#2e2a6b; --md-sys-color-on-primary-container:#e0e2ff;
+}
+[data-theme="light"][data-accent="indigo"]{
+  --primary:#4f46e5; --on-primary:#ffffff; --primary-bg:rgba(79,70,229,.09); --primary-rgb:79,70,229;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#e0e0ff; --md-sys-color-on-primary-container:#1e1b4b;
+}
+:root[data-accent="lime"]{
+  --primary:#a3e635; --on-primary:#1f2b06; --primary-bg:rgba(163,230,53,.14); --primary-rgb:163,230,53;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#33470a; --md-sys-color-on-primary-container:#e6f7c8;
+}
+[data-theme="light"][data-accent="lime"]{
+  --primary:#4d7c0f; --on-primary:#ffffff; --primary-bg:rgba(77,124,15,.09); --primary-rgb:77,124,15;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#ddf0bd; --md-sys-color-on-primary-container:#1f2b06;
+}
+:root[data-accent="magenta"]{
+  --primary:#f472b6; --on-primary:#4a0c2b; --primary-bg:rgba(244,114,182,.14); --primary-rgb:244,114,182;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#6b1145; --md-sys-color-on-primary-container:#ffd6ea;
+}
+[data-theme="light"][data-accent="magenta"]{
+  --primary:#db2777; --on-primary:#ffffff; --primary-bg:rgba(219,39,119,.09); --primary-rgb:219,39,119;
+  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
+  --md-sys-color-primary-container:#fcd0e3; --md-sys-color-on-primary-container:#4a0c2b;
 }
 
 /* ── Base body treatment ── */

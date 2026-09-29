@@ -17,8 +17,8 @@
   "use strict";
   var THEME_KEY = "jspl-hub-theme";
   var ACCENT_KEY = "jspl-hub-accent";
-  var VALID_THEMES = ["light", "dark"];
-  var ACCENTS = ["blue", "green", "grey", "violet", "rose", "orange"];
+  var VALID_THEMES = ["light", "dark", "contrast"];
+  var ACCENTS = ["blue", "green", "grey", "violet", "rose", "orange", "teal", "cyan", "amber", "indigo", "lime", "magenta"];
   // Rake Planner and Order Status Report kept their own preference keys before
   // the hub unified them. Reading them as a fallback means an existing user who
   // had already picked a theme on one of those pages keeps it instead of
