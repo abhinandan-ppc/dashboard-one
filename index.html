@@ -26,12 +26,13 @@ body {
   font-family: 'Poppins', system-ui, sans-serif;
   color: var(--tx);
   background-color: var(--bg-color);
-  /* Accent-derived, matching theme.css's body wash, so the hub's backdrop
-     retints with the accent slider too. The second glow used to be a fixed
-     green (rgba(76,175,125,.06)) that ignored the accent entirely. */
+  /* Accent-derived and scaled by the same --tint-k curve theme.css uses, so the
+     hub's backdrop is as strongly tinted as the rest of the system. The second
+     glow used to be a fixed green (rgba(76,175,125,.06)) that ignored the
+     accent entirely. */
   background-image:
-    radial-gradient(ellipse 70% 50% at 15% 0%, color-mix(in srgb, var(--amb-1) 8%, transparent) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 60% at 90% 90%, color-mix(in srgb, var(--amb-2) 6%, transparent) 0%, transparent 60%);
+    radial-gradient(ellipse 70% 50% at 15% 0%, color-mix(in srgb, var(--amb-1) calc(28% * var(--tint-k)), transparent) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 60% at 90% 90%, color-mix(in srgb, var(--amb-2) calc(20% * var(--tint-k)), transparent) 0%, transparent 60%);
   background-attachment: fixed;
   transition: background-color 0.3s, color 0.3s;
   min-height: 100dvh;

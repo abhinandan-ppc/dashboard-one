@@ -237,28 +237,45 @@
    slider instead of staying a fixed blue haze over every theme.
 
    Each glow keeps a different hue offset AND saturation, because three copies
-   of one flat tint read as banding rather than depth. Saturation is scaled well
-   down from the accent's own --as: at full accent saturation these would be
-   lurid stains, and the point is a faint colour cast.
+   of one flat tint read as banding rather than depth. Saturation is scaled down
+   from the accent's own --as, but far less than before: this layer is the main
+   carrier of the accent across a page, and at the old weight it was invisible.
 
-   Alphas stay at or below .08 deliberately. This layer paints OVER --bg, so it
-   eats into the body-text contrast budget that
-   scripts/theme-contrast-check.mjs measures against the solid --bg. The script
-   models the solid colour only, so a heavier wash would silently spend contrast
-   the check never sees. */
+   Why the strength follows --tint-k instead of being a constant
+   ---------------------------------------------------------------
+   The wash paints OVER --bg, so it spends the body-text contrast budget. That
+   budget is not uniform along the slider: it is enormous at the ends (19:1 on
+   white, 21:1 on AMOLED black) and nearly gone in the middle, where the text
+   roles step and the ramp gives only 4.63:1 — the worst case in the whole
+   system. So the tint is strongest exactly where there is contrast to spend and
+   weakest through that narrow mid-band.
+
+   --tint-k is that shape: 1.0 at both ends, ~0.48 at the midpoint. Squaring
+   the edge term rather than using it linearly is what makes the fall-off steep
+   enough to protect the mid-band; linear left the tint almost as strong there
+   as at the ends.
+
+   The alphas below were chosen against contrast measured in a real browser via
+   scripts/shoot-page.mjs, at the dark end, the light end and the mid-band where
+   the budget is thinnest. They are not derived by a script, so re-check them
+   there if you change them: this layer is invisible to
+   scripts/theme-contrast-check.mjs, which models the solid --bg alone. */
 :root{
-  --amb-1:hsl(var(--ah) calc(var(--as) * 0.55) 62%);
-  --amb-2:hsl(calc(var(--ah) + 42) calc(var(--as) * 0.45) 58%);
-  --amb-3:hsl(calc(var(--ah) - 38) calc(var(--as) * 0.40) 54%);
+  --tint-edge: max(var(--tdsn), calc(1 - var(--tdsn)));
+  --tint-k: calc(0.30 + 0.70 * var(--tint-edge) * var(--tint-edge));
+
+  --amb-1:hsl(var(--ah) calc(var(--as) * 0.72) 62%);
+  --amb-2:hsl(calc(var(--ah) + 42) calc(var(--as) * 0.60) 58%);
+  --amb-3:hsl(calc(var(--ah) - 38) calc(var(--as) * 0.52) 54%);
 }
 
 /* ── Base body treatment ── */
 body{
   background:var(--bg);
   background-image:
-    radial-gradient(ellipse 70% 50% at 15% 10%, color-mix(in srgb, var(--amb-1) 7%, transparent) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 70% at 85% 90%, color-mix(in srgb, var(--amb-2) 6%, transparent) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 50% 50%, color-mix(in srgb, var(--amb-3) 4%, transparent) 0%, transparent 70%);
+    radial-gradient(ellipse 70% 50% at 15% 10%, color-mix(in srgb, var(--amb-1) calc(26% * var(--tint-k)), transparent) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 70% at 85% 90%, color-mix(in srgb, var(--amb-2) calc(20% * var(--tint-k)), transparent) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 50%, color-mix(in srgb, var(--amb-3) calc(14% * var(--tint-k)), transparent) 0%, transparent 70%);
   background-attachment:fixed;
   color:var(--text);
   font-family:'Poppins',system-ui,-apple-system,sans-serif;
