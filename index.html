@@ -239,10 +239,10 @@ input { font: inherit; color: inherit; }
 /* The track doubles as the legend: the range you are about to pick is visible,
    so the sliders need no separate min/max captions. */
 .theme-range--dark::-webkit-slider-runnable-track {
-  background: linear-gradient(90deg, #f0f4f8 0%, #c8d2e2 50%, #0b1120 100%);
+  background: linear-gradient(90deg, #f0f4f8 0%, #c8d2e2 50%, #000000 100%);
 }
 .theme-range--dark::-moz-range-track {
-  background: linear-gradient(90deg, #f0f4f8 0%, #c8d2e2 50%, #0b1120 100%);
+  background: linear-gradient(90deg, #f0f4f8 0%, #c8d2e2 50%, #000000 100%);
 }
 .theme-range--hue::-webkit-slider-runnable-track {
   background: linear-gradient(90deg,#f00 0%,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00 100%);
@@ -2190,10 +2190,10 @@ function syncInjectedFrameHomeAccent(){
 
 var THEME_KEY = "jspl-hub-theme";
 var ACCENT_KEY = "jspl-hub-accent";
-// 40, not 50: the surfaces ramp steeper than the slider (theme.css --tds), so
-// by 40 the background is already well past mid and the step to light text
-// lands on a surface dark enough to carry it.
-var DARK_THRESHOLD = 38;
+// 41, not 50: the surfaces ramp steeper than the slider (theme.css --tds), so
+// by 41 the background is already well past mid and the step to light text
+// lands on a surface dark enough to carry it. Must match theme-boot.js.
+var DARK_THRESHOLD = 41;
 var DEFAULT_DARKNESS = 100;
 var DEFAULT_ACCENT = { h: 199, s: 90, l: 52 };
 var LEGACY_THEME_KEYS = ["jspl-theme", "jspl-osr-theme"];

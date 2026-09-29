@@ -12,7 +12,13 @@
 // resolves the way this model says it does — scripts/shoot-page.mjs reports
 // the measured ratio for that.
 const LIGHT_BG = [0xf0, 0xf4, 0xf8];
-const DARK_BG = [0x0b, 0x11, 0x20];
+// Must be kept in step with theme.css's --bg dark end, which is AMOLED black.
+// These two are duplicated rather than parsed out of the stylesheet because
+// colour-mix() cannot be evaluated here without a CSS engine; if you change one,
+// change the other or this script will silently certify a ramp the browser no
+// longer renders. scripts/shoot-page.mjs is the check that reads the real value
+// back out of a browser.
+const DARK_BG = [0x00, 0x00, 0x00];
 // Pure black / pure white rather than the off-black and off-white the two
 // static themes used. This is not cosmetic: those sit at luminance 0.006 and
 // 0.95, which leaves NO window where both ends clear 4.5:1 against a mid-grey

@@ -44,19 +44,19 @@
        end of the contrast range and never meets the background halfway.
    Two things keep the seam tight: the surfaces ramp on --tds, which runs
    steeper than the raw slider position and so is already well past mid when
-   the derived attribute flips, and that flip happens at 40%. ── */
+   the derived attribute flips, and that flip happens at 41%. ── */
 :root{
   --theme-d: 100;
   --tdn: calc(var(--theme-d) / 100);
   /* Surfaces ramp steeper than the raw slider position and are pinned at both
-     ends: fully light below d=11, fully dark above d=59, with the whole
-     light-to-dark transition inside a ~48%-wide band. That keeps the text step
-     (DARK_THRESHOLD 38) landing where the surface can carry it.
+     ends: fully light below d=14, fully dark above d=66, with the whole
+     light-to-dark transition inside a ~52%-wide band. That keeps the text step
+     (DARK_THRESHOLD 41) landing where the surface can carry it.
      These three numbers are not freehanded — scripts/theme-contrast-check.mjs
      searches slope/offset/threshold and reports the best worst-case body
      contrast, which is 4.63:1 against the 4.5:1 WCAG AA floor. Change any of
      them and re-run that script. */
-  --tds: clamp(0%, calc(var(--theme-d) * 2.1% - 24%), 100%);
+  --tds: clamp(0%, calc(var(--theme-d) * 1.9% - 26%), 100%);
   --tdsn: calc(var(--tds) / 100%);
   --td: var(--tds);
 
@@ -65,13 +65,20 @@
   --as: 90%;
   --al: 52%;
 
-  /* Surfaces */
-  --bg: color-mix(in srgb, #f0f4f8, #0b1120 var(--td));
-  --s0: color-mix(in srgb, rgba(255,255,255,.95), rgba(20,28,45,.74) var(--td));
-  --s1: color-mix(in srgb, rgba(255,255,255,.88), rgba(30,41,59,.62) var(--td));
-  --s2: color-mix(in srgb, rgba(240,244,252,.85), rgba(36,49,70,.58) var(--td));
-  --s3: color-mix(in srgb, rgba(226,232,246,.80), rgba(44,58,82,.55) var(--td));
-  --s4: color-mix(in srgb, rgba(212,220,240,.76), rgba(52,68,94,.52) var(--td));
+  /* Surfaces
+     The dark end is AMOLED black: --bg lands on #000, not a dark blue, so an
+     OLED panel can actually switch those pixels off. That only works if the
+     surfaces ABOVE it stay readable against pure black, so they are near-black
+     greys with just enough lift to separate from the background and each
+     other. A surface as dark as the background would make the whole UI read as
+     one flat black sheet. The blue cast the old ramp used (#0b1120) is what
+     keeps a page looking "lit"; on black it only shows up as a muddy tint. */
+  --bg: color-mix(in srgb, #f0f4f8, #000000 var(--td));
+  --s0: color-mix(in srgb, rgba(255,255,255,.95), rgba(26,26,28,.82) var(--td));
+  --s1: color-mix(in srgb, rgba(255,255,255,.88), rgba(34,34,38,.78) var(--td));
+  --s2: color-mix(in srgb, rgba(240,244,252,.85), rgba(43,43,48,.74) var(--td));
+  --s3: color-mix(in srgb, rgba(226,232,246,.80), rgba(52,52,58,.70) var(--td));
+  --s4: color-mix(in srgb, rgba(212,220,240,.76), rgba(62,62,69,.66) var(--td));
   --bdr: color-mix(in srgb, rgba(0,0,0,.1), rgba(255,255,255,.12) var(--td));
   --bdrHi: color-mix(in srgb, rgba(0,0,0,.2), rgba(255,255,255,.22) var(--td));
 
@@ -132,10 +139,14 @@
       hsl(var(--ah) 60% 16%), hsl(var(--ah) 70% 88%) var(--td));
   --md-sys-color-secondary:var(--secondary);
 
-  /* Glass */
-  --glass: color-mix(in srgb, rgba(255,255,255,.72), rgba(30,41,59,.65) var(--td));
-  --glass-card: color-mix(in srgb, rgba(255,255,255,.80), rgba(30,41,59,.55) var(--td));
-  --glass-hi: color-mix(in srgb, rgba(255,255,255,.98), rgba(30,41,59,.92) var(--td));
+  /* Glass
+     Same reasoning as the surfaces: on an AMOLED black background the glass
+     tints cannot go near-black themselves or cards vanish into the page. They
+     are dark neutral greys instead. --glass-hi is the one that has to stay
+     solidly opaque, because it backs solid chrome such as table headers. */
+  --glass: color-mix(in srgb, rgba(255,255,255,.72), rgba(30,30,34,.80) var(--td));
+  --glass-card: color-mix(in srgb, rgba(255,255,255,.80), rgba(26,26,30,.72) var(--td));
+  --glass-hi: color-mix(in srgb, rgba(255,255,255,.98), rgba(22,22,25,.94) var(--td));
   --glass-border: color-mix(in srgb, rgba(0,0,0,.12), rgba(255,255,255,.14) var(--td));
   --glass-border-hi: color-mix(in srgb, rgba(0,0,0,.22), rgba(255,255,255,.26) var(--td));
   --glass-blur: blur(16px);
@@ -174,10 +185,10 @@
   --radius-xs:4px; --radius-sm:8px; --radius-md:12px;
   --radius-lg:16px; --radius-xl:20px; --radius-pill:999px;
 
-  /* Composites */
-  --s1-80: color-mix(in srgb, rgba(255,255,255,.88), rgba(30,41,59,.8) var(--td));
-  --s2-50: color-mix(in srgb, rgba(240,244,252,.55), rgba(36,49,70,.5) var(--td));
-  --s2-80: color-mix(in srgb, rgba(240,244,252,.85), rgba(36,49,70,.8) var(--td));
+  /* Composites — same neutral-grey dark end as the surfaces above */
+  --s1-80: color-mix(in srgb, rgba(255,255,255,.88), rgba(30,30,34,.86) var(--td));
+  --s2-50: color-mix(in srgb, rgba(240,244,252,.55), rgba(43,43,48,.62) var(--td));
+  --s2-80: color-mix(in srgb, rgba(240,244,252,.85), rgba(43,43,48,.84) var(--td));
   --bdr-10: color-mix(in srgb, rgba(0,0,0,.06), rgba(255,255,255,.05) var(--td));
 
   /* ── Legacy aliases — kept so older pages don't need every rule rewritten ── */
@@ -188,7 +199,7 @@
   --input-hover: color-mix(in srgb, rgba(0,0,0,.08), rgba(255,255,255,.09) var(--td));
   --glass-bg:var(--glass);
   --glass-bg-solid:var(--glass-hi);
-  --glass-bg-hover: color-mix(in srgb, rgba(255,255,255,.9), rgba(38,48,66,.85) var(--td));
+  --glass-bg-hover: color-mix(in srgb, rgba(255,255,255,.9), rgba(40,40,46,.88) var(--td));
   --radius-s:var(--radius-sm); --radius-m:var(--radius-md); --radius-l:var(--radius-lg);
 }
 

@@ -26,10 +26,11 @@
   var THEME_KEY = "jspl-hub-theme";
   var ACCENT_KEY = "jspl-hub-accent";
   // Below this the derived data-theme is "light", at or above it "dark". It is
-  // 40, not 50, because the surfaces ramp steeper than the slider (see
-  // theme.css --tds): by 40 the background is already well past mid, so the
-  // step to light text happens on a surface dark enough to carry it.
-  var DARK_THRESHOLD = 38;
+  // 41, not 50, because the surfaces ramp steeper than the slider (see
+  // theme.css --tds): by 41 the background is already well past mid, so the
+  // step to light text happens on a surface dark enough to carry it. Keep this
+  // equal to the threshold scripts/theme-contrast-check.mjs reports.
+  var DARK_THRESHOLD = 41;
   var DEFAULT_DARKNESS = 100;
   var DEFAULT_ACCENT = { h: 199, s: 90, l: 52 };
   // Older builds stored a theme NAME and a NAMED accent. Map both forward so an
