@@ -162,17 +162,28 @@ function useThemeManager(){
     return()=>mq.removeEventListener('change',h);
   },[]);
   const effective=pref==='auto'?(systemDark?'dark':'light'):pref;
+  // The hub's theme is a continuous darkness (0..100) and theme-boot.js owns
+  // the attribute that paints the page. This effect deliberately does NOT write
+  // data-theme: it used to, which stomped the value the boot script had just
+  // applied and left this page disagreeing with the hub. It only reconciles
+  // this page's own canvas palette, which really is two-tone.
   useEffect(()=>{
-    // 'contrast' is dark-family (near-black surfaces), so it must take the DARK
-    // canvas palette, not the light one. Testing only for 'dark' would hand it
-    // light canvas colours and the plots would invert against the dark chrome.
+    // Anything dark-family (including the dark end of the ramp) takes the DARK
+    // canvas palette; testing only for 'dark' would hand it light colours and
+    // the charts would invert against the dark chrome.
     C=effective==='light'?LIGHT_C:DARK_C;
-    document.documentElement.setAttribute('data-theme',effective);
     localStorage.setItem('jspl-theme',pref);
     document.body.classList.add('data-switching');
     setTimeout(()=>document.body.classList.remove('data-switching'),300);
   },[effective,pref]);
-  return{pref,setPref,effective};
+  // Apply a resolved theme to BOTH the canvas and the shared continuous value.
+  // Used by this page's own toggle, where snapping to an end of the ramp is the
+  // right thing to do: the user picked light or dark, not a midpoint.
+  const setThemeConcrete=useCallback(v=>{
+    setPref(v);
+    if(window.jsplTheme) window.jsplTheme.set(v==='light'?0:100);
+  },[setPref]);
+  return{pref,setPref,effective,setThemeConcrete};
 }
 
 const F={h:"'Poppins',sans-serif",b:"'Poppins',sans-serif",m:"'JetBrains Mono',monospace"};
@@ -5044,7 +5055,7 @@ async function fetchEbtpDirectly(onStep){
 
 /* ═══════════════════ MAIN APP ═══════════════════ */
 /* ═══════════════════ THEME TOGGLE ═══════════════════ */
-function ThemeToggle({pref,setPref}){
+function ThemeToggle({pref,setThemeConcrete}){
   const opts=[
     {v:'dark', icon:'🌙', label:'Dark'},
     {v:'light',icon:'☀️', label:'Light'},
@@ -5054,7 +5065,7 @@ function ThemeToggle({pref,setPref}){
     border:'1px solid var(--bdr)',padding:3,gap:2,flexShrink:0}}>
     {opts.map(o=>{
       const active=pref===o.v;
-      return<button key={o.v} onClick={()=>setPref(o.v)} title={o.label} style={{
+      return<button key={o.v} onClick={()=>setThemeConcrete(o.v)} title={o.label} style={{
         padding:'5px 9px',borderRadius:'var(--radius-xs)',border:'none',cursor:'pointer',
         background:active?'var(--amber)':'transparent',
         color:active?'#fff':'var(--dim)',
@@ -5068,7 +5079,7 @@ function ThemeToggle({pref,setPref}){
 
 function App(){
   const{mob,tab}=useBreakpoint();
-  const{pref,setPref,effective}=useThemeManager();
+  const{pref,setPref,effective,setThemeConcrete}=useThemeManager();
   const[themeKey,setThemeKey]=useState(0); // forces re-render when theme changes
   const initialSessionState=useMemo(()=>readPlannerSessionState(),[]);
   const[cacheBooting,setCacheBooting]=useState(()=>!initialSessionState);
@@ -5086,19 +5097,27 @@ function App(){
   },[effective]);
   useEffect(()=>{
     window.__hub_handle_theme = function(themeValue){
-      var normalized = String(themeValue || '').toLowerCase();
-      if(normalized !== 'dark' && normalized !== 'light' && normalized !== 'contrast' && normalized !== 'auto') return;
-      setPref(normalized);
-      try{ localStorage.setItem('jspl-hub-theme', normalized); }catch(err){}
+      // The hub's value is a continuous darkness. Adopt it EXACTLY — reducing it
+      // to a name and persisting that would snap the shared value to one end and
+      // desync every other page. Only this page's own canvas preference is
+      // reduced, because a canvas genuinely is two-tone.
+      if(!window.jsplTheme) return;
+      var d = window.jsplTheme.normalize(themeValue);
+      setPref(window.jsplTheme.derived(d));
+      window.jsplTheme.apply(d);
     };
     // theme-boot.js applies the hub's stored theme to <html> before first paint,
     // but this page's own effect (above) re-asserts its React state right after
     // mount and would stomp that attribute back to this page's default. Handing
-    // the boot script our state setter lets it drive `pref` instead, so the page
+    // the boot script our canvas setter lets it drive C instead, so the page
     // boots on the hub's theme rather than flipping to it a frame later.
+    // It must NOT touch `pref` — the user may have chosen "auto", and the boot
+    // script calls this on every apply, so writing here would erase that.
     window.__hub_apply_theme = function(themeValue){
-      var normalized = String(themeValue || '').toLowerCase();
-      if(normalized === 'dark' || normalized === 'light') setPref(normalized);
+      var d = window.jsplTheme ? window.jsplTheme.normalize(themeValue)
+        : (String(themeValue||'').toLowerCase()==='light'?0:100);
+      C = d < (window.jsplTheme ? window.jsplTheme.DARK_THRESHOLD : 50) ? LIGHT_C : DARK_C;
+      setThemeKey(k=>k+1);
     };
     return ()=>{
       try{ delete window.__hub_handle_theme; }catch(err){ window.__hub_handle_theme = undefined; }
@@ -5925,12 +5944,18 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
       var d = e.data;
       if(!d || !d.type) return;
       if (d.type === 'theme') {
-        if (d.value && typeof window.__hub_handle_theme === 'function') {
-          window.__hub_handle_theme(d.value);
-        } else if (d.value) {
-          document.documentElement.setAttribute('data-theme', d.value);
+        // No localStorage write here. This handler used to write d.value
+        // straight back to jspl-hub-theme, so on a value it did not recognise
+        // it both displayed and persisted the wrong theme for every other page.
+        // theme-boot.js already applies the hub's value; this page only has to
+        // reconcile its own canvas.
+        if (d.value !== undefined && d.value !== null) {
+          if (typeof window.__hub_handle_theme === 'function') {
+            window.__hub_handle_theme(d.value);
+          } else if (window.jsplTheme) {
+            window.jsplTheme.apply(d.value);
+          }
         }
-        try { localStorage.setItem('jspl-hub-theme', d.value); } catch(err){}
       } else if (d.type === 'reset') {
         // If page exposes a reset function call it, otherwise reload iframe
         if (typeof window.__hub_handle_reset === 'function') {

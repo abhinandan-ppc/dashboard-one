@@ -1288,34 +1288,103 @@ test('Order Status table headers stay a flat band instead of popover cards', asy
 });
 
 // ── Theme: the hub is the single source of truth, and it reaches every page ──
-test('the theme control keeps its compact height on mobile despite the tap-target rule', async () => {
+// The hub's 44px tap-target rule must keep excluding range inputs — that
+// exclusion is what lets the theme panel use compact sliders instead of the
+// buttons that had to be re-pinned with !important overrides.
+function css_rangeExcluded(css) {
+  return /input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\):not\(\[type="range"\]\)/.test(css);
+}
+
+test('the theme panel is driven by range sliders, not a tap-target-stretched button', async () => {
   const hub = await read('index.html');
-  // theme.css's `.page-hub button{min-height:44px!important}` reaches every
-  // button on the hub, including the compact light/dark/contrast segment row,
-  // which rendered as a 44px-tall pill. The override has to be scoped under
-  // .theme-panel AND carry !important, because a bare .theme-seg rule cannot
-  // outrank an !important declaration.
-  assert.ok(
-    hub.includes('.theme-panel .theme-seg') && hub.includes('min-height: 28px !important'),
-    'the segment row must re-pin its height under .theme-panel with !important'
-  );
-  // The 44px touch target is preserved by a pseudo-element rather than by
-  // stretching the visible track.
-  assert.ok(hub.includes('.theme-seg::before'), 'the segment row must keep a 44px hit area via ::before');
-  assert.ok(/height:\s*44px/.test(hub.slice(hub.indexOf('.theme-seg::before'), hub.indexOf('.theme-panel .theme-seg'))),
-    'the ::before hit area must be 44px tall');
-  // One option per theme, so the control actually offers all of them.
-  const seg = hub.slice(hub.indexOf('id="themeSeg"'), hub.indexOf('id="accentSwatches"'));
-  for (const t of ['light', 'dark', 'contrast']) {
-    assert.ok(seg.includes(`data-theme-opt="${t}"`), `the segment control must offer "${t}"`);
+  // The controls used to be <button>s, which theme.css's
+  // `.page-hub button{min-height:44px!important}` stretched into broken pills
+  // that then had to be re-pinned with !important overrides. theme.css's rule
+  // explicitly excludes [type=range], so range inputs are the fix rather than
+  // another pile of !important re-pinning.
+  assert.ok(css_rangeExcluded(await read('theme.css')), 'theme.css must still exclude range inputs from the tap-target rule');
+  for (const id of ['themeDarkness', 'accentHue', 'accentSat', 'accentLight']) {
+    assert.ok(hub.includes(`id="${id}"`), `the panel must offer the ${id} slider`);
+    assert.ok(new RegExp(`id="${id}"[\\s\\S]{0,120}type="range"|type="range"[\\s\\S]{0,120}id="${id}"`).test(hub),
+      `${id} must be a range input`);
+  }
+  // One slider per dimension, and each writes a distinct custom property.
+  assert.ok(/--theme-d/.test(hub) && /--ah/.test(hub) && /--as/.test(hub) && /--al/.test(hub),
+    'the hub must write the four continuous custom properties');
+  // Keyboard support (arrows, Home/End) is the platform's job for a range
+  // input, so the control must not have taken that away by making the track
+  // a non-focusable element.
+  assert.ok(!/tabindex="-1"/.test(hub.slice(hub.indexOf('id="themeDarkness"'), hub.indexOf('id="accentHue"'))),
+    'the sliders must stay keyboard-focusable');
+});
+
+test('every theme token is blended from the continuous slider, not a static pair', async () => {
+  const css = await read('theme.css');
+  // The whole point of the slider: a theme at 50 must be a genuine blend, not
+  // a snap to whichever of two static blocks fell on the other side. Every
+  // surface/text token has to be a color-mix against --td.
+  assert.ok(css.includes('--theme-d: 100'), 'the ramp must have a default position');
+  // --tds is the steepened ramp the surfaces actually use. Its exact numbers
+  // are pinned by scripts/theme-contrast-check.mjs, which searches them for
+  // the best worst-case body contrast; this only asserts the shape.
+  assert.ok(/--tds:\s*clamp\(0%,\s*calc\(var\(--theme-d\)[^;]*?\),\s*100%\)/.test(css),
+    'the surface ramp must be a clamped, steepened function of the slider');
+  assert.ok(/--td:\s*var\(--tds\)/.test(css), 'the color-mix percentage must come from the steepened ramp');
+  for (const token of ['--bg', '--bdr', '--glass', '--s0']) {
+    const line = css.split('\n').find(l => l.trim().startsWith(token + ':'));
+    assert.ok(line, `theme.css must still define ${token}`);
+    assert.ok(/color-mix\(in srgb/.test(line), `${token} must be a color-mix, not a static value`);
+    assert.ok(line.includes('var(--td)'), `${token} must be blended against the slider position`);
+  }
+  // The text roles must NOT ramp. Cross-fading --bg and --text together lands
+  // both on the same mid luminance halfway along, and the text disappears into
+  // the background — which is exactly what rendering at darkness 50 showed.
+  for (const token of ['--text', '--text-hi', '--dim', '--mute']) {
+    const decl = css.slice(css.indexOf(token + ':'), css.indexOf(';', css.indexOf(token + ':')));
+    assert.ok(!/color-mix/.test(decl), `${token} must step, not ramp — a cross-fade loses contrast at the midpoint`);
+  }
+  // Both sides of the step have to exist, and they have to be the extremes:
+  // off-black and off-white leave no window where both clear 4.5:1 against a
+  // mid-grey surface, which caps the ramp at 4.28:1.
+  assert.ok(/\[data-theme="light"\]\{[^}]*--text:#000000/s.test(css), 'light text must be pure black');
+  assert.ok(/--text:#ffffff/.test(css), 'dark text must be pure white');
+  // The accent is a colour, not a name — so --primary must derive from the HSL
+  // inputs rather than a fixed literal. Its declaration wraps over two lines,
+  // so read the whole declaration, not just its first line.
+  const primary = css.slice(css.indexOf('--primary:'), css.indexOf(';', css.indexOf('--primary:')));
+  assert.ok(/hsl\(var\(--ah\)/.test(primary), '--primary must derive from the hue/sat/lightness inputs');
+  assert.ok(/var\(--td\)/.test(primary), '--primary must be blended against the slider position');
+  // No per-accent or per-theme override blocks may creep back in: each would
+  // be a value the slider cannot reach.
+  assert.ok(!/\[data-accent=/.test(css), 'there must be no per-accent blocks — the accent is continuous now');
+  assert.ok(!/\[data-theme="contrast"\]/.test(css), 'the contrast preset is gone; the ramp replaces it');
+  // The derived attribute is the contract the pages still branch on, so it
+  // must be exactly light or dark and nothing else.
+  assert.ok(/\[data-theme="light"\]\{[^}]*color-scheme:light/s.test(css), 'color-scheme must still follow the derived theme');
+  assert.ok(/\[data-theme="dark"\]\{ color-scheme:dark; \}/.test(css), 'color-scheme must still follow the derived theme');
+});
+
+test('the hub maps every stored value forward instead of reverting an old one', async () => {
+  const hub = await read('index.html');
+  const boot = await read('theme-boot.js');
+  for (const src of [hub, boot]) {
+    assert.ok(src.includes('LEGACY_THEME_VALUES'), 'a stored theme NAME from an older build must be mapped');
+    assert.ok(/light:\s*0/.test(src) && /dark:\s*100/.test(src), 'light/dark names must map to the ramp ends');
+    assert.ok(src.includes('LEGACY_ACCENTS'), 'a named accent from an older build must be mapped');
+  }
+  // An unreadable value must fall back, never land mid-ramp as NaN.
+  for (const src of [hub, boot]) {
+    assert.ok(/isFinite/.test(src), 'stored values must be validated before they reach the slider');
   }
 });
 
 test('the hub pushes theme and accent to every page over all three channels', async () => {
   const hub = await read('index.html');
-  // postMessage carries BOTH values. Accent used to be broadcast but handled by
-  // no page at all, so the accent never left the hub.
-  assert.ok(hub.includes('type: "accent"'), 'accent must be pushed to pages');
+  // postMessage carries the theme AND the accent together, as one continuous
+  // payload, plus a legacy named message alongside it.
+  assert.ok(hub.includes('type: "theme-vars"'), 'the continuous theme payload must be pushed to pages');
+  assert.ok(/type: "theme-vars", darkness: currentDarkness, accent: currentAccent/.test(hub),
+    'the pushed payload must carry both the darkness and the accent');
   assert.ok(hub.includes('type: "theme"'), 'theme must be pushed to pages');
   // A `storage` listener is the only way to see a change made in another tab.
   assert.ok(hub.includes("addEventListener('storage'"), 'the hub must listen for cross-tab storage changes');
@@ -1365,70 +1434,97 @@ test('every page boots on the hub theme and accent before it first paints', asyn
   }
 });
 
-test('every theme and accent the hub offers is actually defined in theme.css', async () => {
-  // The hub normalises against these lists, so a value listed here but missing
-  // from theme.css would silently fall back to the default dark/blue while the
-  // picker showed it as selected. Both lists are duplicated in theme-boot.js by
-  // necessity (it is the pre-paint script and cannot import anything), so pin
-  // all three copies together here.
+test('the darkness ramp keeps body text above the WCAG AA floor at every position', async () => {
+  // The ramp is not just "does it look right at the two ends". Rendering at
+  // darkness 50 produced light grey text on a mid grey page, because a
+  // cross-fade drives --bg and --text onto the same luminance halfway along.
+  //
+  // This runs the real search rather than a hand-written expectation, so the
+  // slope/offset/threshold baked into theme.css and the script cannot drift
+  // apart: the script prints the best configuration it can find, and this
+  // asserts the shipped one is that one and clears 4.5:1.
+  const { execFileSync } = await import('node:child_process');
+  let out = '';
+  try {
+    out = execFileSync(process.execPath, ['scripts/theme-contrast-check.mjs'], { encoding: 'utf8' });
+  } catch (e) {
+    // The check exits non-zero when it cannot clear the floor; surface its
+    // reasoning rather than a bare failure.
+    const report = (e.stdout || '') + (e.stderr || '');
+    assert.fail('the darkness ramp fails the contrast floor:\n' + report.trim());
+  }
+  const m = out.match(/best ramp: --tds: (.+)/);
+  assert.ok(m, 'the check must report the ramp it recommends');
+  const recommended = m[1].trim();
+  const t = out.match(/DARK_THRESHOLD = (\d+)/);
+  assert.ok(t, 'the check must report the threshold it recommends');
+
+  const css = await read('theme.css');
+  // The whole clamp(...) expression, not just up to the first closing paren —
+  // the inner calc() closes before the outer clamp does.
+  const shipped = css.match(/--tds:\s*(clamp\(0%,\s*calc\(var\(--theme-d\)[^;]*?\),\s*100%\))/);
+  assert.ok(shipped, 'theme.css must declare the steepened ramp');
+  // Compared as normalised text, not as parsed numbers: the script already
+  // prints the exact CSS form, so this pins theme.css to the searched optimum.
+  const norm = s => s.replace(/\s+/g, ' ').replace(/\s*([%*()])\s*/g, '$1').trim();
+  assert.equal(norm(shipped[1]), norm(recommended),
+    'theme.css must ship exactly the ramp the contrast search recommends');
+
+  for (const [name, src] of [['theme-boot.js', await read('theme-boot.js')], ['index.html', await read('index.html')]]) {
+    const th = src.match(/DARK_THRESHOLD\s*=\s*(\d+)/);
+    assert.ok(th, `${name} must declare DARK_THRESHOLD`);
+    assert.equal(Number(th[1]), Number(t[1]), `${name} and the contrast check must agree on DARK_THRESHOLD`);
+  }
+  assert.ok(/OK: body text stays at or above 4\.5:1/.test(out),
+    'the shipped ramp must clear 4.5:1 across its whole range');
+});
+
+test('the derived data-theme is always light or dark, never a third value', async () => {
+  // The ramp is continuous, but twelve pages still branch on data-theme, so the
+  // hub has to reduce it to the one contract they all understand. If a third
+  // value ever escaped that reduction, every one of those pages would fall
+  // through its own `=== 'light' ? ... : 'dark'` and repaint dark, which is the
+  // exact silent desync the hub's single-source-of-truth design prevents.
   const hub = await read('index.html');
   const boot = await read('theme-boot.js');
-  const css = await read('theme.css');
-
-  const listOf = (src, name) => {
-    const m = src.match(new RegExp(name + '\\s*=\\s*\\[([^\\]]*)\\]'));
-    assert.ok(m, `${name} must be declared as an array`);
-    return [...m[1].matchAll(/["']([^"']+)["']/g)].map(x => x[1]);
-  };
-
-  const themes = listOf(hub, 'VALID_THEMES');
-  const hubAccents = listOf(hub, 'ACCENTS');
-  const bootThemes = listOf(boot, 'VALID_THEMES');
-  const bootAccents = listOf(boot, 'ACCENTS');
-
-  assert.deepEqual(bootThemes, themes, 'theme-boot.js and the hub must accept the same themes');
-  assert.deepEqual(bootAccents, hubAccents, 'theme-boot.js and the hub must offer the same accents');
-
-  for (const t of themes) {
-    // "dark" is the :root default and needs no explicit block.
-    if (t === 'dark') continue;
-    assert.ok(css.includes(`[data-theme="${t}"]`), `theme.css must define [data-theme="${t}"]`);
-  }
-  for (const a of hubAccents) {
-    if (a === 'blue') continue; // the default brand hue, defined on :root
-    assert.ok(css.includes(`[data-accent="${a}"]`), `theme.css must define [data-accent="${a}"]`);
-  }
-  // Each accent must be selectable in the picker, or it is unreachable.
-  const swatches = hub.slice(hub.indexOf('id="accentSwatches"'), hub.indexOf('</div>', hub.indexOf('id="accentSwatches"')));
-  for (const a of hubAccents) {
-    assert.ok(swatches.includes(`data-accent="${a}"`), `the picker must offer a swatch for "${a}"`);
+  for (const [name, src] of [['index.html', hub], ['theme-boot.js', boot]]) {
+    const derived = src.match(/d\s*<\s*DARK_THRESHOLD\s*\?\s*["']light["']\s*:\s*["']dark["']/);
+    assert.ok(derived, `${name} must derive data-theme from DARK_THRESHOLD`);
+    // Nothing may write a raw theme name onto the attribute any more.
+    for (const w of src.matchAll(/setAttribute\(\s*["']data-theme["']\s*,\s*([^)]+)\)/g)) {
+      assert.ok(!/contrast/.test(w[1]), `${name} must not write "contrast" onto data-theme`);
+    }
   }
 });
 
-test('no page coerces a theme it does not recognise back to dark', async () => {
-  // The bug this guards: a page written as `theme === 'light' ? 'light' : 'dark'`
-  // silently discards any new theme. The user picks "contrast" in the hub and
-  // that one page stays dark while everything around it repaints — the exact
-  // class of silent desync the hub's single-source-of-truth design exists to
-  // prevent. Every page that narrows the value must name "contrast" too.
-  const narrowers = [
-    'admin.html',
-    'VDO-Generator.html',
-    'Plate-Tagging-Tool.html',
-    'SMS-Heat-Planner.html',
-    'PM-Yard.html',
-    'Rake-Planner.html',
-    'Order-Status-Report.html',
-  ];
-  for (const page of narrowers) {
+test('no page reads or writes the shared theme key directly', async () => {
+  // The invariant that keeps every page in sync. The shared store is a
+  // continuous darkness (0..100), and each page used to keep its own copy of
+  // "apply the theme and remember it". Every one of those copies read the
+  // stored value, failed to match it against a 'light'/'dark' name, fell back
+  // to dark, and wrote 'dark' back — so opening ONE page standalone reset the
+  // theme for all of them. jsplTheme (theme-boot.js) is the only thing allowed
+  // to touch the key.
+  const boot = await read('theme-boot.js');
+  assert.ok(/window\.jsplTheme\s*=/.test(boot), 'theme-boot.js must expose the jsplTheme API');
+  for (const fn of ['read', 'normalize', 'derived', 'apply', 'set']) {
+    assert.ok(boot.includes(`${fn}:`), `jsplTheme must expose ${fn}()`);
+  }
+
+  for (const page of pages) {
+    if (page === 'index.html') continue; // the hub owns the key
     const src = await read(page);
-    // Find every `=== 'light' ? ... : 'dark'` style coercion still present.
-    const coercions = [...src.matchAll(/===\s*'light'\s*\?[^:]{0,40}:\s*'dark'/g)];
-    for (const c of coercions) {
-      // A ternary that also tests for 'contrast' is not a narrowing coercion.
-      assert.ok(/contrast/.test(c[0]),
-        `${page} narrows the theme with \`${c[0]}\`, which would discard "contrast"`);
+    for (const m of src.matchAll(/localStorage\.(?:get|set)Item\(\s*['"]jspl-hub-theme['"]/g)) {
+      assert.fail(`${page} touches jspl-hub-theme directly (${m[0]}) — use jsplTheme instead`);
     }
+    // A page must not narrow the value by matching it against names either.
+    assert.ok(!/===\s*['"]light['"]\s*\?\s*['"]light['"]\s*:\s*['"]dark['"]/.test(src),
+      `${page} narrows the theme with a light/dark ternary, which discards the ramp`);
+  }
+  // And the two pages with their own theme managers must go through it.
+  for (const page of ['Rake-Planner.html', 'Order-Status-Report.html']) {
+    const src = await read(page);
+    assert.ok(src.includes('jsplTheme'), `${page} must route its theme through jsplTheme`);
   }
 });
 
@@ -1449,5 +1545,12 @@ test('the SMS planner no longer overrides the hub theme on load', async () => {
   // ignored the hub — the one page that visibly refused the chosen theme.
   assert.ok(!/setTheme\(localStorage\.getItem\('smsPlannerTheme'\) \|\| 'dark'\);/.test(sms),
     'the page must not unconditionally re-apply its legacy key at load');
-  assert.ok(sms.includes("localStorage.getItem('jspl-hub-theme')"), 'it must adopt the hub theme first');
+  // The hub key is no longer read directly here: reading it by hand is exactly
+  // what broke, because the value is a continuous number and matching it
+  // against 'light'/'dark' silently fell back to dark. It now goes through
+  // jsplTheme, which owns the format.
+  assert.ok(/window\.jsplTheme\.normalize\(window\.jsplTheme\.read\(\)\)/.test(sms),
+    'it must adopt the hub theme through jsplTheme, not by matching the raw key');
+  assert.ok(!/localStorage\.getItem\('jspl-hub-theme'\)/.test(sms),
+    'this page must not read the shared key directly');
 });

@@ -2704,9 +2704,11 @@ function applyTheme(themeName) {
   
   const themes = {
     'contrast': {
-      // Same night lighting as 'midnight', but the chrome paints via the
-      // hub's high-contrast token set instead of the default dark one.
-      dataTheme: 'contrast', bg: 0x000000, groundCol: 0x05070c,
+      // Night lighting, but data-theme stays "dark": the continuous value has
+      // already been applied by jsplTheme and this is only choosing the 3D
+      // environment. Writing data-theme="contrast" here would reintroduce the
+      // third theme value the continuous ramp replaced.
+      dataTheme: 'dark', bg: 0x000000, groundCol: 0x05070c,
       ambCol: 0x334155, ambInt: 1.2,
       hemiSky: 0x64748b, hemiGround: 0x000000, hemiInt: 1.0,
       sunCol: 0x94a3b8, sunInt: 3.5, sunPos: [40, 80, -40],
@@ -2800,26 +2802,23 @@ function applyTheme(themeName) {
 }
 
 window.__hub_handle_theme = function(themeValue) {
-  const normalized = String(themeValue || '').toLowerCase();
-  if (normalized === 'light') {
+  // Accepts a continuous darkness (0..100) or a legacy name. The 3D
+  // environment is the page's own light/dark call, so the continuous value is
+  // reduced here rather than anywhere else — and the continuous value is
+  // persisted, never the reduced name, so the next page to load still sees the
+  // full ramp position.
+  var d = window.jsplTheme.normalize(themeValue);
+  var derived = window.jsplTheme.derived(d);
+  window.jsplTheme.apply(d);
+  if (derived === 'light') {
     setEnvironment('noon');
     try { localStorage.setItem('jspl-page-theme', 'light'); } catch(err) {}
     return;
   }
-  if (normalized === 'dark') {
-    setEnvironment('midnight');
-    try { localStorage.setItem('jspl-page-theme', 'dark'); } catch(err) {}
-    return;
-  }
-  if (normalized === 'contrast') {
-    setEnvironment('contrast');
-    try { localStorage.setItem('jspl-page-theme', 'contrast'); } catch(err) {}
-    return;
-  }
-  if (normalized === 'auto') {
-    setEnvironment('auto');
-    try { localStorage.setItem('jspl-page-theme', 'auto'); } catch(err) {}
-  }
+  // The dark end of the ramp rides the night environment, but keeps its own
+  // data-theme so the chrome paints with the blended tokens.
+  setEnvironment('contrast');
+  try { localStorage.setItem('jspl-page-theme', 'dark'); } catch(err) {}
 };
 
 function updateAutoLighting() {
@@ -5285,12 +5284,16 @@ updateKPIs();
       var d = e.data;
       if(!d || !d.type) return;
       if (d.type === 'theme') {
-        if (d.value) {
+        if (d.value !== undefined && d.value !== null) {
+          // The hub's store is a continuous darkness (0..100), not a name. This
+          // handler used to write d.value straight back to jspl-hub-theme, so on
+          // a value it did not recognise the page both displayed and persisted
+          // the wrong theme for every other page.
+          var resolved = window.jsplTheme.normalize(d.value);
           try{
-            if (typeof window.__hub_handle_theme === 'function') window.__hub_handle_theme(d.value);
-            else document.documentElement.setAttribute('data-theme', d.value);
+            if (typeof window.__hub_handle_theme === 'function') window.__hub_handle_theme(resolved);
+            else window.jsplTheme.apply(resolved);
           }catch(err){}
-          try { localStorage.setItem('jspl-hub-theme', d.value); } catch(err) {}
         }
       } else if (d.type === 'reset') {
         // Prefer a page-defined reset handler if present, otherwise try a soft clear, else reload

@@ -209,37 +209,64 @@ function useThemeManager(){
     return()=>mq.removeEventListener('change',h);
   },[]);
   const effective=pref==='auto'?(systemDark?'dark':'light'):pref;
+  // The hub's theme is a continuous darkness (0..100) and theme-boot.js owns
+  // the attribute that paints the page. This effect deliberately does NOT write
+  // data-theme: it used to, which stomped the value the boot script had just
+  // applied and left this page disagreeing with the hub. It only reconciles
+  // this page's own canvas palette, which really is two-tone.
   useEffect(()=>{
-    // 'contrast' is dark-family (near-black surfaces), so it must take the DARK
-    // canvas palette. Testing only for 'dark' would hand it light colours and
+    // Anything dark-family (including the dark end of the ramp) takes the DARK
+    // canvas palette; testing only for 'dark' would hand it light colours and
     // the charts would invert against the dark chrome.
     C=effective==='light'?LIGHT_C:DARK_C;
-    document.documentElement.setAttribute('data-theme',effective);
     localStorage.setItem('jspl-osr-theme',pref);
   },[effective,pref]);
+  // Apply a resolved theme to BOTH the canvas and the shared continuous value.
+  // Used by this page's own toggle, where snapping to an end of the ramp is the
+  // right thing to do: the user picked light or dark, not a midpoint.
+  const setThemeConcrete=useCallback(v=>{
+    setPref(v);
+    if(window.jsplTheme) window.jsplTheme.set(v==='light'?0:100);
+  },[setPref]);
   // Sync with the hub's global theme toggle (the Home/Refresh/Theme/User controls mounted into
   // #hubFrameHeaderSlot) — this page had no standalone theme toggle nor any listener for the
   // hub's postMessage({type:'theme',...}), so switching theme from the hub never had any effect
   // here. Mirrors Rake-Planner's handleHubMessage/window.__hub_handle_theme convention.
   useEffect(()=>{
-    window.__hub_handle_theme=value=>{ if(value==='dark'||value==='light'||value==='contrast'||value==='auto')setPref(value); };
+    // The hub's value is a continuous darkness. Adopt it EXACTLY — reducing it
+    // to a name and persisting that would snap the shared value to one end and
+    // desync every other page. Only this page's own canvas preference is
+    // reduced, because a canvas genuinely is two-tone.
+    window.__hub_handle_theme=value=>{
+      if(!window.jsplTheme) return;
+      var d = window.jsplTheme.normalize(value);
+      setPref(window.jsplTheme.derived(d));
+      window.jsplTheme.apply(d);
+    };
     // theme-boot.js applies the hub's stored theme to <html> before first paint,
     // but this page's own effect re-asserts its React state right after mount
     // and would stomp that attribute back to this page's default. Handing the
-    // boot script our state setter lets it drive `pref` instead, so the page
-    // boots on the hub's theme rather than flipping to it a frame later.
-    window.__hub_apply_theme=value=>{ if(value==='dark'||value==='light'||value==='contrast')setPref(value); };
+    // boot script our canvas setter lets it drive C instead, so the page boots
+    // on the hub's theme rather than flipping to it a frame later.
+    // It must NOT touch `pref` — the user may have chosen "auto", and the boot
+    // script calls this on every apply, so writing here would erase that.
+    window.__hub_apply_theme=value=>{
+      var d = window.jsplTheme ? window.jsplTheme.normalize(value)
+        : (String(value||'').toLowerCase()==='light'?0:100);
+      C = d < (window.jsplTheme ? window.jsplTheme.DARK_THRESHOLD : 50) ? LIGHT_C : DARK_C;
+      setThemeKey(k=>k+1);
+    };
     const onMsg=e=>{
       const d=e.data;
-      if(d&&d.type==='theme'&&d.value)window.__hub_handle_theme(d.value);
+      if(d&&d.type==='theme'&&d.value!==undefined&&d.value!==null)window.__hub_handle_theme(d.value);
     };
     window.addEventListener('message',onMsg);
     if(window.parent&&window.parent!==window){
       try{window.parent.postMessage({type:'ready'},'*');}catch(e){}
     }
     return()=>{window.removeEventListener('message',onMsg);delete window.__hub_handle_theme;};
-  },[]);
-  return{pref,setPref,effective};
+  },[setPref]);
+  return{pref,setPref,effective,setThemeConcrete};
 }
 const F={h:"'Poppins',sans-serif",b:"'Poppins',sans-serif",m:"'JetBrains Mono',monospace"};
 const JINDAL_LOGO='data:image/png;base64,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';
@@ -1940,7 +1967,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
 
 /* ═══════════════════ APP ROOT ═══════════════════ */
 function App(){
-  const{pref,setPref,effective}=useThemeManager();
+  const{pref,setPref,effective,setThemeConcrete}=useThemeManager();
   const{mob}=useBreakpoint();
   const[rows,setRows]=useState(null);
   const[headers,setHeaders]=useState(null);
@@ -2134,13 +2161,13 @@ function App(){
   return<Dashboard rawRows={rows} rawArr={null} headers={headers} fileName={fileName}/>;
 }
 
-function ThemeToggle({pref,setPref}){
+function ThemeToggle({pref,setThemeConcrete}){
   const opts=[['auto','◐'],['light','☀'],['dark','☾']];
   return<div style={{position:'fixed',bottom:16,right:16,display:'flex',gap:4,padding:4,
     background:'var(--glass-hi)',backdropFilter:'blur(20px)',borderRadius:'var(--radius-pill)',
     border:'1px solid var(--bdrHi)',boxShadow:'var(--shadow-md)',zIndex:600}}>
     {opts.map(([v,ic])=>(
-      <button key={v} onClick={()=>setPref(v)} title={v} style={{
+      <button key={v} onClick={()=>setThemeConcrete(v)} title={v} style={{
         width:30,height:30,borderRadius:'50%',border:'none',cursor:'pointer',fontSize:14,
         background:pref===v?C.amber:'transparent',color:pref===v?'#1a1200':'var(--dim)'}}>{ic}</button>
     ))}

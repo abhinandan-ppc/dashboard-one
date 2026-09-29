@@ -187,66 +187,74 @@ input { font: inherit; color: inherit; }
   /* Same fixed + body-appended pattern as .user-panel, and for the same
      reason: nested inside .top-bar's own backdrop-filter stacking context
      it would only blur that ancestor's layer instead of the real page. */
-  position: fixed; min-width: 200px;
-  /* Never wider than the viewport minus a gutter: the 200px minimum plus 14px
-     padding each side plus the 6 accent dots overflowed the right edge once
-     the panel was clamped to the left on a 320px screen. */
+  position: fixed; min-width: 264px;
+  /* Never wider than the viewport minus a gutter, so the panel cannot run off
+     either edge when it is clamped left on a 320px screen. */
   max-width: calc(100vw - 24px);
   background: var(--glass-bg-solid); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   border: var(--glass-border); border-radius: var(--radius-m); box-shadow: var(--glass-shadow);
-  padding: 14px; display: none; flex-direction: column; gap: 10px; z-index: 400;
+  padding: 16px; display: none; flex-direction: column; gap: 18px; z-index: 400;
 }
 .theme-panel.open { display: flex; }
 .theme-panel-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .theme-panel-label { font-size: 11px; font-weight: 700; color: var(--tm); text-transform: uppercase; letter-spacing: 0.4px; }
-/* The theme control is three <button>s, so theme.css's mobile tap-target rule
-   (`.page-hub button{min-height:44px!important}`) stretches them too. The
-   segment row is pinned to its own compact height under .theme-panel with
-   !important, because a bare rule cannot outrank an !important declaration.
-   The 44px touch target is NOT given up: .theme-seg::before extends the hit
-   area to a full 44px-tall centred box, so each option stays comfortably
-   tappable on a phone without the pill rendering twice as tall. */
-.theme-seg {
-  display: flex; gap: 2px; padding: 2px; border-radius: var(--radius-pill);
-  background: var(--input-bg); border: var(--glass-border);
-  position: relative; align-self: flex-start;
+/* Each control is wrapped in .theme-field so the label sits closer to the
+   control it labels than to the control below it. With one flat gap for the
+   whole panel, "Accent colour" read as a caption for the theme row. */
+.theme-field { display: flex; flex-direction: column; gap: 8px; }
+.theme-panel-label { font-size: 11px; font-weight: 700; color: var(--tm); text-transform: uppercase; letter-spacing: 0.4px; }
+
+/* Range inputs, not buttons. theme.css's 44px tap-target rule explicitly
+   excludes [type=range] (`input:not([type=checkbox]):not([type=radio]):not([type=range])`),
+   so these keep their own compact track height — which is why the button-based
+   controls this replaced needed all the !important re-pinning to stop being
+   stretched into broken pills. */
+.theme-slider-row { display: flex; align-items: center; gap: 10px; }
+.theme-readout {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--dim);
+  min-width: 54px; text-align: right; flex-shrink: 0; white-space: nowrap;
 }
-.theme-seg::before {
-  content: ""; position: absolute; left: 50%; top: 50%;
-  width: 100%; height: 44px; transform: translate(-50%, -50%);
+.theme-chip {
+  width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+  background: var(--primary); box-shadow: inset 0 0 0 1px rgba(0,0,0,.18);
 }
-.theme-panel .theme-seg { height: 28px !important; min-height: 28px !important; align-items: stretch; }
-.theme-seg-btn {
-  flex: 1; min-width: 0; padding: 0 10px; border: none; border-radius: var(--radius-pill);
-  background: transparent; color: var(--tm); cursor: pointer;
-  font-family: var(--sans); font-size: 11.5px; font-weight: 700; white-space: nowrap;
-  position: relative; transition: background-color .15s ease, color .15s ease;
+.theme-range {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 16px; margin: 0; background: transparent; cursor: pointer;
 }
-.theme-panel .theme-seg-btn { min-height: 24px !important; height: 24px !important; }
-.theme-seg-btn:hover { color: var(--tx); }
-.theme-seg-btn.active { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
-.theme-seg-btn:focus-visible { outline: 2px solid var(--md-sys-color-primary); outline-offset: 1px; }
-/* align-items:center is load-bearing, not cosmetic. This is a flex ROW, so the
-   cross axis is vertical and the default `stretch` would override each dot's
-   explicit height:24px, stretching every swatch to the row's height (~44px) and
-   rendering the circular colour dots as tall rounded pills. The row also wraps,
-   because there are now twelve accents rather than six and a single unwrapped
-   line overflows the panel on a narrow phone. */
-.accent-swatches { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.accent-dot {
-  width: 24px; height: 24px; border-radius: 50%; background: var(--dot); flex-shrink: 0;
-  border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
-  transition: transform 0.15s cubic-bezier(.22,1,.36,1), border-color 0.15s ease;
+.theme-range::-webkit-slider-runnable-track { height: 8px; border-radius: 999px; border: none; }
+.theme-range::-moz-range-track { height: 8px; border-radius: 999px; border: none; }
+.theme-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 16px; height: 16px; margin-top: -4px; border-radius: 50%;
+  background: #fff; border: 2px solid var(--primary);
+  box-shadow: 0 1px 4px rgba(0,0,0,.35); cursor: grab;
 }
-.accent-dot:hover { transform: scale(1.12); }
-.accent-dot.active { border-color: var(--tx); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12), 0 0 0 2px var(--bg-color); }
-/* theme.css's mobile tap-target rule (`.page-hub button{min-height:44px!important}`)
-   applies to EVERY button on this page, including these 24px colour dots, which
-   overrode the height above and stretched each dot into a tall pill. The
-   `!important` in theme.css means a plain `.accent-dot` rule cannot win, so this
-   is scoped under .theme-panel with `!important` to match. Scoping it keeps the
-   shared 44px accessibility floor intact for every other control in the hub. */
-.theme-panel .accent-dot { min-height: 24px !important; }
+.theme-range::-moz-range-thumb {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; border: 2px solid var(--primary);
+  box-shadow: 0 1px 4px rgba(0,0,0,.35); cursor: grab;
+}
+.theme-range:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+/* The track doubles as the legend: the range you are about to pick is visible,
+   so the sliders need no separate min/max captions. */
+.theme-range--dark::-webkit-slider-runnable-track {
+  background: linear-gradient(90deg, #f0f4f8 0%, #c8d2e2 50%, #0b1120 100%);
+}
+.theme-range--dark::-moz-range-track {
+  background: linear-gradient(90deg, #f0f4f8 0%, #c8d2e2 50%, #0b1120 100%);
+}
+.theme-range--hue::-webkit-slider-runnable-track {
+  background: linear-gradient(90deg,#f00 0%,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00 100%);
+}
+.theme-range--hue::-moz-range-track {
+  background: linear-gradient(90deg,#f00 0%,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00 100%);
+}
+/* Saturation and lightness are ramps at the CURRENT hue, so --track is written
+   inline by JS. A gradient hard-coded here would show the wrong hue the moment
+   the hue slider moved. */
+.theme-range--sat::-webkit-slider-runnable-track, .theme-range--light::-webkit-slider-runnable-track { background: var(--track); }
+.theme-range--sat::-moz-range-track, .theme-range--light::-moz-range-track { background: var(--track); }
 
 .login-wrap { display: none; align-items: center; justify-content: center; min-height: 60vh; padding: calc(var(--frame-top, 88px) + 28px) 24px 60px; }
 .login-box {
@@ -847,26 +855,26 @@ input { font: inherit; color: inherit; }
       <div class="theme-menu" id="themeMenu">
         <button class="theme-toggle" id="themeToggle" type="button" title="Theme" aria-label="Theme"></button>
         <div class="theme-panel" id="themePanel">
-          <div class="theme-panel-label">Theme</div>
-          <div class="theme-seg" id="themeSeg" role="radiogroup" aria-label="Theme">
-            <button class="theme-seg-btn" type="button" role="radio" data-theme-opt="light" aria-checked="false">Light</button>
-            <button class="theme-seg-btn" type="button" role="radio" data-theme-opt="dark" aria-checked="false">Dark</button>
-            <button class="theme-seg-btn" type="button" role="radio" data-theme-opt="contrast" aria-checked="false">Contrast</button>
+          <div class="theme-field">
+            <span class="theme-panel-label">Theme</span>
+            <div class="theme-slider-row">
+              <input type="range" class="theme-range theme-range--dark" id="themeDarkness"
+                min="0" max="100" step="1" value="100" aria-label="Theme, light to dark">
+              <span class="theme-readout" id="themeReadout">Dark</span>
+            </div>
           </div>
-          <div class="theme-panel-label">Accent color</div>
-          <div class="accent-swatches" id="accentSwatches">
-            <button class="accent-dot" data-accent="blue" style="--dot:#0284c7" title="Blue" aria-label="Blue"></button>
-            <button class="accent-dot" data-accent="green" style="--dot:#059669" title="Green" aria-label="Green"></button>
-            <button class="accent-dot" data-accent="grey" style="--dot:#64748b" title="Grey" aria-label="Grey"></button>
-            <button class="accent-dot" data-accent="violet" style="--dot:#7c3aed" title="Violet" aria-label="Violet"></button>
-            <button class="accent-dot" data-accent="rose" style="--dot:#e11d48" title="Rose" aria-label="Rose"></button>
-            <button class="accent-dot" data-accent="orange" style="--dot:#ea580c" title="Orange" aria-label="Orange"></button>
-            <button class="accent-dot" data-accent="teal" style="--dot:#0d9488" title="Teal" aria-label="Teal"></button>
-            <button class="accent-dot" data-accent="cyan" style="--dot:#0891b2" title="Cyan" aria-label="Cyan"></button>
-            <button class="accent-dot" data-accent="amber" style="--dot:#b45309" title="Amber" aria-label="Amber"></button>
-            <button class="accent-dot" data-accent="indigo" style="--dot:#4f46e5" title="Indigo" aria-label="Indigo"></button>
-            <button class="accent-dot" data-accent="lime" style="--dot:#4d7c0f" title="Lime" aria-label="Lime"></button>
-            <button class="accent-dot" data-accent="magenta" style="--dot:#db2777" title="Magenta" aria-label="Magenta"></button>
+          <div class="theme-field">
+            <span class="theme-panel-label">Accent colour</span>
+            <div class="theme-slider-row">
+              <span class="theme-chip" id="accentChip" aria-hidden="true"></span>
+              <span class="theme-readout" id="accentReadout">199&deg;</span>
+            </div>
+            <input type="range" class="theme-range theme-range--hue" id="accentHue"
+              min="0" max="360" step="1" value="199" aria-label="Accent hue">
+            <input type="range" class="theme-range theme-range--sat" id="accentSat"
+              min="0" max="100" step="1" value="90" aria-label="Accent saturation">
+            <input type="range" class="theme-range theme-range--light" id="accentLight"
+              min="8" max="80" step="1" value="52" aria-label="Accent lightness">
           </div>
         </div>
       </div>
@@ -1763,7 +1771,7 @@ function installFrameHeaderControls(){
           // Clicking the real #themeToggle now opens its color-picker popover
           // rather than instantly changing the theme, so drive the cycle
           // directly instead of simulating a toggle click.
-          cycleTheme();
+          nudgeTheme();
           var theme = document.documentElement.getAttribute('data-theme');
           syncInjectedThemeIcon(theme);
           applyInjectedThemeStyles(theme);
@@ -1916,14 +1924,22 @@ window.addEventListener('message', function(e){
     // every other page and tab. Without this the hub's switch could still read
     // "dark" while the open dashboard is light, and the next page opened would
     // flip back to the hub's stale value.
+    // A page with its own theme manager (Rake Planner, Order Status Report)
+    // can only express light or dark, so its push snaps the slider to the
+    // matching end. The continuous range stays the hub's alone.
     if(e.data && e.data.type === 'theme' && e.data.value && e.source === pageFrame.contentWindow){
       try{
-        if(root.getAttribute('data-theme') !== e.data.value) setTheme(e.data.value);
+        var pushed = e.data.value === 'light' ? 0 : e.data.value === 'dark' ? 100 : null;
+        if(pushed !== null && currentDarkness !== pushed) setTheme(pushed);
       }catch(err){}
     }
     if(e.data && e.data.type === 'accent' && e.data.value && e.source === pageFrame.contentWindow){
       try{
-        if(root.getAttribute('data-accent') !== e.data.value) setAccent(e.data.value);
+        if(LEGACY_ACCENTS[e.data.value]) setAccent({
+          h: LEGACY_ACCENTS[e.data.value][0],
+          s: LEGACY_ACCENTS[e.data.value][1],
+          l: LEGACY_ACCENTS[e.data.value][2],
+        });
       }catch(err){}
     }
   }catch(err){}
@@ -1939,15 +1955,15 @@ window.addEventListener('storage', function(e){
   try{
     if(e.key === THEME_KEY){
       if(e.newValue === null){
-        if(root.getAttribute('data-theme') !== 'dark') setTheme('dark');
-      } else if(VALID_THEMES.indexOf(e.newValue) !== -1 && root.getAttribute('data-theme') !== e.newValue){
-        setTheme(e.newValue);
+        if(currentDarkness !== DEFAULT_DARKNESS) setTheme(DEFAULT_DARKNESS);
+      } else if(String(currentDarkness) !== e.newValue){
+        setTheme(readStoredDarkness());
       }
     } else if(e.key === ACCENT_KEY){
       if(e.newValue === null){
-        if(root.getAttribute('data-accent') !== 'blue') setAccent('blue');
-      } else if(ACCENTS.indexOf(e.newValue) !== -1 && root.getAttribute('data-accent') !== e.newValue){
-        setAccent(e.newValue);
+        setAccent({ h: DEFAULT_ACCENT.h, s: DEFAULT_ACCENT.s, l: DEFAULT_ACCENT.l });
+      } else {
+        setAccent(readStoredAccent());
       }
     }
   }catch(err){}
@@ -2174,39 +2190,96 @@ function syncInjectedFrameHomeAccent(){
 
 var THEME_KEY = "jspl-hub-theme";
 var ACCENT_KEY = "jspl-hub-accent";
-var ACCENTS = ["blue","green","grey","violet","rose","orange","teal","cyan","amber","indigo","lime","magenta"];
+// 40, not 50: the surfaces ramp steeper than the slider (theme.css --tds), so
+// by 40 the background is already well past mid and the step to light text
+// lands on a surface dark enough to carry it.
+var DARK_THRESHOLD = 38;
+var DEFAULT_DARKNESS = 100;
+var DEFAULT_ACCENT = { h: 199, s: 90, l: 52 };
 var LEGACY_THEME_KEYS = ["jspl-theme", "jspl-osr-theme"];
-var VALID_THEMES = ["light", "dark", "contrast"];
+// Older builds stored a theme NAME and a NAMED accent. Both are mapped
+// forward so an existing device keeps its choice instead of reverting.
+var LEGACY_THEME_VALUES = { light: 0, dark: 100, contrast: 100 };
+var LEGACY_ACCENTS = {
+  blue: [199, 90, 52], green: [152, 72, 40], grey: [215, 16, 50],
+  violet: [258, 90, 55], rose: [343, 79, 51], orange: [24, 92, 45],
+  teal: [174, 76, 40], cyan: [192, 89, 37], amber: [32, 94, 40],
+  indigo: [239, 84, 59], lime: [84, 76, 44], magenta: [330, 80, 54]
+};
 
-function readStoredTheme(){
+// hsl() -> "R G B" for the rgba(var(--primary-rgb), ...) call sites. The
+// accent is lifted at the dark end and dropped at the light end, matching how
+// theme.css blends --primary, so the triple tracks the visible colour.
+function hslToRgb(h, s, l){
+  s /= 100; l /= 100;
+  var c = (1 - Math.abs(2 * l - 1)) * s;
+  var hp = (((h % 360) + 360) % 360) / 60;
+  var x = c * (1 - Math.abs((hp % 2) - 1));
+  var r = 0, g = 0, b = 0;
+  if (hp < 1) { r = c; g = x; }
+  else if (hp < 2) { r = x; g = c; }
+  else if (hp < 3) { g = c; b = x; }
+  else if (hp < 4) { g = x; b = c; }
+  else if (hp < 5) { r = x; b = c; }
+  else { r = c; b = x; }
+  var m = l - c / 2;
+  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+}
+
+function readStoredDarkness(){
   var t = null;
   try{ t = localStorage.getItem(THEME_KEY); }catch(e){}
-  if(VALID_THEMES.indexOf(t) === -1) t = null;
+  if(t !== null && Object.prototype.hasOwnProperty.call(LEGACY_THEME_VALUES, t)){
+    return LEGACY_THEME_VALUES[t];
+  }
+  if(t !== null){
+    var n = parseFloat(t);
+    if(isFinite(n)) return Math.max(0, Math.min(100, n));
+  }
   // Rake Planner and Order Status Report historically kept their own pref
   // keys. If one of those is set and the shared key never was, adopt it so
   // opening that page standalone doesn't silently disagree with the hub.
-  if(!t){
-    for(var i = 0; i < LEGACY_THEME_KEYS.length; i++){
-      var legacy = null;
-      try{ legacy = localStorage.getItem(LEGACY_THEME_KEYS[i]); }catch(e){}
-      if(VALID_THEMES.indexOf(legacy) !== -1){ t = legacy; break; }
-    }
+  for(var i = 0; i < LEGACY_THEME_KEYS.length; i++){
+    var legacy = null;
+    try{ legacy = localStorage.getItem(LEGACY_THEME_KEYS[i]); }catch(e){}
+    if(legacy === "light" || legacy === "dark") return LEGACY_THEME_VALUES[legacy];
   }
-  return t || "dark";
+  return DEFAULT_DARKNESS;
 }
 function readStoredAccent(){
   var a = null;
   try{ a = localStorage.getItem(ACCENT_KEY); }catch(e){}
-  return (ACCENTS && ACCENTS.indexOf(a) !== -1) ? a : "blue";
+  if(!a) return { h: DEFAULT_ACCENT.h, s: DEFAULT_ACCENT.s, l: DEFAULT_ACCENT.l };
+  if(LEGACY_ACCENTS[a]){
+    var legacy = LEGACY_ACCENTS[a];
+    return { h: legacy[0], s: legacy[1], l: legacy[2] };
+  }
+  var parts = String(a).split(",");
+  if(parts.length !== 3) return { h: DEFAULT_ACCENT.h, s: DEFAULT_ACCENT.s, l: DEFAULT_ACCENT.l };
+  var h = parseFloat(parts[0]), s = parseFloat(parts[1]), l = parseFloat(parts[2]);
+  if(!isFinite(h) || !isFinite(s) || !isFinite(l)){
+    return { h: DEFAULT_ACCENT.h, s: DEFAULT_ACCENT.s, l: DEFAULT_ACCENT.l };
+  }
+  return { h: ((h % 360) + 360) % 360, s: Math.max(0, Math.min(100, s)), l: Math.max(0, Math.min(100, l)) };
 }
 
-// Mirror the hub's current theme/accent onto a page document. Applied as a
-// direct attribute write rather than only via the page's own handler, so it
-// works for pages that expose no __hub_handle_theme at all.
+// Mirror the hub's current theme/accent onto a page document. The custom
+// properties are written directly rather than relying on the page's own
+// handler, so this works for pages that expose no __hub_handle_theme at all —
+// which is every page but Rake Planner and Order Status Report.
 function applyThemeToDocument(doc){
   if(!doc || !doc.documentElement) return;
-  try{ doc.documentElement.setAttribute("data-theme", root.getAttribute("data-theme")); }catch(e){}
-  try{ doc.documentElement.setAttribute("data-accent", root.getAttribute("data-accent") || "blue"); }catch(e){}
+  var el = doc.documentElement;
+  try{
+    var st = el.style;
+    st.setProperty("--theme-d", String(currentDarkness));
+    st.setProperty("--ah", String(currentAccent.h));
+    st.setProperty("--as", currentAccent.s + "%");
+    st.setProperty("--al", currentAccent.l + "%");
+    st.setProperty("--primary-rgb", hslToRgb(currentAccent.h, currentAccent.s,
+      currentAccent.l * (currentDarkness < DARK_THRESHOLD ? 0.78 : 1.06)).join(","));
+    el.setAttribute("data-theme", currentDarkness < DARK_THRESHOLD ? "light" : "dark");
+  }catch(e){}
 }
 
 // Push the current theme to the embedded page and everything nested in it.
@@ -2214,14 +2287,16 @@ function applyThemeToDocument(doc){
 // async fetch (Order Status Report) mount their markup after first paint and
 // would otherwise repaint back to their own default.
 function pushThemeToPages(){
-  var theme = root.getAttribute("data-theme");
-  var accent = root.getAttribute("data-accent") || "blue";
   try{
     if(!pageFrame || !pageFrame.contentWindow) return;
     applyThemeToDocument(pageFrame.contentWindow.document);
+    // The continuous payload every page's theme-boot.js understands. The older
+    // named `theme`/`accent` messages are still sent alongside it so a page
+    // holding a pre-slider copy of the boot script keeps up rather than
+    // silently freezing on whatever it booted with.
     var post = function(win){
-      try{ win.postMessage({ type: "theme", value: theme }, "*"); }catch(e){}
-      try{ win.postMessage({ type: "accent", value: accent }, "*"); }catch(e){}
+      try{ win.postMessage({ type: "theme-vars", darkness: currentDarkness, accent: currentAccent }, "*"); }catch(e){}
+      try{ win.postMessage({ type: "theme", value: currentDarkness < DARK_THRESHOLD ? "light" : "dark" }, "*"); }catch(e){}
     };
     post(pageFrame.contentWindow);
     try{
@@ -2232,24 +2307,10 @@ function pushThemeToPages(){
   pushThemeToPages._t = setTimeout(pushThemeToPages, 400);
 }
 
-// Keep the panel's theme buttons showing the real current state, whichever path
-// changed the theme last. Guarded because setTheme() runs before this panel's
-// own setup has bound it.
-function syncThemeSegmented(){
-  try{
-    var seg = document.getElementById("themeSeg");
-    if(!seg) return;
-    var current = root.getAttribute("data-theme");
-    seg.querySelectorAll("[data-theme-opt]").forEach(function(btn){
-      var on = btn.getAttribute("data-theme-opt") === current;
-      btn.classList.toggle("active", on);
-      btn.setAttribute("aria-checked", on ? "true" : "false");
-    });
-  }catch(e){}
-}
-// Back-compat alias: the old binary switch is gone, but anything still calling
-// this name just syncs the replacement.
-window.syncModeSwitchControl = syncThemeSegmented;
+// Back-compat alias: the binary switch and the segmented control are both gone,
+// but the injected frame chrome still calls this name, so point it at the
+// slider sync rather than leaving a dangling reference.
+window.syncModeSwitchControl = syncThemeControls;
 
 // Forget the stored theme/accent so the next sign-in on a shared device starts
 // from the default instead of inheriting the previous user's choice. Bound to
@@ -2263,8 +2324,8 @@ function clearStoredTheme(){
     localStorage.removeItem(ACCENT_KEY);
   }catch(e){}
   try{
-    root.setAttribute("data-theme", "dark");
-    root.setAttribute("data-accent", "blue");
+    applyThemeVars(DEFAULT_DARKNESS, DEFAULT_ACCENT);
+    syncThemeControls();
   }catch(e){}
 }
 
@@ -2283,48 +2344,97 @@ function bindLogoutThemeReset(){
 }
 bindLogoutThemeReset();
 
-function setTheme(theme){
-  // Normalise at the boundary: only ever persist a value theme.css actually
-  // defines a [data-theme=...] block for, so no page can end up on an attribute
-  // that silently falls back to the default dark. This used to be a bare
-  // light-vs-dark test, which would have quietly swallowed the new "contrast".
-  if(VALID_THEMES.indexOf(theme) === -1) theme = "dark";
-  root.setAttribute("data-theme", theme);
-  try{ localStorage.setItem("jspl-hub-theme", theme); }catch(e){}
-  themeBtn.innerHTML = theme === "light"
-    ? "<svg viewBox='0 0 24 24' aria-hidden='true'><path d='M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z'></path></svg>"
-    : theme === "contrast"
-      ? "<svg viewBox='0 0 24 24' aria-hidden='true'><circle cx='12' cy='12' r='9'></circle><path d='M12 3a9 9 0 0 1 0 18Z' fill='currentColor'></path></svg>"
-      : "<svg viewBox='0 0 24 24' aria-hidden='true'><path d='M12 3v2.5'></path><path d='M12 18.5V21'></path><path d='M4.93 4.93l1.77 1.77'></path><path d='M17.3 17.3l1.77 1.77'></path><path d='M3 12h2.5'></path><path d='M18.5 12H21'></path><path d='M4.93 19.07l1.77-1.77'></path><path d='M17.3 6.7l1.77-1.77'></path><circle cx='12' cy='12' r='4'></circle></svg>";
-  themeBtn.setAttribute("aria-label", "Theme: " + theme);
+// Writes the four custom properties theme.css blends from, plus the derived
+// data-theme the pages that own a theme manager still branch on. Mirrors
+// theme-boot.js exactly, so a page opened standalone lands on the same values.
+function applyThemeVars(darkness, accent){
+  var d = Math.max(0, Math.min(100, Number(darkness) || 0));
+  var a = accent || DEFAULT_ACCENT;
+  var st = root.style;
+  st.setProperty("--theme-d", String(d));
+  st.setProperty("--ah", String(a.h));
+  st.setProperty("--as", a.s + "%");
+  st.setProperty("--al", a.l + "%");
+  st.setProperty("--primary-rgb", hslToRgb(a.h, a.s, a.l * (d < DARK_THRESHOLD ? 0.78 : 1.06)).join(","));
+  var derived = d < DARK_THRESHOLD ? "light" : "dark";
+  if(root.getAttribute("data-theme") !== derived) root.setAttribute("data-theme", derived);
+}
+
+// Keeps the sliders showing the real current state, whichever path changed the
+// theme last (a slider drag, a message from a page, another tab).
+function syncThemeControls(){
+  try{
+    var dEl = document.getElementById("themeDarkness");
+    var hEl = document.getElementById("accentHue");
+    var sEl = document.getElementById("accentSat");
+    var lEl = document.getElementById("accentLight");
+    var tEl = document.getElementById("themeReadout");
+    var aEl = document.getElementById("accentReadout");
+    if(dEl) dEl.value = String(currentDarkness);
+    if(hEl) hEl.value = String(currentAccent.h);
+    if(sEl) sEl.value = String(currentAccent.s);
+    if(lEl) lEl.value = String(currentAccent.l);
+    if(tEl) tEl.textContent = currentDarkness >= DARK_THRESHOLD
+      ? "Dark " + Math.round(currentDarkness) + "%"
+      : "Light " + Math.round(100 - currentDarkness) + "%";
+    if(aEl) aEl.textContent = Math.round(currentAccent.h) + "°";
+    // The sat/light tracks are ramps at the current hue, so they can only be
+    // written once the hue is known — hence setTrack() on every sync.
+    setTrack(hEl, "hue");
+    setTrack(sEl, "sat");
+    setTrack(lEl, "light");
+  }catch(e){}
+}
+
+function setTrack(el, kind){
+  if(!el) return;
+  var h = currentAccent.h, s = currentAccent.s, l = currentAccent.l;
+  if(kind === "hue") return; // the hue ramp is a fixed rainbow in CSS
+  var stops = [];
+  for(var i = 0; i <= 10; i++){
+    var t = i / 10;
+    var ss = kind === "sat" ? t * 100 : s;
+    var ll = kind === "light" ? 10 + t * 70 : l;
+    stops.push("hsl(" + h + " " + Math.round(ss) + "% " + Math.round(ll) + "%) " + Math.round(t * 100) + "%");
+  }
+  el.style.setProperty("--track", "linear-gradient(90deg," + stops.join(",") + ")");
+}
+
+var currentDarkness = DEFAULT_DARKNESS;
+var currentAccent = { h: DEFAULT_ACCENT.h, s: DEFAULT_ACCENT.s, l: DEFAULT_ACCENT.l };
+
+function setTheme(darkness){
+  currentDarkness = Math.max(0, Math.min(100, Number(darkness) || 0));
+  applyThemeVars(currentDarkness, currentAccent);
+  try{ localStorage.setItem(THEME_KEY, String(currentDarkness)); }catch(e){}
+  themeBtn.innerHTML = currentDarkness >= DARK_THRESHOLD
+    ? "<svg viewBox='0 0 24 24' aria-hidden='true'><path d='M12 3v2.5'></path><path d='M12 18.5V21'></path><path d='M4.93 4.93l1.77 1.77'></path><path d='M17.3 17.3l1.77 1.77'></path><path d='M3 12h2.5'></path><path d='M18.5 12H21'></path><path d='M4.93 19.07l1.77-1.77'></path><path d='M17.3 6.7l1.77-1.77'></path><circle cx='12' cy='12' r='4'></circle></svg>"
+    : "<svg viewBox='0 0 24 24' aria-hidden='true'><path d='M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z'></path></svg>";
+  themeBtn.setAttribute("aria-label", "Theme: " + (currentDarkness >= DARK_THRESHOLD ? "dark" : "light"));
   syncInjectedFrameHomeAccent();
-  // Keep the panel's own buttons in step when the theme changes from anywhere
-  // else (a message from a page, another tab) and not just from its click.
-  syncThemeSegmented();
+  syncThemeControls();
   pushThemeToPages();
 }
-// Step to the next theme in VALID_THEMES order. Used by the compact pill the
-// hub injects into a dashboard's header, which is too small for a 3-way
-// control and so cycles instead.
-function cycleTheme(){
-  var cur = root.getAttribute("data-theme");
-  var i = VALID_THEMES.indexOf(cur);
-  setTheme(VALID_THEMES[(i === -1 ? 0 : i + 1) % VALID_THEMES.length]);
-}
-setTheme(readStoredTheme());
 
-/* ─── Accent color ─── */
-function setAccent(accent){
-  // Same reasoning as setTheme: only ever persist a value theme.css actually
-  // defines an :root[data-accent=...] block for, so no page can end up on an
-  // attribute that silently falls back to the default blue.
-  if(ACCENTS.indexOf(accent) === -1) accent = "blue";
-  root.setAttribute("data-accent", accent);
-  try{ localStorage.setItem(ACCENT_KEY, accent); }catch(e){}
-  document.querySelectorAll(".accent-dot").forEach(function(dot){
-    dot.classList.toggle("active", dot.getAttribute("data-accent") === accent);
-  });
+// The compact pill the hub injects into a dashboard's header is too small for
+// a slider, so it nudges the darkness by a step instead of toggling.
+function nudgeTheme(){
+  var next = currentDarkness >= DARK_THRESHOLD ? 0 : 100;
+  setTheme(next);
+}
+setTheme(readStoredDarkness());
+
+/* ─── Accent colour ─── */
+function setAccent(a){
+  currentAccent = {
+    h: ((Math.round(a.h) % 360) + 360) % 360,
+    s: Math.max(0, Math.min(100, Math.round(a.s))),
+    l: Math.max(0, Math.min(100, Math.round(a.l))),
+  };
+  applyThemeVars(currentDarkness, currentAccent);
+  try{ localStorage.setItem(ACCENT_KEY, [currentAccent.h, currentAccent.s, currentAccent.l].join(",")); }catch(e){}
   syncInjectedFrameHomeAccent();
+  syncThemeControls();
   pushThemeToPages();
 }
 setAccent(readStoredAccent());
@@ -2377,32 +2487,25 @@ setAccent(readStoredAccent());
     }
     themePanel.style.top = top + "px";
   };
-  syncThemeSegmented();
+  syncThemeControls();
 
   themeBtn.addEventListener("click", function(e){
     e.stopPropagation();
     if(!themePanel.classList.contains("open")) positionThemePanel();
     themePanel.classList.toggle("open");
   });
-  // Enter/Space already fire `click` on these buttons, so only the arrow-key
-  // affordance a radio group is expected to have is added here — keyboard users
-  // can move between the three themes without hunting for Tab.
-  var seg = document.getElementById("themeSeg");
-  if(seg){
-    seg.querySelectorAll("[data-theme-opt]").forEach(function(btn){
-      btn.addEventListener("click", function(){ setTheme(btn.getAttribute("data-theme-opt")); });
-    });
-    seg.addEventListener("keydown", function(e){
-      if(e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-      e.preventDefault();
-      var i = VALID_THEMES.indexOf(root.getAttribute("data-theme"));
-      var next = e.key === "ArrowRight" ? i + 1 : i - 1;
-      setTheme(VALID_THEMES[(next + VALID_THEMES.length) % VALID_THEMES.length]);
-    });
-  }
-  document.querySelectorAll(".accent-dot").forEach(function(dot){
-    dot.addEventListener("click", function(){ setAccent(dot.getAttribute("data-accent")); });
-  });
+  // The four sliders are plain range inputs, so arrow keys, Home/End and
+  // click-to-position all come for free from the platform — no key handling
+  // needed, unlike the button-based control this replaced.
+  var bindRange = function(id, apply){
+    var el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener("input", function(){ apply(Number(el.value)); });
+  };
+  bindRange("themeDarkness", function(v){ setTheme(v); });
+  bindRange("accentHue", function(v){ setAccent({ h: v, s: currentAccent.s, l: currentAccent.l }); });
+  bindRange("accentSat", function(v){ setAccent({ h: currentAccent.h, s: v, l: currentAccent.l }); });
+  bindRange("accentLight", function(v){ setAccent({ h: currentAccent.h, s: currentAccent.s, l: v }); });
   window.addEventListener("resize", function(){
     if(themePanel.classList.contains("open")) positionThemePanel();
   });

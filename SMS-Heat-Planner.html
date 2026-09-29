@@ -197,31 +197,35 @@ var root = document.documentElement;
 function sendTheme(frame, theme){
   if(frame && frame.contentWindow) frame.contentWindow.postMessage({type: 'set-theme', theme: theme}, '*');
 }
-function broadcastTheme(){
-  // Pass any theme theme.css actually defines straight through to the child
-  // frames. Coercing to dark/light here left the two embedded tabs disagreeing
-  // with the parent as soon as a third theme was selected.
-  var theme = root.getAttribute('data-theme') || 'dark';
-  if(themeBtn) themeBtn.textContent = theme === 'light' ? '🌙' : (theme === 'contrast' ? '◐' : '☀️');
-  sendTheme(dailyFrame, theme);
-  sendTheme(monthlyFrame, theme);
+function currentDarkness(){
+  // theme-boot.js owns the stored value and the derived attribute; this page
+  // must not re-derive it, or a mismatch here desyncs the two child tabs.
+  try { return window.jsplTheme.read(); } catch(e){ return 100; }
 }
-function setTheme(theme){
-  root.setAttribute('data-theme', theme);
-  localStorage.setItem('smsPlannerTheme', theme);
+function broadcastTheme(){
+  // The children are sent the continuous darkness, not a derived name, so a
+  // theme anywhere along the ramp reaches them intact rather than snapping to
+  // whichever of two names was nearest.
+  var d = currentDarkness();
+  if(themeBtn) themeBtn.textContent = window.jsplTheme.derived(d) === 'light' ? '🌙' : '☀️';
+  sendTheme(dailyFrame, d);
+  sendTheme(monthlyFrame, d);
+}
+function setTheme(value){
+  window.jsplTheme.set(value);
+  // Keep this page's own legacy key in step so nothing downstream reads a stale
+  // name. It stays a name — only the shared hub key is continuous.
+  try { localStorage.setItem('smsPlannerTheme', window.jsplTheme.derived(value)); }catch(e){}
   broadcastTheme();
 }
 
 window.__hub_handle_theme = function(themeValue){
-  var normalized = String(themeValue || '').toLowerCase();
-  if(normalized === 'light' || normalized === 'dark' || normalized === 'contrast'){
-    setTheme(normalized);
-    try { localStorage.setItem('jspl-hub-theme', normalized); } catch(err){}
-  }
+  setTheme(themeValue);
 };
 
 if(themeBtn) themeBtn.addEventListener('click', function(){
-  setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  var d = currentDarkness();
+  setTheme(d < window.jsplTheme.DARK_THRESHOLD ? 100 : 0);
 });
 
 // A child page announces "theme-ready" once its own message listener is wired up
@@ -257,27 +261,21 @@ setTimeout(broadcastFrameTop, 400);
 dailyFrame.addEventListener('load', broadcastFrameTop);
 monthlyFrame.addEventListener('load', broadcastFrameTop);
 
-// This page keeps its own `smsPlannerTheme` key, which used to be the only
-// source of truth here and so always won — the hub's theme was applied by
-// theme-boot.js a moment earlier and then immediately overwritten with this
-// page's default. Fall back to the hub's stored theme first (theme-boot.js has
-// already resolved it onto <html>), and only use this page's legacy key when
-// the hub has no stored preference at all.
+// The hub's store is a continuous darkness (0..100), not a 'light'/'dark'
+// name. Matching it against names here is what made this page read the stored
+// value, fail to match, and write 'dark' back — resetting the chosen theme for
+// every other page whenever it was opened standalone. jsplTheme owns the
+// format and the default; this page's legacy key is only a last-resort
+// fallback for a device that has never had a hub preference.
 (function initThemeFromHub(){
-  var hubTheme = null;
-  try { hubTheme = localStorage.getItem('jspl-hub-theme'); } catch(e){}
-  if(hubTheme !== 'light' && hubTheme !== 'dark'){
+  var resolved = window.jsplTheme.normalize(window.jsplTheme.read());
+  if (resolved === window.jsplTheme.DEFAULT_DARKNESS) {
     try {
-      var attr = document.documentElement.getAttribute('data-theme');
-      if(attr === 'light' || attr === 'dark') hubTheme = attr;
+      var legacy = localStorage.getItem('smsPlannerTheme');
+      if (legacy) resolved = window.jsplTheme.normalize(legacy);
     } catch(e){}
   }
-  if(hubTheme !== 'light' && hubTheme !== 'dark'){
-    try { hubTheme = localStorage.getItem('smsPlannerTheme'); } catch(e){}
-  }
-  setTheme(hubTheme || 'dark');
-  // Keep this page's legacy key in step so nothing downstream reads a stale one.
-  try { localStorage.setItem('smsPlannerTheme', hubTheme || 'dark'); } catch(e){}
+  setTheme(resolved);
 })();
 </script>
 

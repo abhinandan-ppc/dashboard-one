@@ -1016,12 +1016,13 @@ function bestEbtpParse(wb){
   return {rows,cols:best.headers,map:best.map,sheet:best.name,reqScore:best.reqScore,reqN,
     raw:{headers:best.headers,grid:best.grid,hr:best.hr,sheet:best.name}};
 }
-function setTheme(theme){
-  // Pass the hub's third theme through instead of collapsing it to dark, which
-  // would leave this page disagreeing with every other page in the frame.
-  const next=(theme==='light'||theme==='dark'||theme==='contrast')?theme:'dark';
-  document.documentElement.setAttribute('data-theme',next);
-  try{ localStorage.setItem('jspl-hub-theme',next); }catch{}
+// The hub's store is a continuous darkness (0..100), not a 'light'/'dark'
+// name. Matching it against names here is what made this page read the stored
+// value, fail to match, and write 'dark' back — resetting the chosen theme for
+// every other page whenever it was opened standalone. jsplTheme owns the
+// format; this only re-renders its dashboard on a change.
+function setTheme(value){
+  window.jsplTheme.set(value);
   if(RESULT) renderDashboard(RESULT);
 }
 window.__hub_handle_theme = setTheme;
@@ -1774,7 +1775,7 @@ function download(){ if(!RESULT){alert('Run the tagging first.');return;}
 }
 
 window.addEventListener('DOMContentLoaded',()=>{
-  setTheme((function(){ try{ return localStorage.getItem('jspl-hub-theme') || document.documentElement.getAttribute('data-theme') || 'dark'; }catch{ return 'dark'; } })());
+  setTheme(window.jsplTheme.read());
   for(const k of ['por','ebtp']){
     const inp=document.getElementById('file-'+k);
     inp.addEventListener('change',e=>{if(e.target.files[0])readFile(k,e.target.files[0]);});

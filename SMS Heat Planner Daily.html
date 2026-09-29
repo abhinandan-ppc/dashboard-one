@@ -1710,12 +1710,12 @@ el("tabBar").addEventListener("click", e=>{
   }
 });
 
-// Theme is controlled by the parent shell (SMS Heat Planner.html) via postMessage
+// Theme is controlled by the parent shell (SMS Heat Planner.html) via postMessage.
+// It may be a continuous darkness (0..100) or a legacy name, so it is routed
+// through jsplTheme rather than matched here — matching it against 'dark'/'light'
+// made this tab fall back to light whenever the hub was on any other value.
 function applyTheme(mode){
-  // The parent shell can now send any theme theme.css defines, not just the two
-  // it could before, so don't collapse an unrecognised value to light here.
-  document.documentElement.setAttribute('data-theme',
-    (mode === 'dark' || mode === 'contrast') ? mode : 'light');
+  window.jsplTheme.apply(mode);
   var st = el("tab-sankey");
   if(st && st.classList.contains("on") && currentResult) drawSankey(currentResult);
 }

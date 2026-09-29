@@ -332,30 +332,28 @@ a { color: var(--primary); }
 
 <script>
 // ─── Theme: sync with the hub, same convention every other page uses ───
-// (this page previously had no theme JS at all — data-theme="dark" was a
-// static attribute that never changed, so switching to light theme from
-// the hub silently had no effect here.)
-// A bare "is it light, else dark" test here would silently swallow the hub's
-// third theme and repaint this page dark while the hub stayed on contrast, so
-// unknown values pass through unchanged and only genuinely unknown ones fall
-// back. theme.css defines the tokens for every value theme-boot.js accepts.
-function setTheme(theme){
-  var t = (theme === 'light' || theme === 'dark' || theme === 'contrast') ? theme : 'dark';
-  document.documentElement.setAttribute('data-theme', t);
-  try { localStorage.setItem('jspl-hub-theme', t); } catch(e){}
+// The hub's store is a continuous darkness (0..100), not a 'light'/'dark'
+// name, so this page must not do its own matching. It previously read the
+// stored value, failed to match it against a name, and wrote 'dark' back —
+// which is how opening this page standalone overwrote the chosen theme for
+// every other page. jsplTheme (theme-boot.js) owns the format; this only asks
+// it to apply.
+function setTheme(value){
+  window.jsplTheme.set(value);
 }
 window.__hub_handle_theme = function(themeValue){
-  var normalized = String(themeValue || '').toLowerCase();
-  if(normalized === 'light' || normalized === 'dark' || normalized === 'contrast') setTheme(normalized);
+  setTheme(themeValue);
 };
 window.addEventListener('message', function(e){
   var d = e.data;
   if(d && d.type === 'theme' && d.value) setTheme(d.value);
 });
+// The hub's store is a continuous darkness (0..100), not a 'light'/'dark'
+// name. Reading it here directly and matching it against names is what made
+// this page reset the chosen theme to dark when opened standalone; jsplTheme
+// (theme-boot.js) owns the format and the default.
 (function(){
-  var stored = null;
-  try { stored = localStorage.getItem('jspl-hub-theme'); } catch(e){}
-  setTheme(stored || 'dark');
+  setTheme(window.jsplTheme.read());
 })();
 
 var KNOWN_PAGES = [];

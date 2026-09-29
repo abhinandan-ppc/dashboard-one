@@ -741,11 +741,12 @@ let selectedNode = null;
 let currentFlowView = 'flow'; 
 
 /* ─── Theme Logic (controlled by the parent shell via postMessage) ─── */
+// The parent may send a continuous darkness (0..100) or a legacy name, so it
+// goes through jsplTheme rather than being matched here — matching against
+// 'dark'/'light' made this tab fall back to light whenever the hub was on any
+// other value.
 function applyTheme(mode) {
-    // The parent shell can now send any theme theme.css defines, not just the two
-    // it could before, so don't collapse an unrecognised value to light here.
-    document.documentElement.setAttribute('data-theme',
-        (mode === 'dark' || mode === 'contrast') ? mode : 'light');
+    window.jsplTheme.apply(mode);
     if (currentFlowView === 'sankey') renderSankey();
 }
 window.addEventListener("message", (e) => {

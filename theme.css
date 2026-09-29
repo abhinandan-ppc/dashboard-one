@@ -13,31 +13,104 @@
 
 *,*::before,*::after{box-sizing:border-box}
 
-/* ── Dark (default) ── */
+/* ── Continuous theme + accent ──────────────────────────────────────────────
+   The theme is one number: --theme-d, 0 = light, 100 = dark. Every colour
+   token is a blend between its light and dark reference values at that
+   position, so the whole UI moves together as one slider is dragged. This
+   replaces a pair of static light/dark blocks and, previously, a third
+   "contrast" block — the top of the slider is simply where the dark end of
+   the ramp sits.
+
+   The accent is a colour, not a name: --ah/--as/--al are hue, saturation and
+   lightness. That also subsumes the old "grey" accent, which is just this
+   model with saturation at zero.
+
+   --tdn is the 0..1 form for numeric maths (alpha ramps); --td is the
+   percentage form color-mix() wants. Custom properties resolve at
+   computed-value time, so declaration order does not matter.
+
+   Why the text tokens below do NOT ramp
+   ------------------------------------
+   A naive cross-fade ramps --bg and --text together: light bg + dark text at
+   one end, dark bg + light text at the other. In the middle BOTH land on the
+   same mid luminance, so the text sinks into the background. Measured at
+   darkness 50 that rendered VDO Generator as light grey text on a mid grey
+   page, unreadable — the slider's midpoint was the one broken value.
+
+   So the ramp is split by role:
+     • Surfaces, borders, glass and shadow alphas RAMP continuously. They have
+       no contrast partner, and they are what the slider is really showing.
+     • Text roles STEP at the theme boundary, so text is always pinned to one
+       end of the contrast range and never meets the background halfway.
+   Two things keep the seam tight: the surfaces ramp on --tds, which runs
+   steeper than the raw slider position and so is already well past mid when
+   the derived attribute flips, and that flip happens at 40%. ── */
 :root{
-  /* Surfaces — neutral grey-blue, no harsh contrast */
-  --bg:#0f172a;
-  --s0:rgba(22,30,48,.72);
-  --s1:rgba(30,41,59,.62);
-  --s2:rgba(36,49,70,.58);
-  --s3:rgba(44,58,82,.55);
-  --s4:rgba(52,68,94,.52);
-  --bdr:rgba(255,255,255,.12);
-  --bdrHi:rgba(255,255,255,.22);
+  --theme-d: 100;
+  --tdn: calc(var(--theme-d) / 100);
+  /* Surfaces ramp steeper than the raw slider position and are pinned at both
+     ends: fully light below d=11, fully dark above d=59, with the whole
+     light-to-dark transition inside a ~48%-wide band. That keeps the text step
+     (DARK_THRESHOLD 38) landing where the surface can carry it.
+     These three numbers are not freehanded — scripts/theme-contrast-check.mjs
+     searches slope/offset/threshold and reports the best worst-case body
+     contrast, which is 4.63:1 against the 4.5:1 WCAG AA floor. Change any of
+     them and re-run that script. */
+  --tds: clamp(0%, calc(var(--theme-d) * 2.1% - 24%), 100%);
+  --tdsn: calc(var(--tds) / 100%);
+  --td: var(--tds);
 
-  /* Typography — warm white, readable at every size */
-  --text:#f8fafc;
+  /* Accent inputs. Written inline by the hub as the sliders move. */
+  --ah: 199;
+  --as: 90%;
+  --al: 52%;
+
+  /* Surfaces */
+  --bg: color-mix(in srgb, #f0f4f8, #0b1120 var(--td));
+  --s0: color-mix(in srgb, rgba(255,255,255,.95), rgba(20,28,45,.74) var(--td));
+  --s1: color-mix(in srgb, rgba(255,255,255,.88), rgba(30,41,59,.62) var(--td));
+  --s2: color-mix(in srgb, rgba(240,244,252,.85), rgba(36,49,70,.58) var(--td));
+  --s3: color-mix(in srgb, rgba(226,232,246,.80), rgba(44,58,82,.55) var(--td));
+  --s4: color-mix(in srgb, rgba(212,220,240,.76), rgba(52,68,94,.52) var(--td));
+  --bdr: color-mix(in srgb, rgba(0,0,0,.1), rgba(255,255,255,.12) var(--td));
+  --bdrHi: color-mix(in srgb, rgba(0,0,0,.2), rgba(255,255,255,.22) var(--td));
+
+  /* Typography — dark values, the :root default. The LIGHT side of these lives
+     in the [data-theme="light"] block at the end of this section, because these
+     four step rather than ramp. See the note at the top of this block.
+     Pure white, not the off-white the old dark theme used: off-white sits at
+     luminance 0.95, which leaves no window where BOTH text ends clear 4.5:1
+     against a mid-grey surface, capping the whole ramp at 4.28:1. --dim and
+     --mute are lifted to match. */
+  --text:#ffffff;
   --text-hi:#ffffff;
-  --dim:#94a3b8;
-  --mute:#64748b;
+  --dim:#a8b3c4;
+  --mute:#8492a6;
 
-  /* Glassmorphism accent palette (dark-mode lightened variants of the
-     spec's light-mode hues, keeping the same brand hue per role) */
-  --primary:#29b6f6;     --on-primary:#00344d;   --primary-bg:rgba(41,182,246,.14); --primary-rgb:41,182,246;
-  --secondary:#a79fcf;   --on-secondary:#1c1830; --secondary-bg:rgba(167,159,207,.12);
-  --success:#22d889;     --success-bg:rgba(34,216,137,.12);
-  --warning:#f5a868;     --warning-bg:rgba(245,168,104,.12);
-  --danger:#ff5c7a;      --danger-bg:rgba(255,92,122,.12);
+  /* Accent-derived roles. The accent is lifted at the dark end so it stays
+     legible against near-black, and darkened at the light end so it holds up
+     against near-white — the same reason the old static accents differed
+     between the two themes. */
+  --primary: color-mix(in srgb,
+      hsl(var(--ah) var(--as) calc(var(--al) * .78)),
+      hsl(var(--ah) var(--as) calc(var(--al) * 1.06)) var(--td));
+  --on-primary: color-mix(in srgb,
+      hsl(var(--ah) 20% 100%), hsl(var(--ah) 70% 8%) var(--td));
+  --primary-bg: hsl(var(--ah) var(--as) var(--al) / calc(.09 + .05 * var(--tdsn)));
+  /* Set inline by the hub, which can convert HSL to the "R G B" triple the
+     rgba(var(--primary-rgb),...) call sites need. The literal is only a
+     fallback for the first paint before that script runs. */
+  --primary-rgb: 41,182,246;
+
+  --secondary: color-mix(in srgb, #3a344e, #a79fcf var(--td));
+  --on-secondary: color-mix(in srgb, #ffffff, #1c1830 var(--td));
+  --secondary-bg: color-mix(in srgb, rgba(58,52,78,.08), rgba(167,159,207,.12) var(--td));
+  --success: color-mix(in srgb, #07ca6b, #22d889 var(--td));
+  --success-bg: color-mix(in srgb, rgba(7,202,107,.1), rgba(34,216,137,.12) var(--td));
+  --warning: color-mix(in srgb, #e89558, #f5a868 var(--td));
+  --warning-bg: color-mix(in srgb, rgba(232,149,88,.12), rgba(245,168,104,.12) var(--td));
+  --danger: color-mix(in srgb, #ea2143, #ff5c7a var(--td));
+  --danger-bg: color-mix(in srgb, rgba(234,33,67,.1), rgba(255,92,122,.12) var(--td));
 
   /* Legacy accent names kept as aliases onto the roles above so existing
      var(--amber)/var(--sky) etc usages repaint under the new palette
@@ -48,23 +121,25 @@
   --rose:var(--danger);          --rose-bg:var(--danger-bg);
   --violet:var(--secondary);     --violet-bg:var(--secondary-bg);
   --orange:var(--warning);       --orange-bg:var(--warning-bg);
-  --teal:#3da8a0;
+  --teal:hsl(var(--ah) 45% 42%);
 
   /* Material 3 role tokens (for pages already using --md-sys-color-*) */
   --md-sys-color-primary:var(--primary);
   --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#173a8f;
-  --md-sys-color-on-primary-container:#dbe6ff;
+  --md-sys-color-primary-container: color-mix(in srgb,
+      hsl(var(--ah) 60% 92%), hsl(var(--ah) 55% 26%) var(--td));
+  --md-sys-color-on-primary-container: color-mix(in srgb,
+      hsl(var(--ah) 60% 16%), hsl(var(--ah) 70% 88%) var(--td));
   --md-sys-color-secondary:var(--secondary);
 
   /* Glass */
-  --glass:rgba(30,41,59,.65);
-  --glass-card:rgba(30,41,59,.55);
-  --glass-hi:rgba(30,41,59,.92);
-  --glass-border:rgba(255,255,255,.14);
-  --glass-border-hi:rgba(255,255,255,.26);
-  --glass-blur:blur(16px);
-  --glass-shadow:0 4px 20px rgba(0,0,0,.28);
+  --glass: color-mix(in srgb, rgba(255,255,255,.72), rgba(30,41,59,.65) var(--td));
+  --glass-card: color-mix(in srgb, rgba(255,255,255,.80), rgba(30,41,59,.55) var(--td));
+  --glass-hi: color-mix(in srgb, rgba(255,255,255,.98), rgba(30,41,59,.92) var(--td));
+  --glass-border: color-mix(in srgb, rgba(0,0,0,.12), rgba(255,255,255,.14) var(--td));
+  --glass-border-hi: color-mix(in srgb, rgba(0,0,0,.22), rgba(255,255,255,.26) var(--td));
+  --glass-blur: blur(16px);
+  --glass-shadow: 0 4px 20px rgb(0 0 0 / calc(.07 + .21 * var(--tdsn)));
   /* Shared content chrome — mirrors the reference header while keeping
      component geometry owned by each page. */
   --component-radius:20px;
@@ -72,14 +147,27 @@
   --component-shadow:var(--shadow-lg),var(--shadow-inset);
   --component-primary-hover:color-mix(in srgb,var(--primary) 90%,white 10%);
 
-  /* Elevation shadows — soft, diffuse, glass-appropriate */
-  --shadow-xs:0 1px 2px rgba(0,0,0,.24);
-  --shadow-sm:0 2px 8px rgba(0,0,0,.28),0 1px 2px rgba(0,0,0,.16);
-  --shadow-md:0 4px 14px rgba(0,0,0,.32),0 1px 4px rgba(0,0,0,.18);
-  --shadow-lg:0 8px 26px rgba(0,0,0,.4),0 3px 8px rgba(0,0,0,.22);
-  --shadow-xl:0 16px 44px rgba(0,0,0,.48),0 6px 16px rgba(0,0,0,.26);
-  --shadow-inset:inset 0 1px 0 rgba(255,255,255,.06);
-  --shadow-glow-amber:0 0 0 2px rgba(245,168,104,.22),0 3px 12px rgba(245,168,104,.14);
+  /* Elevation shadows. Every shadow in this system is black-with-alpha (or
+     white, for the inset), so the ramp is a single interpolated alpha per
+     step rather than a second set of hand-tuned shadow strings. */
+  --sa-xs: calc(.06 + .18 * var(--tdsn));
+  --sa-sm1: calc(.08 + .20 * var(--tdsn));
+  --sa-sm2: calc(.05 + .11 * var(--tdsn));
+  --sa-md1: calc(.10 + .22 * var(--tdsn));
+  --sa-md2: calc(.06 + .12 * var(--tdsn));
+  --sa-lg1: calc(.13 + .27 * var(--tdsn));
+  --sa-lg2: calc(.08 + .14 * var(--tdsn));
+  --sa-xl1: calc(.16 + .32 * var(--tdsn));
+  --sa-xl2: calc(.10 + .16 * var(--tdsn));
+  --sia: calc(.90 - .84 * var(--tdsn));
+
+  --shadow-xs:0 1px 2px rgb(0 0 0 / var(--sa-xs));
+  --shadow-sm:0 2px 8px rgb(0 0 0 / var(--sa-sm1)),0 1px 2px rgb(0 0 0 / var(--sa-sm2));
+  --shadow-md:0 4px 14px rgb(0 0 0 / var(--sa-md1)),0 1px 4px rgb(0 0 0 / var(--sa-md2));
+  --shadow-lg:0 8px 26px rgb(0 0 0 / var(--sa-lg1)),0 3px 8px rgb(0 0 0 / var(--sa-lg2));
+  --shadow-xl:0 16px 44px rgb(0 0 0 / var(--sa-xl1)),0 6px 16px rgb(0 0 0 / var(--sa-xl2));
+  --shadow-inset:inset 0 1px 0 rgb(255 255 255 / var(--sia));
+  --shadow-glow-amber:0 0 0 2px rgb(245 168 104 / calc(.12 + .10 * var(--tdsn))),0 3px 12px rgb(245 168 104 / calc(.08 + .06 * var(--tdsn)));
 
   /* Radius scale — compact glassmorphism scale (4/8px small/medium per
      spec), extrapolated up for larger surfaces + legacy aliases */
@@ -87,279 +175,37 @@
   --radius-lg:16px; --radius-xl:20px; --radius-pill:999px;
 
   /* Composites */
-  --s1-80:rgba(30,41,59,.8); --s2-50:rgba(36,49,70,.5); --s2-80:rgba(36,49,70,.8);
-  --bdr-10:rgba(255,255,255,.05);
+  --s1-80: color-mix(in srgb, rgba(255,255,255,.88), rgba(30,41,59,.8) var(--td));
+  --s2-50: color-mix(in srgb, rgba(240,244,252,.55), rgba(36,49,70,.5) var(--td));
+  --s2-80: color-mix(in srgb, rgba(240,244,252,.85), rgba(36,49,70,.8) var(--td));
+  --bdr-10: color-mix(in srgb, rgba(0,0,0,.06), rgba(255,255,255,.05) var(--td));
 
   /* ── Legacy aliases — kept so older pages don't need every rule rewritten ── */
   --bg-color:var(--bg);
   --tx:var(--text); --tm:var(--dim);
   --br:var(--bdr);
-  --input-bg:rgba(255,255,255,.05);
-  --input-hover:rgba(255,255,255,.09);
+  --input-bg: color-mix(in srgb, rgba(0,0,0,.04), rgba(255,255,255,.05) var(--td));
+  --input-hover: color-mix(in srgb, rgba(0,0,0,.08), rgba(255,255,255,.09) var(--td));
   --glass-bg:var(--glass);
   --glass-bg-solid:var(--glass-hi);
-  --glass-bg-hover:rgba(30,41,59,.85);
+  --glass-bg-hover: color-mix(in srgb, rgba(255,255,255,.9), rgba(38,48,66,.85) var(--td));
   --radius-s:var(--radius-sm); --radius-m:var(--radius-md); --radius-l:var(--radius-lg);
-  color-scheme:dark;
 }
 
-/* ── Light — glassmorphism spec: primary #1856FF on a white/near-white
-   surface, rich enough contrast to stay WCAG AA on translucent glass ── */
-:root[data-theme="light"], [data-theme="light"]{
-  --bg:#f0f4f8;
-  --s0:rgba(255,255,255,.95);
-  --s1:rgba(255,255,255,.88);
-  --s2:rgba(240,244,252,.85);
-  --s3:rgba(226,232,246,.80);
-  --s4:rgba(212,220,240,.76);
-  --bdr:rgba(0,0,0,.1);
-  --bdrHi:rgba(0,0,0,.2);
-
-  --text:#141414;
-  --text-hi:#030712;
-  --dim:#44474e;
-  --mute:#6b7280;
-
-  --primary:#0284c7;     --on-primary:#ffffff;   --primary-bg:rgba(2,132,199,.09); --primary-rgb:2,132,199;
-  --secondary:#3a344e;   --on-secondary:#ffffff; --secondary-bg:rgba(58,52,78,.08);
-  --success:#07ca6b;     --success-bg:rgba(7,202,107,.1);
-  --warning:#e89558;     --warning-bg:rgba(232,149,88,.12);
-  --danger:#ea2143;      --danger-bg:rgba(234,33,67,.1);
-
-  /* Legacy accent names kept as aliases onto the roles above so existing
-     var(--amber)/var(--sky) etc usages repaint under the new palette
-     without touching every call site */
-  --amber:var(--warning);        --amber-bg:var(--warning-bg);
-  --sky:var(--primary);          --sky-bg:var(--primary-bg);
-  --green:var(--success);        --green-bg:var(--success-bg);
-  --rose:var(--danger);          --rose-bg:var(--danger-bg);
-  --violet:var(--secondary);     --violet-bg:var(--secondary-bg);
-  --orange:var(--warning);       --orange-bg:var(--warning-bg);
-  --teal:#0f766e;
-
-  --md-sys-color-primary:var(--primary);
-  --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#dbe6ff;
-  --md-sys-color-on-primary-container:#00164f;
-  --md-sys-color-secondary:var(--secondary);
-
-  --glass:rgba(255,255,255,.72);
-  --glass-card:rgba(255,255,255,.80);
-  --glass-hi:rgba(255,255,255,.98);
-  --glass-border:rgba(0,0,0,.12);
-  --glass-border-hi:rgba(0,0,0,.22);
-  --glass-blur:blur(16px);
-  --glass-shadow:0 6px 24px rgba(0,0,0,.07);
-
-  --shadow-xs:0 1px 2px rgba(0,0,0,.06);
-  --shadow-sm:0 2px 6px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
-  --shadow-md:0 4px 12px rgba(0,0,0,.1),0 1px 4px rgba(0,0,0,.06);
-  --shadow-lg:0 8px 24px rgba(0,0,0,.13),0 3px 8px rgba(0,0,0,.08);
-  --shadow-xl:0 16px 40px rgba(0,0,0,.16),0 6px 14px rgba(0,0,0,.1);
-  --shadow-inset:inset 0 1px 0 rgba(255,255,255,.9);
-  --shadow-glow-amber:0 0 0 2px rgba(232,149,88,.25),0 3px 12px rgba(232,149,88,.15);
-
-  --s1-80:rgba(255,255,255,.88); --s2-50:rgba(240,244,252,.55); --s2-80:rgba(240,244,252,.85);
-  --bdr-10:rgba(0,0,0,.06);
-
-  --bg-color:var(--bg);
-  --tx:var(--text); --tm:var(--dim);
-  --br:var(--bdr);
-  --input-bg:rgba(0,0,0,.04);
-  --input-hover:rgba(0,0,0,.08);
-  --glass-bg:var(--glass);
-  --glass-bg-solid:var(--glass-hi);
-  --glass-bg-hover:rgba(255,255,255,.9);
-  --radius-s:var(--radius-sm); --radius-m:var(--radius-md); --radius-l:var(--radius-lg);
+/* color-scheme cannot be interpolated — it is a keyword. The hub writes a
+   derived data-theme="light"|"dark" beside the continuous --theme-d, and these
+   two rules do the two things that have to snap rather than blend: the
+   form-control/scrollbar palette, and the text roles.
+   The pages that branch on data-theme keep working unchanged, and text never
+   meets the background halfway — see the note at the top of the token block. */
+[data-theme="light"]{
   color-scheme:light;
+  --text:#000000;
+  --text-hi:#000000;
+  --dim:#3f434a;
+  --mute:#5a5f68;
 }
-
-/* ── Contrast — a third base theme, dark-family like the default. Near-black
-   surfaces, pure-white text and stronger borders, for control-room screens,
-   older panels and glare. It reuses the default dark accent blocks
-   (:root[data-accent=...]) unchanged, so every accent works here for free and
-   no [data-theme="contrast"][data-accent=...] pairs are needed. ── */
-[data-theme="contrast"]{
-  --bg:#000000;
-  --s0:rgba(10,12,18,.92);
-  --s1:rgba(18,22,32,.88);
-  --s2:rgba(24,29,41,.84);
-  --s3:rgba(32,38,52,.80);
-  --s4:rgba(40,48,64,.76);
-  --bdr:rgba(255,255,255,.28);
-  --bdrHi:rgba(255,255,255,.46);
-
-  --text:#ffffff;
-  --text-hi:#ffffff;
-  --dim:#c3cbd9;
-  --mute:#94a3b8;
-
-  --primary:#4cc9f0;     --on-primary:#001219;   --primary-bg:rgba(76,201,240,.20); --primary-rgb:76,201,240;
-  --secondary:#b8b0e0;   --on-secondary:#0d0a18; --secondary-bg:rgba(184,176,224,.16);
-  --success:#3ef2a4;     --success-bg:rgba(62,242,164,.18);
-  --warning:#ffb570;     --warning-bg:rgba(255,181,112,.18);
-  --danger:#ff6b8a;      --danger-bg:rgba(255,107,138,.18);
-
-  --amber:var(--warning);        --amber-bg:var(--warning-bg);
-  --sky:var(--primary);          --sky-bg:var(--primary-bg);
-  --green:var(--success);        --green-bg:var(--success-bg);
-  --rose:var(--danger);          --rose-bg:var(--danger-bg);
-  --violet:var(--secondary);     --violet-bg:var(--secondary-bg);
-  --orange:var(--warning);       --orange-bg:var(--warning-bg);
-  --teal:#4fd6cc;
-
-  --md-sys-color-primary:var(--primary);
-  --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#0b3a4d;
-  --md-sys-color-on-primary-container:#cdefff;
-  --md-sys-color-secondary:var(--secondary);
-
-  --glass:rgba(12,15,22,.88);
-  --glass-card:rgba(18,22,32,.84);
-  --glass-hi:rgba(26,31,43,.96);
-  --glass-border:rgba(255,255,255,.26);
-  --glass-border-hi:rgba(255,255,255,.44);
-  --glass-blur:blur(12px);
-  --glass-shadow:0 4px 20px rgba(0,0,0,.6);
-
-  --shadow-xs:0 1px 2px rgba(0,0,0,.6);
-  --shadow-sm:0 2px 8px rgba(0,0,0,.66),0 1px 2px rgba(0,0,0,.5);
-  --shadow-md:0 4px 14px rgba(0,0,0,.7),0 1px 4px rgba(0,0,0,.5);
-  --shadow-lg:0 8px 26px rgba(0,0,0,.75),0 3px 8px rgba(0,0,0,.55);
-  --shadow-xl:0 16px 44px rgba(0,0,0,.8),0 6px 16px rgba(0,0,0,.6);
-  --shadow-inset:inset 0 1px 0 rgba(255,255,255,.10);
-  --shadow-glow-amber:0 0 0 2px rgba(255,181,112,.3),0 3px 12px rgba(255,181,112,.2);
-
-  --s1-80:rgba(18,22,32,.88); --s2-50:rgba(24,29,41,.5); --s2-80:rgba(24,29,41,.8);
-  --bdr-10:rgba(255,255,255,.14);
-
-  --bg-color:var(--bg);
-  --tx:var(--text); --tm:var(--dim);
-  --br:var(--bdr);
-  --input-bg:rgba(255,255,255,.10);
-  --input-hover:rgba(255,255,255,.16);
-  --glass-bg:var(--glass);
-  --glass-bg-solid:var(--glass-hi);
-  --glass-bg-hover:rgba(38,45,60,.94);
-  --radius-s:var(--radius-sm); --radius-m:var(--radius-md); --radius-l:var(--radius-lg);
-  color-scheme:dark;
-}
-
-/* ── Accent color overrides — chosen from the theme button's color
-   picker (index.html). "blue" is the default brand hue defined above
-   and needs no override; the rest just repaint --primary and its
-   dependent tokens, so every page using var(--md-sys-color-primary)/
-   var(--primary) etc repaints without further changes. ── */
-:root[data-accent="green"]{
-  --primary:#34d399; --on-primary:#052e1c; --primary-bg:rgba(52,211,153,.14); --primary-rgb:52,211,153;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#0a3d28; --md-sys-color-on-primary-container:#c3f5dd;
-}
-[data-theme="light"][data-accent="green"]{
-  --primary:#059669; --on-primary:#ffffff; --primary-bg:rgba(5,150,105,.09); --primary-rgb:5,150,105;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#d3f5e6; --md-sys-color-on-primary-container:#00291a;
-}
-:root[data-accent="grey"]{
-  --primary:#94a3b8; --on-primary:#0f172a; --primary-bg:rgba(148,163,184,.14); --primary-rgb:148,163,184;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#334155; --md-sys-color-on-primary-container:#e2e8f0;
-}
-[data-theme="light"][data-accent="grey"]{
-  --primary:#475569; --on-primary:#ffffff; --primary-bg:rgba(71,85,105,.09); --primary-rgb:71,85,105;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#e2e8f0; --md-sys-color-on-primary-container:#0f172a;
-}
-:root[data-accent="violet"]{
-  --primary:#a78bfa; --on-primary:#2e1065; --primary-bg:rgba(167,139,250,.14); --primary-rgb:167,139,250;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#3b1a78; --md-sys-color-on-primary-container:#e9ddff;
-}
-[data-theme="light"][data-accent="violet"]{
-  --primary:#7c3aed; --on-primary:#ffffff; --primary-bg:rgba(124,58,237,.09); --primary-rgb:124,58,237;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#eaddff; --md-sys-color-on-primary-container:#22065a;
-}
-:root[data-accent="rose"]{
-  --primary:#fb7185; --on-primary:#4c0519; --primary-bg:rgba(251,113,133,.14); --primary-rgb:251,113,133;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#6b0b26; --md-sys-color-on-primary-container:#ffd9e1;
-}
-[data-theme="light"][data-accent="rose"]{
-  --primary:#e11d48; --on-primary:#ffffff; --primary-bg:rgba(225,29,72,.09); --primary-rgb:225,29,72;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#ffd9e1; --md-sys-color-on-primary-container:#4c0519;
-}
-:root[data-accent="orange"]{
-  --primary:#fb923c; --on-primary:#431407; --primary-bg:rgba(251,146,60,.14); --primary-rgb:251,146,60;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#7c2d12; --md-sys-color-on-primary-container:#ffe1c7;
-}
-[data-theme="light"][data-accent="orange"]{
-  --primary:#ea580c; --on-primary:#ffffff; --primary-bg:rgba(234,88,12,.09); --primary-rgb:234,88,12;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#ffe1c7; --md-sys-color-on-primary-container:#431407;
-}
-:root[data-accent="teal"]{
-  --primary:#2dd4bf; --on-primary:#04302b; --primary-bg:rgba(45,212,191,.14); --primary-rgb:45,212,191;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#0b4a42; --md-sys-color-on-primary-container:#c4f7f1;
-}
-[data-theme="light"][data-accent="teal"]{
-  --primary:#0d9488; --on-primary:#ffffff; --primary-bg:rgba(13,148,136,.09); --primary-rgb:13,148,136;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#c9f5f0; --md-sys-color-on-primary-container:#03302b;
-}
-:root[data-accent="cyan"]{
-  --primary:#22d3ee; --on-primary:#04323d; --primary-bg:rgba(34,211,238,.14); --primary-rgb:34,211,238;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#0b4a58; --md-sys-color-on-primary-container:#c6f4fb;
-}
-[data-theme="light"][data-accent="cyan"]{
-  --primary:#0891b2; --on-primary:#ffffff; --primary-bg:rgba(8,145,178,.09); --primary-rgb:8,145,178;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#c4edf6; --md-sys-color-on-primary-container:#032f3a;
-}
-:root[data-accent="amber"]{
-  --primary:#fbbf24; --on-primary:#3b2600; --primary-bg:rgba(251,191,36,.14); --primary-rgb:251,191,36;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#5c3d00; --md-sys-color-on-primary-container:#ffe9b0;
-}
-[data-theme="light"][data-accent="amber"]{
-  --primary:#b45309; --on-primary:#ffffff; --primary-bg:rgba(180,83,9,.09); --primary-rgb:180,83,9;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#fde8c8; --md-sys-color-on-primary-container:#3b2600;
-}
-:root[data-accent="indigo"]{
-  --primary:#818cf8; --on-primary:#1e1b4b; --primary-bg:rgba(129,140,248,.14); --primary-rgb:129,140,248;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#2e2a6b; --md-sys-color-on-primary-container:#e0e2ff;
-}
-[data-theme="light"][data-accent="indigo"]{
-  --primary:#4f46e5; --on-primary:#ffffff; --primary-bg:rgba(79,70,229,.09); --primary-rgb:79,70,229;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#e0e0ff; --md-sys-color-on-primary-container:#1e1b4b;
-}
-:root[data-accent="lime"]{
-  --primary:#a3e635; --on-primary:#1f2b06; --primary-bg:rgba(163,230,53,.14); --primary-rgb:163,230,53;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#33470a; --md-sys-color-on-primary-container:#e6f7c8;
-}
-[data-theme="light"][data-accent="lime"]{
-  --primary:#4d7c0f; --on-primary:#ffffff; --primary-bg:rgba(77,124,15,.09); --primary-rgb:77,124,15;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#ddf0bd; --md-sys-color-on-primary-container:#1f2b06;
-}
-:root[data-accent="magenta"]{
-  --primary:#f472b6; --on-primary:#4a0c2b; --primary-bg:rgba(244,114,182,.14); --primary-rgb:244,114,182;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#6b1145; --md-sys-color-on-primary-container:#ffd6ea;
-}
-[data-theme="light"][data-accent="magenta"]{
-  --primary:#db2777; --on-primary:#ffffff; --primary-bg:rgba(219,39,119,.09); --primary-rgb:219,39,119;
-  --md-sys-color-primary:var(--primary); --md-sys-color-on-primary:var(--on-primary);
-  --md-sys-color-primary-container:#fcd0e3; --md-sys-color-on-primary-container:#4a0c2b;
-}
+[data-theme="dark"]{ color-scheme:dark; }
 
 /* ── Base body treatment ── */
 body{
@@ -426,7 +272,10 @@ input::placeholder{color:var(--mute);opacity:1}
   font-size:13px !important;line-height:1.5 !important;border-radius:10px !important;
   box-shadow:0 8px 32px rgba(0,0,0,.6) !important;padding:9px 13px !important;
   backdrop-filter:blur(16px) !important;-webkit-backdrop-filter:blur(16px) !important}
-[data-theme="light"] .leaflet-tooltip{background:rgba(255,255,255,.92) !important;border:1px solid rgba(0,0,0,.12) !important;color:#1a1e2a !important}
+/* Both of the remaining two-state overrides become continuous, so a theme
+   dragged to the middle gets a genuine in-between border and tooltip rather
+   than snapping to whichever side of the threshold it fell on. */
+.leaflet-tooltip{background:var(--glass-hi) !important;border:1px solid var(--bdr) !important;color:var(--text) !important}
 .leaflet-tooltip::before{border-top-color:var(--bdrHi) !important;border-bottom-color:var(--bdrHi) !important}
 .leaflet-container{background:var(--bg) !important;font-family:'Poppins',sans-serif}
 .leaflet-control-zoom a{background:var(--s1) !important;color:var(--dim) !important;border-color:var(--bdrHi) !important}
@@ -597,9 +446,8 @@ button:disabled,.btn:disabled{cursor:not-allowed;transform:none!important;filter
   --header-gap:16px;
   --header-control-size:40px;
   --header-shell-max-width:none;
-  --header-border-color:rgba(255,255,255,.1);
+  --header-border-color: color-mix(in srgb, rgba(0,0,0,.08), rgba(255,255,255,.1) var(--td));
 }
-[data-theme="light"]{--header-border-color:rgba(0,0,0,.08)}
 .page-admin{--header-shell-max-width:1180px}
 .page-grade{--header-shell-max-width:1440px}
 .page-plate{--header-shell-max-width:1720px}
