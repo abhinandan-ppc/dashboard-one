@@ -5090,11 +5090,33 @@ function App(){
   const[fetchLog,setFetchLog]=useState([]);
   const logStep=useCallback(msg=>setFetchLog(l=>[...l.slice(-19),msg]),[]);
 
+  // The canvas palette is picked by comparing a resolved darkness against
+  // DARK_THRESHOLD, so anything that lands on the same side of the threshold
+  // paints IDENTICALLY. Track the last value that was actually applied and skip
+  // the work when nothing changed.
+  //
+  // This guard is what makes the remount key safe. The key forces React to drop
+  // and rebuild the whole subtree (every table row, the rake packer, both
+  // Leaflet maps, and every entrance animation), so bumping it for a no-op
+  // message is a full teardown/rebuild that looks exactly like the page
+  // refreshing. Both of this page's theme entry points can fire for a single
+  // user action — __hub_handle_theme calls setPref AND jsplTheme.apply(), and
+  // apply() invokes __hub_apply_theme as its callback — so without this the key
+  // was bumped at least twice per message, and the hub re-pushing on an interval
+  // turned that into a continuous flicker. A theme push is idempotent by
+  // nature, so comparing the value is the correct semantics, not a workaround.
+  const lastCanvasDark=useRef(null);
+  const applyCanvasDarkness=useCallback(d=>{
+    if(lastCanvasDark.current===d) return;
+    lastCanvasDark.current=d;
+    C = d < (window.jsplTheme ? window.jsplTheme.DARK_THRESHOLD : 50) ? LIGHT_C : DARK_C;
+    setThemeKey(k=>k+1);
+  },[]);
+
   // Update C and force re-render when effective theme changes
   useEffect(()=>{
-    C=effective==='dark'?DARK_C:LIGHT_C;
-    setThemeKey(k=>k+1);
-  },[effective]);
+    applyCanvasDarkness(effective==='light'?0:100);
+  },[effective,applyCanvasDarkness]);
   useEffect(()=>{
     window.__hub_handle_theme = function(themeValue){
       // The hub's value is a continuous darkness. Adopt it EXACTLY — reducing it
@@ -5116,13 +5138,12 @@ function App(){
     window.__hub_apply_theme = function(themeValue){
       var d = window.jsplTheme ? window.jsplTheme.normalize(themeValue)
         : (String(themeValue||'').toLowerCase()==='light'?0:100);
-      C = d < (window.jsplTheme ? window.jsplTheme.DARK_THRESHOLD : 50) ? LIGHT_C : DARK_C;
-      setThemeKey(k=>k+1);
+      applyCanvasDarkness(d);
     };
     return ()=>{
       try{ delete window.__hub_handle_theme; }catch(err){ window.__hub_handle_theme = undefined; }
     };
-  },[setPref]);
+  },[setPref,applyCanvasDarkness]);
   useEffect(()=>{
     window.__hub_handle_reset = function(){
       clearAllPlannerCache();

@@ -298,6 +298,56 @@ test('shared responsive primitives cover touch and table overflow behavior', asy
   assert.match(theme, /\.leaflet-control-zoom a\{width:44px/);
 });
 
+test('no infinite animation moves a layout property inside a backdrop-filter panel', async () => {
+  // The EBTP indeterminate bar used to animate `left`, which forces a layout
+  // pass every frame. Because .fetch-status carries backdrop-filter:blur(20px),
+  // each pass also re-sampled the blurred backdrop, so the page jittered for the
+  // whole fetch — and the fetch is long, since it falls through nine proxy
+  // strategies in turn. Animating a layout property from a keyframe is the
+  // defect; the bar must move on transform instead. Covers every keyframe in
+  // the shared sheet, not just loader-slide.
+  const theme = await read('theme.css');
+  // Match each @keyframes block by brace balance. A non-greedy `[\s\S]*?` to the
+  // first newline-`}` over-captures whenever a keyframe body has no closing
+  // brace on its own line, which would sweep in unrelated later rules and
+  // report properties the animation never had.
+  const keyframes = [];
+  for (const m of theme.matchAll(/@keyframes\s+([\w-]+)\s*\{/g)) {
+    let depth = 1, i = m.index + m[0].length;
+    while (i < theme.length && depth > 0) {
+      if (theme[i] === '{') depth++;
+      else if (theme[i] === '}') depth--;
+      i++;
+    }
+    keyframes.push([m[1], theme.slice(m.index + m[0].length, i - 1)]);
+  }
+  assert.ok(keyframes.length, 'the shared sheet should still define keyframes');
+
+  // Properties that force layout when animated. `left` is the one that was
+  // actually wrong; the rest are here so the same class of bug cannot return
+  // through a different property.
+  const layoutProps = ['left', 'right', 'top', 'bottom', 'width', 'height',
+    'margin', 'padding', 'font-size', 'line-height'];
+  for (const [name, body] of keyframes) {
+    for (const prop of layoutProps) {
+      // Only the animated side of a declaration; a bare `left:` in a
+      // from/to block is exactly the shape we are banning.
+      assert.ok(
+        !new RegExp(`(^|[;{\\s])${prop}\\s*:`).test(body),
+        `@keyframes ${name} animates \`${prop}\`, which forces layout every frame; `
+        + 'use transform/opacity instead',
+      );
+    }
+  }
+
+  // And the bar specifically must be transform-driven, so the fix cannot be
+  // undone by simply removing the animation.
+  const slide = keyframes.find(([n]) => n === 'loader-slide');
+  assert.ok(slide, 'the indeterminate bar must keep its loader-slide keyframes');
+  assert.match(slide[1], /transform\s*:\s*translateX/,
+    'loader-slide must move the bar with translateX, not `left`');
+});
+
 test('PM Yard positions mobile overlays from measured header clearance', async () => {
   const pmYard = await read('PM-Yard.html');
   assert.match(pmYard, /\.dropdown-panel\s*\{[\s\S]*?top\s*:\s*var\(--panel-top/);
@@ -1535,6 +1585,83 @@ test('the pages with their own theme managers let the boot script drive them', a
   for (const page of ['Rake-Planner.html', 'Order-Status-Report.html']) {
     const src = await read(page);
     assert.ok(src.includes('__hub_apply_theme'), `${page} must expose __hub_apply_theme to theme-boot.js`);
+  }
+});
+
+test('the hub re-pushes the theme a bounded number of times, not forever', async () => {
+  const hub = await read('index.html');
+  // pushThemeToPages() used to end in `setTimeout(pushThemeToPages, 400)` on
+  // every pass, which re-armed itself unconditionally: the hub posted
+  // {theme-vars} + {theme} to the page every 400ms for the whole session. Every
+  // page that paints its canvas from those messages therefore repainted
+  // continuously, and on the pages that remount on a theme message the entire
+  // React tree was rebuilt several times a second — the "page keeps refreshing
+  // and the contents flicker" symptom. A push is an event, so the retry chain
+  // must terminate.
+  assert.ok(/var\s+THEME_PUSH_RETRIES\s*=/.test(hub), 'the retry budget must be a named, finite constant');
+  assert.ok(/var\s+THEME_PUSH_RETRY_MS\s*=/.test(hub), 'the retry interval must be a named constant');
+
+  // The re-arm must be conditional on budget remaining, and must pass the
+  // decremented count down rather than restarting from the top.
+  assert.ok(/if\s*\(\s*left\s*<=\s*0\s*\)\s*return;/.test(hub),
+    'pushThemeToPages must stop once its retry budget is spent, or the chain never ends');
+  assert.ok(/pushThemeToPages\(\s*left\s*-\s*1\s*\)/.test(hub),
+    'the retry must consume one unit of budget, not restart the chain at full length');
+  // And it must never schedule itself with no argument again — that is the
+  // exact shape of the original unbounded loop.
+  assert.ok(!/setTimeout\(\s*pushThemeToPages\s*,/.test(hub),
+    'pushThemeToPages must not re-arm itself unconditionally (that was the unbounded poll)');
+});
+
+test('a page only remounts for a theme message that actually changes the canvas', async () => {
+  // These two pages bump a `key` on their app root so the module-level canvas
+  // palette (C) is re-read during render. That key makes React discard and
+  // rebuild the ENTIRE subtree, so bumping it for a message that resolves to the
+  // palette already on screen is a full teardown/rebuild that reads as the page
+  // refreshing. Both pages receive a redundant push for a single user action
+  // anyway: __hub_handle_theme calls setPref AND jsplTheme.apply(), and apply()
+  // invokes __hub_apply_theme as its callback.
+  for (const page of ['Rake-Planner.html', 'Order-Status-Report.html']) {
+    const src = await read(page);
+    // The applied darkness must be remembered and compared before doing work.
+    assert.ok(/lastCanvasDark\s*=\s*useRef\(/.test(src),
+      `${page} must remember the last applied darkness so a no-op push can be skipped`);
+    assert.ok(/if\s*\(\s*lastCanvasDark\.current\s*===\s*d\s*\)\s*return;/.test(src),
+      `${page} must skip the remount when the resolved darkness has not changed`);
+    // The bump must happen inside the guarded setter, and nowhere else. Ordering
+    // matters: the guard has to come BEFORE the key bump, otherwise the skip is
+    // useless. Checking "no direct bump" alone would also reject the guarded
+    // setter itself, so the function body is compared positionally instead.
+    const start = src.indexOf('const applyCanvasDarkness');
+    assert.ok(start > -1, `${page} must funnel its remount through applyCanvasDarkness`);
+    const body = src.slice(start, src.indexOf('},[]);', start));
+    const guardAt = body.indexOf('lastCanvasDark.current===d');
+    const bumpAt = body.indexOf('setThemeKey(');
+    assert.ok(guardAt > -1, `${page}: applyCanvasDarkness must compare the applied darkness`);
+    assert.ok(bumpAt > guardAt,
+      `${page}: applyCanvasDarkness must return on a no-op BEFORE bumping the remount key`);
+
+    // Exactly one call site, so no other path can remount behind the guard's back.
+    const bumps = src.match(/setThemeKey\(\s*k\s*=>\s*k\s*\+\s*1\s*\)/g) || [];
+    assert.equal(bumps.length, 1,
+      `${page} must bump the remount key from exactly one place, the guarded setter`);
+  }
+});
+
+test('the pages that remount on a theme push actually declare the state they bump', async () => {
+  // Order-Status-Report called setThemeKey from __hub_apply_theme without ever
+  // declaring it anywhere in the file, so every hub theme push threw a
+  // ReferenceError. theme-boot.js wraps its callback in try/catch, so it failed
+  // silently and the page's canvas simply never repainted. A declared-but-unused
+  // or undeclared setter is invisible to every other check here, so assert the
+  // binding exists and is initialised.
+  for (const page of ['Rake-Planner.html', 'Order-Status-Report.html']) {
+    const src = await read(page);
+    if (src.includes('setThemeKey')) {
+      assert.ok(/const\s*\[\s*themeKey\s*,\s*setThemeKey\s*\]\s*=\s*useState\(/.test(src),
+        `${page} calls setThemeKey, so it must declare that state — otherwise every `
+        + 'theme push throws a ReferenceError that theme-boot.js silently swallows');
+    }
   }
 });
 

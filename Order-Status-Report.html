@@ -202,6 +202,27 @@ let C=DARK_C;
 function useThemeManager(){
   const[pref,setPref]=useState(()=>localStorage.getItem('jspl-osr-theme')||'auto');
   const[systemDark,setSystemDark]=useState(()=>window.matchMedia('(prefers-color-scheme:dark)').matches);
+  // Bumping this re-renders the component that called the hook, which is what
+  // makes the module-level `C` palette actually reach the DOM — `C` is read
+  // during render, so assigning it is not enough on its own.
+  //
+  // It used to be referenced by __hub_apply_theme without ever being DECLARED
+  // anywhere in this file, so that handler threw a ReferenceError on every hub
+  // theme push. theme-boot.js wraps its callback in try/catch, so the failure was
+  // completely silent and this page's canvas simply never repainted. Declared
+  // here, and guarded (see applyCanvasDarkness) so a repeated no-op push cannot
+  // re-render the page for nothing.
+  const[themeKey,setThemeKey]=useState(0);
+  const lastCanvasDark=useRef(null);
+  const applyCanvasDarkness=useCallback(d=>{
+    // The palette is chosen by comparing against DARK_THRESHOLD, so two values
+    // on the same side of it paint identically. Skipping the no-op keeps a
+    // re-push from re-rendering the whole page.
+    if(lastCanvasDark.current===d) return;
+    lastCanvasDark.current=d;
+    C = d < (window.jsplTheme ? window.jsplTheme.DARK_THRESHOLD : 50) ? LIGHT_C : DARK_C;
+    setThemeKey(k=>k+1);
+  },[]);
   useEffect(()=>{
     const mq=window.matchMedia('(prefers-color-scheme:dark)');
     const h=e=>setSystemDark(e.matches);
@@ -253,8 +274,7 @@ function useThemeManager(){
     window.__hub_apply_theme=value=>{
       var d = window.jsplTheme ? window.jsplTheme.normalize(value)
         : (String(value||'').toLowerCase()==='light'?0:100);
-      C = d < (window.jsplTheme ? window.jsplTheme.DARK_THRESHOLD : 50) ? LIGHT_C : DARK_C;
-      setThemeKey(k=>k+1);
+      applyCanvasDarkness(d);
     };
     const onMsg=e=>{
       const d=e.data;
@@ -265,8 +285,8 @@ function useThemeManager(){
       try{window.parent.postMessage({type:'ready'},'*');}catch(e){}
     }
     return()=>{window.removeEventListener('message',onMsg);delete window.__hub_handle_theme;};
-  },[setPref]);
-  return{pref,setPref,effective,setThemeConcrete};
+  },[setPref,applyCanvasDarkness]);
+  return{pref,setPref,effective,setThemeConcrete,themeKey};
 }
 const F={h:"'Poppins',sans-serif",b:"'Poppins',sans-serif",m:"'JetBrains Mono',monospace"};
 const JINDAL_LOGO='data:image/png;base64,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';

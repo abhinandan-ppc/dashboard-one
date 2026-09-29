@@ -2305,10 +2305,25 @@ function applyThemeToDocument(doc){
 }
 
 // Push the current theme to the embedded page and everything nested in it.
-// Re-applies on a short delay because pages that render their header from an
-// async fetch (Order Status Report) mount their markup after first paint and
-// would otherwise repaint back to their own default.
-function pushThemeToPages(){
+//
+// How many extra times a push is repeated. Pages that render their header from
+// an async fetch (Order Status Report) mount their markup after first paint and
+// would otherwise repaint back to their own default, so a couple of delayed
+// repeats are needed — but the count is BOUNDED.
+//
+// This used to re-arm itself with no bound on every pass, so the hub posted
+// {theme-vars}/{theme} to the page every 400ms for the whole life of the
+// session. Rake Planner paints its canvas from that message through
+// __hub_apply_theme, which bumps the `key` on the app's root element — so React
+// tore down and rebuilt the entire tree (every table row, the rake packer, both
+// Leaflet maps, and every CSS entrance animation) two to five times a second.
+// That is the "page refreshes and flickers on load" symptom. A push is an event,
+// not a poll: re-arm only for the few retries a late-mounting page needs, then
+// stop.
+var THEME_PUSH_RETRIES = 4;
+var THEME_PUSH_RETRY_MS = 400;
+
+function pushThemeToPages(retriesLeft){
   try{
     if(!pageFrame || !pageFrame.contentWindow) return;
     applyThemeToDocument(pageFrame.contentWindow.document);
@@ -2325,8 +2340,14 @@ function pushThemeToPages(){
       Array.prototype.forEach.call(pageFrame.contentWindow.frames || [], function(f){ post(f); });
     }catch(e){}
   }catch(e){}
+  // Spend one retry, then stop. Passing the decremented count down (rather than
+  // re-reading a counter) means the chain always terminates after
+  // THEME_PUSH_RETRIES extra passes, while the newest push still collapses the
+  // previous chain via clearTimeout and restarts it at the full budget.
+  var left = retriesLeft == null ? THEME_PUSH_RETRIES : retriesLeft;
+  if(left <= 0) return;
   clearTimeout(pushThemeToPages._t);
-  pushThemeToPages._t = setTimeout(pushThemeToPages, 400);
+  pushThemeToPages._t = setTimeout(function(){ pushThemeToPages(left - 1); }, THEME_PUSH_RETRY_MS);
 }
 
 // Back-compat alias: the binary switch and the segmented control are both gone,
