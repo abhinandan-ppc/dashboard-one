@@ -298,6 +298,26 @@ test('shared responsive primitives cover touch and table overflow behavior', asy
   assert.match(theme, /\.leaflet-control-zoom a\{width:44px/);
 });
 
+test('the Rake Planner header clearance is only written when it changes', async () => {
+  // The desktop clearance ResizeObserver measures the header shell and publishes
+  // the height as --rake-header-clearance, which sizes the spacer below it. An
+  // unconditional write mutates layout from inside a ResizeObserver callback,
+  // which can reschedule the observer indefinitely; an identical write is also
+  // a no-op repaint that reads as the header refreshing itself. Guard on change.
+  const rake = await read('Rake-Planner.html');
+  const start = rake.indexOf('--rake-header-clearance');
+  assert.ok(start > -1, 'the page must publish the header clearance at all');
+
+  const guard = rake.indexOf("getPropertyValue('--rake-header-clearance')");
+  assert.ok(guard > -1,
+    'the clearance must be compared against its current value before writing');
+  // The read must guard the write in the same callback, not appear later.
+  assert.ok(guard < rake.indexOf("setProperty('--rake-header-clearance'", guard),
+    'the change check must come BEFORE the write it protects');
+  assert.ok(/height<=0\)\s*return/.test(rake),
+    'a zero measurement must be ignored rather than collapsing the spacer');
+});
+
 test('no infinite animation moves a layout property inside a backdrop-filter panel', async () => {
   // The EBTP indeterminate bar used to animate `left`, which forces a layout
   // pass every frame. Because .fetch-status carries backdrop-filter:blur(20px),
@@ -515,9 +535,10 @@ test('the Rake KPI strip is as far from the content below as from the header', a
   // welded to the tables below it.
   assert.match(
     rake,
-    /setProperty\('--rake-header-clearance',\s*`\$\{Math\.round\(height\+12\)\}px`\)/,
+    /`\$\{Math\.round\(height\+12\)\}px`/,
     'the header clearance must keep its 12px of breathing room',
   );
+
   // The bottom value carries its own unit. Inside this template string React
   // serialises the value verbatim and does NOT append "px" the way it does for
   // a numeric style value, so a bare `12` made the whole padding declaration

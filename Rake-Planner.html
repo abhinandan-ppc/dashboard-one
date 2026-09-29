@@ -5231,7 +5231,17 @@ function App(){
     if(!shells.length)return undefined;
     const apply=()=>{
       const height=shells.reduce((tallest,el)=>Math.max(tallest,el.getBoundingClientRect().height),0);
-      if(height>0)document.documentElement.style.setProperty('--rake-header-clearance',`${Math.round(height+12)}px`);
+      if(height<=0)return;
+      const next=`${Math.round(height+12)}px`;
+      // Only write when the value actually changes. The observed element is the
+      // header shell, but the value it feeds sizes the spacer BELOW it — so an
+      // unconditional write mutates layout from inside a ResizeObserver callback,
+      // which can schedule the observer again and leave it re-firing. Setting an
+      // identical value is not a real layout change, so skipping it also stops
+      // the no-op repaint that made the header look like it was refreshing.
+      const root=document.documentElement;
+      if(root.style.getPropertyValue('--rake-header-clearance')===next)return;
+      root.style.setProperty('--rake-header-clearance',next);
     };
     apply();
     window.addEventListener('resize',apply);
