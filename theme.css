@@ -149,6 +149,18 @@
   --glass-hi: color-mix(in srgb, rgba(255,255,255,.98), rgba(22,22,25,.94) var(--td));
   --glass-border: color-mix(in srgb, rgba(0,0,0,.12), rgba(255,255,255,.14) var(--td));
   --glass-border-hi: color-mix(in srgb, rgba(0,0,0,.22), rgba(255,255,255,.26) var(--td));
+  /* Accent-tinted borders, a notch stronger than the neutral ones above so they
+     read as the "this is interactive" edge rather than another hairline. The
+     accent is mixed in at low weight on BOTH ends of the ramp — on light pages
+     toward the accent at a few percent, on dark pages toward a light accent —
+     because a border at full accent saturation would out-shout the controls it
+     is meant to frame. */
+  --border-accent: color-mix(in srgb,
+      color-mix(in srgb, #000000 88%, hsl(var(--ah) var(--as) var(--al))),
+      hsl(var(--ah) calc(var(--as) * 0.7) 72%) var(--td));
+  --border-accent-hi: color-mix(in srgb,
+      color-mix(in srgb, #000000 76%, hsl(var(--ah) var(--as) var(--al))),
+      hsl(var(--ah) calc(var(--as) * 0.8) 62%) var(--td));
   --glass-blur: blur(16px);
   --glass-shadow: 0 4px 20px rgb(0 0 0 / calc(.07 + .21 * var(--tdsn)));
   /* Shared content chrome — mirrors the reference header while keeping
@@ -218,13 +230,35 @@
 }
 [data-theme="dark"]{ color-scheme:dark; }
 
+/* ── Accent-derived ambient wash ──────────────────────────────────────────────
+   The page background used to carry three hard-coded radial glows (a blue, a
+   green and a violet) that were written once and never moved. They are now
+   derived from the accent hue, so the wash retints together with the accent
+   slider instead of staying a fixed blue haze over every theme.
+
+   Each glow keeps a different hue offset AND saturation, because three copies
+   of one flat tint read as banding rather than depth. Saturation is scaled well
+   down from the accent's own --as: at full accent saturation these would be
+   lurid stains, and the point is a faint colour cast.
+
+   Alphas stay at or below .08 deliberately. This layer paints OVER --bg, so it
+   eats into the body-text contrast budget that
+   scripts/theme-contrast-check.mjs measures against the solid --bg. The script
+   models the solid colour only, so a heavier wash would silently spend contrast
+   the check never sees. */
+:root{
+  --amb-1:hsl(var(--ah) calc(var(--as) * 0.55) 62%);
+  --amb-2:hsl(calc(var(--ah) + 42) calc(var(--as) * 0.45) 58%);
+  --amb-3:hsl(calc(var(--ah) - 38) calc(var(--as) * 0.40) 54%);
+}
+
 /* ── Base body treatment ── */
 body{
   background:var(--bg);
   background-image:
-    radial-gradient(ellipse 70% 50% at 15% 10%, rgba(91,163,217,.07) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 70% at 85% 90%, rgba(76,175,125,.06) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(155,135,212,.04) 0%, transparent 70%);
+    radial-gradient(ellipse 70% 50% at 15% 10%, color-mix(in srgb, var(--amb-1) 7%, transparent) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 70% at 85% 90%, color-mix(in srgb, var(--amb-2) 6%, transparent) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 50%, color-mix(in srgb, var(--amb-3) 4%, transparent) 0%, transparent 70%);
   background-attachment:fixed;
   color:var(--text);
   font-family:'Poppins',system-ui,-apple-system,sans-serif;

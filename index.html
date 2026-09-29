@@ -26,9 +26,12 @@ body {
   font-family: 'Poppins', system-ui, sans-serif;
   color: var(--tx);
   background-color: var(--bg-color);
+  /* Accent-derived, matching theme.css's body wash, so the hub's backdrop
+     retints with the accent slider too. The second glow used to be a fixed
+     green (rgba(76,175,125,.06)) that ignored the accent entirely. */
   background-image:
-    radial-gradient(ellipse 70% 50% at 15% 0%, rgba(var(--primary-rgb),.08) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 60% at 90% 90%, rgba(76,175,125,.06) 0%, transparent 60%);
+    radial-gradient(ellipse 70% 50% at 15% 0%, color-mix(in srgb, var(--amb-1) 8%, transparent) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 60% at 90% 90%, color-mix(in srgb, var(--amb-2) 6%, transparent) 0%, transparent 60%);
   background-attachment: fixed;
   transition: background-color 0.3s, color 0.3s;
   min-height: 100dvh;
@@ -238,11 +241,29 @@ input { font: inherit; color: inherit; }
 .theme-range:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 /* The track doubles as the legend: the range you are about to pick is visible,
    so the sliders need no separate min/max captions. */
+/* White -> accent -> black, in the accent's CURRENT hue. Built from the live
+   --ah/--as/--al rather than a hard-coded blue, so dragging the hue slider
+   retints the darkness track in the same frame. The middle stops are a pale
+   accent (90% lightness), a mid one (46%) and a deep one (16%), which is what
+   gives the track its colour character; a straight white-to-black fade reads as
+   a plain brightness slider and hides which accent is selected. The final stop
+   is the AMOLED #000 that --bg now lands on, so the track previews the real
+   ramp. */
 .theme-range--dark::-webkit-slider-runnable-track {
-  background: linear-gradient(90deg, #f0f4f8 0%, #c8d2e2 50%, #000000 100%);
+  background: linear-gradient(90deg,
+    #f0f4f8 0%,
+    hsl(var(--ah) calc(var(--as) * 0.30) 90%) 42%,
+    hsl(var(--ah) calc(var(--as) * 0.85) 46%) 68%,
+    hsl(var(--ah) calc(var(--as) * 0.90) 16%) 86%,
+    #000000 100%);
 }
 .theme-range--dark::-moz-range-track {
-  background: linear-gradient(90deg, #f0f4f8 0%, #c8d2e2 50%, #000000 100%);
+  background: linear-gradient(90deg,
+    #f0f4f8 0%,
+    hsl(var(--ah) calc(var(--as) * 0.30) 90%) 42%,
+    hsl(var(--ah) calc(var(--as) * 0.85) 46%) 68%,
+    hsl(var(--ah) calc(var(--as) * 0.90) 16%) 86%,
+    #000000 100%);
 }
 .theme-range--hue::-webkit-slider-runnable-track {
   background: linear-gradient(90deg,#f00 0%,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00 100%);
