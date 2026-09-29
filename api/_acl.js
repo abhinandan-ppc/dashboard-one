@@ -6,9 +6,40 @@
 // @vercel/blob SDK — that package pulls in Node-only deps (undici, node:*
 // builtins) that Edge Middleware can't bundle. Plain fetch works fine there.
 
+// Two properties matter for correctness here, and both are load-bearing:
+//
+//   1. Caching. The registry is read on every page load and every API call, so
+//      a per-instance copy with a short TTL (REGISTRY_CACHE_TTL_MS, default
+//      5s) keeps that off the Blob round-trip. Writes update the copy in the
+//      instance that made them, so an admin never sees their own change lag.
+//
+//   2. Conditional writes. A read-modify-write with no version check silently
+//      loses edits whenever a login (recordLogin) or a second admin tab writes
+//      in between — which is what made checkboxes appear to "revert". Every
+//      write carries the ETag it was based on (x-if-match); a mismatch fails
+//      the write and updateRegistry() re-reads, re-applies and retries.
+
 const REGISTRY_PATH = 'acl/registry.json';
 const BLOB_API_URL = 'https://vercel.com/api/blob';
 const BLOB_API_VERSION = '12';
+
+// Keep the CDN copy effectively uncached so a write is visible to the very next
+// read on any instance. The local in-memory cache below is what absorbs
+// repeat reads; the CDN cache is only ever in the way.
+const WRITE_CACHE_MAX_AGE = '0';
+const MAX_WRITE_ATTEMPTS = 3;
+
+// Set by __setCacheTtl() in tests; null means "read the env var".
+let cacheTtlOverride = null;
+let cache = null; // { registry, etag, fetchedAt }
+
+function cacheTtlMs() {
+  if (cacheTtlOverride !== null) return cacheTtlOverride;
+  const raw = process.env.REGISTRY_CACHE_TTL_MS;
+  if (raw === undefined || raw === '') return 5000;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : 5000;
+}
 
 function blobToken() {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
@@ -21,7 +52,15 @@ function storeIdFromToken(token) {
   return token.split('_')[3] || '';
 }
 
-async function blobPutJson(pathname, value) {
+function isConflict(e) {
+  return !!e && (e.status === 412 || e.code === 'precondition_failed');
+}
+
+// Writes the registry. ifMatch is the quoted ETag the caller based its change
+// on; when present the API rejects the write (412 / precondition_failed) if the
+// stored object moved on. Returns the new ETag, or null if the API didn't
+// report one (in which case the next write simply skips the check).
+async function blobPutJson(pathname, value, ifMatch) {
   const token = blobToken();
   const storeId = storeIdFromToken(token);
   const requestId = `${storeId}:${Date.now()}:${Math.random().toString(16).slice(2)}`;
@@ -29,26 +68,45 @@ async function blobPutJson(pathname, value) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
   try {
+    const headers = {
+      'x-api-blob-request-id': requestId,
+      'x-vercel-blob-store-id': storeId,
+      'x-api-blob-request-attempt': '0',
+      'x-api-version': BLOB_API_VERSION,
+      authorization: `Bearer ${token}`,
+      'x-vercel-blob-access': 'private',
+      'x-content-type': 'application/json',
+      'x-add-random-suffix': '0',
+      'x-allow-overwrite': '1',
+      'x-cache-control-max-age': WRITE_CACHE_MAX_AGE,
+    };
+    // x-if-match must carry the ETag exactly as returned (quotes included), and
+    // only ever travels alongside x-allow-overwrite: 1 — which we always send.
+    // Sending it without that produced conflicting conditional headers
+    // server-side and failed the write (vercel/storage INC-5751).
+    if (ifMatch) headers['x-if-match'] = ifMatch;
+
     const res = await fetch(url, {
       method: 'PUT',
       body: JSON.stringify(value),
-      headers: {
-        'x-api-blob-request-id': requestId,
-        'x-vercel-blob-store-id': storeId,
-        'x-api-blob-request-attempt': '0',
-        'x-api-version': BLOB_API_VERSION,
-        authorization: `Bearer ${token}`,
-        'x-vercel-blob-access': 'private',
-        'x-content-type': 'application/json',
-        'x-add-random-suffix': '0',
-        'x-allow-overwrite': '1',
-      },
+      headers,
       signal: controller.signal
     });
     clearTimeout(timeout);
     if (!res.ok) {
       const text = await res.text().catch(() => '');
-      throw new Error(`Blob write failed (${res.status}): ${text}`);
+      const err = new Error(`Blob write failed (${res.status}): ${text}`);
+      err.status = res.status;
+      // Surface the API's machine-readable code so callers detect a version
+      // conflict without string-matching the human-readable message.
+      try { err.code = JSON.parse(text)?.error?.code; } catch { /* not JSON */ }
+      throw err;
+    }
+    try {
+      const body = await res.json();
+      return body && body.etag ? body.etag : null;
+    } catch {
+      return null;
     }
   } catch (e) {
     clearTimeout(timeout);
@@ -57,21 +115,31 @@ async function blobPutJson(pathname, value) {
   }
 }
 
+// Returns { data, etag }. data is null when the registry doesn't exist yet.
 async function blobGetJson(pathname) {
   const token = blobToken();
   const storeId = storeIdFromToken(token);
-  const url = `https://${storeId}.private.blob.vercel-storage.com/${pathname}`;
+  // The nonce defeats any CDN-cached copy of this private object. Without it a
+  // read can return the previous version for a few seconds after a write,
+  // which is exactly how a just-saved change appeared to vanish.
+  const nonce = `${Date.now().toString(36)}${Math.random().toString(16).slice(2, 8)}`;
+  const url = `https://${storeId}.private.blob.vercel-storage.com/${pathname}?v=${nonce}`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
   try {
-    const res = await fetch(url, { 
+    const res = await fetch(url, {
       headers: { authorization: `Bearer ${token}` },
+      cache: 'no-store',
       signal: controller.signal
     });
     clearTimeout(timeout);
-    if (res.status === 404) return null;
+    if (res.status === 404) return { data: null, etag: null };
     if (!res.ok) throw new Error(`Blob read failed (${res.status})`);
-    return res.json();
+    // ETag arrives as a standard response header on the private storage URL.
+    // It is null only if the store is misconfigured; writes then fall back to
+    // an unconditional overwrite rather than failing outright.
+    const etag = res.headers.get('etag');
+    return { data: await res.json(), etag };
   } catch (e) {
     clearTimeout(timeout);
     if (e.name === 'AbortError') throw new Error('Blob read timeout');
@@ -119,15 +187,65 @@ export function isPrimaryAdmin(email) {
 // Back-compat alias.
 export const isAdmin = isPrimaryAdmin;
 
-export async function getRegistry() {
-  const parsed = await blobGetJson(REGISTRY_PATH);
+function normalize(parsed) {
   if (!parsed || typeof parsed !== 'object') return { users: {} };
   if (!parsed.users || typeof parsed.users !== 'object') parsed.users = {};
   return parsed;
 }
 
-export async function saveRegistry(registry) {
-  await blobPutJson(REGISTRY_PATH, registry);
+// Always hits Blob, bypassing the cache. updateRegistry() must use this so a
+// mutation is never applied on top of a copy something else already superseded.
+async function readRegistryFresh() {
+  const { data, etag } = await blobGetJson(REGISTRY_PATH);
+  return { registry: normalize(data), etag };
+}
+
+// Cached read used by every access check. Returns a deep copy: callers
+// routinely mutate what they get back (admin.html hands out the users map, and
+// recordLogin-style code pokes at records), and a shared cached object would
+// let one request's edit leak into the next request's view.
+export async function getRegistry() {
+  const ttl = cacheTtlMs();
+  const now = Date.now();
+  if (cache && ttl > 0 && now - cache.fetchedAt < ttl) {
+    return structuredClone(cache.registry);
+  }
+  const fresh = await readRegistryFresh();
+  cache = { registry: fresh.registry, etag: fresh.etag, fetchedAt: now };
+  return structuredClone(cache.registry);
+}
+
+// The single write path. `mutate` receives the freshly-read registry, edits it
+// in place, and returns a result that is handed back to the caller.
+//
+// The ETag of the version `mutate` saw travels with the write. If another
+// writer (a concurrent login, a second admin tab) committed in between, Blob
+// rejects the write and we re-read and re-apply rather than clobbering their
+// change. `mutate` must therefore be a pure function of the registry it is
+// given — it will be run more than once.
+export async function updateRegistry(mutate) {
+  let lastErr = null;
+  for (let attempt = 1; attempt <= MAX_WRITE_ATTEMPTS; attempt++) {
+    const { registry, etag } = await readRegistryFresh();
+    const result = await mutate(registry);
+    let newEtag;
+    try {
+      newEtag = await blobPutJson(REGISTRY_PATH, registry, etag);
+    } catch (e) {
+      if (!isConflict(e) || attempt === MAX_WRITE_ATTEMPTS) throw e;
+      lastErr = e;
+      continue; // re-read and re-apply against the newer version
+    }
+    // Refresh the local copy from what we just wrote, so the instance that made
+    // the change sees it immediately rather than after the TTL.
+    cache = {
+      registry: normalize(registry),
+      etag: newEtag || etag,
+      fetchedAt: Date.now(),
+    };
+    return result;
+  }
+  throw lastErr || new Error('Registry update failed');
 }
 
 // Resolves everything a request needs to know about one user in a single
@@ -154,27 +272,32 @@ export async function resolveAccess(email) {
 export async function recordLogin({ email, name, picture, domain }) {
   const lower = String(email || '').toLowerCase();
   if (!lower || isPrimaryAdmin(lower)) return;
-  const registry = await getRegistry();
   const now = Date.now();
-  const existing = registry.users[lower];
-  if (existing) {
-    existing.name = name || existing.name;
-    existing.picture = picture || existing.picture;
-    existing.domain = domain || existing.domain;
-    if (!existing.firstLogin) existing.firstLogin = now;
-    existing.lastLogin = now;
-  } else {
-    registry.users[lower] = {
-      name: name || lower,
-      picture: picture || '',
-      domain: domain || '',
-      status: 'pending',
-      pages: [],
-      allPages: false,
-      devAccess: false,
-      firstLogin: now,
-      lastLogin: now,
-    };
-  }
-  await saveRegistry(registry);
+  await updateRegistry(registry => {
+    const existing = registry.users[lower];
+    if (existing) {
+      existing.name = name || existing.name;
+      existing.picture = picture || existing.picture;
+      existing.domain = domain || existing.domain;
+      if (!existing.firstLogin) existing.firstLogin = now;
+      existing.lastLogin = now;
+    } else {
+      registry.users[lower] = {
+        name: name || lower,
+        picture: picture || '',
+        domain: domain || '',
+        status: 'pending',
+        pages: [],
+        allPages: false,
+        devAccess: false,
+        firstLogin: now,
+        lastLogin: now,
+      };
+    }
+  });
 }
+
+// Test-only hooks. Not used by the app; exported so node --test can drive the
+// cache and TTL without reaching into module internals.
+export function __setCacheTtl(ms) { cacheTtlOverride = ms; }
+export function __resetCache() { cache = null; cacheTtlOverride = null; }

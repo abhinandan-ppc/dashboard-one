@@ -3,9 +3,25 @@ import { resolveAccess, DEV_HOSTS, CHILD_PAGE_PARENTS, KNOWN_PAGES } from './api
 
 // The root page and index.html render unauthenticated too — they show their
 // own login box and call /api/auth/me client-side. Every other page (the
-// actual tools, admin.html, and the admin API) stays gated by this middleware.
+// actual tools and admin.html) stays gated by this middleware.
+//
+// The exclusions all skip the ACL check, not authentication per se, so they
+// are deliberately limited to paths that either carry no user data or
+// re-check admin status themselves:
+//
+//   api/admin/*      — every handler runs requireAdmin() first, so a second
+//                      check here was pure duplicate Blob traffic.
+//   theme-boot.js    — this was a real bug. It is not a "known page", so a
+//                      non-admin got the HTML "Access pending" page served in
+//                      place of the script, breaking theme loading on every
+//                      tool page for ordinary users.
+//   static assets    — .js/.css/.png/.svg/.woff2 hold no user data. Gating
+//                      them cost a Blob read apiece on every page load and
+//                      broke the same way theme-boot.js did.
 export const config = {
-  matcher: ['/((?!api/auth|favicon.ico|favicon.png|theme.css|index.html|$).*)'],
+  matcher: [
+    '/((?!api/auth|api/admin/|theme-boot\\.js|favicon\\.|.*\\.(?:js|css|png|svg|woff2)|index\\.html|$).*)',
+  ],
 };
 
 function esc(s) {

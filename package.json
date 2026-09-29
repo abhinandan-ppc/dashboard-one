@@ -9,5 +9,8 @@
     "test": "node --test",
     "audit:responsive": "node scripts/responsive-audit.mjs",
     "audit:responsive:browser": "node scripts/responsive-browser-audit.mjs"
+  },
+  "dependencies": {
+    "@vercel/functions": "^3.9.9"
   }
 }

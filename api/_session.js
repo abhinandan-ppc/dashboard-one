@@ -12,10 +12,20 @@ function fromBase64Url(b64url) {
   for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i);
   return bytes;
 }
-async function getKey() {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) throw new Error('SESSION_SECRET env var is not set');
-  return crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+// Importing an HMAC key is pure CPU work whose result never changes for the
+// life of the instance, so it is prepared once and shared. Both session
+// creation and every middleware verification go through here, so this is on
+// the hot path for all authenticated traffic.
+let keyPromise = null;
+function getKey() {
+  if (!keyPromise) {
+    keyPromise = (async () => {
+      const secret = process.env.SESSION_SECRET;
+      if (!secret) throw new Error('SESSION_SECRET env var is not set');
+      return crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+    })().catch((e) => { keyPromise = null; throw e; }); // don't cache a failure
+  }
+  return keyPromise;
 }
 
 export async function createSession(payload) {
