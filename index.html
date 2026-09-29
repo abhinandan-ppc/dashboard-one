@@ -2285,6 +2285,42 @@ function readStoredAccent(){
   return { h: ((h % 360) + 360) % 360, s: Math.max(0, Math.min(100, s)), l: Math.max(0, Math.min(100, l)) };
 }
 
+// Reduced-transparency escape hatch. The hub does not load theme-boot.js (it
+// owns its own theme state), so it mirrors that script's preference here:
+// honour prefers-reduced-transparency, let a visitor override it either way, and
+// keep the same storage key so the choice follows the visitor across every page
+// that DOES load theme-boot.js. Read before first paint.
+(function(){
+  var KEY = "jspl-reduce-transparency";
+  function storedValue(){
+    try{ return localStorage.getItem(KEY); }catch(e){ return null; }
+  }
+  function apply(){
+    var stored = storedValue();
+    var on = stored === null
+      ? !!(window.matchMedia && window.matchMedia("(prefers-reduced-transparency: reduce)").matches)
+      : stored === "1";
+    document.documentElement.setAttribute("data-reduce-transparency", on ? "1" : "0");
+    return on;
+  }
+  window.__applyTransparencyPreference = apply;
+  apply();
+  if(window.matchMedia){
+    try{
+      var mq = window.matchMedia("(prefers-reduced-transparency: reduce)");
+      if(mq.addEventListener){
+        mq.addEventListener("change", function(){
+          try{ if(storedValue() === null) apply(); }catch(e){}
+        });
+      }
+    }catch(e){}
+  }
+  window.jsplTransparency = {
+    set: function(on){ try{ localStorage.setItem(KEY, on ? "1" : "0"); }catch(e){} return apply(); },
+    get: function(){ return document.documentElement.getAttribute("data-reduce-transparency") === "1"; }
+  };
+})();
+
 // Mirror the hub's current theme/accent onto a page document. The custom
 // properties are written directly rather than relying on the page's own
 // handler, so this works for pages that expose no __hub_handle_theme at all —
@@ -2292,6 +2328,14 @@ function readStoredAccent(){
 function applyThemeToDocument(doc){
   if(!doc || !doc.documentElement) return;
   var el = doc.documentElement;
+  // Carry the transparency choice into the frame too, so a page that renders
+  // its own glass surfaces matches the hub's without needing the OS signal.
+  try{
+    if(typeof window.__applyTransparencyPreference === "function"){
+      el.setAttribute("data-reduce-transparency",
+        document.documentElement.getAttribute("data-reduce-transparency") || "0");
+    }
+  }catch(e){}
   try{
     var st = el.style;
     st.setProperty("--theme-d", String(currentDarkness));

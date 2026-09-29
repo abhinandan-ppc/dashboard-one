@@ -1138,6 +1138,34 @@ table{font-variant-numeric:tabular-nums}
   .top-bar h1,
   header h1{max-width:calc(100vw - 150px);overflow:hidden;text-overflow:ellipsis}
 }
+/* ── Reduced-transparency escape hatch ──────────────────────────────────────
+   backdrop-filter is the single most expensive thing in the shared surface
+   contract: every glass card samples the pixels behind it on every frame the
+   content under it moves, which is brutal on a low-end GPU (and on the
+   software rasteriser some older devices fall back to).
+
+   This block is INERT by default — the glass design is unchanged unless the
+   visitor opts in. Setting data-reduce-transparency="1" on <html> swaps each
+   blurred surface for the solid surface colour it was sampling, so the layout,
+   type, spacing and hierarchy are all identical; only the see-through blur is
+   dropped. Panels that sit on an opaque backdrop anyway (the frame pill above)
+   already opt out unconditionally.
+
+   theme-boot.js reads prefers-reduced-transparency and the persisted
+   jspl-reduce-transparency key, and mirrors the choice onto <html>. */
+html[data-reduce-transparency="1"] :is(.m3-glass,.glass-card){
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  background:var(--s1)!important;
+}
+html[data-reduce-transparency="1"] :is(.top-bar,header){
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  background:var(--s0)!important;
+}
+html[data-reduce-transparency="1"] :is(.fetch-status,.portal-dropdown){
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  background:var(--s2)!important;
+}
+html[data-reduce-transparency="1"] .loader-track{background:var(--s3)}
 @media (max-width:640px){
   .app-header .jspl-logo,
   .app-header .top-brand img{width:34px!important;height:16px!important}

@@ -318,6 +318,112 @@ test('the Rake Planner header clearance is only written when it changes', async 
     'a zero measurement must be ignored rather than collapsing the spacer');
 });
 
+// ── Performance contracts ──────────────────────────────────────────────────
+// These are cheap, fast checks that keep the load-path wins from being undone.
+// The numbers they defend came from measuring every page's first paint in a real
+// browser (see the commit message); the slowest page, PM Yard, went from a
+// 4112ms first paint to 716ms once its two render-blocking CDN scripts had their
+// origin preconnected.
+
+const PAGES_WITH_CDN_SCRIPTS = [
+  // [page, origins the page loads a render-blocking script from]
+  ['PM-Yard.html', ['https://cdnjs.cloudflare.com']],
+  ['Plate-Tagging-Tool.html', ['https://cdnjs.cloudflare.com']],
+  ['Order-Status-Report.html', ['https://unpkg.com', 'https://cdnjs.cloudflare.com']],
+  ['Rake-Planner.html', ['https://unpkg.com', 'https://cdnjs.cloudflare.com']],
+];
+
+test('every render-blocking third-party script origin is preconnected', async () => {
+  for (const [page, origins] of PAGES_WITH_CDN_SCRIPTS) {
+    const src = await read(page);
+    for (const origin of origins) {
+      // The page must actually load a script from this origin...
+      const host = new URL(origin).host;
+      assert.ok(
+        src.includes(`src="https://${host}/`),
+        `${page} loads a script from ${host}, so it needs a preconnect`,
+      );
+      // ...and must open that connection earlier in the document than the script
+      // it is warming up for. A preconnect placed after a render-blocking script
+      // fires too late to help it, and that ordering is easy to reintroduce.
+      const pre = src.indexOf(`rel="preconnect" href="${origin}`);
+      const script = src.indexOf(`src="https://${host}/`);
+      assert.ok(pre > -1, `${page} must preconnect to ${host}`);
+      assert.ok(pre < script,
+        `${page}: the ${host} preconnect must come before the script tag, not after it`);
+    }
+  }
+});
+
+test('no page loads a page-critical script from a third party without preconnect', async () => {
+  // Guards the general case, not just the four pages above: any origin serving a
+  // <script src> in <head> must be preconnected first, so a page added later
+  // cannot quietly reintroduce a blocking handshake.
+  for (const name of pages) {
+    const src = await read(name);
+    // Scan the whole document, not just <head>: several pages load their React
+    // and Leaflet <script> tags in the body, and a preconnect above them in
+    // <head> is still correct and still valuable.
+    const origins = new Set();
+    for (const m of src.matchAll(/<script\s+src="(https:\/\/[^/]+)\//g)) origins.add(m[1]);
+    for (const origin of origins) {
+      if (origin.includes('127.0.0.1') || origin.includes('localhost')) continue;
+      const pre = src.indexOf(`rel="preconnect" href="${origin}`);
+      const first = src.indexOf(`src="${origin}/`);
+      assert.ok(pre > -1 && pre < first,
+        `${name}: third-party origin ${origin} is used by a script but is not `
+        + 'preconnected ahead of it, which puts a TCP+TLS round-trip on the critical path');
+    }
+  }
+});
+
+test('the reduced-transparency escape hatch exists but changes nothing by default', async () => {
+  // backdrop-filter is the most expensive thing in the shared surface contract.
+  // The opt-out has to be available on every page that draws glass, and — this is
+  // the part that matters — it must be inert unless asked for, so no existing
+  // visitor sees a design change.
+  const theme = await read('theme.css');
+  assert.match(theme, /html\[data-reduce-transparency="1"\]/,
+    'the solid-surface fallback must be keyed off an explicit opt-in attribute');
+  assert.match(theme, /html\[data-reduce-transparency="1"\][^{]*\{[^}]*backdrop-filter\s*:\s*none/,
+    'the opt-out must actually drop the backdrop filter');
+  // Inert by default: nothing may key the fallback off a selector that is
+  // always true (html, *, body). It must require the explicit attribute.
+  assert.doesNotMatch(theme, /^\s*html\s*\{[^}]*data-reduce-transparency/m,
+    'the fallback must never apply without the opt-in attribute');
+
+  // The preference has to be readable, and defaults to OFF when the OS has not
+  // asked for reduced transparency and nothing is stored.
+  const boot = await read('theme-boot.js');
+  assert.match(boot, /jsplTransparency/,
+    'theme-boot.js must expose the preference so pages can read and set it');
+  assert.match(boot, /prefers-reduced-transparency/,
+    'the OS-level signal must be honoured');
+  assert.match(boot, /jspl-reduce-transparency/,
+    'the choice must persist under a key shared with the hub');
+  // "off" unless the OS asked for it or the visitor explicitly turned it on.
+  assert.match(boot, /stored === "1"/,
+    'an unset key must fall through to the OS signal, never default to on');
+});
+
+test('the hub honours the same reduced-transparency key as theme-boot.js', async () => {
+  // index.html owns its own theme state and does not load theme-boot.js, so it
+  // needs its own copy of the preference — and it has to use the SAME storage key,
+  // or a visitor who turns it on would get it on some pages and not others.
+  const hub = await read('index.html');
+  assert.match(hub, /jspl-reduce-transparency/,
+    'the hub must read/write the same key theme-boot.js uses');
+  assert.match(hub, /window\.jsplTransparency/,
+    'the hub must expose the same API shape as theme-boot.js');
+  // The hub pushes the theme into the frame document; the preference rides along
+  // so an embedded page matches the hub.
+  assert.match(hub, /function applyThemeToDocument/);
+  const fn = hub.slice(hub.indexOf('function applyThemeToDocument'));
+  const end = fn.indexOf('\n}');
+  assert.match(fn.slice(0, end), /data-reduce-transparency/,
+    'the hub must mirror the transparency choice into the frame document');
+});
+
 test('no infinite animation moves a layout property inside a backdrop-filter panel', async () => {
   // The EBTP indeterminate bar used to animate `left`, which forces a layout
   // pass every frame. Because .fetch-status carries backdrop-filter:blur(20px),

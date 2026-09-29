@@ -6,6 +6,12 @@
 <script src="theme-boot.js"></script>
 <title>Jindal Steel Angul — SMS & Mills Simulator (M3)</title>
 <link rel="icon" type="image/png" href="favicon.png"/>
+<!-- Both of the scripts below are render-blocking. Their preconnects have to sit
+     ABOVE them in the document to warm the connection in parallel; after the
+     script tag they would only fire once the blocking request had already
+     started, which is the round-trip they were meant to save. -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">

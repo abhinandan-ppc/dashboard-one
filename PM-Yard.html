@@ -6,6 +6,12 @@
 <script src="theme-boot.js"></script>
 <title>Jindal Steel Plate Mill Yard — 3D Live Inventory</title>
 <link rel="icon" type="image/png" href="favicon.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<!-- Both of the scripts below are render-blocking, so the TCP+TLS handshake to
+     their origin is on the critical path. Opening it up front, in parallel with
+     the font request, removes a full round-trip from first paint. -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">

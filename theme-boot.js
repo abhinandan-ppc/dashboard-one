@@ -186,6 +186,41 @@
     DEFAULT_ACCENT: DEFAULT_ACCENT
   };
 
+  // ── Reduced-transparency escape hatch ───────────────────────────────────
+  // Backdrop blur is the most expensive effect in the shared surface contract
+  // and is what makes low-end devices stutter. Respect the OS-level signal, and
+  // let a visitor override it either way, mirroring the choice onto <html> where
+  // theme.css keys its solid-surface fallbacks. Read BEFORE first paint so the
+  // correct surfaces are in place from the start.
+  var REDUCE_KEY = "jspl-reduce-transparency";
+  function applyTransparencyPreference() {
+    var stored = null;
+    try { stored = read(REDUCE_KEY); } catch (e) {}
+    var wanted = stored === null
+      ? !!(window.matchMedia && window.matchMedia("(prefers-reduced-transparency: reduce)").matches)
+      : stored === "1";
+    document.documentElement.setAttribute("data-reduce-transparency", wanted ? "1" : "0");
+    return wanted;
+  }
+  applyTransparencyPreference();
+  if (window.matchMedia) {
+    try {
+      var mqBlur = window.matchMedia("(prefers-reduced-transparency: reduce)");
+      // Only follow the OS while the visitor has not made an explicit choice.
+      if (mqBlur.addEventListener) {
+        mqBlur.addEventListener("change", function () {
+          try { if (read(REDUCE_KEY) === null) applyTransparencyPreference(); } catch (e) {}
+        });
+      }
+    } catch (e) {}
+  }
+
+  window.jsplTransparency = {
+    // Returns the active state and persists an explicit override.
+    set: function (on) { try { localStorage.setItem(REDUCE_KEY, on ? "1" : "0"); } catch (e) {} return applyTransparencyPreference(); },
+    get: function () { return document.documentElement.getAttribute("data-reduce-transparency") === "1"; },
+  };
+
   // 1. Apply the stored values immediately, before first paint.
   apply(storedDarkness(), storedAccent());
 

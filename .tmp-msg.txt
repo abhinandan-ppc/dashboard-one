@@ -1,0 +1,44 @@
+Cut first-paint cost across the pages, and add a blur opt-out
+
+Profiled every page in a real browser before changing anything, rather
+than guessing from file size. That changed the diagnosis: the 1.9MB
+VDO Generator was the FASTEST page (156ms first paint), while the slowest
+was PM Yard at 4112ms. The cost was not page weight, it was render-
+blocking third-party scripts whose origins were never preconnected.
+
+Preconnect every origin that serves a render-blocking <script>. The
+pages already preconnected the font origins but not the script origins,
+so each page paid a TCP+TLS handshake on the critical path, serially
+after the font request. Measured effect on PM Yard: first paint
+4112ms -> 716ms (5.7x), and its heap after load 160MB -> 33MB. Plate
+Tagging, Order Status and Rake Planner improve by the same mechanism.
+
+The new test that checks this across all pages immediately caught two
+things I had missed: SMS Planner Monthly listed its cdnjs preconnect
+AFTER the script tag it was meant to warm (so it did nothing), and
+Order Status and Rake Planner were missing the cdnjs origin entirely.
+
+Also adds an opt-out for backdrop-filter, which is the most expensive
+thing in the shared surface contract: every glass card samples the
+pixels behind it on each frame the content moves, which is what makes
+low-end devices stutter. It is INERT by default — the design is
+unchanged unless a visitor opts in — and then swaps each blurred surface
+for the solid surface colour it was sampling, so layout, type, spacing
+and hierarchy are identical and only the see-through blur is dropped.
+It follows prefers-reduced-transparency, and is exposed as
+window.jsplTransparency.set() so it can be wired to a settings control.
+theme-boot.js and the hub both implement it under the same storage key,
+and the hub mirrors the choice into the frame document, so it is
+consistent across every page.
+
+The two react pages also compile their JSX in the browser on every load
+via Babel standalone, measured at 669ms (Rake Planner) and 267ms (Order
+Status) of main-thread time. That is left in place deliberately:
+precompiling it means checking in machine-generated JavaScript in place
+of readable JSX, which is a real maintainability cost and is better done
+as a build step than a one-off commit.
+
+Verified: 75/75 tests, responsive source audit green for all 11 pages,
+contrast still 4.5:1+ across the whole darkness ramp, theme-boot.js
+parses, and all 11 pages confirmed painting with the theme initialised
+and the loading overlay dismissed.
