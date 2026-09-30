@@ -1,5 +1,5 @@
 import { readCookie, verifySession } from '../_session.js';
-import { isPrimaryAdmin, resolveAccess, updateRegistry, KNOWN_PAGES, ADMIN_EMAILS } from '../_acl.js';
+import { isPrimaryAdmin, resolveAccess, updateRegistry, getRegistry, KNOWN_PAGES, ADMIN_EMAILS } from '../_acl.js';
 
 export const config = { runtime: 'edge' };
 
@@ -26,7 +26,19 @@ async function requireAdmin(req) {
   if (!session) return null;
   const { admin, registry } = await resolveAccess(session.email);
   if (!admin) return null;
-  return { session, registry };
+  // resolveAccess() short-circuits for primary admins (ADMIN_EMAILS): they are
+  // never stored in the registry, so it returns registry: null WITHOUT reading
+  // it. That null used to be passed straight through to the GET payload, which
+  // then shipped `users: {}` — so the one account that owns admin.html (the
+  // env-configured primary admin) saw a permanently empty "No one has logged in
+  // yet" list while everyone else had signed-in users. Fetch the registry here
+  // instead so the payload is complete for every admin, primary or promoted.
+  if (registry) return { session, registry };
+  try {
+    return { session, registry: await getRegistry() };
+  } catch {
+    return { session, registry: { users: {} } };
+  }
 }
 
 // Thrown from inside an updateRegistry() mutate function to abort the whole
@@ -45,9 +57,9 @@ export default async function handler(req) {
   const { session } = auth;
 
   if (req.method === 'GET') {
-    // auth.registry is null only for a primary admin (ADMIN_EMAILS), who is
-    // never stored in the registry at all.
-    const users = auth.registry ? auth.registry.users : {};
+    // requireAdmin() guarantees a registry for every admin now (it fetches it
+    // for primary admins), so this is only a defensive fallback.
+    const users = (auth.registry && auth.registry.users) || {};
     // The page used to call /api/auth/me purely to render the "Signed in as"
     // line. It already has an authenticated session here, so the name and
     // email ride along on this response and that extra round-trip disappears.

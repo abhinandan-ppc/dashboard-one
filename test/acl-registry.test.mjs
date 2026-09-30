@@ -216,6 +216,78 @@ test('reads carry a cache-busting nonce so a stale CDN copy cannot be served', a
   assert.match(calls.readUrls[0], /\?v=/, 'read URL must carry a cache-busting nonce');
 });
 
+// The bug this pins: api/admin/users GET used to build its payload from
+// resolveAccess()'s `registry`, which is null for a primary admin (they are
+// never stored in the registry). So the env-configured admin — the very account
+// that opens admin.html — always received `users: {}` and the page rendered its
+// "No one has logged in yet" empty state no matter how many people had signed in.
+test('GET /api/admin/users returns the user list to a primary admin, not an empty object', async () => {
+  installFetch();
+  store = {
+    users: {
+      'a@example.com': { name: 'A', status: 'approved', pages: ['PM-Yard.html'], lastLogin: 5 },
+      'b@example.com': { name: 'B', status: 'pending', pages: [] },
+    },
+  };
+
+  process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-secret-for-session-signing';
+  const { createSession } = await import('../api/_session.js');
+  const handler = (await import('../api/admin/users.js')).default;
+  const token = await createSession({ email: 'root@example.com', name: 'Root', exp: Date.now() + 60000 });
+
+  const res = await handler(new Request('https://example.com/api/admin/users', {
+    headers: { cookie: `session=${token}` },
+  }));
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.deepEqual(Object.keys(body.users).sort(), ['a@example.com', 'b@example.com']);
+  assert.equal(body.me.email, 'root@example.com');
+  assert.ok(Array.isArray(body.knownPages) && body.knownPages.length > 0);
+});
+
+// A promoted admin is a normal registry record, so their own card and everyone
+// else's must come back too — the same payload shape as the primary-admin case.
+test('GET /api/admin/users returns the full list to a promoted admin as well', async () => {
+  installFetch();
+  store = {
+    users: {
+      'admin2@example.com': { name: 'Admin Two', status: 'approved', role: 'admin', pages: [] },
+      'c@example.com': { name: 'C', status: 'blocked', pages: [] },
+    },
+  };
+
+  process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-secret-for-session-signing';
+  const { createSession } = await import('../api/_session.js');
+  const handler = (await import('../api/admin/users.js')).default;
+  const token = await createSession({ email: 'admin2@example.com', name: 'Admin Two', exp: Date.now() + 60000 });
+
+  const res = await handler(new Request('https://example.com/api/admin/users', {
+    headers: { cookie: `session=${token}` },
+  }));
+
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(Object.keys(body.users).length, 2);
+  assert.equal(body.users['c@example.com'].status, 'blocked');
+});
+
+test('a non-admin session is still refused with 403', async () => {
+  installFetch();
+  store = { users: { 'd@example.com': { name: 'D', status: 'approved', pages: [] } } };
+
+  process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-secret-for-session-signing';
+  const { createSession } = await import('../api/_session.js');
+  const handler = (await import('../api/admin/users.js')).default;
+  const token = await createSession({ email: 'd@example.com', name: 'D', exp: Date.now() + 60000 });
+
+  const res = await handler(new Request('https://example.com/api/admin/users', {
+    headers: { cookie: `session=${token}` },
+  }));
+
+  assert.equal(res.status, 403);
+});
+
 // The middleware matcher is the other half of the fix: it used to run the
 // access check on api/admin/*, on theme-boot.js and on static assets, which
 // cost a Blob read apiece and (for theme-boot.js) served an HTML "Access
