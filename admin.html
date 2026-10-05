@@ -163,13 +163,20 @@ a { color: var(--primary); }
 .stat .lbl { font-size: 11.5px; color: var(--tm); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
 
 .users { display: flex; flex-direction: column; gap: var(--admin-list-gap); }
-.user-card { position: relative; background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--glass-shadow); padding: 12px 44px 12px 14px; }
-.user-top { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.user-card { background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--glass-shadow); padding: 12px 14px; }
+/* The toggle used to be positioned absolute: right:10px; top:50% against
+   .user-card itself — centered on the card's TOTAL height. That height
+   includes the action-button row below and, once expanded, the whole
+   permissions panel, so the button visibly drifted away from the row it
+   belongs to (and toward whatever was now underneath it) every time the
+   card's content grew. .user-top is the positioning context instead, so the
+   toggle always centers on just the header row it opens/closes. */
+.user-top { position: relative; display: flex; align-items: center; gap: 10px; padding-right: 34px; cursor: pointer; }
 .user-info { min-width: 0; flex: 1; }
 .user-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .user-name-row .badge { margin-left: auto; }
 .expand-toggle {
-  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
   width: 26px; height: 26px; padding: 0; display: flex; align-items: center; justify-content: center;
   border-radius: 50%; background: var(--input-bg); border: var(--glass-border); color: var(--tm);
   font-size: 13px; line-height: 1; cursor: pointer; transition: transform 0.2s ease, background 0.2s ease;
@@ -232,7 +239,7 @@ a { color: var(--primary); }
   .stat { min-width: calc(50% - 4px); padding: 10px 12px; }
   .stat .num { font-size: 19px; }
   .stat .lbl { font-size: 10.5px; }
-  .user-card { padding: 12px 40px 12px 12px; }
+  .user-card { padding: 12px; }
   .user-top { gap: 10px; }
   .user-actions { margin-top: 8px; }
   .action-btn { font-size: 9.5px; padding: 0 3px; height: 32px; }
@@ -374,7 +381,10 @@ function usersSkeleton(){
 }
 
 async function api(path, opts){
-  var res = await fetch(path, Object.assign({ credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } }, opts || {}));
+  // 'no-store' so a browser that heuristically caches a bare GET (no explicit
+  // Cache-Control from the server used to reach it either) never hands back a
+  // pre-save snapshot of the registry on the next load.
+  var res = await fetch(path, Object.assign({ credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' } }, opts || {}));
   var data = null;
   try { data = await res.json(); } catch(e){}
   if(!res.ok){
@@ -515,7 +525,6 @@ function userCard(user){
 
   return (
     '<div class="user-card' + (isExpanded ? ' expanded' : '') + '" data-email="' + esc(email) + '">' +
-      '<button type="button" class="expand-toggle" data-action="toggle-expand" aria-label="Toggle details">&#9662;</button>' +
       '<div class="user-top" data-action="toggle-expand">' +
         '<img class="avatar" src="' + esc(user.picture || '') + '" onerror="this.style.visibility=\'hidden\'">' +
         '<div class="user-info">' +
@@ -526,6 +535,7 @@ function userCard(user){
           '<div class="user-email">' + esc(email) + '</div>' +
           '<div class="user-meta">' + (user.lastLogin ? ('First seen ' + esc(fmtDate(user.firstLogin)) + ' &middot; Last login ' + esc(fmtDate(user.lastLogin))) : 'Added manually &middot; never logged in yet') + '</div>' +
         '</div>' +
+        '<button type="button" class="expand-toggle" data-action="toggle-expand" aria-label="Toggle details">&#9662;</button>' +
       '</div>' +
       '<div class="user-actions">' +
         '<button type="button" class="action-btn good" data-action="approve">Approve</button>' +

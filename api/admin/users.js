@@ -6,7 +6,13 @@ export const config = { runtime: 'edge' };
 function json(obj, status) {
   return new Response(JSON.stringify(obj), {
     status: status || 200,
-    headers: { 'Content-Type': 'application/json' },
+    // This payload is per-admin, per-request truth straight off the registry
+    // (or straight off the write this request just made) — never cacheable.
+    // Without this, a browser or an intermediary in front of the Edge Function
+    // is free to serve a stale GET for its own heuristic freshness window,
+    // which is exactly what makes a just-saved permission change appear to
+    // "revert" until that window expires.
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   });
 }
 
@@ -49,6 +55,20 @@ class ActionError extends Error {
     super(message);
     this.status = status || 400;
   }
+}
+
+// Trims, dedupes and drops blanks — but does NOT filter out paths that aren't
+// in KNOWN_PAGES. admin.html's "Add a custom page path" control explicitly
+// lets an admin stage an arbitrary path (shown with a pencil mark) and save
+// it, so filtering by KNOWN_PAGES here silently discarded it on every save:
+// the chip would be checked, "Update permissions" would appear to succeed,
+// and the saved record would come back without it — reading exactly like the
+// save had reverted. The real allowlist enforcement already lives in
+// middleware.js (`KNOWN_PAGES.includes(grantPath)`), so a path recorded here
+// that isn't on that list still grants no actual access; this only fixes
+// what gets persisted.
+function sanitizePages(pages) {
+  return [...new Set(pages.map(p => String(p).trim()).filter(Boolean))];
 }
 
 export default async function handler(req) {
@@ -128,7 +148,7 @@ export default async function handler(req) {
             break;
           case 'setPages':
             if (!Array.isArray(body.pages)) throw new ActionError('pages must be an array', 400);
-            existing.pages = [...new Set(body.pages.filter(p => KNOWN_PAGES.includes(p)).map(p => p.trim()))];
+            existing.pages = sanitizePages(body.pages);
             break;
           case 'setAllPages':
             existing.allPages = !!body.allPages;
@@ -142,7 +162,7 @@ export default async function handler(req) {
             // into clobbering one another's save — the UI batches them into one
             // call, and the version check guards the rest.
             if (!Array.isArray(body.pages)) throw new ActionError('pages must be an array', 400);
-            existing.pages = [...new Set(body.pages.filter(p => KNOWN_PAGES.includes(p)).map(p => p.trim()))];
+            existing.pages = sanitizePages(body.pages);
             existing.allPages = !!body.allPages;
             existing.devAccess = !!body.devAccess;
             break;
