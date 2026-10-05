@@ -11,6 +11,7 @@ const root = process.cwd();
 const PAGES = [
   'admin.html', 'VDO-Generator.html', 'Plate-Tagging-Tool.html',
   'PM-Yard.html', 'Rake-Planner.html', 'Order-Status-Report.html',
+  'Plate-Tracker.html',
   'SMS-Heat-Planner.html', 'SMS Heat Planner Daily.html', 'SMS Heat Planner Monthly.html',
 ];
 const STOPS = [0, 20, 38, 50, 80, 100];

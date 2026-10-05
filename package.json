@@ -7,6 +7,18 @@
   },
   "scripts": {
     "test": "node --test",
+    "verify:integrity": "node scripts/verify-integrity.mjs",
+    "verify:all-sheets": "node scripts/verify-all-sheets.mjs",
+    "verify:fixtures": "node scripts/verify-integrity.mjs sheets-schema",
+    "verify:pipeline": "node scripts/verify-pipeline.mjs",
+    "verify:lineage": "node scripts/verify-lineage.mjs",
+    "verify:vercel": "node scripts/verify-deploy.mjs",
+    "fixtures:make": "node scripts/make-schema-fixtures.mjs",
+    "smoke:plate-tracker": "node scripts/smoke-plate-tracker-stock.mjs",
+    "smoke:plate-tracker:legacy": "node scripts/smoke-plate-tracker.mjs",
+    "check:html": "node check-html.mjs",
+    "check:js": "node check-js.mjs",
+    "measure:header": "node scripts/measure-header.mjs",
     "audit:responsive": "node scripts/responsive-audit.mjs",
     "audit:responsive:browser": "node scripts/responsive-browser-audit.mjs"
   },

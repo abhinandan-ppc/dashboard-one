@@ -8,3 +8,28 @@ node_modules/
 .claude-flow/neural/stats.json
 .claude-flow/policy/stats.json
 .clinerules
+
+# The live plant extracts. ~72MB of production workbooks, deliberately not
+# committed: the Plate Tracker opens every workbook in the browser, so no page
+# needs them on the server, and shipping them would bloat a Vercel deployment
+# for nothing.
+#
+# sheets-schema/ IS committed — small fixtures covering the same columns and the
+# same awkward row shapes, so the tests and the integrity checks run anywhere.
+# Regenerate with: npm run fixtures:make
+sheets/
+
+# Scratch output from the verification scripts.
+fixture-out.txt
+fx.txt
+id.txt
+live.txt
+probe.txt
+ln.txt
+a.txt
+b.txt
+c.txt
+d.txt
+sm.txt
+header-width.png
+plate-tracker-*.png
