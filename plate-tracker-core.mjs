@@ -162,6 +162,17 @@ export const SOURCES = {
       firstDesDt: { header: 'First DesDt' },
       lastDesDt: { header: 'Last DesDt' },
       remarks: { header: 'Remarks' },
+      // Commercial balance columns. The sheet repeats several header names
+      // (e.g. BTR appears a second time near column 219, same issue as the
+      // duplicate MODE column), so these are read by raw column POSITION —
+      // the same indices Order-Status-Report.html already uses for this
+      // export (its IDX map) — rather than by trusting header text.
+      plateStockBal: { header: 'Plate Stock', col: 36 },
+      btr: { header: 'BTR', col: 37 },
+      slabStockBal: { header: 'Slab Stock', col: 39 },
+      btc: { header: 'BTC', col: 41 },
+      issued: { header: 'Issued', col: 43 },
+      btp: { header: 'BTP', col: 45 },
       // Slicer fields. These carry no numeric meaning — they are how an order
       // gets described rather than measured — so they are read straight off the
       // record instead of being normalised. Customer TYPE reads "Domestic" and
@@ -445,6 +456,16 @@ export function resolveColumns(headers, sourceId) {
   const missing = [];
   let matched = 0;
   for (const [field, spec] of Object.entries(source.fields)) {
+    // A field declaring `col` is read by raw column position instead of by
+    // header text — for sheets where that header name repeats elsewhere
+    // (duplicate columns), position is the only reliable way to pick the
+    // ONE occurrence that is actually meant. `{ col }` is a distinguishable
+    // shape from the plain header-string mapping value used below.
+    if (spec.col !== undefined) {
+      mapping[field] = { col: spec.col };
+      matched += 1;
+      continue;
+    }
     // `header` is the name the extracts actually use. `alt` lists older or
     // mis-spelled names for the same column, tried in order — SAP's movement
     // report calls the source location S_SLOC, and an earlier guess of F_SLOC
@@ -570,7 +591,11 @@ function buildRecord(row, sourceId, mapping, ids) {
     const iso = toISODate(get(field));
     if (iso) record[prop] = iso;
   }
-  for (const field of ['orderQty', 'delivered', 'balanceToDeliver']) {
+  const numericOrderFields = [
+    'orderQty', 'delivered', 'balanceToDeliver',
+    'plateStockBal', 'btr', 'slabStockBal', 'btc', 'issued', 'btp',
+  ];
+  for (const field of numericOrderFields) {
     if (!mapping[field]) continue;
     const n = parseNumber(get(field));
     if (n !== null) record[field] = n;
@@ -584,7 +609,7 @@ function buildRecord(row, sourceId, mapping, ids) {
 
   // Everything else the source offered, untouched.
   const mapped = new Set([...Object.values(mapping),
-    'orderQty', 'delivered', 'balanceToDeliver', 'soDate',
+    ...numericOrderFields, 'soDate',
     'firstPrdDt', 'firstDesDt', 'lastDesDt', 'remarks',
   ]);
   const raw = {};
@@ -816,6 +841,12 @@ export function finalisePlate(plate) {
     plate.orderQty = order.orderQty ?? null;
     plate.delivered = order.delivered ?? null;
     plate.balanceToDeliver = order.balanceToDeliver ?? null;
+    plate.plateStockBal = order.plateStockBal ?? null;
+    plate.btr = order.btr ?? null;
+    plate.slabStockBal = order.slabStockBal ?? null;
+    plate.btc = order.btc ?? null;
+    plate.issued = order.issued ?? null;
+    plate.btp = order.btp ?? null;
     plate.orderStatus = order.currentStatus || '';
     plate.paymentStatus = order.paymentStatus || '';
     plate.soDate = order.soDate || null;

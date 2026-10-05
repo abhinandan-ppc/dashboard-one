@@ -580,7 +580,7 @@ function refresh() {
 
 function syncSelectedTrace() {
   if (!state.selectedKey) return;
-  const visible = state.view === 'orders'
+  const visible = state.view !== 'stock'
     ? currentResults(Infinity).some((plate) => plate.key === state.selectedKey)
     : currentStockResults(Infinity).some((record) => (record.linkedKeys || []).includes(state.selectedKey));
   const plate = visible ? state.plates.find((p) => p.key === state.selectedKey) : null;
@@ -677,6 +677,7 @@ function renderKpiCrossFilters(host, definitions, view) {
 
 function renderTable() {
   if (state.view === 'stock') { renderStockTable(); return; }
+  if (state.view === 'genealogy') { renderGenealogyTable(); return; }
   const host = $('tableHost');
   if (!state.plates.length) {
     host.innerHTML = '<div class="empty-msg">Load the extracts above to begin.</div>';
@@ -748,6 +749,150 @@ function renderTable() {
   });
 }
 
+/* ═══════════════════ Genealogy view ═══════════════════
+   One row per order: the commercial balances EBTP carries (what's ordered,
+   billed and still owed) next to a rollup of what actually happened to the
+   metal (cast, rolled, inspected, dispatched). Expanding a row lists every
+   individual heat/slab/plate/FG/dispatch event behind that rollup — the same
+   per-stage records the Order view's lineage chart already reads, just
+   listed flat and chronologically instead of drawn as a tree. */
+
+const GENEALOGY_STAGE_META = {
+  casting: { label: 'Heat cast', idField: 'heatId', idLabel: 'Heat' },
+  rolling: { label: 'Slab rolled to plate', idField: 'slabId', idLabel: 'Slab' },
+  finishing: { label: 'FG inspected', idField: 'batch', idLabel: 'Batch' },
+  dispatch: { label: 'Dispatched', idField: 'batch', idLabel: 'Batch' },
+};
+
+function stageWeight(records) {
+  return records.reduce((sum, r) => sum + (typeof r.weight === 'number' ? r.weight : 0), 0);
+}
+
+function distinctCount(records, field) {
+  return new Set(records.map((r) => r[field]).filter((v) => v !== undefined && v !== null && v !== '').map(String)).size;
+}
+
+function genealogyRollup(plate) {
+  const casting = plate.records.casting || [];
+  const rolling = plate.records.rolling || [];
+  const finishing = plate.records.finishing || [];
+  const dispatch = plate.records.dispatch || [];
+  return {
+    heats: { count: distinctCount(casting, 'heatId'), weight: stageWeight(casting), dates: stageDates(casting) },
+    slabs: { count: distinctCount([...casting, ...rolling], 'slabId'), weight: stageWeight(casting), dates: stageDates(casting) },
+    plates: { count: rolling.length, weight: stageWeight(rolling), dates: stageDates(rolling) },
+    fg: { count: finishing.length, weight: stageWeight(finishing), dates: stageDates(finishing) },
+    dispatch: { count: dispatch.length, weight: stageWeight(dispatch), dates: stageDates(dispatch) },
+  };
+}
+
+function renderGenealogyTable() {
+  const host = $('tableHost');
+  if (!state.plates.length) {
+    host.innerHTML = '<div class="empty-msg">Load the extracts above to begin.</div>';
+    return;
+  }
+  const results = currentResults();
+  if (!results.length) {
+    host.innerHTML = '<div class="empty-msg">No orders match the active cross-filters. Widen the date range or reset a selected KPI, stage or slicer.</div>';
+    return;
+  }
+  const head = [
+    '', 'SO No.', 'Item', 'Customer',
+    'Order (t)', 'Bal. to Bill (t)', 'Billed (t)',
+    'Plate Stock (t)', 'BTR (t)', 'Slab Stock (t)', 'BTC (t)', 'Issued (t)', 'BTP (t)',
+    'Heats', 'Slabs', 'Plates rolled', 'FG inspected', 'Dispatched',
+  ];
+  const colCount = head.length;
+  const rows = results.map((p) => {
+    const roll = genealogyRollup(p);
+    const stageCell = (r, dateHint) => `${r.count.toLocaleString()}${r.weight ? ` · ${num(r.weight, 2)} t` : ''}`
+      + (dateHint && r.dates ? `<div class="note" style="margin:2px 0 0">${esc(r.dates)}</div>` : '');
+    return `<tr data-genealogy-key="${esc(p.key)}" tabindex="0">
+      <td><button class="btn" type="button" data-genealogy-toggle="${esc(p.key)}" aria-expanded="false" title="Expand to see every heat, slab, plate, FG and dispatch event">▸</button></td>
+      <td class="mono">${esc(p.so)}</td>
+      <td class="mono">${esc(p.lineItem)}</td>
+      <td>${esc(p.customer || '—')}</td>
+      <td class="mono">${num(p.orderQty, 2)}</td>
+      <td class="mono">${num(p.balanceToDeliver, 2)}</td>
+      <td class="mono">${num(p.delivered, 2)}</td>
+      <td class="mono">${num(p.plateStockBal, 2)}</td>
+      <td class="mono">${num(p.btr, 2)}</td>
+      <td class="mono">${num(p.slabStockBal, 2)}</td>
+      <td class="mono">${num(p.btc, 2)}</td>
+      <td class="mono">${num(p.issued, 2)}</td>
+      <td class="mono">${num(p.btp, 2)}</td>
+      <td class="mono">${stageCell(roll.heats, true)}</td>
+      <td class="mono">${stageCell(roll.slabs, false)}</td>
+      <td class="mono">${stageCell(roll.plates, true)}</td>
+      <td class="mono">${stageCell(roll.fg, true)}</td>
+      <td class="mono">${stageCell(roll.dispatch, true)}</td>
+    </tr>
+    <tr class="genealogy-detail-row" data-genealogy-detail="${esc(p.key)}" hidden>
+      <td colspan="${colCount}"></td>
+    </tr>`;
+  }).join('');
+
+  const headerHtml = head.map((h) => '<th scope="col">' + esc(h) + '</th>').join('');
+  host.innerHTML = `<div class="data-table-wrap"><table class="data">
+    <thead><tr>${headerHtml}</tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    ${results.length >= 500 ? '<p class="note">Showing the first 500 matches — narrow the search to see the rest.</p>' : ''}`;
+
+  host.querySelectorAll('[data-genealogy-toggle]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      toggleGenealogyRow(button.dataset.genealogyToggle, button);
+    });
+  });
+}
+
+function toggleGenealogyRow(key, button) {
+  const detailRow = document.querySelector(`[data-genealogy-detail="${CSS.escape(key)}"]`);
+  if (!detailRow) return;
+  const open = detailRow.hidden;
+  detailRow.hidden = !open;
+  button.setAttribute('aria-expanded', String(open));
+  button.textContent = open ? '▾' : '▸';
+  if (open && !detailRow.dataset.filled) {
+    const plate = state.plates.find((p) => p.key === key);
+    detailRow.querySelector('td').innerHTML = plate ? renderGenealogyDetail(plate) : '';
+    detailRow.dataset.filled = '1';
+  }
+}
+
+// One flat, chronological event list per order: every heat cast, slab
+// rolled to a plate, FG inspection and dispatch, each with its own date and
+// quantity — the individual events behind the summary row's rollup.
+function renderGenealogyDetail(plate) {
+  const events = [];
+  for (const stageId of ['casting', 'rolling', 'finishing', 'dispatch']) {
+    const meta = GENEALOGY_STAGE_META[stageId];
+    for (const record of plate.records[stageId] || []) {
+      events.push({
+        date: record.date || '',
+        label: meta.label,
+        idLabel: meta.idLabel,
+        id: record[meta.idField] || '—',
+        weight: typeof record.weight === 'number' ? record.weight : null,
+        extra: stageId === 'dispatch' ? (record.customer || record.shipToCity || '') : '',
+      });
+    }
+  }
+  if (!events.length) return '<div class="empty-msg">No production record against this order yet.</div>';
+  events.sort((a, b) => (a.date || '9999-99-99').localeCompare(b.date || '9999-99-99'));
+  const rowsHtml = events.map((e) => `<tr>
+    <td class="mono">${esc(e.date || '—')}</td>
+    <td>${esc(e.label)}</td>
+    <td class="mono">${esc(e.idLabel)}: ${esc(e.id)}</td>
+    <td class="mono">${e.weight === null ? '—' : num(e.weight, 3) + ' t'}</td>
+    <td>${esc(e.extra || '—')}</td>
+  </tr>`).join('');
+  return `<div class="data-table-wrap" style="margin-top:0"><table class="data">
+    <thead><tr><th scope="col">Date</th><th scope="col">Event</th><th scope="col">Identifier</th><th scope="col">Quantity</th><th scope="col">Note</th></tr></thead>
+    <tbody>${rowsHtml}</tbody></table></div>`;
+}
+
 function syncViewChrome() {
   document.querySelectorAll('#viewSwitch [data-view]').forEach((button) => {
     const active = button.dataset.view === state.view;
@@ -755,6 +900,7 @@ function syncViewChrome() {
     button.setAttribute('aria-selected', String(active));
   });
   const stock = state.view === 'stock';
+  const genealogy = state.view === 'genealogy';
   const label = document.querySelector('label[for="q"]');
   if (label) label.textContent = stock
     ? 'Slab · plate · SO No. · grade · location · stock status'
@@ -762,10 +908,12 @@ function syncViewChrome() {
   $('q').placeholder = stock
     ? 'e.g. F6341608E0, PM STOCK, NO PLAN'
     : 'e.g. 607831786, F6204202A0, PES ENGINEERS';
-  $('tableIntroTitle').textContent = stock ? 'Current slab and plate stock' : 'Order-book coverage';
+  $('tableIntroTitle').textContent = stock ? 'Current slab and plate stock' : (genealogy ? 'Order genealogy' : 'Order-book coverage');
   $('tableIntroText').textContent = stock
     ? 'Rows with one exact order match open the same Heat → Slab → Plate → Dispatch lineage. Unallocated and ambiguous stock stays visible.'
-    : 'Click any row to open its production trace. Stage markers show presence, not completion.';
+    : (genealogy
+      ? 'Every order against its billing balances and what actually happened to its metal. Expand a row for the heat-by-heat, slab-by-slab trail.'
+      : 'Click any row to open its production trace. Stage markers show presence, not completion.');
 }
 
 function renderStockTable() {
@@ -1037,7 +1185,49 @@ function plateIdentity(record) {
   return record.batch || (record.materialDoc ? `DOC ${record.materialDoc}` : '');
 }
 
-function makeLineageNode({ id, title, level, identity, records = [], stocks = [], detailLines = [], missing = false }) {
+function matchSlabIdForPlate(batch, knownSlabIds) {
+  if (!batch || !knownSlabIds || !knownSlabIds.size) return null;
+  const raw = String(batch).trim();
+  if (knownSlabIds.has(raw)) return raw;
+  const stem = plateStem(raw);
+  if (knownSlabIds.has(stem)) return stem;
+  const normStem = stem.replace(/[-_/]/g, '');
+  for (const slabId of knownSlabIds) {
+    if (slabId.replace(/[-_/]/g, '') === normStem) return slabId;
+  }
+  let best = null;
+  for (const slabId of knownSlabIds) {
+    if (raw.startsWith(slabId)) {
+      if (!best || slabId.length > best.length) best = slabId;
+    }
+  }
+  if (best) return best;
+  for (const slabId of knownSlabIds) {
+    if (slabId.startsWith(stem) || stem.startsWith(slabId)) {
+      if (!best || slabId.length > best.length) best = slabId;
+    }
+  }
+  return best;
+}
+
+function matchHeatIdForSlab(slabId, knownHeatIds) {
+  if (!slabId || !knownHeatIds || !knownHeatIds.size) return null;
+  const raw = String(slabId).trim();
+  if (knownHeatIds.has(raw)) return raw;
+  let best = null;
+  for (const heatId of knownHeatIds) {
+    if (typeof heatId === 'string' && raw.startsWith(heatId)) {
+      if (!best || heatId.length > best.length) best = heatId;
+    }
+  }
+  return best;
+}
+
+function makeLineageNode({
+  id, title, level, identity, records = [], stocks = [], detailLines = [], missing = false,
+  parentId = null, slabId = null, plateId = null, isVirtual = false, bypassedFG = false,
+  dateText = '', meta = '',
+}) {
   const all = [...records, ...stocks];
   const dates = stageDates(all);
   const tooltip = [[`${title} ID`, identity || 'No physical identifier'], ...detailLines];
@@ -1055,31 +1245,20 @@ function makeLineageNode({ id, title, level, identity, records = [], stocks = []
   const recordLabel = `${records.length.toLocaleString()} production record${records.length === 1 ? '' : 's'}`;
   return {
     id, title, level, identity: identity || 'No physical identifier', missing,
+    parentId, slabId, plateId, isVirtual, bypassedFG,
     records, stocks, tooltip,
-    meta: dates || recordLabel,
-    dateText: dates || 'Date not reported',
+    meta: meta || dates || recordLabel,
+    dateText: dateText || dates || 'Date not reported',
     stockText: stocks.length ? `${stocks.length.toLocaleString()} in stock · ${num(stockQty, 3)} t` : '',
     children: [],
   };
 }
 
-function placeholderNode(id, title, level) {
+function placeholderNode(id, title, level, parentId = null) {
   return makeLineageNode({
-    id, title, level, identity: 'No matching record', missing: true,
+    id, title, level, identity: 'No matching record', missing: true, parentId,
     detailLines: [['Production records', '0']],
   });
-}
-
-function missingPlateNode(id) {
-  const node = placeholderNode(id, 'Plate', 'plate');
-  node.children = [placeholderNode(`${id}:dispatch:missing`, 'Dispatch', 'dispatch')];
-  return node;
-}
-
-function missingSlabNode(id) {
-  const node = placeholderNode(id, 'Slab', 'slab');
-  node.children = [missingPlateNode(`${id}:plate:missing`)];
-  return node;
 }
 
 function processLineageModel(plate) {
@@ -1090,147 +1269,484 @@ function processLineageModel(plate) {
   const slabStock = plate.stocks?.slab || [];
   const plateStock = plate.stocks?.plate || [];
 
-  const slabRecords = [...casting, ...rolling];
-  const slabGroups = groupByIdentity(slabRecords, (record) => record.slabId);
-  const slabStockGroups = groupByIdentity(slabStock, (record) => record.slabId);
-  const plateRecords = [...finishing, ...dispatch];
-  const plateGroups = groupByIdentity(plateRecords, plateIdentity);
-  const plateStockGroups = groupByIdentity(plateStock, plateIdentity);
-  const plateIdentities = new Set([...plateGroups.keys(), ...plateStockGroups.keys()]);
-  const dispatchByPlate = groupByIdentity(dispatch, (record) => record.batch);
-  const assignedPlates = new Set();
+  // Distinct Heat IDs
+  const heatIds = new Set();
+  for (const r of casting) if (r.heatId) heatIds.add(String(r.heatId).trim());
+  for (const r of slabStock) if (r.heatId) heatIds.add(String(r.heatId).trim());
 
-  const makeDispatchNodes = (parentId, identity, records) => {
-    const rows = records || dispatchByPlate.get(identity) || [];
-    if (!rows.length) return [placeholderNode(`${parentId}:dispatch:missing`, 'Dispatch', 'dispatch')];
-    return rows.map((record, index) => makeLineageNode({
-      id: `${parentId}:dispatch:${index}`,
-      title: 'Dispatch', level: 'dispatch',
-      identity: record.billNo || record.vehicleNo || `Dispatch ${index + 1}`,
+  // Distinct Slabs
+  const slabMap = new Map();
+  const getOrCreateSlab = (slabId) => {
+    const key = String(slabId).trim();
+    if (!slabMap.has(key)) {
+      slabMap.set(key, { slabId: key, records: [], stocks: [], heatId: null });
+    }
+    return slabMap.get(key);
+  };
+
+  for (const r of casting) {
+    if (r.slabId) {
+      const s = getOrCreateSlab(r.slabId);
+      s.records.push(r);
+      if (r.heatId && !s.heatId) s.heatId = String(r.heatId).trim();
+    }
+  }
+  for (const r of rolling) {
+    if (r.slabId) {
+      const s = getOrCreateSlab(r.slabId);
+      s.records.push(r);
+    }
+  }
+  for (const r of slabStock) {
+    if (r.slabId) {
+      const s = getOrCreateSlab(r.slabId);
+      s.stocks.push(r);
+      if (r.heatId && !s.heatId) s.heatId = String(r.heatId).trim();
+    }
+  }
+
+  // Resolve heatId for slabs
+  const knownHeatIds = new Set([...heatIds]);
+  for (const [slabId, s] of slabMap) {
+    if (!s.heatId) {
+      s.heatId = matchHeatIdForSlab(slabId, knownHeatIds);
+    }
+    if (s.heatId) heatIds.add(s.heatId);
+  }
+
+  const knownSlabIds = new Set([...slabMap.keys()]);
+
+  // Group Plates by batch
+  const plateMap = new Map();
+  const getOrCreatePlate = (batch) => {
+    const key = String(batch || '').trim();
+    if (!plateMap.has(key)) {
+      plateMap.set(key, { batch: key, finishing: [], plateStock: [], dispatch: [], slabId: null });
+    }
+    return plateMap.get(key);
+  };
+
+  for (const r of finishing) {
+    const id = plateIdentity(r);
+    if (id) {
+      const p = getOrCreatePlate(id);
+      p.finishing.push(r);
+      if (r.slabId && !p.slabId) p.slabId = String(r.slabId).trim();
+    }
+  }
+  for (const r of plateStock) {
+    const id = plateIdentity(r);
+    if (id) {
+      const p = getOrCreatePlate(id);
+      p.plateStock.push(r);
+      if (r.slabId && !p.slabId) p.slabId = String(r.slabId).trim();
+    }
+  }
+  for (const r of dispatch) {
+    const id = r.batch || plateIdentity(r);
+    if (id) {
+      const p = getOrCreatePlate(id);
+      p.dispatch.push(r);
+    }
+  }
+
+  // Link plates to their mother slab
+  for (const [batch, p] of plateMap) {
+    if (!p.slabId) {
+      p.slabId = matchSlabIdForPlate(batch, knownSlabIds);
+    }
+  }
+
+  // Node builders
+  const makeDispatchNode = (record, index, parentId, slabId, plateId) => {
+    const id = `${parentId}:dispatch:${index}`;
+    const identity = record.billNo ? `Bill ${record.billNo}` : (record.vehicleNo ? `Vehicle ${record.vehicleNo}` : `Dispatch ${index + 1}`);
+    const date = record.date || '';
+    const weight = typeof record.weight === 'number' ? `${num(record.weight, 3)} t` : '';
+    const customer = record.customer || record.soldToParty || '';
+    const destination = record.shipToCity || record.shipTo || '';
+    const metaParts = [date, weight, customer, destination].filter(Boolean);
+    return makeLineageNode({
+      id,
+      title: 'Dispatch',
+      level: 'dispatch',
+      identity,
+      parentId,
+      slabId,
+      plateId,
       records: [record],
+      dateText: date || 'Date not reported',
+      meta: metaParts.join(' · ') || 'Dispatched shipment',
       detailLines: [
         ['Bill no.', record.billNo || '—'],
-        ['Batch', record.batch || identity || '—'],
+        ['Batch', record.batch || plateId || '—'],
         ['Vehicle', record.vehicleNo || '—'],
-        ['Weight', typeof record.weight === 'number' ? `${num(record.weight, 3)} t` : '—'],
+        ['Weight', weight || '—'],
+        ['Customer', customer || '—'],
+        ['Destination', destination || '—'],
       ],
-    }));
+    });
   };
 
-  const makePlateNode = (identity, records, stocks, parentId) => {
-    const finishingRows = records.filter((record) => record.stage === 'finishing');
-    const dispatchRows = records.filter((record) => record.stage === 'dispatch');
+  const makePlateNode = (p, parentId) => {
+    // If not found in finishing (FG) and not found in plate stock, but found in dispatch:
+    // This is a direct dispatch from rolling (bypassed FG)
+    const isVirtual = p.finishing.length === 0 && p.plateStock.length === 0 && p.dispatch.length > 0;
+    const allRecords = [...p.finishing, ...p.dispatch];
+    const dates = stageDates(allRecords);
+    const id = `${parentId}:plate:${p.batch || 'unknown'}`;
+    const weight = numericRange(allRecords, 'weight', ' t');
+    const dims = [
+      numericRange(allRecords, 'thicknessMm', ' mm'),
+      numericRange(allRecords, 'widthMm', ' mm'),
+      numericRange(allRecords, 'lengthMm', ' mm'),
+    ].filter(Boolean).join(' × ');
+
     const node = makeLineageNode({
-      id: `${parentId}:plate:${identity || 'missing'}`,
-      title: 'Plate', level: 'plate', identity,
-      records,
-      stocks,
+      id,
+      title: isVirtual ? 'Plate (Direct)' : 'Plate',
+      level: 'plate',
+      identity: p.batch || 'No Plate ID',
+      parentId,
+      slabId: p.slabId,
+      records: allRecords,
+      stocks: p.plateStock,
+      missing: false,
+      isVirtual,
+      bypassedFG: isVirtual,
+      dateText: dates || (p.dispatch[0]?.date ? `Bill: ${p.dispatch[0].date}` : 'Date not reported'),
+      meta: [dims, weight, dates].filter(Boolean).join(' · ') || (isVirtual ? 'Dispatched directly from Rolling' : 'Finished Plate'),
       detailLines: [
-        ['Finishing records', String(finishingRows.length)],
-        ['Dispatch records', String(dispatchRows.length)],
+        ['Status', isVirtual ? 'Dispatched directly from Rolling (No FG record)' : (p.plateStock.length ? 'In Plate Stock' : 'Finished')],
+        ['Dimensions', dims || '—'],
+        ['Finishing records', String(p.finishing.length)],
+        ['Dispatch records', String(p.dispatch.length)],
       ],
     });
-    node.children = makeDispatchNodes(node.id, identity, dispatchRows);
-    return node;
-  };
-
-  const plateForSlab = (slabId) => [...plateIdentities].filter((identity) => {
-    const records = plateGroups.get(identity) || [];
-    const stocks = plateStockGroups.get(identity) || [];
-    const linkedSlabs = new Set([...records, ...stocks].map((record) => record.slabId).filter(Boolean).map(String));
-    return linkedSlabs.has(slabId) || plateStem(identity) === slabId;
-  });
-
-  const makeSlabNode = (slabId, records, stocks, parentId) => {
-    const castingRows = records.filter((record) => record.stage === 'casting');
-    const rollingRows = records.filter((record) => record.stage === 'rolling');
-    const node = makeLineageNode({
-      id: `${parentId}:slab:${slabId}`,
-      title: 'Slab', level: 'slab', identity: slabId,
-      records,
-      stocks,
-      detailLines: [
-        ['Casting records', String(castingRows.length)],
-        ['Rolling records', String(rollingRows.length)],
-      ],
-    });
-    const children = plateForSlab(slabId).map((identity) => {
-      assignedPlates.add(identity);
-      return makePlateNode(identity, plateGroups.get(identity) || [], plateStockGroups.get(identity) || [], node.id);
-    });
-    node.children = children.length ? children : [missingPlateNode(`slab:${slabId}:plate:missing`)];
-    return node;
-  };
-
-  const heatGroups = groupByIdentity(casting, (record) => record.heatId);
-  const assignedSlabs = new Set();
-  const roots = [];
-  for (const [heatId, heatRows] of heatGroups) {
-    const slabIds = [...new Set(heatRows.map((record) => record.slabId).filter(Boolean).map(String))];
-    const heat = makeLineageNode({
-      id: `heat:${heatId}`, title: 'Heat', level: 'heat', identity: heatId,
-      records: heatRows,
-      detailLines: [['Slab count', String(slabIds.length)]],
-    });
-    heat.children = slabIds.map((slabId) => {
-      assignedSlabs.add(slabId);
-      return makeSlabNode(slabId, slabGroups.get(slabId) || [], slabStock.filter((record) => record.slabId === slabId), `heat:${heatId}`);
-    });
-    if (!heat.children.length) heat.children = [missingSlabNode(`heat:${heatId}:slab:missing` )];
-    roots.push(heat);
-  }
-
-  const slabIdentities = new Set([...slabGroups.keys(), ...slabStockGroups.keys()]);
-  const orphanSlabs = [...slabIdentities].filter((slabId) => !assignedSlabs.has(slabId));
-  if (orphanSlabs.length || !roots.length) {
-    const heat = placeholderNode('heat:unassigned', 'Heat', 'heat');
-    heat.children = orphanSlabs.map((slabId) => {
-      return makeSlabNode(slabId, slabGroups.get(slabId) || [], slabStockGroups.get(slabId) || [], 'heat:unassigned');
-    });
-    if (!heat.children.length) heat.children = [missingSlabNode('heat:unassigned:slab:missing')];
-    roots.push(heat);
-  }
-
-  const orphanPlates = [...plateIdentities].filter((identity) => !assignedPlates.has(identity));
-  if (orphanPlates.length) {
-    let heat = roots.find((root) => root.id === 'heat:unassigned');
-    if (!heat) {
-      heat = placeholderNode('heat:unassigned', 'Heat', 'heat');
-      heat.children = [];
-      roots.push(heat);
+    if (isVirtual) {
+      node.stockText = 'Dispatched without FG record';
     }
-    const slab = missingSlabNode('heat:unassigned:plate-parent');
-    slab.children = orphanPlates.map((identity) => makePlateNode(
-      identity,
-      plateGroups.get(identity) || [],
-      plateStockGroups.get(identity) || [],
-      slab.id,
-    ));
-    heat.children.push(slab);
+
+    node.children = p.dispatch.map((r, idx) => makeDispatchNode(r, idx, node.id, p.slabId, p.batch));
+    return node;
+  };
+
+  const makeSlabNode = (s, parentId) => {
+    const allRecords = [...s.records];
+    const dates = stageDates(allRecords);
+    const id = `${parentId}:slab:${s.slabId}`;
+    const dims = [
+      numericRange(allRecords, 'thicknessMm', ' mm'),
+      numericRange(allRecords, 'widthMm', ' mm'),
+      numericRange(allRecords, 'lengthMm', ' mm'),
+    ].filter(Boolean).join(' × ');
+    const weight = numericRange(allRecords, 'weight', ' t');
+
+    const node = makeLineageNode({
+      id,
+      title: 'Slab',
+      level: 'slab',
+      identity: s.slabId,
+      parentId,
+      heatId: s.heatId,
+      records: allRecords,
+      stocks: s.stocks,
+      dateText: dates || (s.stocks[0]?.date ? `Stock: ${s.stocks[0].date}` : 'Date not reported'),
+      meta: [dims, weight, dates].filter(Boolean).join(' · ') || 'Slab',
+      detailLines: [
+        ['Slab ID', s.slabId],
+        ['Heat ID', s.heatId || '—'],
+        ['Dimensions', dims || '—'],
+        ['Casting records', String(s.records.filter((r) => r.stage === 'casting').length)],
+        ['Rolling records', String(s.records.filter((r) => r.stage === 'rolling').length)],
+      ],
+    });
+
+    const platesForThisSlab = [...plateMap.values()].filter((p) => p.slabId === s.slabId);
+    node.children = platesForThisSlab.map((p) => makePlateNode(p, node.id));
+    return node;
+  };
+
+  // Build Heat roots
+  const roots = [];
+  const assignedSlabs = new Set();
+  const assignedPlates = new Set();
+
+  for (const heatId of heatIds) {
+    const slabsForHeat = [...slabMap.values()].filter((s) => s.heatId === heatId);
+    const castingForHeat = casting.filter((r) => String(r.heatId).trim() === heatId);
+    const dates = stageDates(castingForHeat);
+    const heatNode = makeLineageNode({
+      id: `heat:${heatId}`,
+      title: 'Heat',
+      level: 'heat',
+      identity: heatId,
+      parentId: null,
+      records: castingForHeat,
+      dateText: dates || 'Date not reported',
+      meta: `${slabsForHeat.length} slab${slabsForHeat.length === 1 ? '' : 's'}${dates ? ' · ' + dates : ''}`,
+      detailLines: [
+        ['Heat ID', heatId],
+        ['Casting records', String(castingForHeat.length)],
+        ['Slab count', String(slabsForHeat.length)],
+      ],
+    });
+
+    heatNode.children = slabsForHeat.map((s) => {
+      assignedSlabs.add(s.slabId);
+      return makeSlabNode(s, heatNode.id);
+    });
+    roots.push(heatNode);
+  }
+
+  // Handle orphan slabs
+  const orphanSlabs = [...slabMap.values()].filter((s) => !assignedSlabs.has(s.slabId));
+  if (orphanSlabs.length || !roots.length) {
+    const unassignedHeat = makeLineageNode({
+      id: 'heat:unassigned',
+      title: 'Heat (Unassigned)',
+      level: 'heat',
+      identity: 'Unassigned Heat',
+      parentId: null,
+      missing: true,
+      records: [],
+      dateText: '—',
+      meta: `${orphanSlabs.length} unassigned slab${orphanSlabs.length === 1 ? '' : 's'}`,
+      detailLines: [['Heat ID', 'Unassigned']],
+    });
+    unassignedHeat.children = orphanSlabs.map((s) => makeSlabNode(s, unassignedHeat.id));
+    roots.push(unassignedHeat);
+  }
+
+  // Track assigned plates
+  for (const root of roots) {
+    for (const slab of root.children || []) {
+      for (const plateNode of slab.children || []) {
+        assignedPlates.add(plateNode.identity);
+      }
+    }
+  }
+
+  // Handle orphan plates
+  const orphanPlates = [...plateMap.values()].filter((p) => !assignedPlates.has(p.batch));
+  if (orphanPlates.length) {
+    let unassignedHeat = roots.find((r) => r.id === 'heat:unassigned');
+    if (!unassignedHeat) {
+      unassignedHeat = makeLineageNode({
+        id: 'heat:unassigned',
+        title: 'Heat (Unassigned)',
+        level: 'heat',
+        identity: 'Unassigned Heat',
+        parentId: null,
+        missing: true,
+        records: [],
+        dateText: '—',
+        meta: 'Unassigned units',
+        detailLines: [['Heat ID', 'Unassigned']],
+      });
+      roots.push(unassignedHeat);
+    }
+    const unassignedSlab = makeLineageNode({
+      id: `${unassignedHeat.id}:slab:unassigned`,
+      title: 'Slab (Unassigned)',
+      level: 'slab',
+      identity: 'Unassigned Slab',
+      parentId: unassignedHeat.id,
+      missing: true,
+      records: [],
+      dateText: '—',
+      meta: `${orphanPlates.length} unassigned plate${orphanPlates.length === 1 ? '' : 's'}`,
+      detailLines: [['Slab ID', 'Unassigned']],
+    });
+    unassignedSlab.children = orphanPlates.map((p) => makePlateNode(p, unassignedSlab.id));
+    unassignedHeat.children.push(unassignedSlab);
   }
 
   return roots;
 }
 
+function toggleLineageNode(nodeId) {
+  if (!state.collapsedNodes) state.collapsedNodes = new Set();
+  const isCollapsed = state.collapsedNodes.has(nodeId);
+  if (isCollapsed) state.collapsedNodes.delete(nodeId);
+  else state.collapsedNodes.add(nodeId);
+
+  const sub = document.getElementById(`sub-${nodeId}`);
+  const card = document.querySelector(`.lineage-node-card[data-flow-card="${CSS.escape(nodeId)}"]`);
+  const btn = card?.querySelector('[data-toggle-node]');
+
+  if (sub) sub.hidden = !isCollapsed;
+  if (card) card.setAttribute('data-collapsed', String(!isCollapsed));
+  if (btn) btn.setAttribute('aria-expanded', String(isCollapsed));
+}
+
 function renderLineageChart(roots = state.lineageRoots) {
   const host = $('processFlow');
   if (!host) return;
-  if (!roots.length) roots = processLineageModel(state.plates.find((entry) => entry.key === state.selectedKey));
-  const flat = [];
-  const flatten = (node) => { flat.push(node); (node.children || []).forEach(flatten); };
-  roots.forEach(flatten);
+  if (!roots.length) {
+    const currentPlate = state.plates.find((entry) => entry.key === state.selectedKey);
+    roots = currentPlate ? processLineageModel(currentPlate) : [];
+  }
   state.lineageRoots = roots;
-  flowCardData = new Map(flat.map((node) => [node.id, node]));
-  const renderNode = (node, index) => `<article class="lineage-card${node.missing ? ' missing' : ''}${node.stockText ? ' has-stock' : ''}" data-flow-card="${esc(node.id)}" data-lineage-level="${node.level}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}">
-    <div class="lineage-card-top"><span class="lineage-level">${esc(node.title)}</span><span class="lineage-index">${String(index + 1).padStart(2, '0')}</span><span class="lineage-state" aria-hidden="true"></span></div>
-    <h3>${esc(node.identity)}</h3>
-    <div class="lineage-meta">${esc(node.meta)}</div>
-    <div class="lineage-date">${esc(node.dateText)}</div>
-    ${node.stockText ? `<div class="flow-stock-note">${esc(node.stockText)}</div>` : ''}
-    ${(node.children || []).length ? `<div class="lineage-children" role="group" aria-label="${esc(node.title)} children">${node.children.map(renderNode).join('')}</div>` : ''}
-  </article>`;
-  host.innerHTML = `<div class="lineage-route" aria-hidden="true"><span>Heat</span><i>→</i><span>Slab</span><i>→</i><span>Plate</span><i>→</i><span>Dispatch</span></div>
-    <div class="lineage-tree" role="tree" aria-label="Heat to slab to plate to dispatch lineage">${roots.map(renderNode).join('')}</div>`;
+
+  const flat = flattenLineage(roots);
+  flowCardData = new Map(flat.map(({ node }) => [node.id, node]));
+
+  let heatCount = 0, slabCount = 0, plateCount = 0, dispatchCount = 0, directDispatchCount = 0;
+  flat.forEach(({ node }) => {
+    if (node.level === 'heat' && !node.missing) heatCount++;
+    else if (node.level === 'slab' && !node.missing) slabCount++;
+    else if (node.level === 'plate' && !node.missing) {
+      plateCount++;
+      if (node.bypassedFG) directDispatchCount++;
+    } else if (node.level === 'dispatch') dispatchCount++;
+  });
+
+  const renderDispatchCard = (node, index) => {
+    return `<div class="lineage-branch" data-node-id="${esc(node.id)}">
+      <article class="lineage-node-card dispatch" data-flow-card="${esc(node.id)}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}">
+        <span class="lineage-stage-badge dispatch">DISPATCH</span>
+        <strong class="lineage-id-title">${esc(node.identity)}</strong>
+        <div class="lineage-meta-text">
+          <span>${esc(node.dateText)}</span>
+          ${node.meta ? `<span>·</span><span>${esc(node.meta)}</span>` : ''}
+        </div>
+        <div class="lineage-card-actions">
+          <span class="lineage-tag">Shipment ${index + 1}</span>
+        </div>
+      </article>
+    </div>`;
+  };
+
+  const renderPlateCard = (node, index) => {
+    const children = node.children || [];
+    const hasChildren = children.length > 0;
+    const isCollapsed = state.collapsedNodes ? state.collapsedNodes.has(node.id) : false;
+    const isBypassed = !!node.bypassedFG;
+    const cardCls = `lineage-node-card plate${isBypassed ? ' bypassed-fg' : ''}${node.stockText ? ' has-stock' : ''}`;
+    const badgeCls = `lineage-stage-badge ${isBypassed ? 'bypassed' : 'plate'}`;
+
+    return `<div class="lineage-branch" data-node-id="${esc(node.id)}">
+      <article class="${cardCls}" data-flow-card="${esc(node.id)}" data-collapsed="${isCollapsed}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}">
+        <span class="${badgeCls}">${isBypassed ? 'PLATE (DIRECT)' : 'PLATE'}</span>
+        <strong class="lineage-id-title">${esc(node.identity)}</strong>
+        <div class="lineage-meta-text">
+          <span>${esc(node.dateText)}</span>
+          ${node.meta ? `<span>·</span><span>${esc(node.meta)}</span>` : ''}
+        </div>
+        <div class="lineage-card-actions">
+          ${isBypassed ? `<span class="lineage-tag bypassed">⚡ Direct Dispatch (No FG)</span>` : ''}
+          ${node.stockText ? `<span class="lineage-tag stock">${esc(node.stockText)}</span>` : ''}
+          ${hasChildren ? `
+            <button class="lineage-toggle-btn" type="button" data-toggle-node="${esc(node.id)}" aria-expanded="${!isCollapsed}">
+              <span class="lineage-toggle-icon">▾</span>
+              <span>${children.length} Dispatch${children.length === 1 ? '' : 'es'}</span>
+            </button>
+          ` : '<span class="lineage-tag">Pending Dispatch</span>'}
+        </div>
+      </article>
+      ${hasChildren ? `
+        <div class="lineage-sub-branches" id="sub-${esc(node.id)}"${isCollapsed ? ' hidden' : ''}>
+          ${children.map((child, idx) => renderDispatchCard(child, idx)).join('')}
+        </div>
+      ` : ''}
+    </div>`;
+  };
+
+  const renderSlabCard = (node, index) => {
+    const children = node.children || [];
+    const hasChildren = children.length > 0;
+    const isCollapsed = state.collapsedNodes ? state.collapsedNodes.has(node.id) : false;
+    const cardCls = `lineage-node-card slab${node.stockText ? ' has-stock' : ''}${node.missing ? ' missing' : ''}`;
+
+    return `<div class="lineage-branch" data-node-id="${esc(node.id)}">
+      <article class="${cardCls}" data-flow-card="${esc(node.id)}" data-collapsed="${isCollapsed}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}">
+        <span class="lineage-stage-badge slab">SLAB</span>
+        <strong class="lineage-id-title">${esc(node.identity)}</strong>
+        <div class="lineage-meta-text">
+          <span>${esc(node.dateText)}</span>
+          ${node.meta ? `<span>·</span><span>${esc(node.meta)}</span>` : ''}
+        </div>
+        <div class="lineage-card-actions">
+          ${node.stockText ? `<span class="lineage-tag stock">${esc(node.stockText)}</span>` : ''}
+          ${hasChildren ? `
+            <button class="lineage-toggle-btn" type="button" data-toggle-node="${esc(node.id)}" aria-expanded="${!isCollapsed}">
+              <span class="lineage-toggle-icon">▾</span>
+              <span>${children.length} Plate${children.length === 1 ? '' : 's'}</span>
+            </button>
+          ` : '<span class="lineage-tag">Rolled · No plates yet</span>'}
+        </div>
+      </article>
+      ${hasChildren ? `
+        <div class="lineage-sub-branches" id="sub-${esc(node.id)}"${isCollapsed ? ' hidden' : ''}>
+          ${children.map((child, idx) => renderPlateCard(child, idx)).join('')}
+        </div>
+      ` : ''}
+    </div>`;
+  };
+
+  const renderHeatCard = (node, index) => {
+    const children = node.children || [];
+    const hasChildren = children.length > 0;
+    const isCollapsed = state.collapsedNodes ? state.collapsedNodes.has(node.id) : false;
+    const cardCls = `lineage-node-card heat${node.missing ? ' missing' : ''}`;
+
+    return `<div class="lineage-branch" data-node-id="${esc(node.id)}">
+      <article class="${cardCls}" data-flow-card="${esc(node.id)}" data-collapsed="${isCollapsed}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}">
+        <span class="lineage-stage-badge heat">HEAT</span>
+        <strong class="lineage-id-title">${esc(node.identity)}</strong>
+        <div class="lineage-meta-text">
+          <span>${esc(node.dateText)}</span>
+          ${node.meta ? `<span>·</span><span>${esc(node.meta)}</span>` : ''}
+        </div>
+        <div class="lineage-card-actions">
+          ${hasChildren ? `
+            <button class="lineage-toggle-btn" type="button" data-toggle-node="${esc(node.id)}" aria-expanded="${!isCollapsed}">
+              <span class="lineage-toggle-icon">▾</span>
+              <span>${children.length} Slab${children.length === 1 ? '' : 's'}</span>
+            </button>
+          ` : '<span class="lineage-tag">No Slabs</span>'}
+        </div>
+      </article>
+      ${hasChildren ? `
+        <div class="lineage-sub-branches" id="sub-${esc(node.id)}"${isCollapsed ? ' hidden' : ''}>
+          ${children.map((child, idx) => renderSlabCard(child, idx)).join('')}
+        </div>
+      ` : ''}
+    </div>`;
+  };
+
+  host.innerHTML = `<div class="lineage-container" role="tree" aria-label="Heat to dispatch lineage tree">
+    <div class="lineage-summary-strip">
+      <div class="lineage-badges">
+        <span class="lineage-badge-item heat"><span class="dot"></span>${heatCount} Heat${heatCount === 1 ? '' : 's'}</span>
+        <span class="lineage-badge-item slab"><span class="dot"></span>${slabCount} Slab${slabCount === 1 ? '' : 's'}</span>
+        <span class="lineage-badge-item plate"><span class="dot"></span>${plateCount} Plate${plateCount === 1 ? '' : 's'}${directDispatchCount ? ` (${directDispatchCount} direct)` : ''}</span>
+        <span class="lineage-badge-item dispatch"><span class="dot"></span>${dispatchCount} Dispatched</span>
+      </div>
+      <div style="font-size:10.5px;color:var(--tm);font-weight:700">Click a card or chevron to collapse/expand</div>
+    </div>
+    <div class="lineage-tree-branches" style="display:flex;flex-direction:column;gap:10px">
+      ${roots.map((root, idx) => renderHeatCard(root, idx)).join('')}
+    </div>
+  </div>`;
+
+  host.querySelectorAll('[data-toggle-node]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleLineageNode(btn.dataset.toggleNode);
+    });
+  });
+
+  host.querySelectorAll('.lineage-node-card').forEach((card) => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      const toggleBtn = card.querySelector('[data-toggle-node]');
+      if (toggleBtn) {
+        toggleLineageNode(toggleBtn.dataset.toggleNode);
+      }
+    });
+  });
 }
 
 /* ═══════════════════ Flow chart (SVG) ═══════════════════ */
@@ -1254,30 +1770,213 @@ function prepareChartData(roots) {
   flowCardData = new Map(flattenLineage(roots).map(({ node }) => [node.id, node]));
 }
 
-function chartNodeCard(node, className = 'flowchart-node') {
-  return `<article class="${className}${node.missing ? ' missing' : ''}${node.stockText ? ' has-stock' : ''}" data-flow-card="${esc(node.id)}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}"><strong>${esc(node.identity)}</strong><span>${esc(node.dateText)}</span></article>`;
+function updateFlowchartConnectors() {
+  const container = $('flowchartContainer');
+  const svg = $('flowchartSvgOverlay');
+  const linksGroup = $('fcLinksGroup');
+  if (!container || !svg || !linksGroup) return;
+
+  const containerRect = container.getBoundingClientRect();
+  const scrollLeft = container.scrollLeft;
+  const scrollTop = container.scrollTop;
+
+  const width = Math.max(container.scrollWidth, container.clientWidth);
+  const height = Math.max(container.scrollHeight, container.clientHeight);
+
+  svg.style.width = `${width}px`;
+  svg.style.height = `${height}px`;
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+  const paths = [];
+  const cards = container.querySelectorAll('.flowchart-node-card');
+  const cardMap = new Map();
+  cards.forEach((card) => cardMap.set(card.dataset.nodeId, card));
+
+  cards.forEach((childCard) => {
+    const parentId = childCard.dataset.parentId;
+    if (!parentId) return;
+    const parentCard = cardMap.get(parentId);
+    if (!parentCard) return;
+
+    const pRect = parentCard.getBoundingClientRect();
+    const cRect = childCard.getBoundingClientRect();
+
+    const x1 = pRect.right - containerRect.left + scrollLeft;
+    const y1 = pRect.top + pRect.height / 2 - containerRect.top + scrollTop;
+    const x2 = cRect.left - containerRect.left + scrollLeft;
+    const y2 = cRect.top + cRect.height / 2 - containerRect.top + scrollTop;
+
+    const dx = Math.max(20, Math.abs(x2 - x1) * 0.42);
+    const d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+
+    const isDirect = childCard.classList.contains('bypassed-fg') || parentCard.classList.contains('bypassed-fg');
+    const marker = isDirect ? 'url(#fc-arrow-direct)' : 'url(#fc-arrow)';
+    const cls = `fc-edge${isDirect ? ' direct-dispatch' : ''}`;
+
+    paths.push(`<path class="fc-edge-bg" d="${d}"/>`);
+    paths.push(`<path class="${cls}" data-from="${esc(parentId)}" data-to="${esc(childCard.dataset.nodeId)}" d="${d}" marker-end="${marker}"/>`);
+  });
+
+  linksGroup.innerHTML = paths.join('');
+}
+
+function wireFlowchartInteraction() {
+  const container = $('flowchartContainer');
+  if (!container) return;
+
+  const cards = container.querySelectorAll('.flowchart-node-card');
+  const parentMap = new Map();
+  const childrenMap = new Map();
+
+  cards.forEach((card) => {
+    const id = card.dataset.nodeId;
+    const parentId = card.dataset.parentId;
+    if (parentId) {
+      parentMap.set(id, parentId);
+      if (!childrenMap.has(parentId)) childrenMap.set(parentId, new Set());
+      childrenMap.get(parentId).add(id);
+    }
+  });
+
+  const getConnectedPathIds = (startId) => {
+    const ids = new Set([startId]);
+    let cur = startId;
+    while (cur && parentMap.has(cur)) {
+      const p = parentMap.get(cur);
+      ids.add(p);
+      cur = p;
+    }
+    const queue = [startId];
+    while (queue.length) {
+      const parent = queue.shift();
+      const children = childrenMap.get(parent) || [];
+      for (const ch of children) {
+        if (!ids.has(ch)) {
+          ids.add(ch);
+          queue.push(ch);
+        }
+      }
+    }
+    return ids;
+  };
+
+  cards.forEach((card) => {
+    card.addEventListener('mouseenter', () => {
+      const pathIds = getConnectedPathIds(card.dataset.nodeId);
+      cards.forEach((c) => {
+        if (pathIds.has(c.dataset.nodeId)) {
+          c.classList.add('path-active');
+          c.classList.remove('path-dimmed');
+        } else {
+          c.classList.remove('path-active');
+          c.classList.add('path-dimmed');
+        }
+      });
+      const links = container.querySelectorAll('.fc-edge, .fc-edge-bg');
+      links.forEach((l) => {
+        const from = l.dataset.from;
+        const to = l.dataset.to;
+        if (from && to && pathIds.has(from) && pathIds.has(to)) {
+          l.classList.add('path-active');
+          l.classList.remove('path-dimmed');
+        } else {
+          l.classList.remove('path-active');
+          l.classList.add('path-dimmed');
+        }
+      });
+    });
+
+    card.addEventListener('mouseleave', () => {
+      cards.forEach((c) => c.classList.remove('path-active', 'path-dimmed'));
+      const links = container.querySelectorAll('.fc-edge, .fc-edge-bg');
+      links.forEach((l) => l.classList.remove('path-active', 'path-dimmed'));
+    });
+  });
 }
 
 function renderFlowchartChart(roots) {
   const host = $('processFlow');
-  const byLevel = Object.fromEntries(CHART_LEVELS.map(([level]) => [level, []]));
-  flattenLineage(roots).forEach(({ node }) => { if (byLevel[node.level]) byLevel[node.level].push(node); });
-  let lanes = '';
-  for (const [level, label] of CHART_LEVELS) {
-    const nodes = byLevel[level];
-    const shown = nodes.slice(0, 8);
-    const more = nodes.length > shown.length ? `<div class="flowchart-more">+${nodes.length - shown.length} more units</div>` : '';
-    lanes += `<section class="flowchart-lane" aria-label="${label} stage"><h3>${label} <span>(${nodes.length})</span></h3>${shown.map((node) => chartNodeCard(node)).join('')}${more}</section>`;
+  if (!host) return;
+
+  const flat = flattenLineage(roots);
+  state.lineageRoots = roots;
+  flowCardData = new Map(flat.map(({ node }) => [node.id, node]));
+
+  const byLevel = { heat: [], slab: [], plate: [], dispatch: [] };
+  flat.forEach(({ node }) => {
+    if (byLevel[node.level]) byLevel[node.level].push(node);
+  });
+
+  const renderFlowchartLaneCard = (node) => {
+    const isBypassed = !!node.bypassedFG;
+    const cardCls = `flowchart-node-card${isBypassed ? ' bypassed-fg' : ''}${node.stockText ? ' has-stock' : ''}${node.missing ? ' missing' : ''}`;
+    return `<article class="${cardCls}" id="fc-node-${esc(node.id)}" data-node-id="${esc(node.id)}" data-parent-id="${esc(node.parentId || '')}" data-level="${node.level}" data-flow-card="${esc(node.id)}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}">
+      <strong class="flowchart-node-id">${esc(node.identity)}</strong>
+      <span class="flowchart-node-meta">${esc(node.dateText)}</span>
+      ${node.meta ? `<span class="flowchart-node-meta">${esc(node.meta)}</span>` : ''}
+      ${isBypassed ? `<span class="flowchart-node-badge bypassed">⚡ Direct to Dispatch (No FG)</span>` : ''}
+      ${node.stockText ? `<span class="flowchart-node-badge stock">${esc(node.stockText)}</span>` : ''}
+    </article>`;
+  };
+
+  const laneDefs = [
+    { level: 'heat', title: '01 Heat (Casting)' },
+    { level: 'slab', title: '02 Slab (Rolling)' },
+    { level: 'plate', title: '03 Plate (FG / Stock)' },
+    { level: 'dispatch', title: '04 Dispatch (Shipping)' },
+  ];
+
+  const lanesHtml = laneDefs.map(({ level, title }) => {
+    const nodes = byLevel[level] || [];
+    return `<section class="flowchart-lane-col" aria-label="${title}">
+      <div class="flowchart-lane-header">
+        <span class="flowchart-lane-title">${title}</span>
+        <span class="flowchart-lane-count">${nodes.length}</span>
+      </div>
+      <div class="flowchart-lane-cards" style="display:flex;flex-direction:column;gap:10px">
+        ${nodes.length ? nodes.map(renderFlowchartLaneCard).join('') : '<div class="empty-msg" style="padding:14px 8px;font-size:11px">No records</div>'}
+      </div>
+    </section>`;
+  }).join('');
+
+  host.innerHTML = `<div class="flowchart-container" id="flowchartContainer">
+    <svg class="flowchart-svg-overlay" id="flowchartSvgOverlay">
+      <defs>
+        <marker id="fc-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1 L 8 5 L 0 9 z" fill="var(--md-sys-color-primary)"></path>
+        </marker>
+        <marker id="fc-arrow-direct" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1 L 8 5 L 0 9 z" fill="#f59e0b"></path>
+        </marker>
+      </defs>
+      <g id="fcLinksGroup"></g>
+    </svg>
+    <div class="flowchart-lanes-row">
+      ${lanesHtml}
+    </div>
+  </div>`;
+
+  requestAnimationFrame(() => {
+    updateFlowchartConnectors();
+    wireFlowchartInteraction();
+  });
+
+  const container = $('flowchartContainer');
+  if (container) {
+    container.addEventListener('scroll', () => {
+      requestAnimationFrame(updateFlowchartConnectors);
+    }, { passive: true });
   }
-  host.innerHTML = `<div class="flowchart-view" role="list" aria-label="Heat to dispatch flowchart">${lanes}</div>`;
 }
 
 function renderExpandableTreeChart(roots) {
   const host = $('processFlow');
   const renderNode = (node, depth = 0) => {
     const children = node.children || [];
-    const classes = `${node.missing ? ' missing' : ''}${node.stockText ? ' has-stock' : ''}`;
-    const content = `<strong>${esc(node.title)} · ${esc(node.identity)}</strong><span class="tree-level">${esc(node.level)}</span><small>${esc(node.dateText)}</small>`;
+    const isBypassed = !!node.bypassedFG;
+    const classes = `${node.missing ? ' missing' : ''}${isBypassed ? ' bypassed-fg' : ''}${node.stockText ? ' has-stock' : ''}`;
+    const badge = isBypassed ? '<span class="lineage-tag bypassed" style="margin-left:6px">⚡ Direct Dispatch</span>' : '';
+    const content = `<strong>${esc(node.title)} · ${esc(node.identity)}${badge}</strong><span class="tree-level">${esc(node.level)}</span><small>${esc(node.dateText)}</small>`;
     if (!children.length) return `<article class="flowchart-node${classes}" data-flow-card="${esc(node.id)}" tabindex="0" role="treeitem">${content}</article>`;
     return `<details${depth < 1 ? ' open' : ''}><summary class="${classes.trim()}" data-flow-card="${esc(node.id)}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}">${content}</summary><div>${children.map((child) => renderNode(child, depth + 1)).join('')}</div></details>`;
   };
@@ -1329,8 +2028,8 @@ function renderChartMode(plate) {
   $('flowPill').hidden = true;
   host.hidden = false;
   const labels = {
-    lineage: ['Lineage', 'Expanded physical lineage. Dates are displayed on every node; hover or focus a card for the full trace detail.'],
-    flowchart: ['Flowchart', 'Stage lanes show the physical hand-off from Heat through Dispatch. Every unit carries its available date range.'],
+    lineage: ['Lineage', 'Expanded physical lineage. Dates are displayed on every node; click any card or chevron to collapse/expand.'],
+    flowchart: ['Flowchart', 'Node-to-node process flow: mother units connect to child units. Hover any card to illuminate its full lineage route.'],
     tree: ['Expandable tree', 'Open a unit only when you need its children. Dates remain visible while the hierarchy stays compact.'],
     sankey: ['Sankey', 'Connection width represents available production-record volume; dates remain attached to every displayed unit.'],
   };
@@ -1630,7 +2329,12 @@ function wireProcessFlow() {
   if (!host) return;
   // A tooltip is positioned against the viewport that opened it. Dismiss it on
   // resize so a desktop position cannot widen a newly narrow mobile viewport.
-  window.addEventListener('resize', hideTip, { passive: true });
+  window.addEventListener('resize', () => {
+    hideTip();
+    if (state.chartMode === 'flowchart') {
+      updateFlowchartConnectors();
+    }
+  }, { passive: true });
   const open = (card) => {
     if (!card) return;
     const data = flowCardData.get(card.dataset.flowCard);
@@ -1837,7 +2541,7 @@ function wireControls() {
 
   document.querySelectorAll('#viewSwitch [data-view]').forEach((button) => {
     button.addEventListener('click', () => {
-      state.view = button.dataset.view === 'stock' ? 'stock' : 'orders';
+      state.view = ['stock', 'genealogy'].includes(button.dataset.view) ? button.dataset.view : 'orders';
       state.stageFilter = [];
       state.slicers = {};
       hideTip();
@@ -1869,6 +2573,15 @@ function wireControls() {
   });
 
   $('expandAllBtn').addEventListener('click', () => {
+    if (state.chartMode === 'lineage') {
+      state.collapsedNodes = new Set();
+      renderLineageChart(state.lineageRoots);
+      return;
+    }
+    if (state.chartMode === 'tree') {
+      document.querySelectorAll('#processFlow details').forEach((d) => { d.open = true; });
+      return;
+    }
     if (!state.tree) return;
     // Open the lineage down to the units, but NOT the records under them. A plate
     // can carry thousands of dispatch rows and the browser should not be asked to
@@ -1886,6 +2599,19 @@ function wireControls() {
   });
 
   $('collapseAllBtn').addEventListener('click', () => {
+    if (state.chartMode === 'lineage') {
+      if (!state.collapsedNodes) state.collapsedNodes = new Set();
+      const flat = flattenLineage(state.lineageRoots);
+      flat.forEach(({ node }) => {
+        if (node.children && node.children.length) state.collapsedNodes.add(node.id);
+      });
+      renderLineageChart(state.lineageRoots);
+      return;
+    }
+    if (state.chartMode === 'tree') {
+      document.querySelectorAll('#processFlow details').forEach((d) => { d.open = false; });
+      return;
+    }
     if (!state.tree) return;
     // Back to the default lineage view, so collapsing still leaves the whole route
     // visible rather than a lone order node.

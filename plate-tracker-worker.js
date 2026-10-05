@@ -139,6 +139,15 @@ function parseWorkbook(buffer, fileName) {
   }
 
   const index = new Map(headers.map((h, i) => [h, i]));
+  // Normalise `{ col }` position mappings to the field's own name up front
+  // (see the row-building loop below for why), rather than redoing it per row.
+  for (const [field, header] of Object.entries(mapping)) {
+    if (header && typeof header === 'object') mapping[field] = field;
+  }
+  const colByField = {};
+  for (const [field, spec] of Object.entries(core.SOURCES[sourceId].fields)) {
+    if (spec.col !== undefined) colByField[field] = spec.col;
+  }
   const records = [];
   let dropped = 0;
   // Rows a source row expanded into. A clubbed casting row ("A//B") becomes two
@@ -150,6 +159,13 @@ function parseWorkbook(buffer, fileName) {
     if (!Array.isArray(raw) || !raw.some((c) => c !== '' && c !== null && c !== undefined)) continue;
     const row = {};
     for (const [field, header] of Object.entries(mapping)) {
+      // A field with a `col` spec is read by raw column position, stashed
+      // under the field's own name — guaranteed unique, unlike the header
+      // text it would otherwise collide under (see colByField above).
+      if (field in colByField) {
+        row[field] = raw[colByField[field]];
+        continue;
+      }
       const i = index.get(header);
       row[header] = i === undefined ? undefined : raw[i];
     }
