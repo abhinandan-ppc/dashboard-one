@@ -138,6 +138,21 @@ try {
     await page.keyboard.press('ArrowRight');
     check('arrow keys move through the lineage', await page.locator('[data-lineage-level="plate"]:focus').count() === 1);
 
+    check('lineage exposes dates on the cards', await page.locator('#processFlow .lineage-date').count() >= 4);
+    const chartModes = [
+      ['flowchart', '.flowchart-view .flowchart-node'],
+      ['tree', '.expandable-tree details'],
+      ['sankey', '.sankey-svg .sankey-node'],
+    ];
+    for (const [mode, selector] of chartModes) {
+      await page.click(`[data-chart-mode="${mode}"]`);
+      await page.waitForTimeout(100);
+      check(`${mode} mode is selected`, await page.locator(`[data-chart-mode="${mode}"]`).getAttribute('aria-pressed') === 'true');
+      check(`${mode} mode renders its chart`, await page.locator(`#processFlow ${selector}`).count() >= 1);
+      check(`${mode} mode keeps date status visible`, await page.locator('#processFlow').innerText().then((text) => /20\d{2}-\d{2}-\d{2}|Date not reported/.test(text)));
+    }
+    await page.click('[data-chart-mode="lineage"]');
+
     await page.locator('#detail').screenshot({ path: 'plate-tracker-stock-flow.png' });
     check('stock flow screenshot written', true, 'plate-tracker-stock-flow.png');
   }

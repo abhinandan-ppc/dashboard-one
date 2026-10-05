@@ -39,6 +39,8 @@ const state = {
   // it asked "which stages does this order have?" but the question this chart
   // exists to answer is "what happened to this metal, in order?".
   spine: 'lineage',
+  chartMode: 'lineage',
+  lineageRoots: [],
   // One stage can hold thousands of rows, so a node renders at most this many
   // children and says so; the rest stay behind "show all".
   nodeLimit: 200,
@@ -871,7 +873,9 @@ function renderDetail(plate) {
       : '');
 
   renderTimeline(plate);
-  renderProcessFlow(plate);
+  state.tree = buildLineage(plate, { includeAttributes: false });
+  state.expanded = defaultExpandedIds(state.tree, { spine: state.spine });
+  renderChartMode(plate);
 }
 
 function renderTimeline(plate) {
@@ -1053,6 +1057,7 @@ function makeLineageNode({ id, title, level, identity, records = [], stocks = []
     id, title, level, identity: identity || 'No physical identifier', missing,
     records, stocks, tooltip,
     meta: dates || recordLabel,
+    dateText: dates || 'Date not reported',
     stockText: stocks.length ? `${stocks.length.toLocaleString()} in stock · ${num(stockQty, 3)} t` : '',
     children: [],
   };
@@ -1207,18 +1212,20 @@ function processLineageModel(plate) {
   return roots;
 }
 
-function renderProcessFlow(plate) {
+function renderLineageChart(roots = state.lineageRoots) {
   const host = $('processFlow');
   if (!host) return;
-  const roots = processLineageModel(plate);
+  if (!roots.length) roots = processLineageModel(state.plates.find((entry) => entry.key === state.selectedKey));
   const flat = [];
   const flatten = (node) => { flat.push(node); (node.children || []).forEach(flatten); };
   roots.forEach(flatten);
+  state.lineageRoots = roots;
   flowCardData = new Map(flat.map((node) => [node.id, node]));
   const renderNode = (node, index) => `<article class="lineage-card${node.missing ? ' missing' : ''}${node.stockText ? ' has-stock' : ''}" data-flow-card="${esc(node.id)}" data-lineage-level="${node.level}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}">
     <div class="lineage-card-top"><span class="lineage-level">${esc(node.title)}</span><span class="lineage-index">${String(index + 1).padStart(2, '0')}</span><span class="lineage-state" aria-hidden="true"></span></div>
     <h3>${esc(node.identity)}</h3>
     <div class="lineage-meta">${esc(node.meta)}</div>
+    <div class="lineage-date">${esc(node.dateText)}</div>
     ${node.stockText ? `<div class="flow-stock-note">${esc(node.stockText)}</div>` : ''}
     ${(node.children || []).length ? `<div class="lineage-children" role="group" aria-label="${esc(node.title)} children">${node.children.map(renderNode).join('')}</div>` : ''}
   </article>`;
@@ -1227,6 +1234,115 @@ function renderProcessFlow(plate) {
 }
 
 /* ═══════════════════ Flow chart (SVG) ═══════════════════ */
+
+const CHART_LEVELS = [
+  ['heat', 'Heat'], ['slab', 'Slab'], ['plate', 'Plate'], ['dispatch', 'Dispatch'],
+];
+
+function flattenLineage(roots) {
+  const nodes = [];
+  const walk = (node, parent = null) => {
+    nodes.push({ node, parent });
+    (node.children || []).forEach((child) => walk(child, node));
+  };
+  roots.forEach((root) => walk(root));
+  return nodes;
+}
+
+function prepareChartData(roots) {
+  state.lineageRoots = roots;
+  flowCardData = new Map(flattenLineage(roots).map(({ node }) => [node.id, node]));
+}
+
+function chartNodeCard(node, className = 'flowchart-node') {
+  return `<article class="${className}${node.missing ? ' missing' : ''}${node.stockText ? ' has-stock' : ''}" data-flow-card="${esc(node.id)}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}"><strong>${esc(node.identity)}</strong><span>${esc(node.dateText)}</span></article>`;
+}
+
+function renderFlowchartChart(roots) {
+  const host = $('processFlow');
+  const byLevel = Object.fromEntries(CHART_LEVELS.map(([level]) => [level, []]));
+  flattenLineage(roots).forEach(({ node }) => { if (byLevel[node.level]) byLevel[node.level].push(node); });
+  let lanes = '';
+  for (const [level, label] of CHART_LEVELS) {
+    const nodes = byLevel[level];
+    const shown = nodes.slice(0, 8);
+    const more = nodes.length > shown.length ? `<div class="flowchart-more">+${nodes.length - shown.length} more units</div>` : '';
+    lanes += `<section class="flowchart-lane" aria-label="${label} stage"><h3>${label} <span>(${nodes.length})</span></h3>${shown.map((node) => chartNodeCard(node)).join('')}${more}</section>`;
+  }
+  host.innerHTML = `<div class="flowchart-view" role="list" aria-label="Heat to dispatch flowchart">${lanes}</div>`;
+}
+
+function renderExpandableTreeChart(roots) {
+  const host = $('processFlow');
+  const renderNode = (node, depth = 0) => {
+    const children = node.children || [];
+    const classes = `${node.missing ? ' missing' : ''}${node.stockText ? ' has-stock' : ''}`;
+    const content = `<strong>${esc(node.title)} · ${esc(node.identity)}</strong><span class="tree-level">${esc(node.level)}</span><small>${esc(node.dateText)}</small>`;
+    if (!children.length) return `<article class="flowchart-node${classes}" data-flow-card="${esc(node.id)}" tabindex="0" role="treeitem">${content}</article>`;
+    return `<details${depth < 1 ? ' open' : ''}><summary class="${classes.trim()}" data-flow-card="${esc(node.id)}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}">${content}</summary><div>${children.map((child) => renderNode(child, depth + 1)).join('')}</div></details>`;
+  };
+  host.innerHTML = `<div class="expandable-tree" role="tree" aria-label="Expandable Heat to dispatch tree">${roots.map((root) => renderNode(root)).join('')}</div>`;
+}
+
+function renderSankeyChart(roots) {
+  const host = $('processFlow');
+  const all = flattenLineage(roots);
+  const displayed = Object.fromEntries(CHART_LEVELS.map(([level]) => [level, all.filter(({ node }) => node.level === level).slice(0, 8)]));
+  const visible = new Set(Object.values(displayed).flat().map(({ node }) => node.id));
+  const width = 900;
+  const columnX = [20, 240, 460, 680];
+  const nodeWidth = 180;
+  const nodeHeight = 42;
+  const yFor = new Map();
+  CHART_LEVELS.forEach(([level], column) => {
+    const rows = displayed[level];
+    const gap = Math.max(52, Math.min(72, 320 / Math.max(rows.length, 1)));
+    rows.forEach(({ node }, index) => yFor.set(node.id, 50 + index * gap));
+  });
+  const links = all.filter(({ node, parent }) => parent && visible.has(node.id) && visible.has(parent.id)).map(({ node, parent }) => {
+    const fromLevel = CHART_LEVELS.findIndex(([level]) => level === parent.level);
+    const toLevel = CHART_LEVELS.findIndex(([level]) => level === node.level);
+    if (fromLevel < 0 || toLevel < 0 || toLevel <= fromLevel) return '';
+    const x1 = columnX[fromLevel] + nodeWidth;
+    const x2 = columnX[toLevel];
+    const y1 = yFor.get(parent.id) + nodeHeight / 2;
+    const y2 = yFor.get(node.id) + nodeHeight / 2;
+    const weight = Math.max(2, Math.min(12, 2 + (node.records?.length || 0)));
+    return `<path class="sankey-link" stroke-width="${weight}" d="M${x1} ${y1} C${x1 + 60} ${y1},${x2 - 60} ${y2},${x2} ${y2}"/>`;
+  }).join('');
+  let nodes = '';
+  CHART_LEVELS.forEach(([level, label], column) => {
+    nodes += `<text class="sankey-label" x="${columnX[column]}" y="20">${label}</text>`;
+    displayed[level].forEach(({ node }) => {
+      const y = yFor.get(node.id);
+      nodes += `<g class="sankey-node${node.missing ? ' missing' : ''}${node.stockText ? ' has-stock' : ''}" data-flow-card="${esc(node.id)}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}"><rect x="${columnX[column]}" y="${y}" width="${nodeWidth}" height="${nodeHeight}" rx="10"/><text x="${columnX[column] + 10}" y="${y + 17}">${esc(truncate(node.identity, 24))}</text><text class="sankey-date" x="${columnX[column] + 10}" y="${y + 31}">${esc(node.dateText)}</text></g>`;
+    });
+  });
+  host.innerHTML = `<div class="sankey-wrap"><svg class="sankey-svg" viewBox="0 0 ${width} 390" role="tree" aria-label="Heat to dispatch Sankey chart">${links}${nodes}</svg></div>`;
+}
+
+function renderChartMode(plate) {
+  const roots = processLineageModel(plate);
+  prepareChartData(roots);
+  const host = $('processFlow');
+  $('treeSvg').hidden = true;
+  $('flowPill').hidden = true;
+  host.hidden = false;
+  const labels = {
+    lineage: ['Lineage', 'Expanded physical lineage. Dates are displayed on every node; hover or focus a card for the full trace detail.'],
+    flowchart: ['Flowchart', 'Stage lanes show the physical hand-off from Heat through Dispatch. Every unit carries its available date range.'],
+    tree: ['Expandable tree', 'Open a unit only when you need its children. Dates remain visible while the hierarchy stays compact.'],
+    sankey: ['Sankey', 'Connection width represents available production-record volume; dates remain attached to every displayed unit.'],
+  };
+  const [label, description] = labels[state.chartMode] || labels.lineage;
+  $('flowLabel').textContent = `${label} · Heat → Slab → Plate → Dispatch`;
+  $('chartDescription').textContent = description;
+  document.querySelectorAll('[data-chart-mode]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.chartMode === state.chartMode)));
+  if (state.chartMode === 'flowchart') renderFlowchartChart(roots);
+  else if (state.chartMode === 'tree') renderExpandableTreeChart(roots);
+  else if (state.chartMode === 'sankey') renderSankeyChart(roots);
+  else renderLineageChart(roots);
+}
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const svgEl = (name, attrs) => {
@@ -1544,10 +1660,10 @@ function wireProcessFlow() {
     if (!event.relatedTarget?.closest?.('[data-flow-card]')) hideTip();
   });
   host.addEventListener('keydown', (event) => {
-    const card = event.target.closest('.lineage-card');
+    const card = event.target.closest('[data-flow-card]');
     if (!card || !['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'].includes(event.key)) return;
     event.preventDefault();
-    const cards = [...host.querySelectorAll('.lineage-card')];
+    const cards = [...host.querySelectorAll('[data-flow-card]')];
     const at = cards.indexOf(card);
     const delta = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : -1;
     cards[Math.min(cards.length - 1, Math.max(0, at + delta))].focus();
@@ -1726,6 +1842,16 @@ function wireControls() {
       state.slicers = {};
       hideTip();
       refresh();
+    });
+  });
+
+  document.querySelectorAll('[data-chart-mode]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const mode = button.dataset.chartMode;
+      if (!['lineage', 'flowchart', 'tree', 'sankey'].includes(mode)) return;
+      state.chartMode = mode;
+      const plate = state.plates.find((entry) => entry.key === state.selectedKey);
+      if (plate) renderChartMode(plate);
     });
   });
 
