@@ -1803,6 +1803,11 @@ function updateFlowchartConnectors() {
   const width = Math.max(container.scrollWidth, container.clientWidth);
   const height = Math.max(container.scrollHeight, container.clientHeight);
 
+  const edgeStates = new Map([...linksGroup.querySelectorAll('path.fc-edge')].map((edge) => [
+    JSON.stringify([edge.dataset.from, edge.dataset.to]),
+    ['path-active', 'path-dimmed'].filter((className) => edge.classList.contains(className)).join(' '),
+  ]));
+
   svg.style.width = `${width}px`;
   svg.style.height = `${height}px`;
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
@@ -1836,8 +1841,9 @@ function updateFlowchartConnectors() {
     const childNode = flowCardData.get(childCard.dataset.nodeId);
     const weight = Math.max(2, Math.min(14, 2 + (childNode?.records?.length || 0)));
     const marker = isDirect ? ' marker-end="url(#fc-arrow-direct)"' : '';
+    const edgeState = edgeStates.get(JSON.stringify([parentId, childCard.dataset.nodeId]));
 
-    paths.push(`<path class="${cls}" data-from="${esc(parentId)}" data-to="${esc(childCard.dataset.nodeId)}" stroke-width="${weight}" d="${d}"${marker}/>`);
+    paths.push(`<path class="${cls}${edgeState ? ` ${edgeState}` : ''}" data-from="${esc(parentId)}" data-to="${esc(childCard.dataset.nodeId)}" stroke-width="${weight}" d="${d}"${marker}/>`);
   });
 
   linksGroup.innerHTML = paths.join('');
