@@ -45,6 +45,8 @@ const state = {
   // children and says so; the rest stay behind "show all".
   nodeLimit: 200,
   limitOverrides: new Map(),
+  flowchartLockedId: null,
+  sankeySelectedId: null,
 };
 
 const num = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v.toLocaleString(undefined, { maximumFractionDigits: d }) : '—');
@@ -1037,7 +1039,7 @@ function renderTimeline(plate) {
   }
   track.innerHTML = tl.segments.filter((s) => s.kind === 'stage').map((s) => {
     const title = `${s.label}: ${s.start} → ${s.end}${s.durationDays !== null ? ' (' + s.durationDays + 'd)' : ''}${s.status ? ' · ' + s.status : ''}`;
-    return `<div class="tl-seg ${s.stageId}" style="left:${s.offsetPct}%;width:${s.widthPct}%" title="${esc(title)}" data-tip="${esc(title)}">${s.widthPct > 9 ? esc(s.label) : ''}</div>`;
+    return `<div class="tl-seg ${s.stageId}" style="left:${s.offsetPct}%;width:${s.widthPct}%" title="${esc(title)}" data-tip="${esc(title)}">${s.widthPct > 9 ? `<span class="tl-seg-label">${esc(s.label)}</span>` : ''}</div>`;
   }).join('');
 
   $('tlAxis').innerHTML = `<span>${esc(tl.start)}</span><span>${tl.spanDays} day span</span><span>${esc(tl.end)}</span>`;
@@ -1045,7 +1047,7 @@ function renderTimeline(plate) {
   const gaps = tl.segments.filter((s) => s.kind === 'gap');
   $('tlGaps').innerHTML = gaps.length
     ? gaps.map((g) => `<div class="tl-gap"><span class="swatch"></span>${esc(g.label)}: no record in this extract</div>`).join('')
-    : '<div class="tl-gap">Every stage in the pipeline has a record.</div>';
+    : '<div class="tl-gap tl-gap-ok"><span class="swatch"></span>Every stage in the pipeline has a record.</div>';
 }
 
 /* Expanded physical lineage. The previous expandable SVG mixed pan, zoom,
@@ -1575,7 +1577,7 @@ function toggleLineageNode(nodeId) {
   const card = document.querySelector(`.lineage-node-card[data-flow-card="${CSS.escape(nodeId)}"]`);
   const btn = card?.querySelector('[data-toggle-node]');
 
-  if (sub) sub.hidden = !isCollapsed;
+  if (sub) sub.classList.toggle('collapsed', !isCollapsed);
   if (card) card.setAttribute('data-collapsed', String(!isCollapsed));
   if (btn) btn.setAttribute('aria-expanded', String(isCollapsed));
 }
@@ -1646,7 +1648,7 @@ function renderLineageChart(roots = state.lineageRoots) {
         </div>
       </article>
       ${hasChildren ? `
-        <div class="lineage-sub-branches" id="sub-${esc(node.id)}"${isCollapsed ? ' hidden' : ''}>
+        <div class="lineage-sub-branches${isCollapsed ? ' collapsed' : ''}" id="sub-${esc(node.id)}">
           ${children.map((child, idx) => renderDispatchCard(child, idx)).join('')}
         </div>
       ` : ''}
@@ -1678,7 +1680,7 @@ function renderLineageChart(roots = state.lineageRoots) {
         </div>
       </article>
       ${hasChildren ? `
-        <div class="lineage-sub-branches" id="sub-${esc(node.id)}"${isCollapsed ? ' hidden' : ''}>
+        <div class="lineage-sub-branches${isCollapsed ? ' collapsed' : ''}" id="sub-${esc(node.id)}">
           ${children.map((child, idx) => renderPlateCard(child, idx)).join('')}
         </div>
       ` : ''}
@@ -1709,7 +1711,7 @@ function renderLineageChart(roots = state.lineageRoots) {
         </div>
       </article>
       ${hasChildren ? `
-        <div class="lineage-sub-branches" id="sub-${esc(node.id)}"${isCollapsed ? ' hidden' : ''}>
+        <div class="lineage-sub-branches${isCollapsed ? ' collapsed' : ''}" id="sub-${esc(node.id)}">
           ${children.map((child, idx) => renderSlabCard(child, idx)).join('')}
         </div>
       ` : ''}
@@ -1860,38 +1862,77 @@ function wireFlowchartInteraction() {
     return ids;
   };
 
+  const applyPathClasses = (pathIds) => {
+    cards.forEach((c) => {
+      if (pathIds.has(c.dataset.nodeId)) {
+        c.classList.add('path-active');
+        c.classList.remove('path-dimmed');
+      } else {
+        c.classList.remove('path-active');
+        c.classList.add('path-dimmed');
+      }
+    });
+    const links = container.querySelectorAll('.fc-edge, .fc-edge-bg');
+    links.forEach((l) => {
+      const from = l.dataset.from;
+      const to = l.dataset.to;
+      if (from && to && pathIds.has(from) && pathIds.has(to)) {
+        l.classList.add('path-active');
+        l.classList.remove('path-dimmed');
+      } else {
+        l.classList.remove('path-active');
+        l.classList.add('path-dimmed');
+      }
+    });
+  };
+
+  const clearPathClasses = () => {
+    cards.forEach((c) => c.classList.remove('path-active', 'path-dimmed', 'path-locked-dim'));
+    const links = container.querySelectorAll('.fc-edge, .fc-edge-bg');
+    links.forEach((l) => l.classList.remove('path-active', 'path-dimmed'));
+  };
+
+  const banner = $('fcLockedBanner');
+
+  const lockOn = (nodeId) => {
+    state.flowchartLockedId = nodeId;
+    const pathIds = getConnectedPathIds(nodeId);
+    applyPathClasses(pathIds);
+    cards.forEach((c) => {
+      if (!pathIds.has(c.dataset.nodeId)) c.classList.add('path-locked-dim');
+    });
+    if (banner) {
+      banner.hidden = false;
+      banner.textContent = `Showing path for ${flowCardData.get(nodeId)?.identity || nodeId} · click to clear`;
+    }
+  };
+
+  const lockOff = () => {
+    state.flowchartLockedId = null;
+    clearPathClasses();
+    if (banner) banner.hidden = true;
+  };
+
+  if (banner) banner.addEventListener('click', lockOff);
+
   cards.forEach((card) => {
+    card.addEventListener('click', () => {
+      if (state.flowchartLockedId === card.dataset.nodeId) lockOff();
+      else lockOn(card.dataset.nodeId);
+    });
+
     card.addEventListener('mouseenter', () => {
-      const pathIds = getConnectedPathIds(card.dataset.nodeId);
-      cards.forEach((c) => {
-        if (pathIds.has(c.dataset.nodeId)) {
-          c.classList.add('path-active');
-          c.classList.remove('path-dimmed');
-        } else {
-          c.classList.remove('path-active');
-          c.classList.add('path-dimmed');
-        }
-      });
-      const links = container.querySelectorAll('.fc-edge, .fc-edge-bg');
-      links.forEach((l) => {
-        const from = l.dataset.from;
-        const to = l.dataset.to;
-        if (from && to && pathIds.has(from) && pathIds.has(to)) {
-          l.classList.add('path-active');
-          l.classList.remove('path-dimmed');
-        } else {
-          l.classList.remove('path-active');
-          l.classList.add('path-dimmed');
-        }
-      });
+      if (state.flowchartLockedId) return;
+      applyPathClasses(getConnectedPathIds(card.dataset.nodeId));
     });
 
     card.addEventListener('mouseleave', () => {
-      cards.forEach((c) => c.classList.remove('path-active', 'path-dimmed'));
-      const links = container.querySelectorAll('.fc-edge, .fc-edge-bg');
-      links.forEach((l) => l.classList.remove('path-active', 'path-dimmed'));
+      if (state.flowchartLockedId) return;
+      clearPathClasses();
     });
   });
+
+  if (state.flowchartLockedId) lockOn(state.flowchartLockedId);
 }
 
 function renderFlowchartChart(roots) {
@@ -1940,6 +1981,7 @@ function renderFlowchartChart(roots) {
   }).join('');
 
   host.innerHTML = `<div class="flowchart-container" id="flowchartContainer">
+    <button type="button" class="fc-locked-banner" id="fcLockedBanner" hidden></button>
     <svg class="flowchart-svg-overlay" id="flowchartSvgOverlay">
       <defs>
         <marker id="fc-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -1963,9 +2005,20 @@ function renderFlowchartChart(roots) {
 
   const container = $('flowchartContainer');
   if (container) {
-    container.addEventListener('scroll', () => {
-      requestAnimationFrame(updateFlowchartConnectors);
-    }, { passive: true });
+    let scheduled = false;
+    const scheduleUpdate = () => {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(() => {
+        scheduled = false;
+        updateFlowchartConnectors();
+      });
+    };
+    container.addEventListener('scroll', scheduleUpdate, { passive: true });
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(scheduleUpdate);
+      ro.observe(container);
+    }
   }
 }
 
@@ -1986,18 +2039,45 @@ function renderExpandableTreeChart(roots) {
 function renderSankeyChart(roots) {
   const host = $('processFlow');
   const all = flattenLineage(roots);
-  const displayed = Object.fromEntries(CHART_LEVELS.map(([level]) => [level, all.filter(({ node }) => node.level === level).slice(0, 8)]));
+  const displayed = Object.fromEntries(CHART_LEVELS.map(([level]) => [level, all.filter(({ node }) => node.level === level)]));
   const visible = new Set(Object.values(displayed).flat().map(({ node }) => node.id));
   const width = 900;
   const columnX = [20, 240, 460, 680];
   const nodeWidth = 180;
   const nodeHeight = 42;
   const yFor = new Map();
+  let maxRows = 1;
   CHART_LEVELS.forEach(([level], column) => {
     const rows = displayed[level];
+    maxRows = Math.max(maxRows, rows.length);
     const gap = Math.max(52, Math.min(72, 320 / Math.max(rows.length, 1)));
     rows.forEach(({ node }, index) => yFor.set(node.id, 50 + index * gap));
   });
+  const height = Math.max(390, 50 + maxRows * 72 + 40);
+
+  const parentOf = new Map();
+  const childrenOf = new Map();
+  all.forEach(({ node, parent }) => {
+    if (parent) {
+      parentOf.set(node.id, parent.id);
+      if (!childrenOf.has(parent.id)) childrenOf.set(parent.id, new Set());
+      childrenOf.get(parent.id).add(node.id);
+    }
+  });
+  const getConnectedIds = (startId) => {
+    const ids = new Set([startId]);
+    let cur = startId;
+    while (cur && parentOf.has(cur)) { const p = parentOf.get(cur); ids.add(p); cur = p; }
+    const queue = [startId];
+    while (queue.length) {
+      const cur2 = queue.shift();
+      for (const ch of (childrenOf.get(cur2) || [])) {
+        if (!ids.has(ch)) { ids.add(ch); queue.push(ch); }
+      }
+    }
+    return ids;
+  };
+
   const links = all.filter(({ node, parent }) => parent && visible.has(node.id) && visible.has(parent.id)).map(({ node, parent }) => {
     const fromLevel = CHART_LEVELS.findIndex(([level]) => level === parent.level);
     const toLevel = CHART_LEVELS.findIndex(([level]) => level === node.level);
@@ -2007,17 +2087,62 @@ function renderSankeyChart(roots) {
     const y1 = yFor.get(parent.id) + nodeHeight / 2;
     const y2 = yFor.get(node.id) + nodeHeight / 2;
     const weight = Math.max(2, Math.min(12, 2 + (node.records?.length || 0)));
-    return `<path class="sankey-link" stroke-width="${weight}" d="M${x1} ${y1} C${x1 + 60} ${y1},${x2 - 60} ${y2},${x2} ${y2}"/>`;
+    return `<path class="sankey-link" data-from="${esc(parent.id)}" data-to="${esc(node.id)}" stroke-width="${weight}" d="M${x1} ${y1} C${x1 + 60} ${y1},${x2 - 60} ${y2},${x2} ${y2}"/>`;
   }).join('');
   let nodes = '';
   CHART_LEVELS.forEach(([level, label], column) => {
     nodes += `<text class="sankey-label" x="${columnX[column]}" y="20">${label}</text>`;
     displayed[level].forEach(({ node }) => {
       const y = yFor.get(node.id);
-      nodes += `<g class="sankey-node${node.missing ? ' missing' : ''}${node.stockText ? ' has-stock' : ''}" data-flow-card="${esc(node.id)}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}"><rect x="${columnX[column]}" y="${y}" width="${nodeWidth}" height="${nodeHeight}" rx="10"/><text x="${columnX[column] + 10}" y="${y + 17}">${esc(truncate(node.identity, 24))}</text><text class="sankey-date" x="${columnX[column] + 10}" y="${y + 31}">${esc(node.dateText)}</text></g>`;
+      nodes += `<g class="sankey-node${node.missing ? ' missing' : ''}${node.stockText ? ' has-stock' : ''}" data-flow-card="${esc(node.id)}" data-node-id="${esc(node.id)}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}"><rect x="${columnX[column]}" y="${y}" width="${nodeWidth}" height="${nodeHeight}" rx="10"/><text x="${columnX[column] + 10}" y="${y + 17}">${esc(truncate(node.identity, 24))}</text><text class="sankey-date" x="${columnX[column] + 10}" y="${y + 31}">${esc(node.dateText)}</text></g>`;
     });
   });
-  host.innerHTML = `<div class="sankey-wrap"><svg class="sankey-svg" viewBox="0 0 ${width} 390" role="tree" aria-label="Heat to dispatch Sankey chart">${links}${nodes}</svg></div>`;
+  host.innerHTML = `<div class="sankey-wrap"><svg class="sankey-svg" id="sankeySvg" viewBox="0 0 ${width} ${height}" role="tree" aria-label="Heat to dispatch Sankey chart">${links}${nodes}</svg></div>`;
+
+  const svg = $('sankeySvg');
+  if (!svg) return;
+  const nodeEls = svg.querySelectorAll('.sankey-node');
+  const linkEls = svg.querySelectorAll('.sankey-link');
+
+  const applySelection = (selectedId) => {
+    if (!selectedId) {
+      nodeEls.forEach((n) => n.classList.remove('sankey-active', 'sankey-dimmed'));
+      linkEls.forEach((l) => l.classList.remove('sankey-active', 'sankey-dimmed'));
+      return;
+    }
+    const connected = getConnectedIds(selectedId);
+    nodeEls.forEach((n) => {
+      if (connected.has(n.dataset.nodeId)) {
+        n.classList.add('sankey-active');
+        n.classList.remove('sankey-dimmed');
+      } else {
+        n.classList.remove('sankey-active');
+        n.classList.add('sankey-dimmed');
+      }
+    });
+    linkEls.forEach((l) => {
+      if (connected.has(l.dataset.from) && connected.has(l.dataset.to)) {
+        l.classList.add('sankey-active');
+        l.classList.remove('sankey-dimmed');
+      } else {
+        l.classList.remove('sankey-active');
+        l.classList.add('sankey-dimmed');
+      }
+    });
+  };
+
+  nodeEls.forEach((n) => {
+    n.addEventListener('click', () => {
+      const id = n.dataset.nodeId;
+      state.sankeySelectedId = state.sankeySelectedId === id ? null : id;
+      applySelection(state.sankeySelectedId);
+    });
+    n.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); n.dispatchEvent(new Event('click')); }
+    });
+  });
+
+  if (state.sankeySelectedId) applySelection(state.sankeySelectedId);
 }
 
 function renderChartMode(plate) {
@@ -2554,6 +2679,8 @@ function wireControls() {
       const mode = button.dataset.chartMode;
       if (!['lineage', 'flowchart', 'tree', 'sankey'].includes(mode)) return;
       state.chartMode = mode;
+      state.flowchartLockedId = null;
+      state.sankeySelectedId = null;
       const plate = state.plates.find((entry) => entry.key === state.selectedKey);
       if (plate) renderChartMode(plate);
     });
