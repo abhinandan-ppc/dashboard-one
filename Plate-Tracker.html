@@ -414,16 +414,20 @@ button.stage-marker{cursor:pointer}button.stage-marker:hover{border-color:curren
    chevron glyph set directly rather than rotated into place. */
 @media (max-width:860px){
   .schema-rail{grid-template-columns:1fr!important;gap:7px!important}
-  .schema-arrow{height:24px!important;width:24px!important;margin:0 auto!important;transform:none!important}
-  /* The desktop connector is a span drawn as a horizontal line with the ›
-     glyph on its end. Overriding its width/height to re-draw it as a short
-     vertical line duplicated that whole construction and a stale/cached copy
-     of just that override was exactly what kept reappearing as a line
-     spanning the full old row width. Removing the span outright on mobile and
-     drawing the chevron directly on .schema-arrow itself needs nothing from
-     the desktop version to be undone — there is no line left to mis-size. */
-  .schema-arrow span{display:none!important}
-  .schema-arrow::before{content:'⌄'!important;display:block!important;color:var(--primary)!important;font-size:20px!important;line-height:24px!important;font-weight:800!important}
+  /* A proper short connector: a fixed-height line (never a percentage of
+     anything, so it can never stretch to fill unrelated space) with its own
+     arrowhead immediately under it, the two stacked in a small flex column
+     that is itself capped at 30px tall. Earlier attempts kept the desktop
+     line's sizing model (a percentage-based span) and only changed what it
+     was a percentage OF, which is exactly the kind of rule that silently
+     stops applying if anything upstream changes — this one has no
+     percentage, no rotation, and no dependency on the desktop rule at all. */
+  .schema-arrow{height:30px!important;width:24px!important;margin:0 auto!important;transform:none!important;
+    display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:flex-start!important;gap:0!important}
+  .schema-arrow span{display:block!important;width:2px!important;height:14px!important;max-height:14px!important;
+    background:var(--primary)!important;border-radius:1px!important;position:static!important}
+  .schema-arrow span::after{content:'⌄'!important;position:static!important;display:block!important;
+    margin-top:-2px!important;color:var(--primary)!important;font-size:16px!important;line-height:1!important;font-weight:900!important}
   .table-intro{align-items:start;flex-direction:column}
   .table-intro span{text-align:left}
 }
