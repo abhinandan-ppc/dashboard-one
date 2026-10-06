@@ -1315,6 +1315,21 @@ function processLineageModel(plate) {
     if (s.heatId) heatIds.add(s.heatId);
   }
 
+  const slabsByHeat = new Map();
+  for (const slab of slabMap.values()) {
+    if (!slab.heatId) continue;
+    if (!slabsByHeat.has(slab.heatId)) slabsByHeat.set(slab.heatId, []);
+    slabsByHeat.get(slab.heatId).push(slab);
+  }
+
+  const castingByHeat = new Map();
+  for (const record of casting) {
+    const heatId = String(record.heatId || '').trim();
+    if (!heatId) continue;
+    if (!castingByHeat.has(heatId)) castingByHeat.set(heatId, []);
+    castingByHeat.get(heatId).push(record);
+  }
+
   const knownSlabIds = new Set([...slabMap.keys()]);
 
   // Group Plates by batch
@@ -1358,6 +1373,13 @@ function processLineageModel(plate) {
     }
   }
 
+  const platesBySlab = new Map();
+  for (const plate of plateMap.values()) {
+    if (!plate.slabId) continue;
+    if (!platesBySlab.has(plate.slabId)) platesBySlab.set(plate.slabId, []);
+    platesBySlab.get(plate.slabId).push(plate);
+  }
+
   // Node builders
   const makeDispatchNode = (record, index, parentId, slabId, plateId) => {
     const id = `${parentId}:dispatch:${index}`;
@@ -1366,7 +1388,8 @@ function processLineageModel(plate) {
     const weight = typeof record.weight === 'number' ? `${num(record.weight, 3)} t` : '';
     const customer = record.customer || record.soldToParty || '';
     const destination = record.shipToCity || record.shipTo || '';
-    const metaParts = [date, weight, customer, destination].filter(Boolean);
+    const batch = record.batch || plateId || '';
+    const metaParts = [batch && `Batch ${batch}`, date, weight, customer, destination].filter(Boolean);
     return makeLineageNode({
       id,
       title: 'Dispatch',
@@ -1463,7 +1486,7 @@ function processLineageModel(plate) {
       ],
     });
 
-    const platesForThisSlab = [...plateMap.values()].filter((p) => p.slabId === s.slabId);
+    const platesForThisSlab = platesBySlab.get(s.slabId) || [];
     node.children = platesForThisSlab.map((p) => makePlateNode(p, node.id));
     return node;
   };
@@ -1474,8 +1497,8 @@ function processLineageModel(plate) {
   const assignedPlates = new Set();
 
   for (const heatId of heatIds) {
-    const slabsForHeat = [...slabMap.values()].filter((s) => s.heatId === heatId);
-    const castingForHeat = casting.filter((r) => String(r.heatId).trim() === heatId);
+    const slabsForHeat = slabsByHeat.get(heatId) || [];
+    const castingForHeat = castingByHeat.get(heatId) || [];
     const dates = stageDates(castingForHeat);
     const heatNode = makeLineageNode({
       id: `heat:${heatId}`,
@@ -1826,16 +1849,11 @@ function wireFlowchartInteraction() {
 
   const cards = container.querySelectorAll('.flowchart-node-card');
   const parentMap = new Map();
-  const childrenMap = new Map();
 
   cards.forEach((card) => {
     const id = card.dataset.nodeId;
     const parentId = card.dataset.parentId;
-    if (parentId) {
-      parentMap.set(id, parentId);
-      if (!childrenMap.has(parentId)) childrenMap.set(parentId, new Set());
-      childrenMap.get(parentId).add(id);
-    }
+    if (parentId) parentMap.set(id, parentId);
   });
 
   const getConnectedPathIds = (startId) => {
@@ -1845,17 +1863,6 @@ function wireFlowchartInteraction() {
       const p = parentMap.get(cur);
       ids.add(p);
       cur = p;
-    }
-    const queue = [startId];
-    while (queue.length) {
-      const parent = queue.shift();
-      const children = childrenMap.get(parent) || [];
-      for (const ch of children) {
-        if (!ids.has(ch)) {
-          ids.add(ch);
-          queue.push(ch);
-        }
-      }
     }
     return ids;
   };
@@ -2014,7 +2021,6 @@ function renderFlowchartChart(roots) {
         updateFlowchartConnectors();
       });
     };
-    container.addEventListener('scroll', scheduleUpdate, { passive: true });
     if (typeof ResizeObserver !== 'undefined') {
       const ro = new ResizeObserver(scheduleUpdate);
       ro.observe(container);
