@@ -4025,7 +4025,6 @@ function RakePredictor({rows}){
     });
   };
   const sids=useMemo(()=>Object.values(data).sort((a,b)=>RO.indexOf(a.region)-RO.indexOf(b.region)),[data]);
-  if(!sids.length)return null;
   const regions=useMemo(()=>{
     const seen=new Set(sids.map(s=>s.region));
     return RO.filter(r=>seen.has(r)).concat([...seen].filter(r=>!RO.includes(r)));
@@ -4035,6 +4034,7 @@ function RakePredictor({rows}){
     sids.forEach(s=>{(g[s.region]=g[s.region]||[]).push(s);});
     return g;
   },[sids]);
+  if(!sids.length)return null;
   const totRakes=sids.reduce((s,d)=>s+d.rakes.length,0);
   const fullRakes=sids.reduce((s,d)=>s+d.rakes.filter(r=>r.totalBal>=RAKE_CAP*.9).length,0);
   const totalMT=sids.reduce((s,d)=>s+d.totalBal,0);
@@ -5337,7 +5337,7 @@ function App(){
       if(excDummy&&isDummy(r['Sold To Party Name']))return false;
       if(selCust.size>0&&!selCust.has(r['Sold To Party Name']))return false;
       if(s){
-        const h=[r['SO No.'],r['Sold To Party Name'],r['Ship To Party City'],r['Ext Grade']].join(' ').toLowerCase();
+        const h=[r['SO No.'],r['Sold To Party Name'],r._Siding,r['Ship To Party City'],r['Ext Grade']].join(' ').toLowerCase();
         if(!h.includes(s))return false;
       }
       return true;
@@ -5746,7 +5746,7 @@ function App(){
           color:'var(--mute)',fontSize:16,pointerEvents:'none'}}>⌕</span>
         <input style={{...inp,paddingLeft:34,paddingRight:srch?34:12,fontSize:13,
           background:'var(--s2)',borderRadius:'var(--radius-sm)'}}
-          placeholder="Search SO, customer, city, grade…"
+          placeholder="Search SO, customer, siding, city, grade…"
           value={srch} onChange={e=>setSrch(e.target.value)}/>
         {srch&&<button onClick={()=>setSrch('')} style={{
           position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',
@@ -5799,7 +5799,7 @@ function App(){
         <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',
           color:'var(--mute)',fontSize:15,pointerEvents:'none'}}>⌕</span>
         <input style={{...inp,paddingLeft:30,paddingRight:srch?28:12,fontSize:13}}
-          placeholder="Search SO, customer, city, grade…"
+          placeholder="Search SO, customer, siding, city, grade…"
           value={srch} onChange={e=>setSrch(e.target.value)}/>
         {srch&&<button onClick={()=>setSrch('')} style={{
           position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',
