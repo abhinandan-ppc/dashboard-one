@@ -33,3 +33,8 @@ d.txt
 sm.txt
 header-width.png
 plate-tracker-*.png
+
+# Local agent/tool state and one-off browser diagnostics.
+.brud/
+.impeccable/
+scripts/diag-plate-charts.mjs
