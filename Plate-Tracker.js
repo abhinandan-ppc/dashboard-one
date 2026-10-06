@@ -46,7 +46,6 @@ const state = {
   nodeLimit: 200,
   limitOverrides: new Map(),
   flowchartLockedId: null,
-  sankeySelectedId: null,
 };
 
 const num = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v.toLocaleString(undefined, { maximumFractionDigits: d }) : '—');
@@ -130,7 +129,7 @@ function renderSlots() {
     return `<div class="slot ${cls}" id="slot-${id}">
       <label class="slotTrigger" for="file-${id}">
         <h3><span class="dot"></span>${esc(src.label)}</h3>
-        <div class="code">${esc(src.hint)}</div>
+        ${info ? '' : `<div class="code">${esc(src.hint)}</div>`}
         <div class="fname">${info ? esc(info.name) : 'Drop or click to choose .xlsx'}</div>
         <div class="status">${info ? esc(slotStatus(info, id)) : 'Not loaded'}</div>
       </label>
@@ -1753,10 +1752,6 @@ function renderLineageChart(roots = state.lineageRoots) {
 
 /* ═══════════════════ Flow chart (SVG) ═══════════════════ */
 
-const CHART_LEVELS = [
-  ['heat', 'Heat'], ['slab', 'Slab'], ['plate', 'Plate'], ['dispatch', 'Dispatch'],
-];
-
 function flattenLineage(roots) {
   const nodes = [];
   const walk = (node, parent = null) => {
@@ -1812,11 +1807,14 @@ function updateFlowchartConnectors() {
     const d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
 
     const isDirect = childCard.classList.contains('bypassed-fg') || parentCard.classList.contains('bypassed-fg');
-    const marker = isDirect ? 'url(#fc-arrow-direct)' : 'url(#fc-arrow)';
     const cls = `fc-edge${isDirect ? ' direct-dispatch' : ''}`;
+    // Sankey-style ribbon: width communicates the child unit's own record
+    // volume, in place of the separate Sankey chart this view absorbed.
+    const childNode = flowCardData.get(childCard.dataset.nodeId);
+    const weight = Math.max(2, Math.min(14, 2 + (childNode?.records?.length || 0)));
+    const marker = isDirect ? ' marker-end="url(#fc-arrow-direct)"' : '';
 
-    paths.push(`<path class="fc-edge-bg" d="${d}"/>`);
-    paths.push(`<path class="${cls}" data-from="${esc(parentId)}" data-to="${esc(childCard.dataset.nodeId)}" d="${d}" marker-end="${marker}"/>`);
+    paths.push(`<path class="${cls}" data-from="${esc(parentId)}" data-to="${esc(childCard.dataset.nodeId)}" stroke-width="${weight}" d="${d}"${marker}/>`);
   });
 
   linksGroup.innerHTML = paths.join('');
@@ -1872,7 +1870,7 @@ function wireFlowchartInteraction() {
         c.classList.add('path-dimmed');
       }
     });
-    const links = container.querySelectorAll('.fc-edge, .fc-edge-bg');
+    const links = container.querySelectorAll(".fc-edge");
     links.forEach((l) => {
       const from = l.dataset.from;
       const to = l.dataset.to;
@@ -1888,7 +1886,7 @@ function wireFlowchartInteraction() {
 
   const clearPathClasses = () => {
     cards.forEach((c) => c.classList.remove('path-active', 'path-dimmed', 'path-locked-dim'));
-    const links = container.querySelectorAll('.fc-edge, .fc-edge-bg');
+    const links = container.querySelectorAll(".fc-edge");
     links.forEach((l) => l.classList.remove('path-active', 'path-dimmed'));
   };
 
@@ -1948,15 +1946,20 @@ function renderFlowchartChart(roots) {
     if (byLevel[node.level]) byLevel[node.level].push(node);
   });
 
+  const CAL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
   const renderFlowchartLaneCard = (node) => {
     const isBypassed = !!node.bypassedFG;
+    const isDispatched = node.level === 'dispatch' && !node.missing;
     const cardCls = `flowchart-node-card${isBypassed ? ' bypassed-fg' : ''}${node.stockText ? ' has-stock' : ''}${node.missing ? ' missing' : ''}`;
     return `<article class="${cardCls}" id="fc-node-${esc(node.id)}" data-node-id="${esc(node.id)}" data-parent-id="${esc(node.parentId || '')}" data-level="${node.level}" data-flow-card="${esc(node.id)}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}">
       <strong class="flowchart-node-id">${esc(node.identity)}</strong>
-      <span class="flowchart-node-meta">${esc(node.dateText)}</span>
+      <span class="flowchart-node-date">${CAL_ICON}${esc(node.dateText)}</span>
       ${node.meta ? `<span class="flowchart-node-meta">${esc(node.meta)}</span>` : ''}
-      ${isBypassed ? `<span class="flowchart-node-badge bypassed">⚡ Direct to Dispatch (No FG)</span>` : ''}
-      ${node.stockText ? `<span class="flowchart-node-badge stock">${esc(node.stockText)}</span>` : ''}
+      <div class="flowchart-node-status-row">
+        ${isBypassed ? `<span class="flowchart-node-badge bypassed">⚡ Direct dispatch</span>` : ''}
+        ${node.stockText ? `<span class="flowchart-node-badge stock">● ${esc(node.stockText)}</span>` : ''}
+        ${isDispatched ? `<span class="flowchart-node-badge dispatched">▲ Dispatched</span>` : ''}
+      </div>
     </article>`;
   };
 
@@ -1984,9 +1987,6 @@ function renderFlowchartChart(roots) {
     <button type="button" class="fc-locked-banner" id="fcLockedBanner" hidden></button>
     <svg class="flowchart-svg-overlay" id="flowchartSvgOverlay">
       <defs>
-        <marker id="fc-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M 0 1 L 8 5 L 0 9 z" fill="var(--md-sys-color-primary)"></path>
-        </marker>
         <marker id="fc-arrow-direct" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M 0 1 L 8 5 L 0 9 z" fill="#f59e0b"></path>
         </marker>
@@ -2027,122 +2027,19 @@ function renderExpandableTreeChart(roots) {
   const renderNode = (node, depth = 0) => {
     const children = node.children || [];
     const isBypassed = !!node.bypassedFG;
+    const isDispatched = node.level === 'dispatch' && !node.missing;
     const classes = `${node.missing ? ' missing' : ''}${isBypassed ? ' bypassed-fg' : ''}${node.stockText ? ' has-stock' : ''}`;
-    const badge = isBypassed ? '<span class="lineage-tag bypassed" style="margin-left:6px">⚡ Direct Dispatch</span>' : '';
-    const content = `<strong>${esc(node.title)} · ${esc(node.identity)}${badge}</strong><span class="tree-level">${esc(node.level)}</span><small>${esc(node.dateText)}</small>`;
+    const statusBits = [
+      isBypassed ? '<span class="lineage-tag bypassed">⚡ Direct dispatch</span>' : '',
+      node.stockText ? `<span class="lineage-tag stock">● ${esc(node.stockText)}</span>` : '',
+      isDispatched ? '<span class="lineage-tag">▲ Dispatched</span>' : '',
+    ].filter(Boolean).join('');
+    const statusRow = statusBits ? `<div class="tree-status-row">${statusBits}</div>` : '';
+    const content = `<strong>${esc(node.title)} · ${esc(node.identity)}</strong><span class="tree-level">${esc(node.level)}</span><small>${esc(node.dateText)}</small>${statusRow}`;
     if (!children.length) return `<article class="flowchart-node${classes}" data-flow-card="${esc(node.id)}" tabindex="0" role="treeitem">${content}</article>`;
     return `<details${depth < 1 ? ' open' : ''}><summary class="${classes.trim()}" data-flow-card="${esc(node.id)}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}">${content}</summary><div>${children.map((child) => renderNode(child, depth + 1)).join('')}</div></details>`;
   };
   host.innerHTML = `<div class="expandable-tree" role="tree" aria-label="Expandable Heat to dispatch tree">${roots.map((root) => renderNode(root)).join('')}</div>`;
-}
-
-function renderSankeyChart(roots) {
-  const host = $('processFlow');
-  const all = flattenLineage(roots);
-  const displayed = Object.fromEntries(CHART_LEVELS.map(([level]) => [level, all.filter(({ node }) => node.level === level)]));
-  const visible = new Set(Object.values(displayed).flat().map(({ node }) => node.id));
-  const width = 900;
-  const columnX = [20, 240, 460, 680];
-  const nodeWidth = 180;
-  const nodeHeight = 42;
-  const yFor = new Map();
-  let maxRows = 1;
-  CHART_LEVELS.forEach(([level], column) => {
-    const rows = displayed[level];
-    maxRows = Math.max(maxRows, rows.length);
-    const gap = Math.max(52, Math.min(72, 320 / Math.max(rows.length, 1)));
-    rows.forEach(({ node }, index) => yFor.set(node.id, 50 + index * gap));
-  });
-  const height = Math.max(390, 50 + maxRows * 72 + 40);
-
-  const parentOf = new Map();
-  const childrenOf = new Map();
-  all.forEach(({ node, parent }) => {
-    if (parent) {
-      parentOf.set(node.id, parent.id);
-      if (!childrenOf.has(parent.id)) childrenOf.set(parent.id, new Set());
-      childrenOf.get(parent.id).add(node.id);
-    }
-  });
-  const getConnectedIds = (startId) => {
-    const ids = new Set([startId]);
-    let cur = startId;
-    while (cur && parentOf.has(cur)) { const p = parentOf.get(cur); ids.add(p); cur = p; }
-    const queue = [startId];
-    while (queue.length) {
-      const cur2 = queue.shift();
-      for (const ch of (childrenOf.get(cur2) || [])) {
-        if (!ids.has(ch)) { ids.add(ch); queue.push(ch); }
-      }
-    }
-    return ids;
-  };
-
-  const links = all.filter(({ node, parent }) => parent && visible.has(node.id) && visible.has(parent.id)).map(({ node, parent }) => {
-    const fromLevel = CHART_LEVELS.findIndex(([level]) => level === parent.level);
-    const toLevel = CHART_LEVELS.findIndex(([level]) => level === node.level);
-    if (fromLevel < 0 || toLevel < 0 || toLevel <= fromLevel) return '';
-    const x1 = columnX[fromLevel] + nodeWidth;
-    const x2 = columnX[toLevel];
-    const y1 = yFor.get(parent.id) + nodeHeight / 2;
-    const y2 = yFor.get(node.id) + nodeHeight / 2;
-    const weight = Math.max(2, Math.min(12, 2 + (node.records?.length || 0)));
-    return `<path class="sankey-link" data-from="${esc(parent.id)}" data-to="${esc(node.id)}" stroke-width="${weight}" d="M${x1} ${y1} C${x1 + 60} ${y1},${x2 - 60} ${y2},${x2} ${y2}"/>`;
-  }).join('');
-  let nodes = '';
-  CHART_LEVELS.forEach(([level, label], column) => {
-    nodes += `<text class="sankey-label" x="${columnX[column]}" y="20">${label}</text>`;
-    displayed[level].forEach(({ node }) => {
-      const y = yFor.get(node.id);
-      nodes += `<g class="sankey-node${node.missing ? ' missing' : ''}${node.stockText ? ' has-stock' : ''}" data-flow-card="${esc(node.id)}" data-node-id="${esc(node.id)}" tabindex="0" role="treeitem" aria-label="${esc(node.title)}: ${esc(node.identity)}"><rect x="${columnX[column]}" y="${y}" width="${nodeWidth}" height="${nodeHeight}" rx="10"/><text x="${columnX[column] + 10}" y="${y + 17}">${esc(truncate(node.identity, 24))}</text><text class="sankey-date" x="${columnX[column] + 10}" y="${y + 31}">${esc(node.dateText)}</text></g>`;
-    });
-  });
-  host.innerHTML = `<div class="sankey-wrap"><svg class="sankey-svg" id="sankeySvg" viewBox="0 0 ${width} ${height}" role="tree" aria-label="Heat to dispatch Sankey chart">${links}${nodes}</svg></div>`;
-
-  const svg = $('sankeySvg');
-  if (!svg) return;
-  const nodeEls = svg.querySelectorAll('.sankey-node');
-  const linkEls = svg.querySelectorAll('.sankey-link');
-
-  const applySelection = (selectedId) => {
-    if (!selectedId) {
-      nodeEls.forEach((n) => n.classList.remove('sankey-active', 'sankey-dimmed'));
-      linkEls.forEach((l) => l.classList.remove('sankey-active', 'sankey-dimmed'));
-      return;
-    }
-    const connected = getConnectedIds(selectedId);
-    nodeEls.forEach((n) => {
-      if (connected.has(n.dataset.nodeId)) {
-        n.classList.add('sankey-active');
-        n.classList.remove('sankey-dimmed');
-      } else {
-        n.classList.remove('sankey-active');
-        n.classList.add('sankey-dimmed');
-      }
-    });
-    linkEls.forEach((l) => {
-      if (connected.has(l.dataset.from) && connected.has(l.dataset.to)) {
-        l.classList.add('sankey-active');
-        l.classList.remove('sankey-dimmed');
-      } else {
-        l.classList.remove('sankey-active');
-        l.classList.add('sankey-dimmed');
-      }
-    });
-  };
-
-  nodeEls.forEach((n) => {
-    n.addEventListener('click', () => {
-      const id = n.dataset.nodeId;
-      state.sankeySelectedId = state.sankeySelectedId === id ? null : id;
-      applySelection(state.sankeySelectedId);
-    });
-    n.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); n.dispatchEvent(new Event('click')); }
-    });
-  });
-
-  if (state.sankeySelectedId) applySelection(state.sankeySelectedId);
 }
 
 function renderChartMode(plate) {
@@ -2154,9 +2051,8 @@ function renderChartMode(plate) {
   host.hidden = false;
   const labels = {
     lineage: ['Lineage', 'Expanded physical lineage. Dates are displayed on every node; click any card or chevron to collapse/expand.'],
-    flowchart: ['Flowchart', 'Node-to-node process flow: mother units connect to child units. Hover any card to illuminate its full lineage route.'],
+    flowchart: ['Flow', 'Node-to-node process flow: ribbon width shows record volume, dates and stock/dispatch status sit on every card. Click a card to lock its route; click again to clear.'],
     tree: ['Expandable tree', 'Open a unit only when you need its children. Dates remain visible while the hierarchy stays compact.'],
-    sankey: ['Sankey', 'Connection width represents available production-record volume; dates remain attached to every displayed unit.'],
   };
   const [label, description] = labels[state.chartMode] || labels.lineage;
   $('flowLabel').textContent = `${label} · Heat → Slab → Plate → Dispatch`;
@@ -2164,7 +2060,6 @@ function renderChartMode(plate) {
   document.querySelectorAll('[data-chart-mode]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.chartMode === state.chartMode)));
   if (state.chartMode === 'flowchart') renderFlowchartChart(roots);
   else if (state.chartMode === 'tree') renderExpandableTreeChart(roots);
-  else if (state.chartMode === 'sankey') renderSankeyChart(roots);
   else renderLineageChart(roots);
 }
 
@@ -2677,10 +2572,9 @@ function wireControls() {
   document.querySelectorAll('[data-chart-mode]').forEach((button) => {
     button.addEventListener('click', () => {
       const mode = button.dataset.chartMode;
-      if (!['lineage', 'flowchart', 'tree', 'sankey'].includes(mode)) return;
+      if (!['lineage', 'flowchart', 'tree'].includes(mode)) return;
       state.chartMode = mode;
       state.flowchartLockedId = null;
-      state.sankeySelectedId = null;
       const plate = state.plates.find((entry) => entry.key === state.selectedKey);
       if (plate) renderChartMode(plate);
     });
