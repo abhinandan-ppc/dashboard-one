@@ -442,7 +442,7 @@ button.stage-marker{cursor:pointer}button.stage-marker:hover{border-color:curren
    each renderer's root wrapper lands in column 1 alone (minmax(160px,1fr))
    and every card is squeezed to ~160px, wrapping every date onto its own
    line. :has() scopes the override to only the modes that need it. */
-.process-flow:has(>.lineage-container),.process-flow:has(>.flowchart-container),.process-flow:has(>.expandable-tree){display:block;min-width:0}
+.process-flow:has(>.lineage-container),.process-flow:has(>.flowchart-container){display:block;min-width:0}
 .flow-stage-card{position:relative;min-height:166px;padding:17px 16px 15px;border-radius:16px;background:color-mix(in srgb,var(--glass-card) 88%,transparent);box-shadow:0 14px 34px rgba(0,15,28,.16),inset 0 0 0 1px var(--bdr);outline:0;transition:transform .18s cubic-bezier(.2,0,0,1),box-shadow .18s ease,background-color .18s ease}
 .flow-stage-card:hover,.flow-stage-card:focus-visible{transform:translateY(-4px);background:color-mix(in srgb,var(--glass-hi) 90%,transparent);box-shadow:0 20px 42px rgba(0,20,38,.24),inset 0 0 0 2px var(--primary)}
 .flow-stage-card:active{transform:translateY(-2px) scale(.96)}.flow-stage-card.missing{background:color-mix(in srgb,var(--input-bg) 82%,transparent);box-shadow:inset 0 0 0 1px var(--bdrHi)}.flow-stage-card.missing::after{content:'No matching record';position:absolute;left:16px;bottom:14px;color:var(--tm);font-size:11px;font-weight:700}.flow-stage-card.has-stock{box-shadow:0 14px 34px rgba(0,15,28,.16),inset 0 0 0 1px color-mix(in srgb,#2dd4bf 62%,var(--bdr))}
@@ -598,7 +598,11 @@ button.stage-marker{cursor:pointer}button.stage-marker:hover{border-color:curren
 .lineage-badge-item.dispatch .dot{background:#fcd34d}
 
 .lineage-branch{position:relative;display:flex;flex-direction:column;gap:8px;min-width:0}
-.lineage-node-card{position:relative;display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;align-items:center;gap:12px;min-height:56px;padding:10px 14px;border-radius:var(--radius-md);background:color-mix(in srgb,var(--component-surface) 80%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--glass-border);box-shadow:var(--shadow-xs);transition:transform .14s ease,border-color .14s ease,background-color .14s ease;cursor:pointer;outline:none;contain:layout style}
+.lineage-branch>summary{list-style:none}
+.lineage-branch>summary::-webkit-details-marker{display:none}
+.lineage-branch>summary:focus-visible{outline:2px solid var(--md-sys-color-primary);outline-offset:2px}
+.lineage-node-card{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head disclosure" "date date" "facts facts" "status status";align-items:center;gap:0 12px;min-width:0;min-height:64px;padding:11px 14px;border-radius:var(--radius-md);background:color-mix(in srgb,var(--component-surface) 80%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--glass-border);box-shadow:var(--shadow-xs);transition:transform .14s ease,border-color .14s ease,background-color .14s ease;cursor:default;outline:none;contain:layout style}
+.lineage-branch>summary.lineage-node-card{cursor:pointer}
 .lineage-node-card:hover,.lineage-node-card:focus-visible{transform:translateX(3px);background:var(--glass-bg-hover);border-color:var(--md-sys-color-primary)}
 .lineage-node-card.bypassed-fg{border:1.5px dashed #f59e0b;background:color-mix(in srgb,#f59e0b 8%,var(--component-surface))}
 .lineage-node-card.missing{border-style:dashed;opacity:.75}
@@ -611,20 +615,29 @@ button.stage-marker{cursor:pointer}button.stage-marker:hover{border-color:curren
 .lineage-stage-badge.bypassed{background:rgba(245,158,11,.15);color:#f59e0b;border:1px dashed rgba(245,158,11,.5)}
 .lineage-stage-badge.dispatch{background:rgba(252,211,77,.15);color:#fcd34d;border:1px solid rgba(252,211,77,.3)}
 
-.lineage-id-title{font-family:var(--mono);font-size:13px;font-weight:800;color:var(--text);white-space:nowrap}
-.lineage-meta-text{min-width:0;font-size:11px;color:var(--tm);font-weight:600;display:flex;gap:10px;align-items:center;flex-wrap:nowrap;overflow:hidden}
-.lineage-meta-text span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lineage-card-actions{display:flex;align-items:center;gap:8px}
+.lineage-card-head{grid-area:head;display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap}
+.lineage-id-title{min-width:0;overflow:hidden;font-family:var(--mono);font-size:13px;font-weight:800;color:var(--text);text-overflow:ellipsis;white-space:nowrap}
+.lineage-disclosure{grid-area:disclosure;display:flex;align-items:center;gap:6px;color:var(--tm);font-size:11px;font-weight:800;font-variant-numeric:tabular-nums}
+.lineage-disclosure::before{content:'+';display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container);font-size:14px}
+.lineage-branch[open]>summary .lineage-disclosure::before{content:'−'}
+.lineage-card-date{grid-area:date;display:flex;align-items:center;gap:9px;min-width:0;margin-top:9px;padding-top:8px;border-top:1px solid var(--glass-border)}
+.lineage-date-label{flex:0 0 auto;color:var(--tm);font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
+.lineage-date-value{min-width:0;overflow:hidden;color:var(--text);font-family:var(--mono);font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;text-overflow:ellipsis;white-space:nowrap}
+.lineage-card-facts{grid-area:facts;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;margin-top:7px}
+.lineage-card-batch{display:inline-flex;align-items:center;gap:7px;min-width:0;padding:5px 8px;border:1px solid var(--glass-border);border-radius:var(--radius-xs);background:var(--glass);color:var(--text)}
+.lineage-card-batch>span{color:var(--tm);font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.lineage-card-batch>strong{overflow:hidden;font-family:var(--mono);font-size:11px;font-weight:800;text-overflow:ellipsis;white-space:nowrap}
+.lineage-node-card.plate .lineage-card-batch{border-color:color-mix(in srgb,#6ee7b7 38%,var(--glass-border));background:rgba(110,231,183,.1)}
+.lineage-node-card.plate .lineage-card-batch>strong{color:#6ee7b7}
+.lineage-node-card.dispatch .lineage-card-batch{border-color:color-mix(in srgb,#fcd34d 38%,var(--glass-border));background:rgba(252,211,77,.1)}
+.lineage-node-card.dispatch .lineage-card-batch>strong{color:#fcd34d}
+.lineage-card-meta{min-width:0;overflow:hidden;color:var(--tm);font-size:11px;font-weight:600;line-height:1.4;text-overflow:ellipsis}
+.lineage-card-actions{grid-area:status;display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;margin-top:7px}
 .lineage-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:var(--radius-xs,5px);font-size:11px;font-weight:700;background:var(--glass);border:1px solid var(--glass-border);color:var(--tm)}
 .lineage-tag.stock{background:rgba(45,212,191,.12);color:#2dd4bf;border-color:rgba(45,212,191,.3)}
 .lineage-tag.bypassed{background:rgba(245,158,11,.15);color:#fbbf24;border-color:rgba(245,158,11,.35);font-weight:800}
-.lineage-toggle-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:var(--radius-pill);border:1px solid var(--glass-border);background:var(--glass);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;transition:all .14s ease}
-.lineage-toggle-btn:hover{background:var(--glass-bg-hover);border-color:var(--md-sys-color-primary)}
-.lineage-toggle-icon{font-size:11px;transition:transform .18s ease}
-.lineage-node-card[data-collapsed="true"] .lineage-toggle-icon{transform:rotate(-90deg)}
-
-.lineage-sub-branches{position:relative;display:flex;flex-direction:column;gap:8px;margin-left:22px;padding-left:16px;border-left:2px solid color-mix(in srgb,var(--md-sys-color-primary) 32%,var(--glass-border));overflow:hidden;max-height:8000px;opacity:1;transition:max-height .22s ease,opacity .18s ease,margin .18s ease}
-.lineage-sub-branches.collapsed{max-height:0!important;opacity:0;margin-top:0;margin-bottom:0;pointer-events:none}
+.lineage-tag.dispatched{background:rgba(252,211,77,.14);color:#fcd34d;border-color:rgba(252,211,77,.35)}
+.lineage-sub-branches{position:relative;display:flex;flex-direction:column;gap:8px;margin:8px 0 0 22px;padding:0 0 0 16px;border-left:2px solid color-mix(in srgb,var(--md-sys-color-primary) 32%,var(--glass-border))}
 .lineage-sub-branches::before{content:'';position:absolute;left:-2px;top:14px;width:16px;height:2px;background:color-mix(in srgb,var(--md-sys-color-primary) 32%,var(--glass-border))}
 
 /* ── Redesigned Node-to-Node Flowchart ── */
@@ -682,9 +695,7 @@ button.stage-marker{cursor:pointer}button.stage-marker:hover{border-color:curren
 .chart-mode:hover{background:var(--glass-bg-hover);color:var(--text)}.chart-mode:active{transform:scale(.96)}.chart-mode:focus-visible{outline:2px solid var(--md-sys-color-primary);outline-offset:2px}.chart-mode[aria-pressed="true"]{background:var(--md-sys-color-primary-container);border-color:color-mix(in srgb,var(--md-sys-color-primary) 45%,transparent);color:var(--md-sys-color-on-primary-container);box-shadow:var(--shadow-sm),var(--shadow-inset)}
 .chart-description{color:var(--tm);font-size:14px;font-weight:600;line-height:1.5;text-wrap:pretty}
 .chart-stage-label{display:flex;align-items:center;gap:7px;margin:14px 0 8px;color:var(--tm);font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.chart-stage-label::after{content:'';height:1px;flex:1;background:var(--glass-border)}
-.expandable-tree{display:grid;gap:5px}.expandable-tree details{position:relative;margin-left:12px;padding-left:10px;border-left:1px solid color-mix(in srgb,var(--md-sys-color-primary) 38%,var(--glass-border))}.expandable-tree>details{margin-left:0;padding-left:0;border-left:0}.expandable-tree summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;min-height:40px;padding:7px 10px;border:1px solid var(--glass-border);border-radius:var(--radius-sm);background:var(--component-surface);box-shadow:var(--shadow-xs),var(--shadow-inset);cursor:pointer;list-style:none;outline:0}.expandable-tree summary::-webkit-details-marker{display:none}.expandable-tree summary::before{content:'+';display:grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container);font-size:12px;font-weight:700;flex-shrink:0}.expandable-tree details[open]>summary::before{content:'−'}.expandable-tree summary:hover,.expandable-tree summary:focus-visible{background:var(--glass-bg-hover);border-color:var(--md-sys-color-primary)}.expandable-tree summary.missing{border-style:dashed}.expandable-tree summary.has-stock{border-color:color-mix(in srgb,#2dd4bf 48%,var(--glass-border))}.expandable-tree strong{min-width:0;overflow:hidden;color:var(--text);font-family:var(--mono);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.expandable-tree small{color:var(--tm);font-family:var(--mono);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}.expandable-tree .tree-level{justify-self:end;padding:2px 8px;border-radius:var(--radius-pill);background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container);font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.expandable-tree .flowchart-node{padding:6px 10px;min-height:36px}
-.expandable-tree .tree-status-row{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:3px}
-@media (max-width:768px){.lineage-node-card{grid-template-columns:1fr;gap:6px}.lineage-sub-branches{margin-left:8px;padding-left:8px}.flowchart-container{min-width:760px}.flowchart-lanes-row{gap:18px}.chart-mode-switch{border-radius:var(--radius-lg)}.chart-mode{flex:1 1 30%;padding-inline:8px}}
+@media (max-width:768px){.lineage-node-card{gap:0 8px;padding:10px}.lineage-sub-branches{margin-left:8px;padding-left:8px}.lineage-card-head{gap:7px}.lineage-card-date{margin-top:7px;padding-top:7px}.lineage-date-value{font-size:11px}.lineage-card-batch{max-width:100%}.flowchart-container{min-width:760px}.flowchart-lanes-row{gap:18px}.chart-mode-switch{border-radius:var(--radius-lg)}.chart-mode{flex:1 1 30%;padding-inline:8px}}
 </style>
 </head>
 <body class="page-trace">
@@ -801,12 +812,11 @@ button.stage-marker{cursor:pointer}button.stage-marker:hover{border-color:curren
       <div class="tl-gaps" id="tlGaps"></div>
     </div>
 
-    <div style="font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--tm)" id="flowLabel">Lineage · Heat → Slab → Plate → Dispatch · hover or focus a card for details</div>
+    <div style="font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--tm)" id="flowLabel">Lineage · Heat → Slab → Plate → Dispatch · dates and batch IDs on each unit</div>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <div class="chart-mode-switch" id="chartModeSwitch" role="group" aria-label="Trace chart mode" style="margin-top:0">
         <button class="chart-mode" type="button" data-chart-mode="lineage" aria-pressed="true">Lineage</button>
         <button class="chart-mode" type="button" data-chart-mode="flowchart" aria-pressed="false">Flow</button>
-        <button class="chart-mode" type="button" data-chart-mode="tree" aria-pressed="false">Expandable tree</button>
       </div>
       <div style="flex:1"></div>
       <div class="controls" id="detailControls" style="margin-top:0">
@@ -814,7 +824,7 @@ button.stage-marker{cursor:pointer}button.stage-marker:hover{border-color:curren
         <button class="btn" id="collapseAllBtn" type="button">Collapse all</button>
       </div>
     </div>
-    <div class="chart-description" id="chartDescription">Expanded physical lineage. Dates are displayed on every node; hover or focus a card for the full trace detail.</div>
+    <div class="chart-description" id="chartDescription">Color-coded and expandable physical lineage. Dates and plate batch IDs remain visible on every unit.</div>
     <div class="tree-wrap" id="treeWrap" aria-label="Plate process flow">
       <div class="process-flow" id="processFlow" role="list"></div>
       <!-- Pan/zoom/fullscreen pill. Glass, like the chart it floats over, so it
