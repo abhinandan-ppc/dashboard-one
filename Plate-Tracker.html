@@ -422,12 +422,26 @@ button.stage-marker{cursor:pointer}button.stage-marker:hover{border-color:curren
      was a percentage OF, which is exactly the kind of rule that silently
      stops applying if anything upstream changes — this one has no
      percentage, no rotation, and no dependency on the desktop rule at all. */
+  /* The arrowhead is a CSS border-triangle, not a text glyph. A chevron
+     character stacked directly under a line depends on that font's specific
+     glyph shape and baseline/metrics, which is exactly why it rendered as a
+     squiggle instead of a clean arrow — a triangle built from borders has no
+     such dependency and looks identical everywhere. */
   .schema-arrow{height:30px!important;width:24px!important;margin:0 auto!important;transform:none!important;
     display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:flex-start!important;gap:0!important}
-  .schema-arrow span{display:block!important;width:2px!important;height:14px!important;max-height:14px!important;
-    background:var(--primary)!important;border-radius:1px!important;position:static!important}
-  .schema-arrow span::after{content:'⌄'!important;position:static!important;display:block!important;
-    margin-top:-2px!important;color:var(--primary)!important;font-size:16px!important;line-height:1!important;font-weight:900!important}
+  /* span is only 2px wide, and ::after defaulted to a block box anchored at
+     THAT box's left edge — so the 10px-wide triangle (0 content + 5px
+     borders each side) overflowed almost entirely to the right of the line
+     instead of straddling it, which is what actually drew the lopsided
+     flag/squiggle shape. Centering it with its own absolute position (against
+     span, now the positioning context) fixes that regardless of how narrow
+     the line above it is. */
+  .schema-arrow span{display:block!important;width:2px!important;height:16px!important;max-height:16px!important;
+    background:var(--primary)!important;border-radius:1px!important;position:relative!important}
+  .schema-arrow span::after{content:''!important;position:absolute!important;left:50%!important;top:100%!important;
+    display:block!important;width:0!important;height:0!important;border-left:5px solid transparent!important;
+    border-right:5px solid transparent!important;border-top:6px solid var(--primary)!important;
+    margin-top:1px!important;transform:translateX(-50%)!important;font-size:0!important;line-height:0!important}
   .table-intro{align-items:start;flex-direction:column}
   .table-intro span{text-align:left}
 }
