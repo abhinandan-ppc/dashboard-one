@@ -452,6 +452,17 @@ button.stage-marker{cursor:pointer}button.stage-marker:hover{border-color:curren
 .tree-legend .flow-ok{background:var(--success-bg);border-color:var(--success)}.tree-legend .flow-stock{background:rgba(45,212,191,.14);border-color:#2dd4bf}
 @media (max-width:700px){.tree-wrap{overflow:visible;padding:18px 14px}.process-flow{min-width:0;grid-template-columns:1fr;gap:0}.flow-link{width:2px;height:34px;justify-self:center}.flow-link::before{inset:0 -1px 50% -1px}.flow-link::after{content:'⌄';right:-10px;top:9px}.flow-stage-card{min-height:142px}.view-switch{width:100%}.kpi-crossfilters{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi-filter{min-height:76px;padding:11px}.kpi-filter-value{font-size:19px}}
 
+/* Compact the repeated page rhythm without shrinking interactive targets. */
+.page-trace .trace-stack[hidden]{display:none!important}
+.page-trace main>.trace-stack{gap:18px;margin-bottom:18px;padding:16px 18px!important}
+.page-trace main>.trace-stack>*{margin-top:0}
+.page-trace .trace-stack .slot{margin-bottom:0}
+.page-trace .schema-node{padding:15px 16px}
+.page-trace .schema-rules{gap:6px;margin-top:0}
+@media (max-width:768px){
+  .page-trace main>.trace-stack{gap:14px;margin-bottom:14px;padding:14px!important}
+}
+
 /* Compact order/stock work surface. The controls answer one question together,
    so they share a toolbar instead of paying a full section rhythm between each
    row. The upload and trace-detail surfaces keep their existing breathing room. */
@@ -656,7 +667,6 @@ button.stage-marker{cursor:pointer}button.stage-marker:hover{border-color:curren
 .trace-kpi-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:0;padding:14px 18px;border-radius:14px;background:color-mix(in srgb,var(--glass-card) 60%,transparent);backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3);border:1px solid var(--glass-border);box-shadow:var(--shadow-sm)}
 .chart-toolbar{position:sticky;top:8px;z-index:11;display:flex;align-items:center;gap:8px;margin-bottom:10px;width:fit-content}
 .chart-toolbar .btn{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);background:color-mix(in srgb,var(--glass) 75%,transparent)}
-.page-trace .timeline{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
 /* .tree-wrap's own margin-top:12px stacks on top of the .trace-stack flex
    gap that already separates it from .chart-description above — doubling
    the gap. It is a direct trace-stack child only on this page, so the
