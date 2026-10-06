@@ -107,7 +107,7 @@ html,body{min-height:100%}
 .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:12px}
 .field{display:flex;flex-direction:column;gap:5px;min-width:0}
 .field label{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--tm)}
-.field input,.field select{min-height:38px;padding:8px 11px;border:1px solid var(--bdr);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-size:12.5px;min-width:150px}
+.field input,.field select{min-height:var(--touch-target,44px);padding:8px 11px;border:1px solid var(--bdr);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-size:12.5px;min-width:150px}
 .field input:focus,.field select:focus{outline:none;border-color:var(--amber);box-shadow:var(--shadow-glow-amber)}
 .btn{min-height:38px;padding:8px 15px;border-radius:var(--radius-sm);border:1px solid var(--bdrHi);background:var(--input-bg);color:var(--text);font-size:12px;font-weight:700;cursor:pointer}
 .btn:hover:not(:disabled){background:var(--input-hover)}
@@ -138,7 +138,7 @@ html,body{min-height:100%}
 
 /* ── Timeline ── */
 .timeline{margin-top:14px}
-.tl-track{position:relative;height:34px;border-radius:var(--radius-md);background:color-mix(in srgb,var(--input-bg) 80%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--glass-border);box-shadow:var(--shadow-inset);overflow:hidden}
+.tl-track{position:relative;height:34px;border-radius:var(--radius-md);background:color-mix(in srgb,var(--input-bg) 85%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);overflow:hidden}
 .tl-seg{position:absolute;top:0;bottom:0;min-width:2px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#0b1220;overflow:hidden;white-space:nowrap;border-right:1px solid rgba(8,15,24,.22);transition:filter .14s ease,transform .14s ease;cursor:default}
 .tl-seg:last-child{border-right:0}
 .tl-seg:hover{filter:brightness(1.08);z-index:2}
