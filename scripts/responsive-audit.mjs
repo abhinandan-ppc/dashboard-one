@@ -11,7 +11,6 @@ const requiredPages = new Set([
   'Grade-Clubbing-Matrix.html',
   'Order-Status-Report.html',
   'PM-Yard.html',
-  'Plate-Tracker.html',
   'Plate-Tagging-Tool.html',
   'Rake-Planner.html',
   'SMS-Heat-Planner.html',

@@ -26,12 +26,8 @@ body{
 }
 
 @keyframes flowDash{to{stroke-dashoffset:-24}}
-.flow-trunk{animation:flowDash .8s linear infinite;will-change:stroke-dashoffset}
-.flow-spoke{animation:flowDash 1.4s linear infinite;will-change:stroke-dashoffset}
-/* Pause the per-frame dash animation while the map is panning/zooming — with
-   dozens of spokes the repaint cost of an infinite stroke-dashoffset tween
-   stacks on top of tile loading and is the main source of visible map lag. */
-.leaflet-interacting .flow-trunk,.leaflet-interacting .flow-spoke{animation-play-state:paused}
+.flow-trunk{animation:flowDash .8s linear infinite}
+.flow-spoke{animation:flowDash 1.4s linear infinite}
 
 /* ── Interaction states (page-specific !important override) ── */
 input:focus{outline:none;border-color:var(--amber) !important;box-shadow:var(--shadow-glow-amber);background:var(--s0);}
@@ -2224,7 +2220,7 @@ function OverviewMapModal({rows,onClose}){
   const searchMarkerRef=useRef(null);
   const overlayGroupRef=useRef(null);
   const flowRendererRef=useRef(null);
-  const[lightMap,setLightMap]=useState(()=>!C.isDark);
+  const[lightMap,setLightMap]=useState(true);
   const[selSid,setSelSid]=useState(null);
   const[reverseKm,setReverseKm]=useState(150);
   const[cityDrill,setCityDrill]=useState(null); // {cityName, rows}
@@ -2277,11 +2273,7 @@ function OverviewMapModal({rows,onClose}){
     const map=L.map(mapRef.current,{center:[22,80],zoom:5,zoomControl:true,preferCanvas:true});
     mapInst.current=map;
     flowRendererRef.current=L.svg({padding:.5}).addTo(map);
-    const _markInteracting=()=>map.getContainer().classList.add('leaflet-interacting');
-    const _clearInteracting=()=>map.getContainer().classList.remove('leaflet-interacting');
-    map.on('movestart zoomstart',_markInteracting).on('moveend zoomend',_clearInteracting);
     return()=>{
-      map.off('movestart zoomstart',_markInteracting).off('moveend zoomend',_clearInteracting);
       if(baseLayerRef.current){baseLayerRef.current.remove();baseLayerRef.current=null;}
       if(overlayGroupRef.current){overlayGroupRef.current.remove();overlayGroupRef.current=null;}
       flowRendererRef.current=null;
@@ -2299,7 +2291,7 @@ function OverviewMapModal({rows,onClose}){
     baseLayerRef.current=window.L.tileLayer(
       `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${style}/MapServer/tile/{z}/{y}/{x}`,{
         attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community',
-        maxZoom:16,keepBuffer:3,updateWhenZooming:false,updateWhenIdle:true
+        maxZoom:16
       }).addTo(map);
     return()=>{
       if(baseLayerRef.current){baseLayerRef.current.remove();baseLayerRef.current=null;}
@@ -2530,7 +2522,7 @@ function OverviewMapModal({rows,onClose}){
             border:`1px solid ${lightMap?C.amber:'var(--bdr)'}`,
             borderRadius:6,color:lightMap?C.amber:'var(--dim)',
             padding:'7px 10px',cursor:'pointer',fontSize:14,transition:'all .15s',flexShrink:0}}>
-            {lightMap?'Light':'Dark'}
+            {lightMap?'Dark':'Light'}
           </button>
           {selSid&&<button onClick={()=>setSelSid(null)} style={{
             background:`${C._amber}18`,border:`1px solid ${C._amber}40`,
@@ -2654,7 +2646,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
   const overlayGroupRef=useRef(null);
   const flowRendererRef=useRef(null);
   const fittedViewRef=useRef(null);
-  const[lightMap,setLightMap]=useState(()=>!C.isDark);
+  const[lightMap,setLightMap]=useState(true);
   const[cityDrill,setCityDrill]=useState(null); // {cityName, rows}
   const[reverseKm,setReverseKm]=useState(100);  // reverse range limit
   const[searchQ,setSearchQ]=useState('');
@@ -2754,12 +2746,8 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
     const map=L.map(mapRef.current,{center:[22,80],zoom:5,zoomControl:true,attributionControl:true,preferCanvas:true});
     mapInst.current=map;
     flowRendererRef.current=L.svg({padding:.5}).addTo(map);
-    const _markInteracting=()=>map.getContainer().classList.add('leaflet-interacting');
-    const _clearInteracting=()=>map.getContainer().classList.remove('leaflet-interacting');
-    map.on('movestart zoomstart',_markInteracting).on('moveend zoomend',_clearInteracting);
 
     return()=>{
-      map.off('movestart zoomstart',_markInteracting).off('moveend zoomend',_clearInteracting);
       if(baseLayerRef.current){baseLayerRef.current.remove();baseLayerRef.current=null;}
       if(overlayGroupRef.current){overlayGroupRef.current.remove();overlayGroupRef.current=null;}
       flowRendererRef.current=null;
@@ -2777,7 +2765,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
     baseLayerRef.current=window.L.tileLayer(
       `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${style}/MapServer/tile/{z}/{y}/{x}`,{
         attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community',
-        maxZoom:16,keepBuffer:3,updateWhenZooming:false,updateWhenIdle:true
+        maxZoom:16
       }).addTo(map);
     return()=>{
       if(baseLayerRef.current){baseLayerRef.current.remove();baseLayerRef.current=null;}
