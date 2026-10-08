@@ -2214,10 +2214,11 @@ function PivotTable({data,onDrill,onRegionExport,activeCell,remarksLbl}){
 
 /* ═══════════════════ OVERVIEW MAP MODAL ═══════════════════ */
 function OverviewMapModal({rows,onClose}){
-  // ── Exactly mirrors RakeMapModal — single useEffect, same city logic ──
   const mapRef=useRef(null);
   const mapInst=useRef(null);
   const searchMarkerRef=useRef(null);
+  const overlayGroupRef=useRef(null);
+  const flowRendererRef=useRef(null);
   const[lightMap,setLightMap]=useState(true);
   const[selSid,setSelSid]=useState(null);
   const[reverseKm,setReverseKm]=useState(150);
@@ -2263,16 +2264,31 @@ function OverviewMapModal({rows,onClose}){
   const revExcl=cities.filter(c=>c.direction==='reverse'&&!c.included);
   const offMap=selPlan?new Set(selPlan.rakes.flatMap(rk=>rk.items.map(({ord})=>String(ord['Ship To Party City']||'').trim().toUpperCase()))).size-cities.length:0;
 
-  // ── Single useEffect — same structure as RakeMapModal ──
-  useEffect(()=>{
+  React.useLayoutEffect(()=>{
     if(!mapRef.current||!window.L)return;
-    if(mapInst.current){mapInst.current.remove();mapInst.current=null;}
     const L=window.L;
     const map=L.map(mapRef.current,{center:[22,80],zoom:5,zoomControl:true,preferCanvas:true});
     mapInst.current=map;
-    const flowRenderer=L.svg({padding:.5}).addTo(map);
+    flowRendererRef.current=L.svg({padding:.5}).addTo(map);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
       {attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community',maxZoom:16}).addTo(map);
+    return()=>{
+      if(overlayGroupRef.current){overlayGroupRef.current.remove();overlayGroupRef.current=null;}
+      flowRendererRef.current=null;
+      map.remove();
+      if(mapInst.current===map)mapInst.current=null;
+      searchMarkerRef.current=null;
+    };
+  },[]);
+
+  React.useLayoutEffect(()=>{
+    const map=mapInst.current;
+    if(!map||!window.L)return;
+    const L=window.L;
+    const layerGroup=L.layerGroup().addTo(map);
+    if(overlayGroupRef.current)overlayGroupRef.current.remove();
+    overlayGroupRef.current=layerGroup;
+    const flowRenderer=flowRendererRef.current;
     map.getPane('tilePane').style.filter=lightMap
       ?'saturate(.45) brightness(1.04) contrast(.94)'
       :'invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.45)';
@@ -2280,7 +2296,7 @@ function OverviewMapModal({rows,onClose}){
     const mkDivIcon=(h,sz)=>L.divIcon({html:h,className:'',iconSize:sz,iconAnchor:[sz[0]/2,sz[1]/2]});
     // ── Angul origin marker (same as RakeMapModal) ──
     const angulIcon=plantPinIcon(L,C.amber);
-    L.marker([ANGUL.lat,ANGUL.lng],{icon:angulIcon,zIndexOffset:200}).addTo(map)
+    L.marker([ANGUL.lat,ANGUL.lng],{icon:angulIcon,zIndexOffset:200}).addTo(layerGroup)
       .bindTooltip('<b style="font-family:Poppins,sans-serif;font-size:13px">Jindal Steel Angul PlateMill</b><br><span style="color:#94a3b8;font-size:11px">Origin · All Rakes</span>',
         {direction:'right',offset:[14,0],sticky:false,permanent:false});
 
@@ -2288,8 +2304,8 @@ function OverviewMapModal({rows,onClose}){
     if(selHub){
       const trunkPts=mapRoutePoints(ANGUL.lat,ANGUL.lng,selHub.lat,selHub.lng);
       const rc=C.region[selHub.region]||C.region.Unknown;
-      L.polyline(trunkPts,{color:rc.glow||C.amber,weight:2.25,opacity:.8,smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(map);
-      L.polyline(trunkPts,{color:'#fff',weight:1.1,opacity:.8,dashArray:'7 11',className:'flow-trunk',renderer:flowRenderer,lineCap:'round',lineJoin:'round'}).addTo(map);
+      L.polyline(trunkPts,{color:rc.glow||C.amber,weight:2.25,opacity:.8,smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(layerGroup);
+      L.polyline(trunkPts,{color:'#fff',weight:1.1,opacity:.8,dashArray:'7 11',className:'flow-trunk',renderer:flowRenderer,lineCap:'round',lineJoin:'round'}).addTo(layerGroup);
     }
 
     // ── City spokes for selected siding (exact copy of RakeMapModal logic) ──
@@ -2299,10 +2315,10 @@ function OverviewMapModal({rows,onClose}){
       const clr=!incl?'#475569':fwd?(ct.fgOk?'#48a872':'#d96868'):(ct.fgOk?C.amber:'#f97316');
       const pts=mapRoutePoints(hubLat,hubLng,ct.lat,ct.lng);
       if(incl){
-        L.polyline(pts,{color:clr,weight:1.6,opacity:.58,smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(map);
-        L.polyline(pts,{color:'#fff',weight:.9,opacity:.68,dashArray:'4 8',className:'flow-spoke',renderer:flowRenderer,lineCap:'round',lineJoin:'round'}).addTo(map);
+        L.polyline(pts,{color:clr,weight:1.6,opacity:.58,smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(layerGroup);
+        L.polyline(pts,{color:'#fff',weight:.9,opacity:.68,dashArray:'4 8',className:'flow-spoke',renderer:flowRenderer,lineCap:'round',lineJoin:'round'}).addTo(layerGroup);
       } else {
-        L.polyline(pts,{color:clr,weight:1,opacity:.32,dashArray:'4 7',smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(map);
+        L.polyline(pts,{color:clr,weight:1,opacity:.32,dashArray:'4 7',smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(layerGroup);
       }
     });
 
@@ -2328,7 +2344,7 @@ function OverviewMapModal({rows,onClose}){
         </div>`,[24,24]);
       try{
         // Tooltip with customer table (same as RakeMapModal)
-        const cityMarker=L.marker([ct.lat,ct.lng],{icon,zIndexOffset:5}).addTo(map);
+        const cityMarker=L.marker([ct.lat,ct.lng],{icon,zIndexOffset:5}).addTo(layerGroup);
         cityMarker.bindTooltip(()=>{
           try{
             const custMap={};
@@ -2383,7 +2399,7 @@ function OverviewMapModal({rows,onClose}){
             ${sid} (${rakes}R)
           </div>
         </div>`,[24,24]);
-      L.marker([hub.lat,hub.lng],{icon,zIndexOffset:isSel?50:10}).addTo(map)
+      L.marker([hub.lat,hub.lng],{icon,zIndexOffset:isSel?50:10}).addTo(layerGroup)
         .bindTooltip(`<div style="font-family:Poppins,sans-serif;font-size:12px;min-width:160px">
           <b style="font-family:'Poppins',sans-serif;font-size:13px">${hub.name} <span style="opacity:.5">(${sid})</span></b><br>
           <span style="color:${rc.glow}">${hub.region} Region</span><br>
@@ -2401,7 +2417,10 @@ function OverviewMapModal({rows,onClose}){
       prevSelRef.current=null;
     }
 
-    return()=>{if(mapInst.current){mapInst.current.remove();mapInst.current=null;}searchMarkerRef.current=null;};
+    return()=>{
+      layerGroup.remove();
+      if(overlayGroupRef.current===layerGroup)overlayGroupRef.current=null;
+    };
   },[lightMap,selSid,cities,data]);
 
   // Reset the search pin when the selected siding changes
@@ -2610,6 +2629,9 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
   const mapRef=useRef(null);
   const mapInst=useRef(null);
   const searchMarkerRef=useRef(null);
+  const overlayGroupRef=useRef(null);
+  const flowRendererRef=useRef(null);
+  const fittedViewRef=useRef(null);
   const[lightMap,setLightMap]=useState(true);
   const[cityDrill,setCityDrill]=useState(null); // {cityName, rows}
   const[reverseKm,setReverseKm]=useState(100);  // reverse range limit
@@ -2702,19 +2724,35 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
     map.flyTo([searchResult.lat,searchResult.lng],7,{duration:.8});
   },[searchResult]);
 
-  useEffect(()=>{
+  React.useLayoutEffect(()=>{
     if(!mapRef.current||!window.L)return;
-    if(mapInst.current){mapInst.current.remove();mapInst.current=null;}
     const L=window.L;
-
     const map=L.map(mapRef.current,{center:[22,80],zoom:5,zoomControl:true,attributionControl:true});
     mapInst.current=map;
-    const flowRenderer=L.svg({padding:.5}).addTo(map);
+    flowRendererRef.current=L.svg({padding:.5}).addTo(map);
 
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{
       attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community',
       maxZoom:16
     }).addTo(map);
+
+    return()=>{
+      if(overlayGroupRef.current){overlayGroupRef.current.remove();overlayGroupRef.current=null;}
+      flowRendererRef.current=null;
+      map.remove();
+      if(mapInst.current===map)mapInst.current=null;
+      searchMarkerRef.current=null;
+    };
+  },[]);
+
+  React.useLayoutEffect(()=>{
+    const map=mapInst.current;
+    if(!map||!window.L)return;
+    const L=window.L;
+    const layerGroup=L.layerGroup().addTo(map);
+    if(overlayGroupRef.current)overlayGroupRef.current.remove();
+    overlayGroupRef.current=layerGroup;
+    const flowRenderer=flowRendererRef.current;
     map.getPane('tilePane').style.filter=lightMap
       ?'saturate(.45) brightness(1.04) contrast(.94)'
       :'invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.45)';
@@ -2723,8 +2761,8 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
     // ── Draw trunk: Angul → Hub ──
     if(hub){
       const pts=mapRoutePoints(ANGUL.lat,ANGUL.lng,hub.lat,hub.lng);
-      L.polyline(pts,{color:C.amber,weight:2.25,opacity:.8,smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(map);
-      L.polyline(pts,{color:'#fff',weight:1.1,opacity:.8,dashArray:'7 11',className:'flow-trunk',renderer:flowRenderer,lineCap:'round',lineJoin:'round'}).addTo(map);
+      L.polyline(pts,{color:C.amber,weight:2.25,opacity:.8,smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(layerGroup);
+      L.polyline(pts,{color:'#fff',weight:1.1,opacity:.8,dashArray:'7 11',className:'flow-trunk',renderer:flowRenderer,lineCap:'round',lineJoin:'round'}).addTo(layerGroup);
     }
 
     // ── Draw spokes: Hub → Cities ──
@@ -2737,10 +2775,10 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
       const clr=!incl?'#475569':fwd?(ct.fgOk?C.green:C.rose):(ct.fgOk?C.amber:'#f97316');
       const pts=mapRoutePoints(fromLat,fromLng,ct.lat,ct.lng);
       if(incl){
-        L.polyline(pts,{color:clr,weight:1.6,opacity:.58,smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(map);
-        L.polyline(pts,{color:'#fff',weight:.9,opacity:.68,dashArray:'4 8',className:'flow-spoke',renderer:flowRenderer,lineCap:'round',lineJoin:'round'}).addTo(map);
+        L.polyline(pts,{color:clr,weight:1.6,opacity:.58,smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(layerGroup);
+        L.polyline(pts,{color:'#fff',weight:.9,opacity:.68,dashArray:'4 8',className:'flow-spoke',renderer:flowRenderer,lineCap:'round',lineJoin:'round'}).addTo(layerGroup);
       } else {
-        L.polyline(pts,{color:clr,weight:1,opacity:.32,dashArray:'4 7',smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(map);
+        L.polyline(pts,{color:clr,weight:1,opacity:.32,dashArray:'4 7',smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(layerGroup);
       }
     });
 
@@ -2770,7 +2808,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
         }).map(x=>x.ord));
         const _ctot=_ctOrd.reduce((s,o)=>{const f=freightCost(o);return f?{r:s.r+f.rake,t:s.t+f.truck,x:s.x+f.total}:s;},{r:0,t:0,x:0});
         const _cr=v=>'&#8377;'+(v/1e5).toFixed(1)+'L';
-        L.marker([ct.lat,ct.lng],{icon,zIndexOffset:5}).addTo(map)
+        L.marker([ct.lat,ct.lng],{icon,zIndexOffset:5}).addTo(layerGroup)
           .bindTooltip(()=>{
             // Group orders by customer, sum Bal to PGI
             const custMap={};
@@ -2828,7 +2866,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
         // siding town is itself a delivery destination) — without its own click handler
         // it silently swallows that click. Fall through to that city's drill-down too.
         const hubCity=cities.find(ct=>haversine(hub.lat,hub.lng,ct.lat,ct.lng)<2);
-        L.marker([hub.lat,hub.lng],{icon,zIndexOffset:20}).addTo(map)
+        L.marker([hub.lat,hub.lng],{icon,zIndexOffset:20}).addTo(layerGroup)
           .bindTooltip(
             '<div style="font-family:Poppins,system-ui,sans-serif;line-height:1.6">'
             +'<div style="font-family:Poppins,Poppins,sans-serif;font-size:14px;font-weight:800;letter-spacing:.05em;margin-bottom:3px">'+hub.name.toUpperCase()+'</div>'
@@ -2859,9 +2897,16 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
 
     // Fit all points with padding
     const allPts=[[ANGUL.lat,ANGUL.lng],...(hub?[[hub.lat,hub.lng]]:[]),...cities.map(c=>[c.lat,c.lng])];
-    if(allPts.length>1)map.fitBounds(L.latLngBounds(allPts),{padding:[50,50],maxZoom:8});
+    const viewKey=`${rakePlan.siding}:${rakeIdx==null?'all':rakeIdx}`;
+    if(allPts.length>1&&fittedViewRef.current!==viewKey){
+      map.fitBounds(L.latLngBounds(allPts),{padding:[50,50],maxZoom:8});
+      fittedViewRef.current=viewKey;
+    }
 
-    return()=>{if(mapInst.current){mapInst.current.remove();mapInst.current=null;}searchMarkerRef.current=null;};
+    return()=>{
+      layerGroup.remove();
+      if(overlayGroupRef.current===layerGroup)overlayGroupRef.current=null;
+    };
   },[rakePlan.siding,rakeIdx,lightMap,reverseKm]);
 
   // Reset the search pin when switching to a different rake/siding
