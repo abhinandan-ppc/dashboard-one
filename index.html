@@ -204,10 +204,54 @@ input { font: inherit; color: inherit; }
 }
 @keyframes sheetSyncPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 @media (max-width: 760px) {
-  .sheet-sync { gap: 4px; }
-  .sheet-sync-chip span.sheet-sync-label { display: none; }
-  .sheet-sync-chip span.sheet-sync-code { display: inline; }
-  .sheet-sync-chip { padding: 0 8px; min-height: 32px; gap: 4px; justify-content: center; }
+  .sheet-sync { display: none; } /* clubbed into the single #sheetSyncClub button */
+  .sheet-sync-club { display: inline-flex; }
+}
+/* ─── Clubbed mobile sync button (≤760px) ──────────────────────────────
+   One compact button beside the header text replacing the three chips. The
+   aggregate dot shows the worst health of the three sources (red > amber-
+   pulsing > green > grey); the fraction tells how many are synced. Tapping
+   it opens #sheetSyncPanel, a per-source popup (same fixed + body-appended
+   pattern as .theme-panel, so the top-bar's backdrop-filter never breaks
+   the frosted-glass effect). Hidden on desktop. */
+.sheet-sync-club { display: none; }
+@media (max-width: 760px) {
+  .sheet-sync-club {
+    align-items: center; gap: 6px; flex-shrink: 0;
+    min-height: 32px; padding: 0 10px; border-radius: var(--radius-pill);
+    background: var(--input-bg); border: var(--glass-border);
+    font-size: 11px; font-weight: 800; letter-spacing: 0.03em; color: var(--tm);
+    cursor: pointer; white-space: nowrap;
+  }
+  .sheet-sync-club:active { transform: scale(0.97); }
+}
+.sheet-sync-club-count { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; }
+.sheet-sync-panel {
+  position: fixed; min-width: 250px; max-width: calc(100vw - 24px);
+  background: var(--glass-bg-solid); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border); border-radius: var(--radius-m); box-shadow: var(--glass-shadow);
+  padding: 10px; display: none; flex-direction: column; gap: 6px; z-index: 400;
+}
+.sheet-sync-panel.open { display: flex; }
+.sheet-sync-panel-title { font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tm); padding: 2px 6px 6px; }
+.sheet-sync-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 9px 10px; border-radius: var(--radius-s); border: 1px solid transparent;
+  background: transparent; cursor: pointer; min-height: 48px;
+}
+.sheet-sync-row:hover { background: var(--input-hover); border-color: var(--glass-border); }
+.sheet-sync-row:active { transform: scale(0.99); }
+.sheet-sync-row-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: var(--tm); opacity: 0.5; }
+.sheet-sync-row-dot.ok { background: #10b981; opacity: 1; box-shadow: 0 0 0 2px rgba(16,185,129,0.18); }
+.sheet-sync-row-dot.error { background: #ef4444; opacity: 1; box-shadow: 0 0 0 2px rgba(239,68,68,0.18); }
+.sheet-sync-row-dot.checking { background: #fbbf24; opacity: 1; animation: sheetSyncPulse 1s ease-in-out infinite; }
+.sheet-sync-row-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.sheet-sync-row-name { font-size: 13px; font-weight: 800; color: var(--chip-accent, var(--tx)); }
+.sheet-sync-row-sub { font-size: 11px; color: var(--tm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sheet-sync-row-act {
+  flex-shrink: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase;
+  padding: 7px 12px; min-height: 32px; border-radius: var(--radius-pill);
+  background: var(--input-bg); color: var(--tx); border: var(--glass-border); cursor: pointer;
 }
 .user-menu { position: relative; flex-shrink: 0; }
 .user-btn {
@@ -913,6 +957,9 @@ input { font: inherit; color: inherit; }
         <div class="eyebrow">AI Planning</div>
         <h1>AI Planning Hub</h1>
       </div>
+      <button class="sheet-sync-club" id="sheetSyncClub" type="button" title="Sync status" aria-label="Sync status" aria-expanded="false" aria-controls="sheetSyncPanel">
+        <span class="sheet-sync-dot" id="sheetSyncClubDot"></span><span class="sheet-sync-club-count" id="sheetSyncClubCount" aria-hidden="true">–/3</span>
+      </button>
     </div>
     <div class="hdr-r">
       <div class="sheet-sync" id="sheetSyncWidget">
@@ -975,6 +1022,24 @@ input { font: inherit; color: inherit; }
       </div>
     </div>
   </div>
+</div>
+<div class="sheet-sync-panel" id="sheetSyncPanel" role="dialog" aria-label="Sheet sync status">
+  <div class="sheet-sync-panel-title">Live sheets</div>
+  <button class="sheet-sync-row" data-src="zstk" type="button">
+    <span class="sheet-sync-row-dot"></span>
+    <span class="sheet-sync-row-body"><span class="sheet-sync-row-name">ZSTK</span><span class="sheet-sync-row-sub"></span></span>
+    <span class="sheet-sync-row-act">Sync</span>
+  </button>
+  <button class="sheet-sync-row" data-src="autobtr" type="button">
+    <span class="sheet-sync-row-dot"></span>
+    <span class="sheet-sync-row-body"><span class="sheet-sync-row-name">BTR</span><span class="sheet-sync-row-sub"></span></span>
+    <span class="sheet-sync-row-act">Sync</span>
+  </button>
+  <button class="sheet-sync-row" data-src="ebtp" type="button">
+    <span class="sheet-sync-row-dot"></span>
+    <span class="sheet-sync-row-body"><span class="sheet-sync-row-name">EBTP</span><span class="sheet-sync-row-sub"></span></span>
+    <span class="sheet-sync-row-act">Sync</span>
+  </button>
 </div>
 
 <div class="frame-stage" id="frameStage" style="display:none;">
@@ -3385,9 +3450,105 @@ function fetchAndCacheSegment(force){
     chip.title = title;
     chip.classList.toggle('is-ok', cls === 'ok');
     chip.classList.toggle('is-error', cls === 'error');
+    renderClub();  // aggregate dot/count follows every per-source change
+    renderPanelRow(src, cls, st);
   }
 
   var SRC_LABEL = { zstk: 'ZSTK', autobtr: 'AutoBTR', ebtp: 'EBTP' };
+  var SRC_ORDER = ['zstk', 'autobtr', 'ebtp'];
+  var SRC_ACCENT = { zstk: '#38bdf8', autobtr: '#a78bfa', ebtp: '#34d399' };
+
+  // ── Clubbed mobile button + popup ─────────────────────────────────────
+  // The single #sheetSyncClub button (≤760px, beside the header text) shows
+  // the worst health of the three sources and how many are synced; tapping
+  // it opens #sheetSyncPanel with one full row per source. Both refresh from
+  // the same status store on every render(), so they never go stale.
+  function srcClass(src){
+    var st = statusGet(src);
+    if(!st) return 'unknown';
+    if(st.state === 'checking') return 'checking';
+    return st.ok ? 'ok' : 'error';
+  }
+  function renderClub(){
+    var dot = document.getElementById('sheetSyncClubDot');
+    var count = document.getElementById('sheetSyncClubCount');
+    var club = document.getElementById('sheetSyncClub');
+    if(!dot || !count || !club) return;
+    var classes = SRC_ORDER.map(srcClass);
+    var worst = classes.indexOf('error') !== -1 ? 'error'
+      : classes.indexOf('checking') !== -1 ? 'checking'
+      : classes.every(function(c){ return c === 'ok'; }) ? 'ok' : 'unknown';
+    dot.className = 'sheet-sync-dot ' + worst;
+    var okN = classes.filter(function(c){ return c === 'ok'; }).length;
+    count.textContent = okN + '/3';
+    var bits = SRC_ORDER.map(function(src){
+      var c = srcClass(src);
+      return (SRC_LABEL[src] || src) + ': ' + (c === 'ok' ? 'synced' : c === 'error' ? 'failed' : c === 'checking' ? 'syncing' : 'not synced');
+    });
+    var title = bits.join(' · ') + '. Tap for details.';
+    club.title = title;
+    club.setAttribute('aria-label', 'Sync status — ' + bits.join(', ') + '. Tap for details.');
+  }
+  function rowSubText(src, st){
+    if(!st) return 'Never synced';
+    if(st.state === 'checking') return 'Syncing…';
+    if(st.ok){
+      var when = st.at ? new Date(st.at).toLocaleTimeString() : '';
+      return 'Synced ' + when + (st.rows != null ? ' · ' + st.rows.toLocaleString() + ' rows' : '');
+    }
+    var err = st.error || 'unknown error';
+    if(err.length > 42) err = err.slice(0, 42) + '…';
+    return 'Failed · ' + err;
+  }
+  function renderPanelRow(src, cls, st){
+    var panel = document.getElementById('sheetSyncPanel');
+    if(!panel) return;
+    var row = panel.querySelector('.sheet-sync-row[data-src="' + src + '"]');
+    if(!row) return;
+    if(!cls){ cls = srcClass(src); st = statusGet(src); }
+    var dot = row.querySelector('.sheet-sync-row-dot');
+    if(dot) dot.className = 'sheet-sync-row-dot ' + cls;
+    var sub = row.querySelector('.sheet-sync-row-sub');
+    if(sub) sub.textContent = rowSubText(src, st);
+    var act = row.querySelector('.sheet-sync-row-act');
+    if(act) act.textContent = (cls === 'checking') ? '…' : (st && !st.ok) ? 'Retry' : 'Sync';
+    var accent = SRC_ACCENT[src];
+    if(accent) row.style.setProperty('--chip-accent', accent);
+  }
+  function renderPanelAll(){
+    for(var i = 0; i < SRC_ORDER.length; i++) renderPanelRow(SRC_ORDER[i]);
+  }
+  function placePanel(){
+    var panel = document.getElementById('sheetSyncPanel');
+    var club = document.getElementById('sheetSyncClub');
+    if(!panel || !club) return;
+    if(panel.parentElement !== document.body) document.body.appendChild(panel);
+    var r = club.getBoundingClientRect();
+    var w = Math.min(300, window.innerWidth - 24);
+    panel.style.minWidth = w + 'px';
+    var left = Math.max(12, Math.min(r.left, window.innerWidth - w - 12));
+    panel.style.left = left + 'px';
+    panel.style.top = (r.bottom + 8) + 'px';
+  }
+  function openPanel(){
+    var panel = document.getElementById('sheetSyncPanel');
+    var club = document.getElementById('sheetSyncClub');
+    if(!panel) return;
+    renderPanelAll();
+    placePanel();
+    panel.classList.add('open');
+    if(club) club.setAttribute('aria-expanded', 'true');
+  }
+  function closePanel(){
+    var panel = document.getElementById('sheetSyncPanel');
+    var club = document.getElementById('sheetSyncClub');
+    if(panel) panel.classList.remove('open');
+    if(club) club.setAttribute('aria-expanded', 'false');
+  }
+  function panelIsOpen(){
+    var panel = document.getElementById('sheetSyncPanel');
+    return !!(panel && panel.classList.contains('open'));
+  }
 
   function pingOnce(src, force){
     if(src === 'ebtp'){
@@ -3542,6 +3703,45 @@ function fetchAndCacheSegment(force){
       syncSheet(src, true);
     });
   });
+
+  // ── Club button + popup wiring (mobile) ──────────────────────────────
+  // The club button lives beside the header text; the popup lists all three
+  // sources with full names + per-source Sync/Retry. Tapping a row also
+  // surfaces the bottom #fetchStatus loader, exactly like a desktop chip tap.
+  var clubBtn = document.getElementById('sheetSyncClub');
+  if(clubBtn){
+    clubBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      if(panelIsOpen()) closePanel();
+      else { renderPanelAll(); openPanel(); }
+    });
+  }
+  document.querySelectorAll('#sheetSyncPanel .sheet-sync-row').forEach(function(row){
+    row.addEventListener('click', function(e){
+      e.stopPropagation();
+      var src = row.dataset.src;
+      var chip = document.querySelector('.sheet-sync-chip[data-src="' + src + '"]');
+      closePanel();
+      if(chip && chip.classList.contains('is-busy')){ peekStatus(src); return; }
+      clearRetry(src);
+      peekStatus(src);
+      syncSheet(src, true);
+    });
+  });
+  document.addEventListener('click', function(e){
+    if(!panelIsOpen()) return;
+    var panel = document.getElementById('sheetSyncPanel');
+    var club = document.getElementById('sheetSyncClub');
+    if(panel && panel.contains(e.target)) return;
+    if(club && club.contains(e.target)) return;
+    closePanel();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && panelIsOpen()) closePanel();
+  });
+  window.addEventListener('resize', function(){ if(panelIsOpen()) placePanel(); });
+  renderClub();
+  renderPanelAll();
 
   // One quiet status check per source on load, staggered so the three don't
   // all hit the token endpoint in the same instant (a burst of simultaneous
