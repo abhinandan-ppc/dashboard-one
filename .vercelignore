@@ -1,0 +1,28 @@
+# Everything the static site does not need to serve.
+#
+# The Plate Tracker is entirely client-side: the user picks or drops the
+# workbooks, and the page parses them in the browser. So the live extracts under
+# sheets/ are ~72MB that no request would ever reach. Excluding them keeps the
+# deployment upload small and fast.
+sheets/
+
+# Verification scripts and their fixtures. They run from a clone, not from the
+# deployed site.
+scripts/
+test/
+
+# Local-only dev server — reads the gitignored service-account.json to serve
+# the sheet proxies on localhost. Runs from a clone, never deployed.
+local-auth.mjs
+
+# Development and verification scratch.
+.playwright-cli/
+claude-flow/
+CLAUDE.md
+.clinerules
+*.log
+*.txt
+!README*.txt
+
+# Screenshots produced by the audits and smoke tests.
+plate-tracker-*.png

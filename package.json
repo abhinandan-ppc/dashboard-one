@@ -7,6 +7,7 @@
   },
   "scripts": {
     "test": "node --test",
+    "dev": "node local-auth.mjs",
     "audit:responsive": "node scripts/responsive-audit.mjs",
     "audit:responsive:browser": "node scripts/responsive-browser-audit.mjs"
   },
