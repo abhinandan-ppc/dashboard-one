@@ -385,6 +385,7 @@ details b{color:var(--tx)}
       <label class="slotTrigger" for="file-por">
         <h3><span class="dot"></span>Free Plate Stock</h3>
         <div class="code">POR / PSFS · any column layout — you map the columns</div>
+          <button type="button" id="zstkOnlineBtn" style="margin-top:8px;width:100%;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--bdrHi);background:var(--input-bg);color:var(--tx);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer">⟳ Load Free Stock from ZSTK</button>
         <div class="fname">Drop or click to choose .xlsx</div>
         <div class="status">Not loaded</div>
       </label>
@@ -910,6 +911,90 @@ async function fetchOnlineEbtp(){
   }catch(err){
     slot.classList.remove('ok');slot.classList.add('err');
     slot.querySelector('.status').textContent=err.message+'. Upload the .xlsx instead.';
+  }
+  btn.disabled=false;
+}
+
+/* ---------- online ZSTK: shared hub cache (IndexedDB) + fallback fetch ----------
+   ZSTK is fetched once by the hub (index.html) and shared via the same
+   IndexedDB (jspl-ebtp-shared-db / store 'cache') under key 'zstk' — the
+   record's csvText holds the Sheets-API `values` grid (header row + data
+   rows), the same contract PM-Yard's readHubZstkCache/ingestZstkCacheRecord
+   use. The grid is converted to a workbook and run through bestStockParse,
+   so the Free Plate Stock slot behaves exactly as if the user had dropped
+   the ZSTK export .xlsx — with the tool's column auto-mapping on top. */
+function readHubZstkCache(){
+  return openEbtpDb().then(db=>{
+    if(!db)return null;
+    return new Promise(resolve=>{
+      try{
+        const tx=db.transaction(EBTP_DB_STORE,'readonly');
+        const req=tx.objectStore(EBTP_DB_STORE).get('zstk');
+        req.onsuccess=()=>{try{db.close();}catch(e){}resolve(req.result||null);};
+        req.onerror=()=>{try{db.close();}catch(e){}resolve(null);};
+      }catch(e){try{db.close();}catch(_){}resolve(null);}
+    });
+  }).catch(()=>null);
+}
+/* ── ZSTK's only network path: the service-account proxy (/api/zstk-proxy),
+   same as PM-Yard's standalone directFetch. Returns the `values` grid. ── */
+function fetchZstkDirectly(){
+  return fetch('/api/zstk-proxy',{cache:'no-store',credentials:'same-origin'})
+    .then(r=>r.json().then(data=>{if(!r.ok||data.error)throw new Error(data.error||('HTTP '+r.status));return data;}))
+    .then(data=>{
+      const values=data.values||[];
+      if(!Array.isArray(values)||values.length<2)throw new Error('ZSTK sheet is empty or missing headers');
+      return values;
+    });
+}
+function applyOnlineZstkValues(values,slot){
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(values),'ZSTK_LIVE_TEMP');
+  const parsed=bestStockParse(wb);
+  if(!parsed||!parsed.rows.length){
+    slot.classList.remove('ok');slot.classList.add('err');
+    slot.querySelector('.status').textContent='Free-stock columns not found in ZSTK.';
+    FILES.por=null;
+  }else{
+    FILES.por=parsed.rows;POR_COLS=parsed.cols;PORMAP=parsed.map;
+    slot.classList.remove('err');slot.classList.add('ok');
+    slot.querySelector('.fname').textContent='Live ZSTK (ZSTK_LIVE_TEMP)';
+    slot.querySelector('.status').textContent=`Sheet "${parsed.sheet}" · ${parsed.rows.length.toLocaleString()} rows · ${parsed.reqScore}/${parsed.reqN} required fields auto-mapped`;
+    renderMapping(parsed);
+  }
+  updateRun();
+}
+async function fetchOnlineZstk(){
+  const slot=document.getElementById('slot-por');
+  const btn=document.getElementById('zstkOnlineBtn');
+  btn.disabled=true;
+  slot.querySelector('.status').textContent='Reading ZSTK hub cache…';
+  const cached=await readHubZstkCache();
+  const rows=(()=>{if(cached&&Array.isArray(cached.csvText))return cached.csvText;if(cached&&Array.isArray(cached.values))return cached.values;return null;})();
+  if(rows){
+    try{applyOnlineZstkValues(rows,slot);}
+    catch(err){slot.classList.add('err');slot.querySelector('.status').textContent='Could not parse ZSTK: '+err.message;}
+    btn.disabled=false;return;
+  }
+  const inFrame=window.parent!==window;
+  if(inFrame){try{window.parent.postMessage({type:'request-zstk-fetch',force:false},'*');}catch(e){}}
+  for(let i=0;i<(inFrame?15:0);i++){
+    slot.querySelector('.status').textContent='Waiting for ZSTK hub cache…';
+    await new Promise(r=>setTimeout(r,600));
+    const c=await readHubZstkCache();
+    const rows=(()=>{if(c&&Array.isArray(c.csvText))return c.csvText;if(c&&Array.isArray(c.values))return c.values;return null;})();
+    if(rows){
+      try{applyOnlineZstkValues(rows,slot);}
+      catch(err){slot.classList.add('err');slot.querySelector('.status').textContent='Could not parse ZSTK: '+err.message;}
+      btn.disabled=false;return;
+    }
+  }
+  try{
+    const values=await fetchZstkDirectly();
+    applyOnlineZstkValues(values,slot);
+  }catch(err){
+    slot.classList.remove('ok');slot.classList.add('err');
+    slot.querySelector('.status').textContent=err.message+'. Drop the .xlsx instead.';
   }
   btn.disabled=false;
 }
@@ -1743,6 +1828,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     slot.addEventListener('drop',e=>{e.preventDefault();slot.classList.remove('drag');if(e.dataTransfer.files[0])readFile(k,e.dataTransfer.files[0]);});
   }
   document.getElementById('ebtpOnlineBtn').addEventListener('click',e=>{e.preventDefault();fetchOnlineEbtp();});
+  document.getElementById('zstkOnlineBtn').addEventListener('click',e=>{e.preventDefault();fetchOnlineZstk();});
   // Auto-load the Order Book on open (hub cache, falling back to a direct
   // fetch) so this slot doesn't require an explicit click before it has
   // data — unless the user already uploaded their own EBTP file.

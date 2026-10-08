@@ -185,10 +185,18 @@ input { font: inherit; color: inherit; }
 .sheet-sync-dot.error { background: #ef4444; opacity: 1; box-shadow: 0 0 0 2px rgba(239,68,68,0.18); }
 .sheet-sync-dot.checking { background: #fbbf24; opacity: 1; animation: sheetSyncPulse 1s ease-in-out infinite; }
 .sheet-sync-chip.is-busy { pointer-events: none; opacity: 0.75; }
+/* Mobile-only identity code (Z / B / E). At ≤760px the full label is hidden
+   to keep the header compact — but with only the state dot left, all three
+   chips collapsed into identical pills: green/red told you the health but
+   never WHICH sheet it belonged to. The code restores a per-source identity
+   while keeping the chip's footprint (≈29px vs the old 28px). aria-hidden
+   keeps it out of the accessible name so chip.title stays the fallback. */
+.sheet-sync-code { display: none; }
 @keyframes sheetSyncPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 @media (max-width: 760px) {
   .sheet-sync-chip span.sheet-sync-label { display: none; }
-  .sheet-sync-chip { padding: 0 8px; width: 28px; justify-content: center; }
+  .sheet-sync-chip span.sheet-sync-code { display: inline; }
+  .sheet-sync-chip { padding: 0 6px; gap: 3px; justify-content: center; }
 }
 .user-menu { position: relative; flex-shrink: 0; }
 .user-btn {
@@ -898,13 +906,13 @@ input { font: inherit; color: inherit; }
     <div class="hdr-r">
       <div class="sheet-sync" id="sheetSyncWidget">
         <button class="sheet-sync-chip" data-src="zstk" data-label="ZSTK Yard Data" type="button" title="ZSTK — never synced. Click to sync.">
-          <span class="sheet-sync-dot"></span><span class="sheet-sync-label">ZSTK</span>
+          <span class="sheet-sync-dot"></span><span class="sheet-sync-label">ZSTK</span><span class="sheet-sync-code" aria-hidden="true">Z</span>
         </button>
         <button class="sheet-sync-chip" data-src="autobtr" data-label="AutoBTR" type="button" title="AutoBTR — never synced. Click to sync.">
-          <span class="sheet-sync-dot"></span><span class="sheet-sync-label">BTR</span>
+          <span class="sheet-sync-dot"></span><span class="sheet-sync-label">BTR</span><span class="sheet-sync-code" aria-hidden="true">B</span>
         </button>
         <button class="sheet-sync-chip" data-src="ebtp" data-label="EBTP" type="button" title="EBTP — never synced. Click to sync.">
-          <span class="sheet-sync-dot"></span><span class="sheet-sync-label">EBTP</span>
+          <span class="sheet-sync-dot"></span><span class="sheet-sync-label">EBTP</span><span class="sheet-sync-code" aria-hidden="true">E</span>
         </button>
       </div>
       <button class="add-btn home-btn" id="homeBtn" type="button" title="Home" aria-label="Home">
