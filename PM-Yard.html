@@ -848,7 +848,7 @@ aside.collapsed .left-toggle {
             <div class="upload-opt-desc">Plate inventory &amp; bin positions</div>
             <span class="upload-opt-status empty" id="zstk-upload-status">No file loaded</span>
           </div>
-          <button type="button" class="upload-opt-sync-btn" id="zstk-sync-btn" title="Sync live from Google Sheet" onclick="event.stopPropagation(); syncZSTKLive();">🔄 Sync Live</button>
+          <button type="button" class="upload-opt-sync-btn" id="zstk-sync-btn" title="Sync live from Google Sheet" onclick="event.stopPropagation(); syncZSTKLive(true);">🔄 Sync Live</button>
         </div>
 
         <!-- BTR Card -->
@@ -859,7 +859,7 @@ aside.collapsed .left-toggle {
             <div class="upload-opt-desc">Remarks · Dispatch Mode · Finance Status</div>
             <span class="upload-opt-status empty" id="btr-upload-status">No file loaded</span>
           </div>
-          <button type="button" class="upload-opt-sync-btn" id="btr-sync-btn" title="Sync live from Drive" onclick="event.stopPropagation(); syncAutoBTRLive();">🔄 Sync Live</button>
+          <button type="button" class="upload-opt-sync-btn" id="btr-sync-btn" title="Sync live from Drive" onclick="event.stopPropagation(); syncAutoBTRLive(true);">🔄 Sync Live</button>
         </div>
 
         <div style="font-size:10px;color:var(--tm);text-align:center;padding-top:2px;">Click a card above to browse for a file</div>
@@ -4241,8 +4241,85 @@ function loadBTRFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
-// ─── Live Sync: ZSTK (Google Sheet, via service-account server proxy) ────────
-function syncZSTKLive() {
+// ─── Hub cache (ZSTK / AutoBTR) ───────────────────────────────────────────────
+// The hub (index.html) is the one place that actually calls /api/zstk-proxy
+// and /api/autobtr-proxy — it caches whatever it fetches in the same shared
+// IndexedDB (jspl-ebtp-shared-db) EBTP already uses, under keys 'zstk' and
+// 'autobtr', and broadcasts a '<src>-cache-updated' message to every open
+// dashboard iframe afterwards. This page reads that cache directly (same
+// origin, so no postMessage round trip needed just to read it) and only
+// talks to the hub when it actually needs a fetch to happen: either there's
+// no cache yet, or the user clicked "Sync Live" and wants a genuinely fresh
+// pull. Opened standalone (not inside the hub) it falls back to calling the
+// proxies itself, same as before.
+const EBTP_DB_NAME = 'jspl-ebtp-shared-db', EBTP_DB_STORE = 'cache';
+function openHubCacheDb() {
+  return new Promise(resolve => {
+    try {
+      if (!window.indexedDB) { resolve(null); return; }
+      const req = indexedDB.open(EBTP_DB_NAME, 1);
+      req.onupgradeneeded = () => { const db = req.result; if (!db.objectStoreNames.contains(EBTP_DB_STORE)) db.createObjectStore(EBTP_DB_STORE); };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    } catch (e) { resolve(null); }
+  });
+}
+function readHubCache(key) {
+  return openHubCacheDb().then(db => {
+    if (!db) return null;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(EBTP_DB_STORE, 'readonly');
+        const req = tx.objectStore(EBTP_DB_STORE).get(key);
+        req.onsuccess = () => { try { db.close(); } catch (e) {} resolve(req.result || null); };
+        req.onerror = () => { try { db.close(); } catch (e) {} resolve(null); };
+      } catch (e) { try { db.close(); } catch (_) {} resolve(null); }
+    });
+  }).catch(() => null);
+}
+const readHubZstkCache = () => readHubCache('zstk');
+const readHubAutoBtrCache = () => readHubCache('autobtr');
+
+const _inHub = !!(window.parent && window.parent !== window);
+let _pendingZstkResolve = null;
+let _pendingAutoBtrResolve = null;
+
+// Asks the hub (postMessage) to run its own fetch+cache+broadcast for `src`.
+// Resolves once the matching 'cache-updated' broadcast lands (handled in the
+// hub-message listener further down), or after `timeoutMs` with resolve(false)
+// so the caller can fall back to fetching the proxy directly itself.
+function requestHubSync(src, force, timeoutMs) {
+  return new Promise(resolve => {
+    let settled = false;
+    const clearPending = () => { if (src === 'zstk') _pendingZstkResolve = null; else _pendingAutoBtrResolve = null; };
+    const finish = (ok) => { if (settled) return; settled = true; clearPending(); resolve(ok); };
+    if (src === 'zstk') _pendingZstkResolve = () => finish(true);
+    else _pendingAutoBtrResolve = () => finish(true);
+    try { window.parent.postMessage({ type: 'request-' + src + '-fetch', force: !!force }, '*'); } catch (e) {}
+    setTimeout(() => finish(false), timeoutMs || 8000);
+  });
+}
+
+function ingestZstkCacheRecord(rec, viaHub) {
+  const rows = rec && rec.csvText;
+  if (!Array.isArray(rows) || rows.length < 2) return false;
+  const cnt = parseZSTKData(rows);
+  showToast(`✓ Synced ${cnt.toLocaleString()} plates from ZSTK_LIVE_TEMP${viaHub ? ' (hub cache)' : ''}`);
+  const zstkStatus = document.getElementById('zstk-upload-status');
+  const zstkOpt = document.getElementById('zstk-opt');
+  if (zstkStatus) { zstkStatus.textContent = `✅ ${cnt.toLocaleString()} plates`; zstkStatus.className = 'upload-opt-status loaded'; }
+  if (zstkOpt) { zstkOpt.classList.remove('is-loading'); zstkOpt.classList.add('has-data'); }
+  return true;
+}
+function ingestAutoBtrCacheRecord(rec) {
+  const buf = rec && rec.csvText;
+  if (!buf || !buf.byteLength) return false;
+  loadBTRFile(new Blob([buf]));
+  return true;
+}
+
+// ─── Live Sync: ZSTK ──────────────────────────────────────────────────────────
+function syncZSTKLive(force) {
   const btn = document.getElementById('zstk-sync-btn');
   const zstkStatus = document.getElementById('zstk-upload-status');
   const zstkOpt = document.getElementById('zstk-opt');
@@ -4252,52 +4329,100 @@ function syncZSTKLive() {
   if (zstkStatus) { zstkStatus.innerHTML = '<span class="card-spinner"></span>Syncing…'; zstkStatus.className = 'upload-opt-status loading'; }
   if (zstkOpt) zstkOpt.classList.add('is-loading');
 
-  fetch('/api/zstk-proxy', { cache: 'no-store' })
-    .then(r => r.json().then(data => { if (!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status)); return data; }))
-    .then(data => {
-      const rows = data.values || [];
-      if (rows.length < 2) throw new Error('Sheet is empty or missing headers');
-      const cnt = parseZSTKData(rows);
-      showToast(`✓ Synced ${cnt.toLocaleString()} plates from ZSTK_LIVE_TEMP`);
-      if (zstkStatus) { zstkStatus.textContent = `✅ ${cnt.toLocaleString()} plates (live)`; zstkStatus.className = 'upload-opt-status loaded'; }
-      if (zstkOpt) { zstkOpt.classList.remove('is-loading'); zstkOpt.classList.add('has-data'); }
-    })
-    .catch(e => {
-      console.error('ZSTK sync error:', e);
-      showToast('⚠ ZSTK sync failed: ' + e.message);
-      if (zstkStatus) { zstkStatus.textContent = '⚠ Sync failed'; zstkStatus.className = 'upload-opt-status empty'; }
-      if (zstkOpt) zstkOpt.classList.remove('is-loading');
-    })
-    .finally(() => { if (btn) btn.disabled = false; });
+  const fail = (msg) => {
+    console.error('ZSTK sync error:', msg);
+    showToast('⚠ ZSTK sync failed: ' + msg);
+    if (zstkStatus) { zstkStatus.textContent = '⚠ Sync failed'; zstkStatus.className = 'upload-opt-status empty'; }
+    if (zstkOpt) zstkOpt.classList.remove('is-loading');
+    if (btn) btn.disabled = false;
+  };
+  const ok = () => { if (btn) btn.disabled = false; };
+
+  function directFetch() {
+    fetch('/api/zstk-proxy', { cache: 'no-store' })
+      .then(r => r.json().then(data => { if (!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status)); return data; }))
+      .then(data => {
+        if (!ingestZstkCacheRecord({ csvText: data.values || [] }, false)) throw new Error('Sheet is empty or missing headers');
+        ok();
+      })
+      .catch(e => fail(e.message));
+  }
+
+  if (!_inHub) { directFetch(); return; }
+
+  if (!force) {
+    // Prefer whatever the hub already has — skips a redundant fetch on every
+    // page open when the hub synced recently.
+    readHubZstkCache().then(rec => {
+      if (rec && ingestZstkCacheRecord(rec, true)) { ok(); return; }
+      requestHubSync('zstk', false).then(gotIt => {
+        if (gotIt) { readHubZstkCache().then(r2 => { ingestZstkCacheRecord(r2, true) ? ok() : directFetch(); }); }
+        else directFetch();
+      });
+    });
+    return;
+  }
+
+  // Forced ("Sync Live" clicked) — ask the hub for a genuinely fresh pull;
+  // its retry/backoff + status popup are shared with every other page.
+  requestHubSync('zstk', true).then(gotIt => {
+    if (gotIt) { readHubZstkCache().then(rec => { ingestZstkCacheRecord(rec, true) ? ok() : directFetch(); }); }
+    else directFetch();
+  });
 }
 
-// ─── Live Sync: AutoBTR (Drive .xlsx, via service-account server proxy) ──────
-function syncAutoBTRLive() {
+// ─── Live Sync: AutoBTR ───────────────────────────────────────────────────────
+function syncAutoBTRLive(force) {
   const btn = document.getElementById('btr-sync-btn');
   if (btn) btn.disabled = true;
 
-  fetch('/api/autobtr-proxy', { cache: 'no-store' })
-    .then(r => { if (!r.ok) return r.text().then(t => { throw new Error(t || ('HTTP ' + r.status)); }); return r.blob(); })
-    .then(blob => loadBTRFile(blob))
-    .catch(e => {
-      console.error('AutoBTR sync error:', e);
-      showToast('⚠ AutoBTR sync failed: ' + e.message);
-      const btrStatus = document.getElementById('btr-upload-status');
-      const btrOpt = document.getElementById('btr-opt');
-      if (btrStatus) { btrStatus.textContent = '⚠ Sync failed'; btrStatus.className = 'upload-opt-status empty'; }
-      if (btrOpt) btrOpt.classList.remove('is-loading');
-    })
-    .finally(() => { if (btn) btn.disabled = false; });
+  const fail = (msg) => {
+    console.error('AutoBTR sync error:', msg);
+    showToast('⚠ AutoBTR sync failed: ' + msg);
+    const btrStatus = document.getElementById('btr-upload-status');
+    const btrOpt = document.getElementById('btr-opt');
+    if (btrStatus) { btrStatus.textContent = '⚠ Sync failed'; btrStatus.className = 'upload-opt-status empty'; }
+    if (btrOpt) btrOpt.classList.remove('is-loading');
+    if (btn) btn.disabled = false;
+  };
+  const ok = () => { if (btn) btn.disabled = false; };
+
+  function directFetch() {
+    fetch('/api/autobtr-proxy', { cache: 'no-store' })
+      .then(r => { if (!r.ok) return r.text().then(t => { throw new Error(t || ('HTTP ' + r.status)); }); return r.arrayBuffer(); })
+      .then(buf => { ingestAutoBtrCacheRecord({ csvText: buf }); ok(); })
+      .catch(e => fail(e.message));
+  }
+
+  if (!_inHub) { directFetch(); return; }
+
+  if (!force) {
+    readHubAutoBtrCache().then(rec => {
+      if (rec && ingestAutoBtrCacheRecord(rec)) { ok(); return; }
+      requestHubSync('autobtr', false).then(gotIt => {
+        if (gotIt) { readHubAutoBtrCache().then(r2 => { ingestAutoBtrCacheRecord(r2) ? ok() : directFetch(); }); }
+        else directFetch();
+      });
+    });
+    return;
+  }
+
+  requestHubSync('autobtr', true).then(gotIt => {
+    if (gotIt) { readHubAutoBtrCache().then(rec => { ingestAutoBtrCacheRecord(rec) ? ok() : directFetch(); }); }
+    else directFetch();
+  });
 }
 
 // Auto-sync both live sources the first time the Upload dropdown is opened in
-// this session (manual "Sync Live" buttons still work any time after).
+// this session (manual "Sync Live" buttons still work any time after, and now
+// pass force=true to actually ask the hub for a fresh pull rather than reuse
+// whatever's already cached).
 let _liveSyncedOnce = false;
 function autoSyncLiveOnFirstOpen() {
   if (_liveSyncedOnce) return;
   _liveSyncedOnce = true;
-  try { syncZSTKLive(); } catch (e) {}
-  try { syncAutoBTRLive(); } catch (e) {}
+  try { syncZSTKLive(false); } catch (e) {}
+  try { syncAutoBTRLive(false); } catch (e) {}
 }
 
 // ─── Build BTR Slicer Dropdowns ───────────────────────────────────────────────
@@ -5393,10 +5518,19 @@ updateKPIs();
           if (typeof window.clearAllGlobalFilters === 'function') { window.clearAllGlobalFilters(); applyFilters(); return; }
         }catch(err){}
         location.reload();
-      } else if (d.type === 'sync-zstk') {
-        try{ if (typeof syncZSTKLive === 'function') syncZSTKLive(); }catch(err){}
-      } else if (d.type === 'sync-autobtr') {
-        try{ if (typeof syncAutoBTRLive === 'function') syncAutoBTRLive(); }catch(err){}
+      } else if (d.type === 'zstk-cache-updated') {
+        // The hub just finished a fetch (its own chip click, or another
+        // tab's request) and cached fresh ZSTK rows — read and ingest them,
+        // and resolve this page's own pending request if it had one out.
+        try{
+          if (typeof _pendingZstkResolve === 'function') { var r = _pendingZstkResolve; _pendingZstkResolve = null; r(); }
+          else if (typeof readHubZstkCache === 'function') readHubZstkCache().then(function(rec){ try{ ingestZstkCacheRecord(rec, true); }catch(e){} });
+        }catch(err){}
+      } else if (d.type === 'autobtr-cache-updated') {
+        try{
+          if (typeof _pendingAutoBtrResolve === 'function') { var r2 = _pendingAutoBtrResolve; _pendingAutoBtrResolve = null; r2(); }
+          else if (typeof readHubAutoBtrCache === 'function') readHubAutoBtrCache().then(function(rec){ try{ ingestAutoBtrCacheRecord(rec); }catch(e){} });
+        }catch(err){}
       }
     } catch(err){ console.warn('Hub message handler error', err); }
   }
