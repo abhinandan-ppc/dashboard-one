@@ -11,6 +11,10 @@ sheets/
 scripts/
 test/
 
+# Local-only dev server — reads the gitignored service-account.json to serve
+# the sheet proxies on localhost. Runs from a clone, never deployed.
+local-auth.mjs
+
 # Development and verification scratch.
 .playwright-cli/
 claude-flow/

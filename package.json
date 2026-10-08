@@ -7,6 +7,7 @@
   },
   "scripts": {
     "test": "node --test",
+    "dev": "node local-auth.mjs",
     "verify:integrity": "node scripts/verify-integrity.mjs",
     "verify:all-sheets": "node scripts/verify-all-sheets.mjs",
     "verify:fixtures": "node scripts/verify-integrity.mjs sheets-schema",
