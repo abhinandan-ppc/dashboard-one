@@ -443,6 +443,29 @@ input::placeholder{color:var(--mute);opacity:1}
 .fetch-status-log div{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fetch-status-log div:last-child{color:var(--dim)}
 
+/* ── Per-source status badges — EBTP / BTR / ZSTK ──
+   The popup used to show only whichever source most recently posted a phase.
+   These three badges let it show all three live syncs at once: grey/idle by
+   default, amber-pulsing while that source is fetching, then green (✓) or red
+   (✗) once it settles. Only the hub's popup has these elements — other pages
+   load theme.css too but carry no .fetch-status-src nodes, so this is inert there. */
+.fetch-status-sources{display:flex;gap:6px;flex-wrap:wrap}
+.fetch-status-src{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:3px 9px;border-radius:var(--radius-pill);
+  font-size:11px;font-weight:700;letter-spacing:.03em;
+  background:var(--s2);border:1px solid var(--bdr);color:var(--mute);
+  transition:color .2s ease,border-color .2s ease;
+}
+.fetch-status-src-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--mute);opacity:.6;transition:background-color .2s ease,opacity .2s ease}
+.fetch-status-src.is-active{color:var(--text);border-color:var(--amber)}
+.fetch-status-src.is-active .fetch-status-src-dot{background:var(--amber);opacity:1;animation:fetchSrcPulse 1s ease-in-out infinite}
+.fetch-status-src.is-ok{color:var(--text);border-color:var(--green)}
+.fetch-status-src.is-ok .fetch-status-src-dot{background:var(--green);opacity:1}
+.fetch-status-src.is-error{color:var(--text);border-color:var(--rose)}
+.fetch-status-src.is-error .fetch-status-src-dot{background:var(--rose);opacity:1}
+@keyframes fetchSrcPulse{0%,100%{opacity:1}50%{opacity:.4}}
+
 /* ── Shared Material 3 / glass primitives ── */
 :root{
   --font-display:'Space Grotesk','Poppins',system-ui,sans-serif;

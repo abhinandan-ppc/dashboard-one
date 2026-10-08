@@ -2772,6 +2772,11 @@ setAccent(readStoredAccent());
     <div class="fetch-status-spinner"></div>
     <div class="fetch-status-label" id="fetchStatusLabel">Fetching EBTP data…</div>
   </div>
+  <div class="fetch-status-sources">
+    <span class="fetch-status-src" data-src="EBTP"><i class="fetch-status-src-dot"></i><span>EBTP</span></span>
+    <span class="fetch-status-src" data-src="AutoBTR"><i class="fetch-status-src-dot"></i><span>BTR</span></span>
+    <span class="fetch-status-src" data-src="ZSTK"><i class="fetch-status-src-dot"></i><span>ZSTK</span></span>
+  </div>
   <div class="loader-track"><div class="loader-bar" id="fetchStatusBar"></div></div>
   <div class="fetch-status-log" id="fetchStatusLog"></div>
 </div>
@@ -2781,7 +2786,6 @@ setAccent(readStoredAccent());
    same-origin, across every dashboard iframe) so opening a tool never
    re-triggers its own network fetch — it just reads the cache. */
 "use strict";
-var EBTP_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQEKS6uq6epbkSmpv548hSG63WVUiFwKLXctpeM3G8NMeXJ_ZJaTCuFj95n4gTRuhchM_T4q_kp5_au/pub?gid=0&single=true&output=csv";
 var EBTP_CACHE_KEY = "jspl-ebtp-cache-v1";
 // Sold-To-Party → Segment lookup (e.g. "Yellow Goods"), published from the same
 // workbook's SEGMENT tab. Fetched/cached alongside EBTP so every dashboard can
@@ -2926,36 +2930,68 @@ function clearLegacyEbtpCaches(){
 // Shared bottom-of-screen fetch/parse popup — originally EBTP-only, now also
 // used by the ZSTK/AutoBTR live syncs. Several sources can be mid-fetch at
 // once (e.g. the hub's own startup status check), so a small "active sources"
-// set decides visibility: the panel stays up and keeps showing whichever
-// source most recently posted a phase, and only actually hides once every
-// source that asked for it has also asked to hide.
+// set decides visibility: the panel stays up while any source is mid-fetch and
+// only actually hides once every source that asked for it has also asked to
+// hide. On top of the phase label + scroll log, three per-source badges
+// (EBTP / BTR / ZSTK) light up so all three live syncs are visible at once —
+// grey/idle by default, amber-pulsing while that source fetches, then green (✓)
+// or red (✗) once it settles.
 var _fetchStatusActive = {};
+var _fetchStatusOutcome = {}; // source -> 'ok' | 'error', set by a ✓/✗ log line
+var _FETCH_SRC_LABEL = { EBTP: 'EBTP', AutoBTR: 'BTR', ZSTK: 'ZSTK' };
+function fetchSrcName(s){ return _FETCH_SRC_LABEL[s] || s; }
+function renderFetchSources(){
+  var badges = document.querySelectorAll('#fetchStatus .fetch-status-src');
+  for(var i = 0; i < badges.length; i++){
+    var b = badges[i], s = b.getAttribute('data-src');
+    b.classList.remove('is-active', 'is-ok', 'is-error');
+    if(_fetchStatusOutcome[s] === 'ok') b.classList.add('is-ok');
+    else if(_fetchStatusOutcome[s] === 'error') b.classList.add('is-error');
+    else if(_fetchStatusActive[s]) b.classList.add('is-active');
+  }
+}
 function fetchStatusShow(phase, source){
   source = source || 'EBTP';
   _fetchStatusActive[source] = true;
+  delete _fetchStatusOutcome[source]; // this (re)started — clear any stale settle state
   var el = document.getElementById('fetchStatus');
   if(el) el.style.display = 'flex';
   var lbl = document.getElementById('fetchStatusLabel');
-  if(lbl) lbl.textContent = (phase === 'parsing' ? 'Validating ' : 'Fetching ') + source + ' data…';
+  if(lbl){
+    var act = Object.keys(_fetchStatusActive);
+    if(act.length > 1) lbl.textContent = 'Syncing ' + act.map(fetchSrcName).join(', ') + '…';
+    else lbl.textContent = (phase === 'parsing' ? 'Validating ' : 'Fetching ') + fetchSrcName(source) + '…';
+  }
   var bar = document.getElementById('fetchStatusBar');
   if(bar) bar.classList.toggle('phase-parsing', phase === 'parsing');
+  renderFetchSources();
 }
 function fetchStatusLog(msg, source){
   var log = document.getElementById('fetchStatusLog');
   if(!log) return;
   var line = document.createElement('div');
-  line.textContent = (source ? '[' + source + '] ' : '') + msg;
+  line.textContent = (source ? '[' + fetchSrcName(source) + '] ' : '') + msg;
   log.appendChild(line);
   while(log.children.length > 6) log.removeChild(log.firstChild);
   log.scrollTop = log.scrollHeight;
+  if(source){
+    if(msg.indexOf('✓') === 0) _fetchStatusOutcome[source] = 'ok';
+    else if(msg.indexOf('✗') === 0) _fetchStatusOutcome[source] = 'error';
+  }
+  renderFetchSources();
 }
 function fetchStatusHide(source){
-  delete _fetchStatusActive[source || 'EBTP'];
+  source = source || 'EBTP';
+  delete _fetchStatusActive[source];
+  if(!_fetchStatusOutcome[source]) _fetchStatusOutcome[source] = 'ok'; // settled without an explicit marker
+  renderFetchSources();
   if(Object.keys(_fetchStatusActive).length > 0) return; // another source is still mid-fetch
   var el = document.getElementById('fetchStatus');
   if(el) el.style.display = 'none';
   var log = document.getElementById('fetchStatusLog');
   if(log) log.innerHTML = '';
+  _fetchStatusOutcome = {}; // reset badges so the next session starts clean
+  renderFetchSources();
 }
 
 var ebtpFetchInFlight = null;
@@ -2965,57 +3001,44 @@ function fetchAndCacheEBTP(force){
   // only reuse the in-flight promise when this call isn't itself demanding a refetch.
   if(ebtpFetchInFlight && !force) return ebtpFetchInFlight;
   clearLegacyEbtpCaches(); // reclaim quota from pre-centralization per-page localStorage caches
-  var enc = encodeURIComponent(EBTP_SHEET_URL);
-  var strats = [
-    { n: 'api-proxy',      f: function(){ return tryApiProxy(); } },
-    { n: 'XHR',            f: function(){ return tryXHR(EBTP_SHEET_URL); } },
-    { n: 'Iframe',         f: function(){ return tryIframeFetch(EBTP_SHEET_URL); } },
-    { n: 'corsproxy.io',   f: function(){ return tryProxyFetch('https://corsproxy.io/?' + enc, false); } },
-    { n: 'codetabs',       f: function(){ return tryProxyFetch('https://api.codetabs.com/v1/proxy?quest=' + enc, false); } },
-    { n: 'allorigins/raw', f: function(){ return tryProxyFetch('https://api.allorigins.win/raw?url=' + enc, false); } },
-    { n: 'allorigins/get', f: function(){ return tryProxyFetch('https://api.allorigins.win/get?url=' + enc, true); } },
-    { n: 'thingproxy',     f: function(){ return tryProxyFetch('https://thingproxy.freeboard.io/fetch/' + EBTP_SHEET_URL, false); } },
-    { n: 'jsonp.afeld.me', f: function(){ return tryProxyFetch('https://jsonp.afeld.me/?url=' + enc, false); } },
-  ];
 
   ebtpFetchInFlight = (async function(){
     var cached = await readEbtpCache();
     if(cached && !force) { ebtpFetchInFlight = null; return { ok: true, cached: true, fetchedAt: cached.fetchedAt }; }
 
-    fetchStatusShow('fetching');
-    var errs = [];
-    for(var i = 0; i < strats.length; i++){
-      var n = strats[i].n, f = strats[i].f;
-      fetchStatusLog('→ Trying ' + n + '…');
-      try{
-        var text = await f();
-        if(!text || text.length < 50) throw new Error('empty');
-        if(text.split('\n')[0].indexOf(',') === -1) throw new Error('not CSV');
-        fetchStatusLog('✓ ' + n + ' succeeded');
-        fetchStatusShow('parsing');
-        var rowCount = text.split('\n').filter(function(l){ return l.trim(); }).length - 1;
-        fetchStatusLog('Validated ' + Math.max(0, rowCount).toLocaleString() + ' rows');
-        var wrote = await writeEbtpCache(text, rowCount);
-        if(!wrote){
-          fetchStatusLog('✗ Cache write failed — dashboards will fetch on their own');
-          setTimeout(fetchStatusHide, 3000);
-          ebtpFetchInFlight = null;
-          return { ok: false, error: 'IndexedDB write failed' };
-        }
-        fetchStatusLog('✓ Cached for all dashboards');
-        setTimeout(fetchStatusHide, 900);
-        try{ broadcastToFrame({ type: 'ebtp-cache-updated', fetchedAt: Date.now(), rowCount: rowCount }); }catch(e){}
+    // EBTP is fetched EXCLUSIVELY through the service-account proxy
+    // (/api/ebtp-proxy → Google Sheets API, signed by the shared service account).
+    // The old XHR / iframe / public CORS-proxy fallback chain was removed: the
+    // sheet is private now, so only the service account can read it — and EBTP
+    // data should never leak through third-party CORS proxies anyway.
+    fetchStatusShow('fetching', 'EBTP');
+    fetchStatusLog('→ Requesting EBTP via service account…', 'EBTP');
+    try{
+      var text = await tryApiProxy();
+      if(!text || text.length < 50) throw new Error('empty');
+      if(text.split('\n')[0].indexOf(',') === -1) throw new Error('not CSV');
+      fetchStatusShow('parsing', 'EBTP');
+      var rowCount = text.split('\n').filter(function(l){ return l.trim(); }).length - 1;
+      fetchStatusLog('→ Validating ' + Math.max(0, rowCount).toLocaleString() + ' rows', 'EBTP');
+      var wrote = await writeEbtpCache(text, rowCount);
+      if(!wrote){
+        fetchStatusLog('✗ Cache write failed — dashboards will fetch on their own', 'EBTP');
+        setTimeout(function(){ fetchStatusHide('EBTP'); }, 3000);
         ebtpFetchInFlight = null;
-        return { ok: true, rowCount: rowCount, fetchedAt: Date.now() };
-      }catch(e){
-        var msg = n + ': ' + (e.name === 'AbortError' ? 'timeout' : e.message);
-        errs.push(msg); fetchStatusLog('✗ ' + msg);
+        return { ok: false, error: 'IndexedDB write failed' };
       }
+      fetchStatusLog('✓ Service account cached ' + rowCount.toLocaleString() + ' rows for all dashboards', 'EBTP');
+      setTimeout(function(){ fetchStatusHide('EBTP'); }, 900);
+      try{ broadcastToFrame({ type: 'ebtp-cache-updated', fetchedAt: Date.now(), rowCount: rowCount }); }catch(e){}
+      ebtpFetchInFlight = null;
+      return { ok: true, rowCount: rowCount, fetchedAt: Date.now() };
+    }catch(e){
+      var msg = e.name === 'AbortError' ? 'timeout' : e.message;
+      fetchStatusLog('✗ Service-account fetch failed: ' + msg, 'EBTP');
+      setTimeout(function(){ fetchStatusHide('EBTP'); }, 2500);
+      ebtpFetchInFlight = null;
+      return { ok: false, error: msg };
     }
-    fetchStatusLog('✗ All ' + strats.length + ' methods failed');
-    setTimeout(fetchStatusHide, 2500);
-    ebtpFetchInFlight = null;
-    return { ok: false, error: errs.join(' · ') };
   })();
   return ebtpFetchInFlight;
 }

@@ -602,7 +602,6 @@ function previewSkeleton(){
    (same DB/store/key contract as index.html — localStorage's ~5-10MB
    quota is too small for this CSV). If the hub's cache doesn't show up
    in time, this page fetches EBTP itself. */
-const EBTP_SHEET_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vQEKS6uq6epbkSmpv548hSG63WVUiFwKLXctpeM3G8NMeXJ_ZJaTCuFj95n4gTRuhchM_T4q_kp5_au/pub?gid=0&single=true&output=csv";
 const EBTP_DB_NAME='jspl-ebtp-shared-db',EBTP_DB_STORE='cache',EBTP_DB_KEY='latest';
 function openEbtpDb(){
   return new Promise(resolve=>{
@@ -641,46 +640,9 @@ function writeHubEbtpCache(csvText,rowCount){
     });
   }).catch(()=>false);
 }
-function tryXHR(url,attempts=5,timeoutMs=4000){
-  const attempt=n=>new Promise((res,rej)=>{
-    const x=new XMLHttpRequest();
-    x.open('GET',url,true);
-    x.timeout=timeoutMs;
-    x.onload=()=>x.status>=200&&x.status<300?res(x.responseText):rej(new Error('XHR '+x.status+' (try '+n+'/'+attempts+')'));
-    x.onerror=()=>rej(new Error('XHR network error (try '+n+'/'+attempts+')'));
-    x.ontimeout=()=>rej(new Error('XHR timeout (try '+n+'/'+attempts+')'));
-    x.send();
-  }).catch(e=>{
-    if(n>=attempts)throw e;
-    return new Promise(r=>setTimeout(r,250)).then(()=>attempt(n+1));
-  });
-  return attempt(1);
-}
-function tryIframe(url){
-  return new Promise((res,rej)=>{
-    const iframe=document.createElement('iframe');
-    iframe.style.cssText='position:fixed;width:1px;height:1px;top:-999px;left:-999px;opacity:0;';
-    iframe.sandbox='allow-same-origin';
-    const t=setTimeout(()=>{try{document.body.removeChild(iframe);}catch(e){}rej(new Error('iframe timeout'));},12000);
-    iframe.onload=()=>{
-      clearTimeout(t);
-      try{
-        const txt=iframe.contentDocument?.body?.innerText||iframe.contentDocument?.documentElement?.innerText||'';
-        document.body.removeChild(iframe);
-        txt.includes(',')&&txt.length>50?res(txt):rej(new Error('iframe: no csv'));
-      }catch(e){try{document.body.removeChild(iframe);}catch(_){}rej(e);}
-    };
-    iframe.onerror=()=>{clearTimeout(t);try{document.body.removeChild(iframe);}catch(e){}rej(new Error('iframe error'));};
-    document.body.appendChild(iframe);
-    iframe.src=url;
-  });
-}
-function tryFetch(proxyUrl,json){
-  return fetch(proxyUrl,{cache:'no-store',mode:'cors',credentials:'omit'})
-    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);
-      return json?r.json().then(d=>{const t=d?.contents||d?.data||'';if(!t)throw new Error('empty');return t;}):r.text();
-    });
-}
+/* ── EBTP's only network path: the service-account proxy (/api/ebtp-proxy).
+   The old XHR / iframe / public CORS-proxy fallback chain was removed — the
+   sheet is private, so only the service account can read it. ── */
 function tryApiProxy(){
   return fetch('/api/ebtp-proxy',{cache:'no-store',credentials:'same-origin'})
     .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
@@ -704,38 +666,32 @@ function fetchStatusHide(){
 }
 async function fetchEbtpDirectly(){
   fetchStatusShow('fetching');
-  const enc=encodeURIComponent(EBTP_SHEET_URL);
+  // EBTP is fetched EXCLUSIVELY through the service-account proxy. The old XHR /
+  // iframe / public CORS-proxy fallback chain was removed — the sheet is private
+  // now, so only the service account can read it.
   const strats=[
-    {n:'api-proxy',      f:()=>tryApiProxy()},
-    {n:'XHR',            f:()=>tryXHR(EBTP_SHEET_URL)},
-    {n:'Iframe',         f:()=>tryIframe(EBTP_SHEET_URL)},
-    {n:'corsproxy.io',   f:()=>tryFetch('https://corsproxy.io/?'+enc,false)},
-    {n:'codetabs',       f:()=>tryFetch('https://api.codetabs.com/v1/proxy?quest='+enc,false)},
-    {n:'allorigins/raw', f:()=>tryFetch('https://api.allorigins.win/raw?url='+enc,false)},
-    {n:'allorigins/get', f:()=>tryFetch('https://api.allorigins.win/get?url='+enc,true)},
-    {n:'thingproxy',     f:()=>tryFetch('https://thingproxy.freeboard.io/fetch/'+EBTP_SHEET_URL,false)},
-    {n:'jsonp.afeld.me', f:()=>tryFetch('https://jsonp.afeld.me/?url='+enc,false)},
+    {n:'api-proxy', f:()=>tryApiProxy()},
   ];
   const errs=[];
   for(const{n,f}of strats){
-    fetchStatusLog('→ Trying '+n+'…');
+    fetchStatusLog('→ Requesting EBTP via service account…');
     try{
       const text=await f();
       if(!text||text.length<50)throw new Error('empty');
       if(!text.split('\n')[0].includes(','))throw new Error('not CSV');
-      fetchStatusLog('✓ '+n+' succeeded');
+      fetchStatusLog('✓ Service account responded');
       fetchStatusShow('parsing');
       const rowCount=text.split('\n').filter(l=>l.trim()).length-1;
       writeHubEbtpCache(text,rowCount);
       fetchStatusHide();
       return text;
     }catch(e){
-      const msg=n+': '+(e.name==='AbortError'?'timeout':e.message);
-      errs.push(msg);fetchStatusLog('✗ '+msg);
+      const msg=(e.name==='AbortError'?'timeout':e.message);
+      errs.push(msg);fetchStatusLog('✗ Service-account fetch failed: '+msg);
     }
   }
   fetchStatusHide();
-  throw new Error('All '+strats.length+' fetch methods failed — '+errs.join(' · '));
+  throw new Error('Service-account EBTP fetch failed — '+errs.join(' · '));
 }
 
 function setOnlineFetching(on,label){
