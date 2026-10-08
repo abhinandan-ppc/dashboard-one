@@ -2216,6 +2216,7 @@ function PivotTable({data,onDrill,onRegionExport,activeCell,remarksLbl}){
 function OverviewMapModal({rows,onClose}){
   const mapRef=useRef(null);
   const mapInst=useRef(null);
+  const baseLayerRef=useRef(null);
   const searchMarkerRef=useRef(null);
   const overlayGroupRef=useRef(null);
   const flowRendererRef=useRef(null);
@@ -2236,7 +2237,7 @@ function OverviewMapModal({rows,onClose}){
   const hubLat=selHub?selHub.lat:ANGUL.lat;
   const hubLng=selHub?selHub.lng:ANGUL.lng;
 
-  const cities=useMemo(()=>{
+  const mappedCities=useMemo(()=>{
     if(!selPlan||!selHub)return[];
     const cityMap={};
     for(const rk of selPlan.rakes)for(const{ord,q}of rk.items){
@@ -2250,19 +2251,21 @@ function OverviewMapModal({rows,onClose}){
       if(n2(parseFloat(ord['FG UR Stock']))<n2(q))cityMap[c].fgOk=false;
       cityMap[c].ords.push(ord);
     }
-    return Object.values(cityMap).map(ct=>{
+    return Object.values(cityMap);
+  },[selPlan,selHub]);
+
+  const cities=useMemo(()=>mappedCities.map(ct=>{
       const distFromHub=Math.round(haversine(hubLat,hubLng,ct.lat,ct.lng));
       const fwd=forwardDistance(ANGUL.lat,ANGUL.lng,hubLat,hubLng,ct.lat,ct.lng);
       const direction=fwd>=0?'forward':'reverse';
       const included=direction==='forward'||(distFromHub<=reverseKm);
       return{...ct,distFromHub,direction,included};
-    });
-  },[selPlan,selHub,reverseKm]);
+    }),[mappedCities,hubLat,hubLng,reverseKm]);
 
   const fwdCities=cities.filter(c=>c.direction==='forward');
   const revIncl=cities.filter(c=>c.direction==='reverse'&&c.included);
   const revExcl=cities.filter(c=>c.direction==='reverse'&&!c.included);
-  const offMap=selPlan?new Set(selPlan.rakes.flatMap(rk=>rk.items.map(({ord})=>String(ord['Ship To Party City']||'').trim().toUpperCase()))).size-cities.length:0;
+  const offMap=useMemo(()=>selPlan?new Set(selPlan.rakes.flatMap(rk=>rk.items.map(({ord})=>String(ord['Ship To Party City']||'').trim().toUpperCase()))).size-mappedCities.length:0,[selPlan,mappedCities.length]);
 
   React.useLayoutEffect(()=>{
     if(!mapRef.current||!window.L)return;
@@ -2270,9 +2273,8 @@ function OverviewMapModal({rows,onClose}){
     const map=L.map(mapRef.current,{center:[22,80],zoom:5,zoomControl:true,preferCanvas:true});
     mapInst.current=map;
     flowRendererRef.current=L.svg({padding:.5}).addTo(map);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-      {attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community',maxZoom:16}).addTo(map);
     return()=>{
+      if(baseLayerRef.current){baseLayerRef.current.remove();baseLayerRef.current=null;}
       if(overlayGroupRef.current){overlayGroupRef.current.remove();overlayGroupRef.current=null;}
       flowRendererRef.current=null;
       map.remove();
@@ -2284,15 +2286,26 @@ function OverviewMapModal({rows,onClose}){
   React.useLayoutEffect(()=>{
     const map=mapInst.current;
     if(!map||!window.L)return;
+    if(baseLayerRef.current)baseLayerRef.current.remove();
+    const style=lightMap?'World_Light_Gray_Base':'World_Dark_Gray_Base';
+    baseLayerRef.current=window.L.tileLayer(
+      `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${style}/MapServer/tile/{z}/{y}/{x}`,{
+        attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community',
+        maxZoom:16
+      }).addTo(map);
+    return()=>{
+      if(baseLayerRef.current){baseLayerRef.current.remove();baseLayerRef.current=null;}
+    };
+  },[lightMap]);
+
+  React.useLayoutEffect(()=>{
+    const map=mapInst.current;
+    if(!map||!window.L)return;
     const L=window.L;
     const layerGroup=L.layerGroup().addTo(map);
     if(overlayGroupRef.current)overlayGroupRef.current.remove();
     overlayGroupRef.current=layerGroup;
     const flowRenderer=flowRendererRef.current;
-    map.getPane('tilePane').style.filter=lightMap
-      ?'saturate(.45) brightness(1.04) contrast(.94)'
-      :'invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.45)';
-
     const mkDivIcon=(h,sz)=>L.divIcon({html:h,className:'',iconSize:sz,iconAnchor:[sz[0]/2,sz[1]/2]});
     // ── Angul origin marker (same as RakeMapModal) ──
     const angulIcon=plantPinIcon(L,C.amber);
@@ -2628,6 +2641,7 @@ function OverviewMapModal({rows,onClose}){
 function RakeMapModal({rakePlan,rakeIdx,onClose}){
   const mapRef=useRef(null);
   const mapInst=useRef(null);
+  const baseLayerRef=useRef(null);
   const searchMarkerRef=useRef(null);
   const overlayGroupRef=useRef(null);
   const flowRendererRef=useRef(null);
@@ -2643,34 +2657,36 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
   const rc=C.region[rakePlan.region]||C.region.Unknown;
   const baseCode=rakePlan.siding.replace(/\s*\(Long\)/,'').trim();
   const hub=resolveHub(baseCode);
-  const items=rk?rk.items:rakePlan.rakes.flatMap(r=>r.items);
+  const items=useMemo(()=>rk?rk.items:rakePlan.rakes.flatMap(r=>r.items),[rk,rakePlan.rakes]);
 
-  // Unique cities with direction, FG status, distance
-  const cityMap={};
-  for(const{ord,q}of items){
-    const c=String(ord['Ship To Party City']||'').trim().toUpperCase();
-    const raw=CITY_COORDS[c];const coords=raw||mlLookupCoords(c)||null;
-    if(!coords)continue;
-    const la=parseFloat(coords[0]),lo=parseFloat(coords[1]);
-    if(isNaN(la)||isNaN(lo)||la<6||la>37||lo<68||lo>98)continue; // guard against bad/out-of-India coords crashing Leaflet
-    if(!cityMap[c])cityMap[c]={name:String(ord['Ship To Party City']||c),lat:la,lng:lo,bal:0,n:0,fgOk:true,ords:[]};
-    cityMap[c].bal+=q;cityMap[c].n++;
-    if(n2(parseFloat(ord['FG UR Stock']))<q)cityMap[c].fgOk=false;
-    cityMap[c].ords.push(ord);
-  }
+  const mappedCities=useMemo(()=>{
+    const cityMap={};
+    for(const{ord,q}of items){
+      const c=String(ord['Ship To Party City']||'').trim().toUpperCase();
+      const raw=CITY_COORDS[c];const coords=raw||mlLookupCoords(c)||null;
+      if(!coords)continue;
+      const la=parseFloat(coords[0]),lo=parseFloat(coords[1]);
+      if(isNaN(la)||isNaN(lo)||la<6||la>37||lo<68||lo>98)continue; // guard against bad/out-of-India coords crashing Leaflet
+      if(!cityMap[c])cityMap[c]={name:String(ord['Ship To Party City']||c),lat:la,lng:lo,bal:0,n:0,fgOk:true,ords:[]};
+      cityMap[c].bal+=q;cityMap[c].n++;
+      if(n2(parseFloat(ord['FG UR Stock']))<q)cityMap[c].fgOk=false;
+      cityMap[c].ords.push(ord);
+    }
+    return Object.values(cityMap);
+  },[items]);
   // Compute direction for each city using hub and Angul as source
   const hubLat=hub?hub.lat:ANGUL.lat, hubLng=hub?hub.lng:ANGUL.lng;
-  const cities=Object.values(cityMap).map(ct=>{
+  const cities=useMemo(()=>mappedCities.map(ct=>{
     const distFromHub=Math.round(haversine(hubLat,hubLng,ct.lat,ct.lng));
     const fwd=forwardDistance(ANGUL.lat,ANGUL.lng,hubLat,hubLng,ct.lat,ct.lng);
     const direction=fwd>=0?'forward':'reverse';
     const included=direction==='forward'||(distFromHub<=reverseKm);
     return{...ct,distFromHub,direction,included};
-  });
+  }),[mappedCities,hubLat,hubLng,reverseKm]);
   const fwdCities=cities.filter(c=>c.direction==='forward');
   const revIncl=cities.filter(c=>c.direction==='reverse'&&c.included);
   const revExcl=cities.filter(c=>c.direction==='reverse'&&!c.included);
-  const offMap=new Set(items.map(({ord})=>String(ord['Ship To Party City']||'').trim().toUpperCase())).size-cities.length;
+  const offMap=useMemo(()=>new Set(items.map(({ord})=>String(ord['Ship To Party City']||'').trim().toUpperCase())).size-mappedCities.length,[items,mappedCities.length]);
 
   const title=rk?`Rake ${rakeIdx+1} · ${rakePlan.siding} · ${rk.items.length} orders`
     :`All Rakes · ${rakePlan.siding} · ${items.length} orders`;
@@ -2727,16 +2743,12 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
   React.useLayoutEffect(()=>{
     if(!mapRef.current||!window.L)return;
     const L=window.L;
-    const map=L.map(mapRef.current,{center:[22,80],zoom:5,zoomControl:true,attributionControl:true});
+    const map=L.map(mapRef.current,{center:[22,80],zoom:5,zoomControl:true,attributionControl:true,preferCanvas:true});
     mapInst.current=map;
     flowRendererRef.current=L.svg({padding:.5}).addTo(map);
 
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{
-      attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community',
-      maxZoom:16
-    }).addTo(map);
-
     return()=>{
+      if(baseLayerRef.current){baseLayerRef.current.remove();baseLayerRef.current=null;}
       if(overlayGroupRef.current){overlayGroupRef.current.remove();overlayGroupRef.current=null;}
       flowRendererRef.current=null;
       map.remove();
@@ -2748,15 +2760,26 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
   React.useLayoutEffect(()=>{
     const map=mapInst.current;
     if(!map||!window.L)return;
+    if(baseLayerRef.current)baseLayerRef.current.remove();
+    const style=lightMap?'World_Light_Gray_Base':'World_Dark_Gray_Base';
+    baseLayerRef.current=window.L.tileLayer(
+      `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${style}/MapServer/tile/{z}/{y}/{x}`,{
+        attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community',
+        maxZoom:16
+      }).addTo(map);
+    return()=>{
+      if(baseLayerRef.current){baseLayerRef.current.remove();baseLayerRef.current=null;}
+    };
+  },[lightMap]);
+
+  React.useLayoutEffect(()=>{
+    const map=mapInst.current;
+    if(!map||!window.L)return;
     const L=window.L;
     const layerGroup=L.layerGroup().addTo(map);
     if(overlayGroupRef.current)overlayGroupRef.current.remove();
     overlayGroupRef.current=layerGroup;
     const flowRenderer=flowRendererRef.current;
-    map.getPane('tilePane').style.filter=lightMap
-      ?'saturate(.45) brightness(1.04) contrast(.94)'
-      :'invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.45)';
-
     const mkDivIcon=(html,sz)=>L.divIcon({html,className:'',iconSize:sz,iconAnchor:[sz[0]/2,sz[1]/2]});
     // ── Draw trunk: Angul → Hub ──
     if(hub){
