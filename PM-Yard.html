@@ -219,6 +219,13 @@ input[type=range] { flex: 1; accent-color: var(--md-sys-color-secondary); height
 .upload-opt-status.loaded { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
 .upload-opt-status.loading{ background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
 .upload-opt.has-data { border-color: rgba(16,185,129,0.3); }
+.upload-opt-sync-btn {
+  flex-shrink: 0; align-self: center; font-size: 10.5px; font-weight: 700;
+  color: #38bdf8; background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.35);
+  border-radius: 100px; padding: 5px 10px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.upload-opt-sync-btn:hover { background: rgba(56,189,248,0.22); }
+.upload-opt-sync-btn:disabled { opacity: 0.5; cursor: wait; }
 
 /* ─── CUSTOM M3 SELECT DROPDOWN ─── */
 .custom-select { position: relative; width: 100%; font-size: 13px; font-weight: 700; color: var(--tx); user-select: none; }
@@ -841,6 +848,7 @@ aside.collapsed .left-toggle {
             <div class="upload-opt-desc">Plate inventory &amp; bin positions</div>
             <span class="upload-opt-status empty" id="zstk-upload-status">No file loaded</span>
           </div>
+          <button type="button" class="upload-opt-sync-btn" id="zstk-sync-btn" title="Sync live from Google Sheet" onclick="event.stopPropagation(); syncZSTKLive();">🔄 Sync Live</button>
         </div>
 
         <!-- BTR Card -->
@@ -851,6 +859,7 @@ aside.collapsed .left-toggle {
             <div class="upload-opt-desc">Remarks · Dispatch Mode · Finance Status</div>
             <span class="upload-opt-status empty" id="btr-upload-status">No file loaded</span>
           </div>
+          <button type="button" class="upload-opt-sync-btn" id="btr-sync-btn" title="Sync live from Drive" onclick="event.stopPropagation(); syncAutoBTRLive();">🔄 Sync Live</button>
         </div>
 
         <div style="font-size:10px;color:var(--tm);text-align:center;padding-top:2px;">Click a card above to browse for a file</div>
@@ -2915,7 +2924,12 @@ function toggleDropdown(id, event) {
       }
   });
   const targetEl = document.getElementById(id);
-  if (targetEl) targetEl.classList.toggle('show');
+  if (targetEl) {
+    targetEl.classList.toggle('show');
+    if (id === 'upload-dropdown' && targetEl.classList.contains('show')) {
+      try { autoSyncLiveOnFirstOpen(); } catch (e) {}
+    }
+  }
 }
 
 // Close dropdowns when clicking anywhere outside
@@ -4215,6 +4229,64 @@ function loadBTRFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
+// ─── Live Sync: ZSTK (Google Sheet, via service-account server proxy) ────────
+function syncZSTKLive() {
+  const btn = document.getElementById('zstk-sync-btn');
+  const zstkStatus = document.getElementById('zstk-upload-status');
+  const zstkOpt = document.getElementById('zstk-opt');
+  const uploadDd = document.getElementById('upload-dropdown');
+  if (uploadDd) uploadDd.classList.add('show');
+  if (btn) btn.disabled = true;
+  if (zstkStatus) { zstkStatus.innerHTML = '<span class="card-spinner"></span>Syncing…'; zstkStatus.className = 'upload-opt-status loading'; }
+  if (zstkOpt) zstkOpt.classList.add('is-loading');
+
+  fetch('/api/zstk-proxy', { cache: 'no-store' })
+    .then(r => r.json().then(data => { if (!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status)); return data; }))
+    .then(data => {
+      const rows = data.values || [];
+      if (rows.length < 2) throw new Error('Sheet is empty or missing headers');
+      const cnt = parseZSTKData(rows);
+      showToast(`✓ Synced ${cnt.toLocaleString()} plates from ZSTK_LIVE_TEMP`);
+      if (zstkStatus) { zstkStatus.textContent = `✅ ${cnt.toLocaleString()} plates (live)`; zstkStatus.className = 'upload-opt-status loaded'; }
+      if (zstkOpt) { zstkOpt.classList.remove('is-loading'); zstkOpt.classList.add('has-data'); }
+    })
+    .catch(e => {
+      console.error('ZSTK sync error:', e);
+      showToast('⚠ ZSTK sync failed: ' + e.message);
+      if (zstkStatus) { zstkStatus.textContent = '⚠ Sync failed'; zstkStatus.className = 'upload-opt-status empty'; }
+      if (zstkOpt) zstkOpt.classList.remove('is-loading');
+    })
+    .finally(() => { if (btn) btn.disabled = false; });
+}
+
+// ─── Live Sync: AutoBTR (Drive .xlsx, via service-account server proxy) ──────
+function syncAutoBTRLive() {
+  const btn = document.getElementById('btr-sync-btn');
+  if (btn) btn.disabled = true;
+
+  fetch('/api/autobtr-proxy', { cache: 'no-store' })
+    .then(r => { if (!r.ok) return r.text().then(t => { throw new Error(t || ('HTTP ' + r.status)); }); return r.blob(); })
+    .then(blob => loadBTRFile(blob))
+    .catch(e => {
+      console.error('AutoBTR sync error:', e);
+      showToast('⚠ AutoBTR sync failed: ' + e.message);
+      const btrStatus = document.getElementById('btr-upload-status');
+      const btrOpt = document.getElementById('btr-opt');
+      if (btrStatus) { btrStatus.textContent = '⚠ Sync failed'; btrStatus.className = 'upload-opt-status empty'; }
+      if (btrOpt) btrOpt.classList.remove('is-loading');
+    })
+    .finally(() => { if (btn) btn.disabled = false; });
+}
+
+// Auto-sync both live sources the first time the Upload dropdown is opened in
+// this session (manual "Sync Live" buttons still work any time after).
+let _liveSyncedOnce = false;
+function autoSyncLiveOnFirstOpen() {
+  if (_liveSyncedOnce) return;
+  _liveSyncedOnce = true;
+  try { syncZSTKLive(); } catch (e) {}
+  try { syncAutoBTRLive(); } catch (e) {}
+}
 
 // ─── Build BTR Slicer Dropdowns ───────────────────────────────────────────────
 function buildBtrSlicers() {
