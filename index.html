@@ -185,18 +185,29 @@ input { font: inherit; color: inherit; }
 .sheet-sync-dot.error { background: #ef4444; opacity: 1; box-shadow: 0 0 0 2px rgba(239,68,68,0.18); }
 .sheet-sync-dot.checking { background: #fbbf24; opacity: 1; animation: sheetSyncPulse 1s ease-in-out infinite; }
 .sheet-sync-chip.is-busy { pointer-events: none; opacity: 0.75; }
-/* Mobile-only identity code (Z / B / E). At ≤760px the full label is hidden
-   to keep the header compact — but with only the state dot left, all three
-   chips collapsed into identical pills: green/red told you the health but
-   never WHICH sheet it belonged to. The code restores a per-source identity
-   while keeping the chip's footprint (≈29px vs the old 28px). aria-hidden
-   keeps it out of the accessible name so chip.title stays the fallback. */
-.sheet-sync-code { display: none; }
+/* Per-source identity tint, driven by each chip's own data-accent (set on the
+   markup). The dot's health colour (grey/amber/green/red via .sheet-sync-dot)
+   always wins for status; the tint only colour-washes the label/code text so
+   each source stays recognizable at a glance. */
+.sheet-sync-label, .sheet-sync-code { color: color-mix(in srgb, var(--tm) 72%, var(--chip-accent, var(--tm))); }
+.sheet-sync-chip.is-ok .sheet-sync-label, .sheet-sync-chip.is-ok .sheet-sync-code { color: color-mix(in srgb, #10b981 70%, var(--tx)); }
+.sheet-sync-chip.is-error .sheet-sync-label, .sheet-sync-chip.is-error .sheet-sync-code { color: color-mix(in srgb, #ef4444 78%, var(--tx)); }
+/* Mobile codes are two letters (ZS / BT / EB) so each source stays
+   distinguishable at a glance — single letters (Z/B/E) all read alike on a
+   small header. Monospace + fixed width keeps the three chips visually even;
+   32px min-height meets the tap-target floor. */
+.sheet-sync-code {
+  display: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  min-width: 20px; text-align: center;
+}
 @keyframes sheetSyncPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 @media (max-width: 760px) {
+  .sheet-sync { gap: 4px; }
   .sheet-sync-chip span.sheet-sync-label { display: none; }
   .sheet-sync-chip span.sheet-sync-code { display: inline; }
-  .sheet-sync-chip { padding: 0 6px; gap: 3px; justify-content: center; }
+  .sheet-sync-chip { padding: 0 8px; min-height: 32px; gap: 4px; justify-content: center; }
 }
 .user-menu { position: relative; flex-shrink: 0; }
 .user-btn {
@@ -905,14 +916,14 @@ input { font: inherit; color: inherit; }
     </div>
     <div class="hdr-r">
       <div class="sheet-sync" id="sheetSyncWidget">
-        <button class="sheet-sync-chip" data-src="zstk" data-label="ZSTK Yard Data" type="button" title="ZSTK — never synced. Click to sync.">
-          <span class="sheet-sync-dot"></span><span class="sheet-sync-label">ZSTK</span><span class="sheet-sync-code" aria-hidden="true">Z</span>
+        <button class="sheet-sync-chip" data-src="zstk" data-label="ZSTK Yard Data" data-accent="#38bdf8" type="button" title="ZSTK — never synced. Click to sync." aria-label="Sync ZSTK Yard Data">
+          <span class="sheet-sync-dot"></span><span class="sheet-sync-label">ZSTK</span><span class="sheet-sync-code" aria-hidden="true">ZS</span>
         </button>
-        <button class="sheet-sync-chip" data-src="autobtr" data-label="AutoBTR" type="button" title="AutoBTR — never synced. Click to sync.">
-          <span class="sheet-sync-dot"></span><span class="sheet-sync-label">BTR</span><span class="sheet-sync-code" aria-hidden="true">B</span>
+        <button class="sheet-sync-chip" data-src="autobtr" data-label="AutoBTR" data-accent="#a78bfa" type="button" title="AutoBTR — never synced. Click to sync." aria-label="Sync AutoBTR">
+          <span class="sheet-sync-dot"></span><span class="sheet-sync-label">BTR</span><span class="sheet-sync-code" aria-hidden="true">BT</span>
         </button>
-        <button class="sheet-sync-chip" data-src="ebtp" data-label="EBTP" type="button" title="EBTP — never synced. Click to sync.">
-          <span class="sheet-sync-dot"></span><span class="sheet-sync-label">EBTP</span><span class="sheet-sync-code" aria-hidden="true">E</span>
+        <button class="sheet-sync-chip" data-src="ebtp" data-label="EBTP" data-accent="#34d399" type="button" title="EBTP — never synced. Click to sync." aria-label="Sync EBTP">
+          <span class="sheet-sync-dot"></span><span class="sheet-sync-label">EBTP</span><span class="sheet-sync-code" aria-hidden="true">EB</span>
         </button>
       </div>
       <button class="add-btn home-btn" id="homeBtn" type="button" title="Home" aria-label="Home">
@@ -3339,9 +3350,17 @@ function fetchAndCacheSegment(force){
     try{ localStorage.setItem(SYNC_KEY_PREFIX + src, JSON.stringify(status)); }catch(e){}
     render(src);
   }
+  // ── Automatic retry state ─────────────────────────────────────────────
+  // Declared up here (not next to scheduleRetry below) because render() reads
+  // retryTimer[src] for its tooltip — it must exist before any render() call.
+  var retryTimer = {};  // src -> timeout id
+  var retryDelay = {};  // src -> next delay in ms
+  var RETRY_FIRST_MS = 10000;
+  var RETRY_MAX_MS = 5 * 60 * 1000;
   function render(src){
     var chip = document.querySelector('.sheet-sync-chip[data-src="' + src + '"]');
     if(!chip) return;
+    if(chip.dataset.accent) chip.style.setProperty('--chip-accent', chip.dataset.accent);
     var dot = chip.querySelector('.sheet-sync-dot');
     var label = chip.dataset.label || src;
     var st = statusGet(src);
@@ -3358,11 +3377,14 @@ function fetchAndCacheSegment(force){
       } else {
         cls = 'error';
         var whenE = st.at ? new Date(st.at).toLocaleTimeString() : '';
-        title = label + ' — failed (' + whenE + '): ' + (st.error || 'unknown error') + '. Click to retry.';
+        var retryNote = retryTimer[src] ? ' Retrying automatically…' : '';
+        title = label + ' — failed (' + whenE + '): ' + (st.error || 'unknown error') + '.' + retryNote + ' Click to retry now.';
       }
     }
     if(dot) dot.className = 'sheet-sync-dot ' + cls;
     chip.title = title;
+    chip.classList.toggle('is-ok', cls === 'ok');
+    chip.classList.toggle('is-error', cls === 'error');
   }
 
   var SRC_LABEL = { zstk: 'ZSTK', autobtr: 'AutoBTR', ebtp: 'EBTP' };
@@ -3416,7 +3438,65 @@ function fetchAndCacheSegment(force){
     });
   }
 
+  // ── Automatic retry after failure ─────────────────────────────────────
+  // After the in-flight instant retry gives up, each source keeps retrying on
+  // its own with exponential backoff (10s → 20s → 40s … capped at 5 min) until
+  // it succeeds. No user click needed — a red chip heals itself the moment the
+  // network/proxy recovers. Any manual click or fresh success clears the loop.
+  // (retryTimer / retryDelay / RETRY_* live at the top of this IIFE.)
+  function clearRetry(src){
+    if(retryTimer[src]){ clearTimeout(retryTimer[src]); delete retryTimer[src]; }
+    delete retryDelay[src];
+    render(src); // drop the "Retrying automatically…" note from the tooltip
+  }
+  function scheduleRetry(src){
+    clearTimeout(retryTimer[src]);
+    var delay = retryDelay[src] || RETRY_FIRST_MS;
+    retryDelay[src] = Math.min(delay * 2, RETRY_MAX_MS);
+    retryTimer[src] = setTimeout(function(){
+      delete retryTimer[src];
+      render(src);
+      var label = SRC_LABEL[src] || src;
+      fetchStatusShow('fetching', label);
+      fetchStatusLog('↻ Retrying ' + label + ' (automatic)…', label);
+      syncSheet(src, false);
+    }, delay);
+    var mins = Math.round(delay / 60000 * 10) / 10;
+    var whenTxt = delay < 60000 ? Math.round(delay / 1000) + 's' : mins + 'm';
+    var label2 = SRC_LABEL[src] || src;
+    fetchStatusLog('↻ Will retry ' + label2 + ' automatically in ' + whenTxt + '…', label2);
+    render(src); // surface the "Retrying automatically…" note on the chip
+  }
+
+  function peekStatus(src){
+    // Show the bottom loader popup for one source without starting a fetch —
+    // used when a chip is tapped while idle, so every tap surfaces real state
+    // (last result + what happens next) instead of feeling dead.
+    var label = SRC_LABEL[src] || src;
+    var chip = document.querySelector('.sheet-sync-chip[data-src="' + src + '"]');
+    var full = (chip && chip.dataset.label) || label;
+    var st = statusGet(src);
+    fetchStatusShow('fetching', label);
+    if(!st){
+      fetchStatusLog('○ ' + full + ' has never synced yet. Starting a sync…', label);
+    } else if(st.state === 'checking'){
+      fetchStatusLog('○ ' + full + ' is syncing…', label);
+    } else if(st.ok){
+      var when = st.at ? new Date(st.at).toLocaleTimeString() : '';
+      var rows = (st.rows != null) ? ' · ' + st.rows.toLocaleString() + ' rows' : '';
+      fetchStatusLog('✓ ' + full + ' is up to date (synced ' + when + rows + '). Starting a fresh sync…', label);
+    } else {
+      var whenE = st.at ? new Date(st.at).toLocaleTimeString() : '';
+      var note = retryTimer[src] ? ' Automatic retry is scheduled.' : '';
+      fetchStatusLog('✗ ' + full + ' last failed (' + whenE + '): ' + (st.error || 'unknown error') + '.' + note + ' Starting a retry…', label);
+    }
+  }
+
   function syncSheet(src, force){
+    // A tap always wins over the backoff loop: drop any pending auto-retry so
+    // the manual attempt is the only one in flight, then reschedule from zero
+    // if it fails again (fresh 10s base instead of a stale grown delay).
+    clearRetry(src);
     var chip = document.querySelector('.sheet-sync-chip[data-src="' + src + '"]');
     if(chip) chip.classList.add('is-busy');
     statusSet(src, { state: 'checking', at: Date.now() });
@@ -3431,14 +3511,19 @@ function fetchAndCacheSegment(force){
     // A single flaky attempt (cold-start token fetch, a transient 5xx that
     // outlasted the proxy's own retry) used to flip the chip straight to red.
     // One silent retry here absorbs the rest of that noise — the chip only
-    // ever goes red if TWO attempts in a row genuinely failed.
+    // ever goes red if TWO attempts in a row genuinely failed. Past that, the
+    // backoff loop above keeps healing attempts coming on its own.
     pingOnce(src, force).then(function(res){
       done(true, res);
+      clearRetry(src); // success resets the backoff to its 10s base
     }, function(firstErr){
       return new Promise(function(resolve){ setTimeout(resolve, 700); })
         .then(function(){ return pingOnce(src, force); })
-        .then(function(res){ done(true, res); })
-        .catch(function(secondErr){ done(false, { error: secondErr.message || firstErr.message }); });
+        .then(function(res){ done(true, res); clearRetry(src); })
+        .catch(function(secondErr){
+          done(false, { error: secondErr.message || firstErr.message });
+          scheduleRetry(src);
+        });
     });
   }
 
@@ -3446,7 +3531,16 @@ function fetchAndCacheSegment(force){
 
   document.querySelectorAll('.sheet-sync-chip').forEach(function(chip){
     render(chip.dataset.src);
-    chip.addEventListener('click', function(){ syncSheet(chip.dataset.src, true); });
+    // Every tap surfaces the bottom loader: if a sync is already running the
+    // tap just peeks at live progress; otherwise it peeks at last-known state
+    // and then kicks off a fresh forced sync.
+    chip.addEventListener('click', function(){
+      var src = chip.dataset.src;
+      if(chip.classList.contains('is-busy')){ peekStatus(src); return; }
+      clearRetry(src);
+      peekStatus(src);
+      syncSheet(src, true);
+    });
   });
 
   // One quiet status check per source on load, staggered so the three don't
