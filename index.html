@@ -1988,6 +1988,16 @@ window.addEventListener('message', function(e){
       try{ fetchAndCacheEBTP(!!e.data.force); }catch(err){}
       try{ fetchAndCacheSegment(!!e.data.force); }catch(err){}
     }
+    // Same pattern for ZSTK/AutoBTR: a dashboard iframe (PM-Yard) asks the hub
+    // to do the live fetch instead of hitting the proxy itself, so every page
+    // shares one cache and one retry/backoff implementation (syncSheet, defined
+    // further down this file).
+    if(e.data && e.data.type === 'request-zstk-fetch'){
+      try{ if(typeof window.__hubSyncSheet === 'function') window.__hubSyncSheet('zstk', !!e.data.force); }catch(err){}
+    }
+    if(e.data && e.data.type === 'request-autobtr-fetch'){
+      try{ if(typeof window.__hubSyncSheet === 'function') window.__hubSyncSheet('autobtr', !!e.data.force); }catch(err){}
+    }
     // A page that changed its OWN theme (e.g. Rake Planner's dark/light/auto
     // control) tells the hub, so the hub adopts it and propagates it onward to
     // every other page and tab. Without this the hub's switch could still read
@@ -3279,14 +3289,19 @@ function fetchAndCacheSegment(force){
 <script>
 // ─── Live sheet sync status chips (ZSTK / AutoBTR / EBTP) ──────────────────
 // Sits in the hub's own header, before the Home/Refresh/Theme/Account
-// buttons. EBTP reuses the existing fetchAndCacheEBTP()/readEbtpCache()
-// pipeline (already defined above) so it shares one cache with everything
-// else; ZSTK and AutoBTR have no hub-level cache of their own (PM-Yard owns
-// that data), so a click here just confirms the proxy is reachable and — if
-// a dashboard iframe happens to be open — asks it to re-ingest via the same
-// postMessage channel the EBTP refresh button already uses.
+// buttons. All three now share the EBTP model end to end: the hub is the only
+// thing that ever calls the proxies, the result lands in the same shared
+// IndexedDB (jspl-ebtp-shared-db) EBTP already uses (different keys), and a
+// 'zstk-cache-updated' / 'autobtr-cache-updated' broadcast tells every open
+// dashboard iframe to re-read the cache instead of fetching for itself.
 (function(){
   var SYNC_KEY_PREFIX = 'jspl-sheetsync-';
+  var ZSTK_DB_KEY = 'zstk';
+  var AUTOBTR_DB_KEY = 'autobtr';
+  // openEbtpDb/writeDbCache are defined earlier on this page (central EBTP
+  // fetch/cache script) — reused here rather than opening a second database.
+  function writeZstkCache(values, rowCount){ return writeDbCache(ZSTK_DB_KEY, values, rowCount); }
+  function writeAutoBtrCache(arrayBuffer){ return writeDbCache(AUTOBTR_DB_KEY, arrayBuffer, null); }
 
   function statusGet(src){
     try{ return JSON.parse(localStorage.getItem(SYNC_KEY_PREFIX + src) || 'null'); }catch(e){ return null; }
@@ -3342,13 +3357,23 @@ function fetchAndCacheSegment(force){
         return r.json().then(function(data){
           if(!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status));
           var rows = Math.max(0, (data.values || []).length - 1);
-          fetchStatusLog('✓ Synced ' + rows.toLocaleString() + ' rows', label);
-          return { rows: rows };
+          fetchStatusShow('parsing', label);
+          return writeZstkCache(data.values || [], rows).then(function(){
+            fetchStatusLog('✓ Synced ' + rows.toLocaleString() + ' rows — cached for all dashboards', label);
+            try{ broadcastToFrame({ type: 'zstk-cache-updated', fetchedAt: Date.now(), rowCount: rows }); }catch(e){}
+            return { rows: rows };
+          });
         });
       }
       if(!r.ok) return r.text().then(function(t){ throw new Error(t || ('HTTP ' + r.status)); });
-      fetchStatusLog('✓ Synced', label);
-      return r.blob().then(function(){ return {}; }); // drain the body; the hub itself has no use for the bytes
+      return r.arrayBuffer().then(function(buf){
+        fetchStatusShow('parsing', label);
+        return writeAutoBtrCache(buf).then(function(){
+          fetchStatusLog('✓ Synced — cached for all dashboards', label);
+          try{ broadcastToFrame({ type: 'autobtr-cache-updated', fetchedAt: Date.now() }); }catch(e){}
+          return {};
+        });
+      });
     }).then(function(result){
       setTimeout(function(){ fetchStatusHide(label); }, 900);
       return result;
@@ -3369,9 +3394,6 @@ function fetchAndCacheSegment(force){
       var next = { ok: !!ok, at: Date.now() };
       if(extra) for(var k in extra) next[k] = extra[k];
       statusSet(src, next);
-      if(ok && force && src !== 'ebtp' && typeof broadcastToFrame === 'function'){
-        broadcastToFrame({ type: src === 'zstk' ? 'sync-zstk' : 'sync-autobtr' });
-      }
     }
 
     // A single flaky attempt (cold-start token fetch, a transient 5xx that
@@ -3387,6 +3409,8 @@ function fetchAndCacheSegment(force){
         .catch(function(secondErr){ done(false, { error: secondErr.message || firstErr.message }); });
     });
   }
+
+  window.__hubSyncSheet = syncSheet;
 
   document.querySelectorAll('.sheet-sync-chip').forEach(function(chip){
     render(chip.dataset.src);
