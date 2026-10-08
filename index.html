@@ -3383,7 +3383,10 @@ function fetchAndCacheSegment(force){
     fetchStatusLog('→ Requesting ' + label + '…', label);
     return fetch(endpoint, { cache: 'no-store' }).then(function(r){
       if(src === 'zstk'){
-        return r.json().then(function(data){
+        return r.text().then(function(t){
+          var data;
+          try{ data = JSON.parse(t); }
+          catch(e){ throw new Error('HTTP ' + r.status + ' — unexpected response (check sign-in, then retry)'); }
           if(!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status));
           var rows = Math.max(0, (data.values || []).length - 1);
           fetchStatusShow('parsing', label);

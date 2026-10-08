@@ -4340,7 +4340,12 @@ function syncZSTKLive(force) {
 
   function directFetch() {
     fetch('/api/zstk-proxy', { cache: 'no-store' })
-      .then(r => r.json().then(data => { if (!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status)); return data; }))
+      .then(r => r.text().then(t => {
+        let data;
+        try { data = JSON.parse(t); }
+        catch (e) { throw new Error('HTTP ' + r.status + ' — unexpected response (check sign-in, then retry)'); }
+        if (!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status)); return data;
+      }))
       .then(data => {
         if (!ingestZstkCacheRecord({ csvText: data.values || [] }, false)) throw new Error('Sheet is empty or missing headers');
         ok();
