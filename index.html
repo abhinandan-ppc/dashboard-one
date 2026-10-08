@@ -1336,6 +1336,12 @@ grid.addEventListener('dragstart', function(e){
 var frameStage = document.getElementById('frameStage');
 var frameBox = document.getElementById('frameBox');
 var pageFrame = document.getElementById('pageFrame');
+function framePathFromUrl(){
+  var path = window.location.hash.replace(/^#\/?/, '');
+  if(!path) path = window.location.pathname.replace(/^\/+/, '');
+  try{ path = decodeURIComponent(path); }catch(e){}
+  return path;
+}
 function updateFrameTop(){
   var tw = document.querySelector('.top-wrapper');
   var topVal = 0;
@@ -1991,7 +1997,7 @@ window.addEventListener('storage', function(e){
   }catch(err){}
 });
 
-function openInFrame(path, title){
+function openInFrame(path, title, updateUrl){
   if(!path) return;
   updateFrameTop();
   frameStage.style.display = 'block';
@@ -2005,9 +2011,12 @@ function openInFrame(path, title){
   // ensure layout has settled before measuring (handles font/load shifts)
   requestAnimationFrame(function(){ updateFrameTop(); });
   pageFrame.src = path;
-  // Update URL without reload
-  var state = { path: path, title: title || '' };
-  history.pushState(state, '', '/' + path);
+  // Keep the hub document as the reload target; the hash restores this tool
+  // after a browser refresh without bypassing the hub's injected controls.
+  if(updateUrl !== false){
+    var state = { path: path, title: title || '' };
+    history.pushState(state, '', '/#/' + encodeURIComponent(path));
+  }
 }
 
 document.getElementById('homeBtn').addEventListener('click', function(){
@@ -2029,7 +2038,7 @@ document.getElementById('homeBtn').addEventListener('click', function(){
 window.addEventListener('popstate', function(e){
   var state = e.state;
   if(state && state.path){
-    openInFrame(state.path, state.title);
+    openInFrame(state.path, state.title, false);
   } else {
     // Navigated back to home
     frameBox.classList.remove('on');
@@ -2044,12 +2053,13 @@ window.addEventListener('popstate', function(e){
 
 // Restore iframe from URL on initial load
 (function(){
-  var path = window.location.pathname.slice(1); // remove leading '/'
+  var path = framePathFromUrl();
   if(path && path.endsWith('.html')){
     var item = items.find(function(i){ return i.path === path; });
     if(item){
       // defer to let DOM initialize
-      setTimeout(function(){ openInFrame(item.path, item.name); }, 0);
+      var title = history.state && history.state.title || item.name;
+      setTimeout(function(){ openInFrame(item.path, title, false); }, 0);
     }
   }
 })();
