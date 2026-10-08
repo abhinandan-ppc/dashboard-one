@@ -2915,24 +2915,35 @@ function clearLegacyEbtpCaches(){
   });
 }
 
-function fetchStatusShow(phase){
+// Shared bottom-of-screen fetch/parse popup — originally EBTP-only, now also
+// used by the ZSTK/AutoBTR live syncs. Several sources can be mid-fetch at
+// once (e.g. the hub's own startup status check), so a small "active sources"
+// set decides visibility: the panel stays up and keeps showing whichever
+// source most recently posted a phase, and only actually hides once every
+// source that asked for it has also asked to hide.
+var _fetchStatusActive = {};
+function fetchStatusShow(phase, source){
+  source = source || 'EBTP';
+  _fetchStatusActive[source] = true;
   var el = document.getElementById('fetchStatus');
   if(el) el.style.display = 'flex';
   var lbl = document.getElementById('fetchStatusLabel');
-  if(lbl) lbl.textContent = phase === 'parsing' ? 'Validating EBTP data…' : 'Fetching EBTP data…';
+  if(lbl) lbl.textContent = (phase === 'parsing' ? 'Validating ' : 'Fetching ') + source + ' data…';
   var bar = document.getElementById('fetchStatusBar');
   if(bar) bar.classList.toggle('phase-parsing', phase === 'parsing');
 }
-function fetchStatusLog(msg){
+function fetchStatusLog(msg, source){
   var log = document.getElementById('fetchStatusLog');
   if(!log) return;
   var line = document.createElement('div');
-  line.textContent = msg;
+  line.textContent = (source ? '[' + source + '] ' : '') + msg;
   log.appendChild(line);
   while(log.children.length > 6) log.removeChild(log.firstChild);
   log.scrollTop = log.scrollHeight;
 }
-function fetchStatusHide(){
+function fetchStatusHide(source){
+  delete _fetchStatusActive[source || 'EBTP'];
+  if(Object.keys(_fetchStatusActive).length > 0) return; // another source is still mid-fetch
   var el = document.getElementById('fetchStatus');
   if(el) el.style.display = 'none';
   var log = document.getElementById('fetchStatusLog');
@@ -3310,6 +3321,44 @@ function fetchAndCacheSegment(force){
     chip.title = title;
   }
 
+  var SRC_LABEL = { zstk: 'ZSTK', autobtr: 'AutoBTR', ebtp: 'EBTP' };
+
+  function pingOnce(src, force){
+    if(src === 'ebtp'){
+      if(typeof fetchAndCacheEBTP !== 'function') return Promise.reject(new Error('EBTP fetcher not loaded'));
+      // fetchAndCacheEBTP already drives the shared #fetchStatus popup itself.
+      return fetchAndCacheEBTP(!!force).then(function(res){
+        if(res && res.error) throw new Error(res.error);
+        return { rows: res && res.rowCount };
+      });
+    }
+
+    var label = SRC_LABEL[src];
+    var endpoint = src === 'zstk' ? '/api/zstk-proxy' : '/api/autobtr-proxy';
+    fetchStatusShow('fetching', label);
+    fetchStatusLog('→ Requesting ' + label + '…', label);
+    return fetch(endpoint, { cache: 'no-store' }).then(function(r){
+      if(src === 'zstk'){
+        return r.json().then(function(data){
+          if(!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status));
+          var rows = Math.max(0, (data.values || []).length - 1);
+          fetchStatusLog('✓ Synced ' + rows.toLocaleString() + ' rows', label);
+          return { rows: rows };
+        });
+      }
+      if(!r.ok) return r.text().then(function(t){ throw new Error(t || ('HTTP ' + r.status)); });
+      fetchStatusLog('✓ Synced', label);
+      return r.blob().then(function(){ return {}; }); // drain the body; the hub itself has no use for the bytes
+    }).then(function(result){
+      setTimeout(function(){ fetchStatusHide(label); }, 900);
+      return result;
+    }, function(e){
+      fetchStatusLog('✗ ' + e.message, label);
+      setTimeout(function(){ fetchStatusHide(label); }, 2500);
+      throw e;
+    });
+  }
+
   function syncSheet(src, force){
     var chip = document.querySelector('.sheet-sync-chip[data-src="' + src + '"]');
     if(chip) chip.classList.add('is-busy');
@@ -3320,31 +3369,23 @@ function fetchAndCacheSegment(force){
       var next = { ok: !!ok, at: Date.now() };
       if(extra) for(var k in extra) next[k] = extra[k];
       statusSet(src, next);
-    }
-
-    if(src === 'ebtp'){
-      // fetchAndCacheEBTP is defined earlier on this page (central EBTP fetch/cache IIFE).
-      if(typeof fetchAndCacheEBTP !== 'function'){ done(false, { error: 'EBTP fetcher not loaded' }); return; }
-      fetchAndCacheEBTP(!!force).then(function(res){
-        done(!!(res && res.ok), { rows: res && res.rowCount, error: res && res.error });
-      }).catch(function(e){ done(false, { error: e.message }); });
-      return;
-    }
-
-    var endpoint = src === 'zstk' ? '/api/zstk-proxy' : '/api/autobtr-proxy';
-    fetch(endpoint, { cache: 'no-store' }).then(function(r){
-      if(src === 'zstk'){
-        return r.json().then(function(data){
-          if(!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status));
-          done(true, { rows: Math.max(0, (data.values || []).length - 1) });
-          if(force && typeof broadcastToFrame === 'function') broadcastToFrame({ type: 'sync-zstk' });
-        });
+      if(ok && force && src !== 'ebtp' && typeof broadcastToFrame === 'function'){
+        broadcastToFrame({ type: src === 'zstk' ? 'sync-zstk' : 'sync-autobtr' });
       }
-      if(!r.ok) return r.text().then(function(t){ throw new Error(t || ('HTTP ' + r.status)); });
-      done(true, {});
-      if(force && typeof broadcastToFrame === 'function') broadcastToFrame({ type: 'sync-autobtr' });
-      return r.blob(); // drain the body; the hub itself has no use for the bytes
-    }).catch(function(e){ done(false, { error: e.message }); });
+    }
+
+    // A single flaky attempt (cold-start token fetch, a transient 5xx that
+    // outlasted the proxy's own retry) used to flip the chip straight to red.
+    // One silent retry here absorbs the rest of that noise — the chip only
+    // ever goes red if TWO attempts in a row genuinely failed.
+    pingOnce(src, force).then(function(res){
+      done(true, res);
+    }, function(firstErr){
+      return new Promise(function(resolve){ setTimeout(resolve, 700); })
+        .then(function(){ return pingOnce(src, force); })
+        .then(function(res){ done(true, res); })
+        .catch(function(secondErr){ done(false, { error: secondErr.message || firstErr.message }); });
+    });
   }
 
   document.querySelectorAll('.sheet-sync-chip').forEach(function(chip){
@@ -3352,13 +3393,12 @@ function fetchAndCacheSegment(force){
     chip.addEventListener('click', function(){ syncSheet(chip.dataset.src, true); });
   });
 
-  // One quiet status check per source on load — EBTP just reads whatever the
-  // page's own auto-fetch already produces (no extra network call forced);
-  // ZSTK/AutoBTR get a lightweight reachability ping since nothing else on
-  // this page talks to them yet.
-  setTimeout(function(){
-    ['zstk', 'autobtr', 'ebtp'].forEach(function(src){ syncSheet(src, false); });
-  }, 400);
+  // One quiet status check per source on load, staggered so the three don't
+  // all hit the token endpoint in the same instant (a burst of simultaneous
+  // cold-start token requests was part of what made this flaky).
+  [['zstk', 300], ['autobtr', 900], ['ebtp', 1500]].forEach(function(pair){
+    setTimeout(function(){ syncSheet(pair[0], false); }, pair[1]);
+  });
 })();
 </script>
 
