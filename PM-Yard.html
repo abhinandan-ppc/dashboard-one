@@ -14,7 +14,6 @@
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="theme.css"/>
 
 <style>
@@ -5407,6 +5406,11 @@ if (window.innerWidth <= 768) {
 camFromSph();
 (function animate() {
   requestAnimationFrame(animate);
+  // Skip all render/physics work while the tab is backgrounded. The scene is
+  // stateless and recomputed each frame, so nothing is lost — rendering simply
+  // resumes on the next frame once the tab is visible again. This is the single
+  // biggest memory/CPU/battery win for a continuously-rendering WebGL scene.
+  if (document.hidden) return;
   let needsShadowUpdate = false; // Track if physics are moving
   
   // NEW: Calculate live sun movement if Auto Theme is selected

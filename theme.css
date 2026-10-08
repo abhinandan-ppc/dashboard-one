@@ -1,4 +1,18 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* ─── Type system ───────────────────────────────────────────────────────────
+   Product Sans is Google's proprietary brand font and cannot be legally
+   embedded on a website (no webfont / CDN / license). So the stack tries the
+   real thing first (renders for anyone with it installed, e.g. ChromeOS) then
+   falls back to Plus Jakarta Sans — the closest open-licensed (OFL) visual
+   twin, chosen for strong legibility at small UI sizes across desktop,
+   responsive and mobile. Every page links this file, so setting body +
+   headings here with !important covers the whole project and overrides the
+   older per-page `font-family:'Poppins'` inline rules. JetBrains Mono stays
+   the data/number face (elements that set it explicitly keep it). */
+:root{
+  --font-product:'Product Sans','Google Sans','Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
 
 /* ══════════════════════════════════════════════════════════
    JSPL DASHBOARD — SHARED DESIGN SYSTEM
@@ -294,6 +308,8 @@ body{
 }
 
 h1,h2,h3{font-family:'Poppins',sans-serif;font-weight:700;color:var(--text-hi);line-height:1.2}
+/* Brand wordmark also follows the type stack (overrides per-page Poppins). */
+.jspl-brand-l1{font-family:var(--font-product)!important}
 
 /* ── Scrollbars ── */
 ::-webkit-scrollbar{width:5px;height:5px}
@@ -339,7 +355,7 @@ input::placeholder{color:var(--mute);opacity:1}
 
 /* ── Leaflet map chrome (used by PM-Yard / Rake-Planner) ── */
 .leaflet-tooltip{background:rgba(14,20,32,.92) !important;border:1px solid rgba(255,255,255,.14) !important;
-  color:#eceef4 !important;font-family:'Poppins',system-ui,sans-serif !important;
+  color:#eceef4 !important;font-family:var(--font-product) !important;
   font-size:13px !important;line-height:1.5 !important;border-radius:10px !important;
   box-shadow:0 8px 32px rgba(0,0,0,.6) !important;padding:9px 13px !important;
   backdrop-filter:blur(16px) !important;-webkit-backdrop-filter:blur(16px) !important}
@@ -468,8 +484,8 @@ input::placeholder{color:var(--mute);opacity:1}
 
 /* ── Shared Material 3 / glass primitives ── */
 :root{
-  --font-display:'Space Grotesk','Poppins',system-ui,sans-serif;
-  --font-body:'Manrope','Poppins',system-ui,sans-serif;
+  --font-display:var(--font-product);
+  --font-body:var(--font-product);
   --ease-emphasized:cubic-bezier(.2,0,0,1);
   --ease-standard:cubic-bezier(.2,0,0,1);
   /* Shared content gutter — the single source of truth for the horizontal
@@ -615,7 +631,7 @@ button:disabled,.btn:disabled{cursor:not-allowed;transform:none!important;filter
 .app-header .brand-text{line-height:1!important;min-width:0}
 .app-header .jspl-brand-l1,
 .app-header .brand-name{
-  font-family:'Poppins',sans-serif!important;
+  font-family:var(--font-product)!important;
   font-size:12px!important;
   font-weight:900!important;
   line-height:1!important;

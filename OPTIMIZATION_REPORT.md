@@ -354,6 +354,37 @@ Convert remaining CommonJS to ES modules for consistency and better tree-shaking
 
 ---
 
+## Round 3 — Payload & WebGL (verified)
+
+**1. Dead font payload removed (performance, every page).**
+The app's type stack resolves entirely to Plus Jakarta Sans (with a
+`Product Sans`/`Google Sans` first-try for installed users) + JetBrains Mono
+for data cells. But every page still downloaded fonts it never renders:
+- Each page's `<head>` `<link>` loaded **Poppins** + a duplicate JetBrains Mono.
+- `theme.css` `@import`ed **Manrope** + **Space Grotesk**.
+
+Both were stripped: `theme.css` now imports only Plus Jakarta Sans + JetBrains
+Mono, and the per-page Google-Fonts `<link>` was removed from all 11 HTML pages
+(the `<preconnect>` hints stay, so the single `theme.css` import still
+warm-connects). Net: one fewer render-blocking stylesheet and several hundred KB
+of unused font files saved on **every** page load. Verified by `check-font.mjs`
+(9/9) and a sweep confirming no `fonts.googleapis.com/css2` link remains in any
+page.
+
+**2. WebGL loop pauses when backgrounded (memory/CPU/battery, PM-Yard).**
+The three.js `animate()` loop called `renderer.render()` every frame even with
+the tab hidden — a continuous GPU/CPU drain on the heaviest page. Added a
+`document.hidden` early-return; the scene is stateless and recomputed each
+frame, so rendering resumes seamlessly on the next visible frame. Rake-Planner
+is React + Leaflet (no continuous WebGL rAF loop), so no change was needed
+there.
+
+**Verification:** `check-font.mjs` ALL GOOD; `acl-registry` 15/15; PM-Yard's
+inline scripts parse clean. (`responsive-contract` runs long in this env and
+times out a plain `node --test`, unrelated to these changes.)
+
+---
+
 ## Conclusion
 
 The dashboard-one-1 codebase has been comprehensively optimized for:
