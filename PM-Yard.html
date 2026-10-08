@@ -5381,6 +5381,10 @@ updateKPIs();
           if (typeof window.clearAllGlobalFilters === 'function') { window.clearAllGlobalFilters(); applyFilters(); return; }
         }catch(err){}
         location.reload();
+      } else if (d.type === 'sync-zstk') {
+        try{ if (typeof syncZSTKLive === 'function') syncZSTKLive(); }catch(err){}
+      } else if (d.type === 'sync-autobtr') {
+        try{ if (typeof syncAutoBTRLive === 'function') syncAutoBTRLive(); }catch(err){}
       }
     } catch(err){ console.warn('Hub message handler error', err); }
   }

@@ -162,6 +162,34 @@ input { font: inherit; color: inherit; }
 .hdr-r button svg {
   transition: transform 0.2s cubic-bezier(.22,1,.36,1);
 }
+
+/* ─── Live sheet sync status (ZSTK / AutoBTR / EBTP), sits before the 4
+   home/refresh/theme/account buttons ─── */
+.sheet-sync { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-right: 2px; }
+.sheet-sync-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 10px 0 8px; border-radius: var(--radius-pill);
+  background: var(--input-bg); color: var(--tm); border: var(--glass-border);
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase;
+  cursor: pointer; white-space: nowrap;
+  transition: transform 0.2s cubic-bezier(.22,1,.36,1), background-color 0.2s ease, border-color 0.2s ease;
+}
+.sheet-sync-chip:hover { background: var(--input-hover); transform: translateY(-1px); }
+.sheet-sync-chip:active { transform: translateY(0) scale(0.97); }
+.sheet-sync-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  background: var(--tm); opacity: 0.5;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+.sheet-sync-dot.ok { background: #10b981; opacity: 1; box-shadow: 0 0 0 2px rgba(16,185,129,0.18); }
+.sheet-sync-dot.error { background: #ef4444; opacity: 1; box-shadow: 0 0 0 2px rgba(239,68,68,0.18); }
+.sheet-sync-dot.checking { background: #fbbf24; opacity: 1; animation: sheetSyncPulse 1s ease-in-out infinite; }
+.sheet-sync-chip.is-busy { pointer-events: none; opacity: 0.75; }
+@keyframes sheetSyncPulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+@media (max-width: 760px) {
+  .sheet-sync-chip span.sheet-sync-label { display: none; }
+  .sheet-sync-chip { padding: 0 8px; width: 28px; justify-content: center; }
+}
 .user-menu { position: relative; flex-shrink: 0; }
 .user-btn {
   height: 40px; width: 40px; padding: 0; border-radius: var(--radius-pill); overflow: hidden; flex-shrink: 0;
@@ -868,6 +896,17 @@ input { font: inherit; color: inherit; }
       </div>
     </div>
     <div class="hdr-r">
+      <div class="sheet-sync" id="sheetSyncWidget">
+        <button class="sheet-sync-chip" data-src="zstk" data-label="ZSTK Yard Data" type="button" title="ZSTK — never synced. Click to sync.">
+          <span class="sheet-sync-dot"></span><span class="sheet-sync-label">ZSTK</span>
+        </button>
+        <button class="sheet-sync-chip" data-src="autobtr" data-label="AutoBTR" type="button" title="AutoBTR — never synced. Click to sync.">
+          <span class="sheet-sync-dot"></span><span class="sheet-sync-label">BTR</span>
+        </button>
+        <button class="sheet-sync-chip" data-src="ebtp" data-label="EBTP" type="button" title="EBTP — never synced. Click to sync.">
+          <span class="sheet-sync-dot"></span><span class="sheet-sync-label">EBTP</span>
+        </button>
+      </div>
       <button class="add-btn home-btn" id="homeBtn" type="button" title="Home" aria-label="Home">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path><path d="M9 21v-6h6v6"></path></svg>
       </button>
@@ -3221,6 +3260,103 @@ function fetchAndCacheSegment(force){
       run();
     }
   });
+})();
+</script>
+
+<script>
+// ─── Live sheet sync status chips (ZSTK / AutoBTR / EBTP) ──────────────────
+// Sits in the hub's own header, before the Home/Refresh/Theme/Account
+// buttons. EBTP reuses the existing fetchAndCacheEBTP()/readEbtpCache()
+// pipeline (already defined above) so it shares one cache with everything
+// else; ZSTK and AutoBTR have no hub-level cache of their own (PM-Yard owns
+// that data), so a click here just confirms the proxy is reachable and — if
+// a dashboard iframe happens to be open — asks it to re-ingest via the same
+// postMessage channel the EBTP refresh button already uses.
+(function(){
+  var SYNC_KEY_PREFIX = 'jspl-sheetsync-';
+
+  function statusGet(src){
+    try{ return JSON.parse(localStorage.getItem(SYNC_KEY_PREFIX + src) || 'null'); }catch(e){ return null; }
+  }
+  function statusSet(src, status){
+    try{ localStorage.setItem(SYNC_KEY_PREFIX + src, JSON.stringify(status)); }catch(e){}
+    render(src);
+  }
+  function render(src){
+    var chip = document.querySelector('.sheet-sync-chip[data-src="' + src + '"]');
+    if(!chip) return;
+    var dot = chip.querySelector('.sheet-sync-dot');
+    var label = chip.dataset.label || src;
+    var st = statusGet(src);
+    var cls = 'unknown';
+    var title = label + ' — never synced. Click to sync.';
+    if(st){
+      if(st.state === 'checking'){
+        cls = 'checking';
+        title = label + ' — syncing…';
+      } else if(st.ok){
+        cls = 'ok';
+        var when = st.at ? new Date(st.at).toLocaleTimeString() : '';
+        title = label + ' — synced ' + when + (st.rows != null ? ' · ' + st.rows.toLocaleString() + ' rows' : '') + '. Click to re-sync.';
+      } else {
+        cls = 'error';
+        var whenE = st.at ? new Date(st.at).toLocaleTimeString() : '';
+        title = label + ' — failed (' + whenE + '): ' + (st.error || 'unknown error') + '. Click to retry.';
+      }
+    }
+    if(dot) dot.className = 'sheet-sync-dot ' + cls;
+    chip.title = title;
+  }
+
+  function syncSheet(src, force){
+    var chip = document.querySelector('.sheet-sync-chip[data-src="' + src + '"]');
+    if(chip) chip.classList.add('is-busy');
+    statusSet(src, { state: 'checking', at: Date.now() });
+
+    function done(ok, extra){
+      if(chip) chip.classList.remove('is-busy');
+      var next = { ok: !!ok, at: Date.now() };
+      if(extra) for(var k in extra) next[k] = extra[k];
+      statusSet(src, next);
+    }
+
+    if(src === 'ebtp'){
+      // fetchAndCacheEBTP is defined earlier on this page (central EBTP fetch/cache IIFE).
+      if(typeof fetchAndCacheEBTP !== 'function'){ done(false, { error: 'EBTP fetcher not loaded' }); return; }
+      fetchAndCacheEBTP(!!force).then(function(res){
+        done(!!(res && res.ok), { rows: res && res.rowCount, error: res && res.error });
+      }).catch(function(e){ done(false, { error: e.message }); });
+      return;
+    }
+
+    var endpoint = src === 'zstk' ? '/api/zstk-proxy' : '/api/autobtr-proxy';
+    fetch(endpoint, { cache: 'no-store' }).then(function(r){
+      if(src === 'zstk'){
+        return r.json().then(function(data){
+          if(!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status));
+          done(true, { rows: Math.max(0, (data.values || []).length - 1) });
+          if(force && typeof broadcastToFrame === 'function') broadcastToFrame({ type: 'sync-zstk' });
+        });
+      }
+      if(!r.ok) return r.text().then(function(t){ throw new Error(t || ('HTTP ' + r.status)); });
+      done(true, {});
+      if(force && typeof broadcastToFrame === 'function') broadcastToFrame({ type: 'sync-autobtr' });
+      return r.blob(); // drain the body; the hub itself has no use for the bytes
+    }).catch(function(e){ done(false, { error: e.message }); });
+  }
+
+  document.querySelectorAll('.sheet-sync-chip').forEach(function(chip){
+    render(chip.dataset.src);
+    chip.addEventListener('click', function(){ syncSheet(chip.dataset.src, true); });
+  });
+
+  // One quiet status check per source on load — EBTP just reads whatever the
+  // page's own auto-fetch already produces (no extra network call forced);
+  // ZSTK/AutoBTR get a lightweight reachability ping since nothing else on
+  // this page talks to them yet.
+  setTimeout(function(){
+    ['zstk', 'autobtr', 'ebtp'].forEach(function(src){ syncSheet(src, false); });
+  }, 400);
 })();
 </script>
 
