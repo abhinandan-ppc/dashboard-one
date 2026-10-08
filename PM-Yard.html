@@ -3835,8 +3835,20 @@ function downloadFilteredData() {
 
 // ─── ZSTK Excel Parsing ───────────────────────────────────────────────────────
 function parseZSTKData(rows) {
-  const hdr = rows[0].map(h => String(h||'').trim().toLowerCase());
-  
+  // The manual-upload workbook always has headers on row 0, but the live
+  // ZSTK_LIVE_TEMP sheet (fetched via the Sheets API in syncZSTKLive) can carry
+  // a title/filter row above the real header — scan the first few rows for
+  // the one that actually contains "Batch Storage Bin" instead of assuming row 0.
+  let headerRowIdx = 0;
+  for (let r = 0; r < Math.min(5, rows.length); r++) {
+    const cells = (rows[r] || []).map(h => String(h||'').trim().toLowerCase());
+    if (cells.some(h => h === 'batch storage bin' || h === 'storage bin' || h.includes('batch storage bin'))) {
+      headerRowIdx = r;
+      break;
+    }
+  }
+  const hdr = rows[headerRowIdx].map(h => String(h||'').trim().toLowerCase());
+
   const findIdx = (keys) => {
      for(let key of keys) {
         let idx = hdr.findIndex(h => h === key.toLowerCase());
@@ -3889,7 +3901,7 @@ function parseZSTKData(rows) {
   uidToPlates = {}; // Reset global map on fresh upload
   let parsed = 0;
 
-  for (let r = 1; r < rows.length; r++) {
+  for (let r = headerRowIdx + 1; r < rows.length; r++) {
     const row = rows[r];
     
     // Safety check: skip entirely empty/undefined rows instantly to prevent crashes
