@@ -1,15 +1,28 @@
 export const config = { runtime: 'edge' };
 
-const EBTP_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQEKS6uq6epbkSmpv548hSG63WVUiFwKLXctpeM3G8NMeXJ_ZJaTCuFj95n4gTRuhchM_T4q_kp5_au/pub?gid=0&single=true&output=csv";
+import { getSheetsAccessToken, valuesToCsv } from './_sheets-sa.js';
+
+// Private sheet (service-account shared, not published-to-web) — replaces the
+// old publish-to-web CSV export. Downstream (index.html's fetchAndCacheEBTP)
+// still expects CSV text, so this converts the Sheets API's array-of-arrays
+// response to CSV rather than touching every caller.
+const SPREADSHEET_ID = '1mIoA3R9LCUozGBLx4okQoQYWHjZD4tDf-OFM9m6OsQU';
+const SHEET_NAME = 'LIVE';
 
 export default async function handler(req) {
   try {
-    const upstream = await fetch(EBTP_SHEET_URL, { cache: 'no-store' });
+    const token = await getSheetsAccessToken('https://www.googleapis.com/auth/spreadsheets.readonly');
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(SHEET_NAME)}?valueRenderOption=UNFORMATTED_VALUE`;
+    const upstream = await fetch(url, {
+      headers: { authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
     if (!upstream.ok) {
       return new Response('Upstream data is temporarily unavailable.', { status: 502 });
     }
-    const text = await upstream.text();
-    return new Response(text, {
+    const data = await upstream.json();
+    const csv = valuesToCsv(data.values || []);
+    return new Response(csv, {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
