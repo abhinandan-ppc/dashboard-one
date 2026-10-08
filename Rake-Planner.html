@@ -562,6 +562,30 @@ function computeRow(row){
 
 /* ═══════════════════ GEO COORDS ═══════════════════ */
 const ANGUL={lat:20.8461,lng:84.9973};
+function mapRoutePoints(startLat,startLng,endLat,endLng){
+  const latDelta=endLat-startLat,lngDelta=endLng-startLng;
+  const midLat=(startLat+endLat)/2,midLng=(startLng+endLng)/2;
+  const controlLat=midLat-lngDelta*.18,controlLng=midLng+latDelta*.18;
+  const steps=Math.max(12,Math.min(28,Math.ceil(Math.hypot(latDelta,lngDelta)*3)));
+  return Array.from({length:steps+1},(_,stepIndex)=>{
+    const progress=stepIndex/steps,inverseProgress=1-progress;
+    return[
+      inverseProgress**2*startLat+2*inverseProgress*progress*controlLat+progress**2*endLat,
+      inverseProgress**2*startLng+2*inverseProgress*progress*controlLng+progress**2*endLng,
+    ];
+  });
+}
+function plantPinIcon(L,color){
+  const html=`<div style="width:36px;height:44px;filter:drop-shadow(0 2px 4px rgba(15,23,42,.34))">
+    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44" aria-hidden="true">
+      <path d="M18 42C16 38 4 25 4 17a14 14 0 1 1 28 0c0 8-12 21-14 25Z" fill="${color}" stroke="#fff" stroke-width="2"/>
+      <circle cx="18" cy="17" r="9.5" fill="#fff"/>
+      <path d="M10.5 22v-6.5l4 2.4v-3l4 2.4v-6.2h7V22Z" fill="#1e293b"/>
+      <path d="M20 22v-4h3v4" fill="#fff"/>
+    </svg>
+  </div>`;
+  return L.divIcon({html,className:'',iconSize:[36,44],iconAnchor:[18,42]});
+}
 const SIDING_COORDS={
   // ── EAST ──
   'BRGT':{name:'Bheraghat Jabalpur',lat:23.1815,lng:79.9864,region:'East'},
@@ -2194,7 +2218,7 @@ function OverviewMapModal({rows,onClose}){
   const mapRef=useRef(null);
   const mapInst=useRef(null);
   const searchMarkerRef=useRef(null);
-  const[lightMap,setLightMap]=useState(false);
+  const[lightMap,setLightMap]=useState(true);
   const[selSid,setSelSid]=useState(null);
   const[reverseKm,setReverseKm]=useState(150);
   const[cityDrill,setCityDrill]=useState(null); // {cityName, rows}
@@ -2246,38 +2270,26 @@ function OverviewMapModal({rows,onClose}){
     const L=window.L;
     const map=L.map(mapRef.current,{center:[22,80],zoom:5,zoomControl:true,preferCanvas:true});
     mapInst.current=map;
-    // Plain OpenStreetMap raster tiles — free, no API key. Dark mode is achieved
-    // via a CSS filter on the tile pane (below) rather than a keyed dark-tile provider.
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      {attribution:'© OpenStreetMap contributors',maxZoom:19}).addTo(map);
-    if(!lightMap)map.getPane('tilePane').style.filter='invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9)';
+    const flowRenderer=L.svg({padding:.5}).addTo(map);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      {attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community',maxZoom:16}).addTo(map);
+    map.getPane('tilePane').style.filter=lightMap
+      ?'saturate(.45) brightness(1.04) contrast(.94)'
+      :'invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.45)';
 
     const mkDivIcon=(h,sz)=>L.divIcon({html:h,className:'',iconSize:sz,iconAnchor:[sz[0]/2,sz[1]/2]});
-    function bezierPts(aLat,aLng,bLat,bLng,n=60){
-      const ml=(aLat+bLat)/2,mg=(aLng+bLng)/2;
-      const dl=bLat-aLat,dg=bLng-aLng;
-      const f=Math.min(0.28,Math.max(0.1,0.18));
-      const cl=ml-dg*f,cg=mg+dl*f;
-      return Array.from({length:n+1},(_,i)=>{const t=i/n;return[(1-t)**2*aLat+2*(1-t)*t*cl+t**2*bLat,(1-t)**2*aLng+2*(1-t)*t*cg+t**2*bLng];});
-    }
-
     // ── Angul origin marker (same as RakeMapModal) ──
-    const angulIcon=mkDivIcon(
-      `<div style="position:relative;width:22px;height:22px;display:flex;align-items:center;justify-content:center">
-        <div style="position:absolute;width:22px;height:22px;border-radius:50%;background:${C.amber}30;border:2px solid ${C.amber};animation:markerPulse 2s ease-in-out infinite"></div>
-        <div style="width:10px;height:10px;border-radius:50%;background:${C.amber};box-shadow:0 0 8px ${C.amber}aa"></div>
-      </div>`,[22,22]);
+    const angulIcon=plantPinIcon(L,C.amber);
     L.marker([ANGUL.lat,ANGUL.lng],{icon:angulIcon,zIndexOffset:200}).addTo(map)
       .bindTooltip('<b style="font-family:Poppins,sans-serif;font-size:13px">Jindal Steel Angul PlateMill</b><br><span style="color:#94a3b8;font-size:11px">Origin · All Rakes</span>',
         {direction:'right',offset:[14,0],sticky:false,permanent:false});
 
     // ── Trunk line: Angul → selected hub (same as RakeMapModal) ──
     if(selHub){
-      const trunkPts=bezierPts(ANGUL.lat,ANGUL.lng,selHub.lat,selHub.lng,80);
+      const trunkPts=mapRoutePoints(ANGUL.lat,ANGUL.lng,selHub.lat,selHub.lng);
       const rc=C.region[selHub.region]||C.region.Unknown;
-      L.polyline(trunkPts,{color:rc.glow||C.amber,weight:6,opacity:.18,smoothFactor:1}).addTo(map);
-      L.polyline(trunkPts,{color:rc.glow||C.amber,weight:2.5,opacity:.85,smoothFactor:1}).addTo(map);
-      L.polyline(trunkPts,{color:'#fff',weight:1.5,opacity:.6,dashArray:'8 10',className:'flow-trunk'}).addTo(map);
+      L.polyline(trunkPts,{color:rc.glow||C.amber,weight:2.25,opacity:.8,smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(map);
+      L.polyline(trunkPts,{color:'#fff',weight:1.1,opacity:.8,dashArray:'7 11',className:'flow-trunk',renderer:flowRenderer,lineCap:'round',lineJoin:'round'}).addTo(map);
     }
 
     // ── City spokes for selected siding (exact copy of RakeMapModal logic) ──
@@ -2285,14 +2297,12 @@ function OverviewMapModal({rows,onClose}){
       const fwd=ct.direction==='forward';
       const incl=ct.included;
       const clr=!incl?'#475569':fwd?(ct.fgOk?'#48a872':'#d96868'):(ct.fgOk?C.amber:'#f97316');
-      const opacity=incl?1:.4;
-      const pts=bezierPts(hubLat,hubLng,ct.lat,ct.lng,50);
+      const pts=mapRoutePoints(hubLat,hubLng,ct.lat,ct.lng);
       if(incl){
-        L.polyline(pts,{color:clr,weight:4,opacity:.12,smoothFactor:1}).addTo(map);
-        L.polyline(pts,{color:clr,weight:1.5,opacity:.75,smoothFactor:1}).addTo(map);
-        L.polyline(pts,{color:'#fff',weight:1,opacity:.45,dashArray:'4 8',className:'flow-spoke'}).addTo(map);
+        L.polyline(pts,{color:clr,weight:1.6,opacity:.58,smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(map);
+        L.polyline(pts,{color:'#fff',weight:.9,opacity:.68,dashArray:'4 8',className:'flow-spoke',renderer:flowRenderer,lineCap:'round',lineJoin:'round'}).addTo(map);
       } else {
-        L.polyline(pts,{color:clr,weight:1,opacity:.25,dashArray:'3 9',smoothFactor:1}).addTo(map);
+        L.polyline(pts,{color:clr,weight:1,opacity:.32,dashArray:'4 7',smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(map);
       }
     });
 
@@ -2306,13 +2316,13 @@ function OverviewMapModal({rows,onClose}){
       const opVal=incl?1:.38;
       const icon=mkDivIcon(`
         <div style="position:relative;width:24px;height:24px;opacity:${opVal}">
-          <div style="position:absolute;inset:0;border-radius:50%;background:${clr}18;border:1.5px solid ${clr}60"></div>
-          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-            width:8px;height:8px;border-radius:50%;background:${clr};box-shadow:0 0 6px ${clr}cc"></div>
-          <div style="position:absolute;left:16px;top:3px;white-space:nowrap;
-            font-family:'Poppins',Poppins,system-ui,sans-serif;font-size:11px;font-weight:700;
-            color:${clr};letter-spacing:.04em;
-            text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 8px rgba(0,0,0,.8)">
+          <div style="position:absolute;left:4px;top:4px;width:12px;height:12px;border-radius:50%;
+            background:${clr};border:2px solid #fff;box-shadow:0 1px 4px rgba(15,23,42,.28)"></div>
+          <div style="position:absolute;left:22px;top:1px;white-space:nowrap;padding:2px 7px;
+            border-radius:999px;background:${lightMap?'rgba(255,255,255,.92)':'rgba(15,23,42,.88)'};
+            border:1px solid ${lightMap?'rgba(15,23,42,.10)':'rgba(255,255,255,.18)'};
+            font-family:'Poppins',Poppins,system-ui,sans-serif;font-size:10px;font-weight:600;
+            color:${lightMap?'#334155':'#f1f5f9'};box-shadow:0 1px 4px rgba(15,23,42,.16)">
             ${escHtml(ct.name.length>18?ct.name.slice(0,16)+'\u2026':ct.name)}
           </div>
         </div>`,[24,24]);
@@ -2362,18 +2372,17 @@ function OverviewMapModal({rows,onClose}){
       const rc=C.region[hub.region]||C.region.Unknown;
       const isSel=selSid===sid;
       const icon=mkDivIcon(`
-        <div style="position:relative;width:${isSel?32:22}px;height:${isSel?32:22}px;display:flex;align-items:center;justify-content:center">
-          <div style="position:absolute;width:${isSel?32:22}px;height:${isSel?32:22}px;border-radius:50%;
-            background:${rc.glow}20;border:${isSel?2:1.5}px solid ${rc.glow}${isSel?'':'90'};
-            ${isSel?'animation:markerPulse 2s ease-in-out infinite':''}"></div>
-          <div style="width:${isSel?14:8}px;height:${isSel?14:8}px;border-radius:50%;background:${rc.glow};
-            box-shadow:0 0 ${isSel?12:4}px ${rc.glow}aa"></div>
-          <div style="position:absolute;left:${isSel?36:26}px;top:${isSel?4:3}px;white-space:nowrap;
-            font-family:'Poppins',Poppins,system-ui,sans-serif;font-size:${isSel?12:10}px;font-weight:700;
-            color:${rc.glow};text-shadow:0 1px 4px rgba(0,0,0,.95)">
+        <div style="position:relative;width:24px;height:24px">
+          <div style="position:absolute;left:3px;top:3px;width:${isSel?16:12}px;height:${isSel?16:12}px;
+            border-radius:50%;background:${rc.glow};border:2px solid #fff;box-shadow:0 1px 4px rgba(15,23,42,.28)"></div>
+          <div style="position:absolute;left:24px;top:1px;white-space:nowrap;padding:2px 7px;
+            border-radius:999px;background:${lightMap?'rgba(255,255,255,.92)':'rgba(15,23,42,.88)'};
+            border:1px solid ${lightMap?'rgba(15,23,42,.10)':'rgba(255,255,255,.18)'};
+            font-family:'Poppins',Poppins,system-ui,sans-serif;font-size:${isSel?11:10}px;font-weight:600;
+            color:${lightMap?'#334155':'#f1f5f9'};box-shadow:0 1px 4px rgba(15,23,42,.16)">
             ${sid} (${rakes}R)
           </div>
-        </div>`,[isSel?140:120,isSel?32:22]);
+        </div>`,[24,24]);
       L.marker([hub.lat,hub.lng],{icon,zIndexOffset:isSel?50:10}).addTo(map)
         .bindTooltip(`<div style="font-family:Poppins,sans-serif;font-size:12px;min-width:160px">
           <b style="font-family:'Poppins',sans-serif;font-size:13px">${hub.name} <span style="opacity:.5">(${sid})</span></b><br>
@@ -2580,7 +2589,7 @@ function OverviewMapModal({rows,onClose}){
           }
           <span style={{fontFamily:F.m,fontSize:11,color:'var(--dim)'}}>Click a siding to expand · Click a city for orders</span>
           <span style={{flex:1}}/>
-          <span style={{fontSize:10,color:'var(--mute)',fontFamily:F.b}}>Map: © OpenStreetMap contributors</span>
+          <span style={{fontSize:10,color:'var(--mute)',fontFamily:F.b}}>Map: Esri · HERE · Garmin · © OpenStreetMap contributors</span>
         </div>
       </div>
     </div>
@@ -2601,7 +2610,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
   const mapRef=useRef(null);
   const mapInst=useRef(null);
   const searchMarkerRef=useRef(null);
-  const[lightMap,setLightMap]=useState(false);
+  const[lightMap,setLightMap]=useState(true);
   const[cityDrill,setCityDrill]=useState(null); // {cityName, rows}
   const[reverseKm,setReverseKm]=useState(100);  // reverse range limit
   const[searchQ,setSearchQ]=useState('');
@@ -2643,21 +2652,6 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
 
   const title=rk?`Rake ${rakeIdx+1} · ${rakePlan.siding} · ${rk.items.length} orders`
     :`All Rakes · ${rakePlan.siding} · ${items.length} orders`;
-
-  // Bezier interpolation: curved path from A to B
-  function bezierPts(aLat,aLng,bLat,bLng,n=60){
-    const ml=(aLat+bLat)/2,mg=(aLng+bLng)/2;
-    const dl=bLat-aLat,dg=bLng-aLng;
-    // Perpendicular offset — smaller for nearby points
-    const dist=Math.sqrt(dl*dl+dg*dg);
-    const f=Math.min(0.28,Math.max(0.1,0.18));
-    const cl=ml-dg*f,cg=mg+dl*f;
-    return Array.from({length:n+1},(_,i)=>{
-      const t=i/n;
-      return[(1-t)**2*aLat+2*(1-t)*t*cl+t**2*bLat,
-             (1-t)**2*aLng+2*(1-t)*t*cg+t**2*bLng];
-    });
-  }
 
   // ── Live place search via OpenStreetMap's free Nominatim geocoder ──
   // No API key required; distances are computed client-side with haversine
@@ -2715,25 +2709,22 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
 
     const map=L.map(mapRef.current,{center:[22,80],zoom:5,zoomControl:true,attributionControl:true});
     mapInst.current=map;
+    const flowRenderer=L.svg({padding:.5}).addTo(map);
 
-    // Plain OpenStreetMap raster tiles — free, no API key. Dark mode via CSS filter below.
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
-      attribution:'© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
-      maxZoom:19
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{
+      attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community',
+      maxZoom:16
     }).addTo(map);
-    if(!lightMap)map.getPane('tilePane').style.filter='invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9)';
+    map.getPane('tilePane').style.filter=lightMap
+      ?'saturate(.45) brightness(1.04) contrast(.94)'
+      :'invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.45)';
 
     const mkDivIcon=(html,sz)=>L.divIcon({html,className:'',iconSize:sz,iconAnchor:[sz[0]/2,sz[1]/2]});
-
     // ── Draw trunk: Angul → Hub ──
     if(hub){
-      const pts=bezierPts(ANGUL.lat,ANGUL.lng,hub.lat,hub.lng,80);
-      // Glow layer
-      L.polyline(pts,{color:C.amber,weight:6,opacity:.18,smoothFactor:1}).addTo(map);
-      // Solid
-      L.polyline(pts,{color:C.amber,weight:2.5,opacity:.85,smoothFactor:1}).addTo(map);
-      // Animated dash overlay (CSS animation via className)
-      L.polyline(pts,{color:'#fff',weight:1.5,opacity:.6,dashArray:'8 10',className:'flow-trunk'}).addTo(map);
+      const pts=mapRoutePoints(ANGUL.lat,ANGUL.lng,hub.lat,hub.lng);
+      L.polyline(pts,{color:C.amber,weight:2.25,opacity:.8,smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(map);
+      L.polyline(pts,{color:'#fff',weight:1.1,opacity:.8,dashArray:'7 11',className:'flow-trunk',renderer:flowRenderer,lineCap:'round',lineJoin:'round'}).addTo(map);
     }
 
     // ── Draw spokes: Hub → Cities ──
@@ -2744,15 +2735,12 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
       const incl=ct.included;
       // Colour: forward=green, reverse-included=amber, reverse-excluded=muted
       const clr=!incl?'#475569':fwd?(ct.fgOk?C.green:C.rose):(ct.fgOk?C.amber:'#f97316');
-      const opacity=incl?1:.4;
-      const pts=bezierPts(fromLat,fromLng,ct.lat,ct.lng,50);
-      // Spoke lines — dim excluded
+      const pts=mapRoutePoints(fromLat,fromLng,ct.lat,ct.lng);
       if(incl){
-        L.polyline(pts,{color:clr,weight:4,opacity:.12,smoothFactor:1}).addTo(map);
-        L.polyline(pts,{color:clr,weight:1.5,opacity:.75,smoothFactor:1}).addTo(map);
-        L.polyline(pts,{color:'#fff',weight:1,opacity:.45,dashArray:'4 8',className:'flow-spoke'}).addTo(map);
+        L.polyline(pts,{color:clr,weight:1.6,opacity:.58,smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(map);
+        L.polyline(pts,{color:'#fff',weight:.9,opacity:.68,dashArray:'4 8',className:'flow-spoke',renderer:flowRenderer,lineCap:'round',lineJoin:'round'}).addTo(map);
       } else {
-        L.polyline(pts,{color:clr,weight:1,opacity:.25,dashArray:'3 9',smoothFactor:1}).addTo(map);
+        L.polyline(pts,{color:clr,weight:1,opacity:.32,dashArray:'4 7',smoothFactor:1.5,lineCap:'round',lineJoin:'round'}).addTo(map);
       }
     });
 
@@ -2764,14 +2752,13 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
       const opVal=incl?1:.38;
       const icon=mkDivIcon(`
         <div style="position:relative;width:24px;height:24px;opacity:${opVal}">
-          <div style="position:absolute;inset:0;border-radius:50%;background:${clr}18;border:1.5px solid ${clr}60"></div>
-          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-            width:8px;height:8px;border-radius:50%;background:${clr};
-            box-shadow:0 0 6px ${clr}cc"></div>
-          <div style="position:absolute;left:16px;top:3px;white-space:nowrap;
-            font-family:'Poppins',Poppins,system-ui,sans-serif;font-size:11px;font-weight:700;
-            color:${clr};letter-spacing:.04em;
-            text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 8px rgba(0,0,0,.8)">
+          <div style="position:absolute;left:4px;top:4px;width:12px;height:12px;border-radius:50%;
+            background:${clr};border:2px solid #fff;box-shadow:0 1px 4px rgba(15,23,42,.28)"></div>
+          <div style="position:absolute;left:22px;top:1px;white-space:nowrap;padding:2px 7px;
+            border-radius:999px;background:${lightMap?'rgba(255,255,255,.92)':'rgba(15,23,42,.88)'};
+            border:1px solid ${lightMap?'rgba(15,23,42,.10)':'rgba(255,255,255,.18)'};
+            font-family:'Poppins',Poppins,system-ui,sans-serif;font-size:10px;font-weight:600;
+            color:${lightMap?'#334155':'#f1f5f9'};box-shadow:0 1px 4px rgba(15,23,42,.16)">
             ${escHtml(ct.name.length>18?ct.name.slice(0,16)+'…':ct.name)}
           </div>
         </div>`,[24,24]);
@@ -2822,12 +2809,8 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
     // ── Hub marker ──
     if(hub){
       const icon=mkDivIcon(`
-        <div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center">
-          <div style="position:absolute;width:32px;height:32px;border-radius:50%;
-            background:${rc.glow}20;border:2px solid ${rc.glow}80;animation:markerPulse 2s ease-in-out infinite"></div>
-          <div style="width:12px;height:12px;border-radius:50%;background:${rc.glow};
-            box-shadow:0 0 10px ${rc.glow}cc;border:1.5px solid rgba(255,255,255,.3)"></div>
-        </div>`,[32,32]);
+        <div style="width:20px;height:20px;border-radius:50%;background:${rc.glow};
+          border:3px solid #fff;box-shadow:0 1px 5px rgba(15,23,42,.32)"></div>`,[20,20]);
       {
         const _allOrd=rakePlan.rakes.flatMap(rk=>rk.items.map(x=>x.ord));
         const _tot=_allOrd.reduce((s,o)=>{const f=freightCost(o);return f?{r:s.r+f.rake,t:s.t+f.truck,x:s.x+f.total}:s;},{r:0,t:0,x:0});
@@ -2868,15 +2851,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
     }
 
     // ── Origin marker (Angul) ──
-    const originIcon=mkDivIcon(`
-      <div style="position:relative;width:38px;height:38px;display:flex;align-items:center;justify-content:center">
-        <div style="position:absolute;width:38px;height:38px;border-radius:50%;
-          background:${C._amber}15;border:2px solid ${C._amber}90;animation:markerPulse 1.4s ease-in-out infinite"></div>
-        <div style="position:absolute;width:22px;height:22px;border-radius:50%;
-          background:${C._amber}25;border:1px solid ${C._amber}60;animation:ripple 2s linear infinite"></div>
-        <div style="width:14px;height:14px;border-radius:50%;background:${C.amber};
-          box-shadow:0 0 14px ${C._amber}cc;border:2px solid rgba(255,255,255,.4);z-index:1"></div>
-      </div>`,[38,38]);
+    const originIcon=plantPinIcon(L,C.amber);
     L.marker([ANGUL.lat,ANGUL.lng],{icon:originIcon,zIndexOffset:30}).addTo(map)
       .bindTooltip(`<b style="font-family:'Poppins',Poppins,system-ui,sans-serif;font-size:14px;letter-spacing:.06em;color:${C.amber}">ANGUL PLATEMILL</b><br>
         <span style="color:${C.dim}">JSL Origin · Angul, Odisha</span>`,
@@ -3028,7 +3003,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
         <span style={{fontFamily:F.m,fontSize:11,color:'var(--dim)'}}>Click a city dot for order details</span>
         <span style={{flex:1}}/>
         <span style={{fontSize:10,color:'var(--mute)',fontFamily:F.b}}>
-          Map: © OpenStreetMap contributors
+          Map: Esri · HERE · Garmin · © OpenStreetMap contributors
         </span>
       </div>
     </div>
