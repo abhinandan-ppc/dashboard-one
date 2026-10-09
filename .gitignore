@@ -13,3 +13,4 @@ service-account.json
 .vercel
 .env*
 DESIGN-CONTEXT.md
+.vscode/settings.json
