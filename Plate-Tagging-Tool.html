@@ -958,9 +958,9 @@ function applyOnlineZstkValues(values,slot){
   if(!parsed||!parsed.rows.length){
     slot.classList.remove('ok');slot.classList.add('err');
     slot.querySelector('.status').textContent='Free-stock columns not found in ZSTK.';
-    FILES.por=null;
+    FILES.por=null;POR_SOURCE=null;
   }else{
-    FILES.por=parsed.rows;POR_COLS=parsed.cols;PORMAP=parsed.map;
+    FILES.por=parsed.rows;POR_COLS=parsed.cols;PORMAP=parsed.map;POR_SOURCE='zstk';
     slot.classList.remove('err');slot.classList.add('ok');
     slot.querySelector('.fname').textContent='Live ZSTK (ZSTK_LIVE_TEMP)';
     slot.querySelector('.status').textContent=`Sheet "${parsed.sheet}" · ${parsed.rows.length.toLocaleString()} rows · ${parsed.reqScore}/${parsed.reqN} required fields auto-mapped`;
@@ -968,43 +968,60 @@ function applyOnlineZstkValues(values,slot){
   }
   updateRun();
 }
+/* True while a ZSTK load is in flight. The auto-load on open and the hub's
+   'zstk-cache-updated' broadcast can both fire at the same moment — the hub is
+   usually still fetching when this page opens, so it is this page's own
+   request that triggers the sync — and two concurrent runs would each re-render
+   the slot. The second call returns immediately; the run already polling picks
+   up the freshly cached rows on its next 600ms tick. */
+let ZSTK_FETCHING=false;
 async function fetchOnlineZstk(){
+  if(ZSTK_FETCHING) return;
+  ZSTK_FETCHING=true;
   const slot=document.getElementById('slot-por');
   const btn=document.getElementById('zstkOnlineBtn');
   btn.disabled=true;
-  slot.querySelector('.status').textContent='Reading ZSTK hub cache…';
-  const cached=await readHubZstkCache();
-  const rows=(()=>{if(cached&&Array.isArray(cached.csvText))return cached.csvText;if(cached&&Array.isArray(cached.values))return cached.values;return null;})();
-  if(rows){
-    try{applyOnlineZstkValues(rows,slot);}
-    catch(err){slot.classList.add('err');slot.querySelector('.status').textContent='Could not parse ZSTK: '+err.message;}
-    btn.disabled=false;return;
-  }
-  const inFrame=window.parent!==window;
-  if(inFrame){try{window.parent.postMessage({type:'request-zstk-fetch',force:false},'*');}catch(e){}}
-  for(let i=0;i<(inFrame?15:0);i++){
-    slot.querySelector('.status').textContent='Waiting for ZSTK hub cache…';
-    await new Promise(r=>setTimeout(r,600));
-    const c=await readHubZstkCache();
-    const rows=(()=>{if(c&&Array.isArray(c.csvText))return c.csvText;if(c&&Array.isArray(c.values))return c.values;return null;})();
+  try{
+    slot.querySelector('.status').textContent='Reading ZSTK hub cache…';
+    const cached=await readHubZstkCache();
+    const rows=(()=>{if(cached&&Array.isArray(cached.csvText))return cached.csvText;if(cached&&Array.isArray(cached.values))return cached.values;return null;})();
     if(rows){
       try{applyOnlineZstkValues(rows,slot);}
       catch(err){slot.classList.add('err');slot.querySelector('.status').textContent='Could not parse ZSTK: '+err.message;}
-      btn.disabled=false;return;
+      return;
     }
+    const inFrame=window.parent!==window;
+    if(inFrame){try{window.parent.postMessage({type:'request-zstk-fetch',force:false},'*');}catch(e){}}
+    for(let i=0;i<(inFrame?15:0);i++){
+      slot.querySelector('.status').textContent='Waiting for ZSTK hub cache…';
+      await new Promise(r=>setTimeout(r,600));
+      const c=await readHubZstkCache();
+      const rows=(()=>{if(c&&Array.isArray(c.csvText))return c.csvText;if(c&&Array.isArray(c.values))return c.values;return null;})();
+      if(rows){
+        try{applyOnlineZstkValues(rows,slot);}
+        catch(err){slot.classList.add('err');slot.querySelector('.status').textContent='Could not parse ZSTK: '+err.message;}
+        return;
+      }
+    }
+    try{
+      const values=await fetchZstkDirectly();
+      applyOnlineZstkValues(values,slot);
+    }catch(err){
+      slot.classList.remove('ok');slot.classList.add('err');
+      slot.querySelector('.status').textContent=err.message+'. Drop the .xlsx instead.';
+    }
+  }finally{
+    btn.disabled=false;
+    ZSTK_FETCHING=false;
   }
-  try{
-    const values=await fetchZstkDirectly();
-    applyOnlineZstkValues(values,slot);
-  }catch(err){
-    slot.classList.remove('ok');slot.classList.add('err');
-    slot.querySelector('.status').textContent=err.message+'. Drop the .xlsx instead.';
-  }
-  btn.disabled=false;
 }
 
 /* ---------- file handling ---------- */
 const FILES={por:null,ebtp:null};
+/* Which source last filled the Free Plate Stock slot: 'zstk' (hub cache /
+   proxy) or 'file' (a .xlsx the user dropped in). A hub 'zstk-cache-updated'
+   broadcast must never overwrite a file the user chose deliberately. */
+let POR_SOURCE=null;
 let POR_COLS=[], PORMAP={}, EBTP_COLS=[], EBTPMAP={}, EBTP_RAW=null;
 
 /* ---------- order-book (EBTP) field mapping ---------- */
@@ -1083,7 +1100,7 @@ function resetSlot(kind,title,code){
   slot.querySelector('h3').innerHTML=`<span class="dot"></span>${title}`;
 }
 function resetAll(){
-  FILES.por=null; FILES.ebtp=null; POR_COLS=[]; PORMAP={}; EBTP_COLS=[]; EBTPMAP={}; EBTP_RAW=null; RESULT=null;
+  FILES.por=null; FILES.ebtp=null; POR_SOURCE=null; POR_COLS=[]; PORMAP={}; EBTP_COLS=[]; EBTPMAP={}; EBTP_RAW=null; RESULT=null;
   destroyCharts();
   resetSlot('por','Free Plate Stock','POR / PSFS · any column layout — you map the columns');
   resetSlot('ebtp','Order Book','EBTP · Sheet with SO No. + BTR');
@@ -1156,8 +1173,8 @@ function readFile(kind,file){
         const parsed=bestStockParse(wb);
         if(!parsed||!parsed.rows.length){ slot.classList.remove('ok'); slot.classList.add('err');
           slot.querySelector('.status').textContent='No data table found in file';
-          FILES.por=null; updateRun(); return; }
-        FILES.por=parsed.rows; POR_COLS=parsed.cols; PORMAP=parsed.map;
+          FILES.por=null; POR_SOURCE=null; updateRun(); return; }
+        FILES.por=parsed.rows; POR_COLS=parsed.cols; PORMAP=parsed.map; POR_SOURCE='file';
         slot.classList.remove('err'); slot.classList.add('ok');
         slot.querySelector('.fname').textContent=file.name;
         slot.querySelector('.status').textContent=`Sheet "${parsed.sheet}" · ${parsed.rows.length.toLocaleString()} rows · ${parsed.reqScore}/${parsed.reqN} fields auto-mapped`;
@@ -1837,6 +1854,11 @@ window.addEventListener('DOMContentLoaded',()=>{
   // fetch) so this slot doesn't require an explicit click before it has
   // data — unless the user already uploaded their own EBTP file.
   if(!FILES.ebtp) fetchOnlineEbtp();
+  // Same for Free Plate Stock: read the hub's ZSTK cache on open, ask the hub
+  // to fetch when it has nothing cached yet, and fall back to hitting
+  // /api/zstk-proxy directly. Skipped when the user already dropped their own
+  // file in, so their choice always wins.
+  if(!FILES.por) fetchOnlineZstk();
   document.getElementById('runBtn').addEventListener('click',execute);
   document.getElementById('dlBtn').addEventListener('click',download);
   document.getElementById('analysisReset').addEventListener('click',clearAnalysisDetail);
@@ -1859,6 +1881,13 @@ window.addEventListener('message',e=>{
   const msg=e.data||{};
   if(msg.type==='theme') setTheme(msg.value);
   if(msg.type==='reset') resetAll();
+  // The hub broadcasts this after every successful ZSTK sync (its own chip tap,
+  // another tab's request, or this page's own on-open request). Without it a
+  // sync that lands *after* the on-open poll window expires would leave the
+  // slot stale until a reload. fetchOnlineZstk() reads the cache that broadcast
+  // was just written from, so it returns as soon as the rows are there.
+  // Never overwrite a file the user dropped in themselves.
+  if(msg.type==='zstk-cache-updated' && POR_SOURCE!=='file') fetchOnlineZstk();
 });
 </script>
 </body>
