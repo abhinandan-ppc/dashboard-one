@@ -586,6 +586,12 @@ input { font: inherit; color: inherit; }
   .top-wrapper { padding: 8px var(--page-gutter); }
   .top-bar { flex-wrap: wrap; align-items: center; padding: 12px; gap: 10px; }
   .top-l { flex: 1 1 auto; min-width: 0; justify-content: flex-start; gap: 10px; }
+  /* .top-l now spans the whole first row (the .hdr-r buttons wrap below), so
+     an auto margin pushes the clubbed sync pill flush right instead of leaving
+     it stranded in the middle after the title. Auto margins are honoured ahead
+     of justify-content, so this wins over flex-start above. Harmless if the row
+     is too narrow — then there is no free space and it stays where it was. */
+  .sheet-sync-club { margin-left: auto; }
   .top-l h1 { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .jspl-brand-text { display: none; }
   .jspl-divider { display: none; }
