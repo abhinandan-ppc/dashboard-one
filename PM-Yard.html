@@ -2925,10 +2925,10 @@ function toggleDropdown(id, event) {
   });
   const targetEl = document.getElementById(id);
   if (targetEl) {
+    // Data loading no longer waits for this menu: both live sources are
+    // fetched once on page load (autoSyncLiveDataOnLoad at the bottom of
+    // the script). Opening the menu only reveals the status cards.
     targetEl.classList.toggle('show');
-    if (id === 'upload-dropdown' && targetEl.classList.contains('show')) {
-      try { autoSyncLiveOnFirstOpen(); } catch (e) {}
-    }
   }
 }
 
@@ -4043,9 +4043,13 @@ if (fileInput) {
   });
 })();
 
-function loadBTRFile(file) {
+// openMenu=false lets background callers (the on-page-load auto-sync) load
+// data without force-opening the upload dropdown; explicit user actions
+// (file pick, Sync Live button) keep the default true so the inline progress
+// stays visible.
+function loadBTRFile(file, openMenu = true) {
   const uploadDd = document.getElementById('upload-dropdown');
-  if (uploadDd) uploadDd.classList.add('show');
+  if (uploadDd && openMenu) uploadDd.classList.add('show');
 
   const btrStatus = document.getElementById('btr-upload-status');
   const btrOpt    = document.getElementById('btr-opt');
@@ -4311,20 +4315,20 @@ function ingestZstkCacheRecord(rec, viaHub) {
   if (zstkOpt) { zstkOpt.classList.remove('is-loading'); zstkOpt.classList.add('has-data'); }
   return true;
 }
-function ingestAutoBtrCacheRecord(rec) {
+function ingestAutoBtrCacheRecord(rec, openMenu = true) {
   const buf = rec && rec.csvText;
   if (!buf || !buf.byteLength) return false;
-  loadBTRFile(new Blob([buf]));
+  loadBTRFile(new Blob([buf]), openMenu);
   return true;
 }
 
 // ─── Live Sync: ZSTK ──────────────────────────────────────────────────────────
-function syncZSTKLive(force) {
+function syncZSTKLive(force, openMenu = true) {
   const btn = document.getElementById('zstk-sync-btn');
   const zstkStatus = document.getElementById('zstk-upload-status');
   const zstkOpt = document.getElementById('zstk-opt');
   const uploadDd = document.getElementById('upload-dropdown');
-  if (uploadDd) uploadDd.classList.add('show');
+  if (uploadDd && openMenu) uploadDd.classList.add('show');
   if (btn) btn.disabled = true;
   if (zstkStatus) { zstkStatus.innerHTML = '<span class="card-spinner"></span>Syncing…'; zstkStatus.className = 'upload-opt-status loading'; }
   if (zstkOpt) zstkOpt.classList.add('is-loading');
@@ -4377,7 +4381,7 @@ function syncZSTKLive(force) {
 }
 
 // ─── Live Sync: AutoBTR ───────────────────────────────────────────────────────
-function syncAutoBTRLive(force) {
+function syncAutoBTRLive(force, openMenu = true) {
   const btn = document.getElementById('btr-sync-btn');
   if (btn) btn.disabled = true;
 
@@ -4395,7 +4399,7 @@ function syncAutoBTRLive(force) {
   function directFetch() {
     fetch('/api/autobtr-proxy', { cache: 'no-store' })
       .then(r => { if (!r.ok) return r.text().then(t => { throw new Error(t || ('HTTP ' + r.status)); }); return r.arrayBuffer(); })
-      .then(buf => { ingestAutoBtrCacheRecord({ csvText: buf }); ok(); })
+      .then(buf => { ingestAutoBtrCacheRecord({ csvText: buf }, openMenu); ok(); })
       .catch(e => fail(e.message));
   }
 
@@ -4403,9 +4407,9 @@ function syncAutoBTRLive(force) {
 
   if (!force) {
     readHubAutoBtrCache().then(rec => {
-      if (rec && ingestAutoBtrCacheRecord(rec)) { ok(); return; }
+      if (rec && ingestAutoBtrCacheRecord(rec, openMenu)) { ok(); return; }
       requestHubSync('autobtr', false).then(gotIt => {
-        if (gotIt) { readHubAutoBtrCache().then(r2 => { ingestAutoBtrCacheRecord(r2) ? ok() : directFetch(); }); }
+        if (gotIt) { readHubAutoBtrCache().then(r2 => { ingestAutoBtrCacheRecord(r2, openMenu) ? ok() : directFetch(); }); }
         else directFetch();
       });
     });
@@ -4413,21 +4417,23 @@ function syncAutoBTRLive(force) {
   }
 
   requestHubSync('autobtr', true).then(gotIt => {
-    if (gotIt) { readHubAutoBtrCache().then(rec => { ingestAutoBtrCacheRecord(rec) ? ok() : directFetch(); }); }
+    if (gotIt) { readHubAutoBtrCache().then(rec => { ingestAutoBtrCacheRecord(rec, openMenu) ? ok() : directFetch(); }); }
     else directFetch();
   });
 }
 
-// Auto-sync both live sources the first time the Upload dropdown is opened in
-// this session (manual "Sync Live" buttons still work any time after, and now
-// pass force=true to actually ask the hub for a fresh pull rather than reuse
-// whatever's already cached).
+// Auto-sync both live sources once, on page load — the yard is populated
+// as soon as it opens instead of waiting for the first Upload-menu click
+// (manual "Sync Live" buttons still work any time after, and now pass
+// force=true to actually ask the hub for a fresh pull rather than reuse
+// whatever's already cached). openMenu=false keeps the dropdown closed
+// during this background load.
 let _liveSyncedOnce = false;
-function autoSyncLiveOnFirstOpen() {
+function autoSyncLiveDataOnLoad() {
   if (_liveSyncedOnce) return;
   _liveSyncedOnce = true;
-  try { syncZSTKLive(false); } catch (e) {}
-  try { syncAutoBTRLive(false); } catch (e) {}
+  try { syncZSTKLive(false, false); } catch (e) {}
+  try { syncAutoBTRLive(false, false); } catch (e) {}
 }
 
 // ─── Build BTR Slicer Dropdowns ───────────────────────────────────────────────
@@ -5498,6 +5504,13 @@ camFromSph();
 })();
 
 updateKPIs();
+
+// ─── Live data auto-load ───
+// Fetch ZSTK + AutoBTR as soon as the page loads (hub cache first when
+// embedded, direct proxy fetch when standalone) so the yard is populated
+// without the user having to open the Upload menu. Guarded by _liveSyncedOnce
+// so a later manual "Sync Live" is never blocked and this never runs twice.
+try { autoSyncLiveDataOnLoad(); } catch (e) {}
 </script>
 <script>
 // Hub message listener: accepts theme and reset messages from the parent hub iframe
