@@ -1,0 +1,4 @@
+local-auth: service account → dbone-327@sonic-harbor-448010-j8.iam.gserviceaccount.com
+local-auth: dashboards      → http://127.0.0.1:4173/
+local-auth: sheet proxies   → /api/ebtp-proxy  /api/zstk-proxy  /api/autobtr-proxy
+local-auth: Ctrl+C to stop
