@@ -2,7 +2,7 @@
 
   <h1>🏭 Dashboard One</h1>
 
-  <p><b>AI Planning Hub — a suite of static dashboards for industrial planning, yard management, and logistics tracking at Jindal Steel Angul (Plate Mill).</b></p>
+  <p><b>Dashboard One — a suite of static dashboards for industrial planning, yard management, and logistics tracking at Jindal Steel Angul (Plate Mill).</b></p>
 
 </div>
 
@@ -29,7 +29,7 @@
 
 **Dashboard One** provides a centralized interface for managing complex industrial operations. Instead of relying on a heavy backend framework, this project uses fast, static HTML pages for dedicated planning tools covering Steel Melting Shop (SMS) heat planning, plate/PSFS tagging, PM Yard management, and rake (railway) logistics.
 
-Access is gated behind Google Workspace SSO: a Vercel Edge Middleware protects every tool page, and the landing page (`index.html`, the **AI Planning Hub**) renders its own login/user menu by checking session state client-side.
+Access is gated behind Google Workspace SSO: a Vercel Edge Middleware protects every tool page, and the landing page (`index.html`, the **Dashboard One** hub) renders its own login/user menu by checking session state client-side.
 
 ---
 
@@ -38,7 +38,7 @@ Access is gated behind Google Workspace SSO: a Vercel Edge Middleware protects e
 <table width="100%">
   <tr>
     <td width="50%">
-      <h3>🏠 AI Planning Hub</h3>
+      <h3>🏠 Dashboard One</h3>
       <code>index.html</code>
       <p>The central landing page connecting all operational planners and views, with sign-in and user menu.</p>
     </td>
