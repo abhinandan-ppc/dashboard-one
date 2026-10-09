@@ -253,7 +253,25 @@ input { font: inherit; color: inherit; }
   flex-shrink: 0; font-size: 11px; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase;
   padding: 7px 12px; min-height: 32px; border-radius: var(--radius-pill);
   background: var(--input-bg); color: var(--tx); border: var(--glass-border); cursor: pointer;
+  /* Flex + fixed min-width: the Sync/Retry label and the spinner occupy the
+     exact same box, so swapping between them never resizes the pill (or the
+     row) mid-sync. Centered content keeps either form optically level. */
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-width: 74px;
 }
+/* Spinner shown in place of the label while that source is syncing. Same look
+   as theme.css's .fetch-status-spinner (which also reuses the shared spin
+   keyframe), just sized for this pill. Hidden until .is-busy — the element
+   lives in the markup so render() only has to toggle a class. */
+.sheet-sync-row-act-spin {
+  display: none;
+  width: 14px; height: 14px; flex-shrink: 0; border-radius: 50%;
+  border: 2px solid var(--bdr); border-top-color: var(--sky);
+  animation: spin 0.7s linear infinite;
+}
+.sheet-sync-row-act.is-busy { border-color: color-mix(in srgb, var(--sky) 45%, transparent); cursor: progress; }
+.sheet-sync-row-act.is-busy .sheet-sync-row-act-spin { display: block; }
+.sheet-sync-row-act.is-busy .sheet-sync-row-act-txt { display: none; }
 .user-menu { position: relative; flex-shrink: 0; }
 .user-btn {
   height: 40px; width: 40px; padding: 0; border-radius: var(--radius-pill); overflow: hidden; flex-shrink: 0;
@@ -1041,20 +1059,22 @@ input { font: inherit; color: inherit; }
 </div>
 <div class="sheet-sync-panel" id="sheetSyncPanel" role="dialog" aria-label="Sheet sync status">
   <div class="sheet-sync-panel-title">Live sheets</div>
+  <!-- .sheet-sync-row-act holds a hidden spinner (CSS-swap via .is-busy) so the
+       Sync/Retry label is replaced by a spinner while that source is syncing. -->
   <button class="sheet-sync-row" data-src="zstk" type="button">
     <span class="sheet-sync-row-dot"></span>
     <span class="sheet-sync-row-body"><span class="sheet-sync-row-name">ZSTK</span><span class="sheet-sync-row-sub"></span></span>
-    <span class="sheet-sync-row-act">Sync</span>
+    <span class="sheet-sync-row-act"><i class="sheet-sync-row-act-spin" aria-hidden="true"></i><span class="sheet-sync-row-act-txt">Sync</span></span>
   </button>
   <button class="sheet-sync-row" data-src="autobtr" type="button">
     <span class="sheet-sync-row-dot"></span>
     <span class="sheet-sync-row-body"><span class="sheet-sync-row-name">BTR</span><span class="sheet-sync-row-sub"></span></span>
-    <span class="sheet-sync-row-act">Sync</span>
+    <span class="sheet-sync-row-act"><i class="sheet-sync-row-act-spin" aria-hidden="true"></i><span class="sheet-sync-row-act-txt">Sync</span></span>
   </button>
   <button class="sheet-sync-row" data-src="ebtp" type="button">
     <span class="sheet-sync-row-dot"></span>
     <span class="sheet-sync-row-body"><span class="sheet-sync-row-name">EBTP</span><span class="sheet-sync-row-sub"></span></span>
-    <span class="sheet-sync-row-act">Sync</span>
+    <span class="sheet-sync-row-act"><i class="sheet-sync-row-act-spin" aria-hidden="true"></i><span class="sheet-sync-row-act-txt">Sync</span></span>
   </button>
 </div>
 
@@ -3579,9 +3599,24 @@ function fetchAndCacheSegment(force){
     var sub = row.querySelector('.sheet-sync-row-sub');
     if(sub) sub.textContent = rowSubText(src, st);
     var act = row.querySelector('.sheet-sync-row-act');
-    if(act) act.textContent = (cls === 'checking') ? '…' : (st && !st.ok) ? 'Retry' : 'Sync';
+    if(act){
+      // Swap the whole pill to its spinner form while that source is syncing
+      // (the label and spinner share one fixed-width box, so nothing reflows).
+      var busy = (cls === 'checking');
+      act.classList.toggle('is-busy', busy);
+      act.title = busy ? 'Syncing…' : '';
+      var actTxt = act.querySelector('.sheet-sync-row-act-txt');
+      // While busy the label is display:none — only refresh it when visible so
+      // the pill comes back as Retry (after a failure) or Sync (after success).
+      if(actTxt && !busy) actTxt.textContent = (st && !st.ok) ? 'Retry' : 'Sync';
+      row.setAttribute('aria-busy', busy ? 'true' : 'false');
+    }
     var accent = SRC_ACCENT[src];
     if(accent) row.style.setProperty('--chip-accent', accent);
+    // The sub-line can change width on every status flip (short "Syncing…" →
+    // long "Failed · …"). If the panel is visible right now, re-clamp its
+    // position so a growing row can't push the panel past the right edge.
+    if(panelIsOpen()) placePanel();
   }
   function renderPanelAll(){
     for(var i = 0; i < SRC_ORDER.length; i++) renderPanelRow(SRC_ORDER[i]);
@@ -3594,7 +3629,13 @@ function fetchAndCacheSegment(force){
     var r = club.getBoundingClientRect();
     var w = Math.min(300, window.innerWidth - 24);
     panel.style.minWidth = w + 'px';
-    var left = Math.max(12, Math.min(r.left, window.innerWidth - w - 12));
+    // Clamp against the panel's REAL laid-out width, not the 300px baseline:
+    // content (e.g. a long "Failed · …" sub-line) can push the shrink-to-fit
+    // width past w up to max-width, and a left computed from w alone let the
+    // panel run off the right edge (390px viewport → right edge 444). Only
+    // valid while the panel is displayed, so openPanel adds .open first.
+    var pw = panel.offsetWidth || w;
+    var left = Math.max(12, Math.min(r.left, window.innerWidth - pw - 12));
     panel.style.left = left + 'px';
     panel.style.top = (r.bottom + 8) + 'px';
   }
@@ -3602,9 +3643,11 @@ function fetchAndCacheSegment(force){
     var panel = document.getElementById('sheetSyncPanel');
     var club = document.getElementById('sheetSyncClub');
     if(!panel) return;
+    // .open BEFORE render/place: placePanel must measure offsetWidth, which is
+    // 0 while the panel is still display:none.
+    panel.classList.add('open');
     renderPanelAll();
     placePanel();
-    panel.classList.add('open');
     if(club) club.setAttribute('aria-expanded', 'true');
   }
   function closePanel(){
@@ -3784,16 +3827,37 @@ function fetchAndCacheSegment(force){
       else { renderPanelAll(); openPanel(); }
     });
   }
+  // The panel used to close the instant a row was tapped, which would hide the
+  // new per-row spinner. Instead the panel now stays open while any sync runs,
+  // then closes itself ~1s after everything settles — so the user watches the
+  // spinner, sees the final "Synced …" line land, and still ends up back on the
+  // dashboard like before (the bottom #fetchStatus loader keeps carrying the
+  // detailed progress in the meantime).
+  function watchPanelUntilSettled(){
+    var iv = setInterval(function(){
+      if(!panelIsOpen()){ clearInterval(iv); return; } // user dismissed it early
+      var busy = false;
+      document.querySelectorAll('.sheet-sync-chip').forEach(function(c){
+        if(c.classList.contains('is-busy')) busy = true;
+      });
+      if(!busy){
+        clearInterval(iv);
+        // Brief hold so the settled row (updated sub-line + Sync/Retry pill) is
+        // readable before the panel slides away.
+        setTimeout(function(){ if(panelIsOpen()) closePanel(); }, 1000);
+      }
+    }, 250);
+  }
   document.querySelectorAll('#sheetSyncPanel .sheet-sync-row').forEach(function(row){
     row.addEventListener('click', function(e){
       e.stopPropagation();
       var src = row.dataset.src;
       var chip = document.querySelector('.sheet-sync-chip[data-src="' + src + '"]');
-      closePanel();
-      if(chip && chip.classList.contains('is-busy')){ peekStatus(src); return; }
+      if(chip && chip.classList.contains('is-busy')){ closePanel(); peekStatus(src); return; }
       clearRetry(src);
       peekStatus(src);
       syncSheet(src, true);
+      watchPanelUntilSettled(); // keep the spinner visible until the sync lands
     });
   });
   document.addEventListener('click', function(e){
