@@ -10,3 +10,6 @@ service-account.json
 .claude-flow/neural/stats.json
 .claude-flow/policy/stats.json
 .clinerules
+.vercel
+.env*
+DESIGN-CONTEXT.md
