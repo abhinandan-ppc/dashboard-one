@@ -384,10 +384,10 @@ details b{color:var(--tx)}
       <label class="slotTrigger" for="file-por">
         <h3><span class="dot"></span>Free Plate Stock</h3>
         <div class="code">POR / PSFS · any column layout — you map the columns</div>
-          <button type="button" id="zstkOnlineBtn" style="margin-top:8px;width:100%;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--bdrHi);background:var(--input-bg);color:var(--tx);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer">⟳ Load Free Stock from ZSTK</button>
         <div class="fname">Drop or click to choose .xlsx</div>
         <div class="status">Not loaded</div>
       </label>
+          <button type="button" id="zstkOnlineBtn" style="margin-top:8px;width:100%;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--bdrHi);background:var(--input-bg);color:var(--tx);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer">⟳ Load Free Stock from ZSTK</button>
       <input type="file" id="file-por" accept=".xlsx,.xls">
       <div id="pormap" class="pormap"></div>
     </div>
@@ -398,10 +398,7 @@ details b{color:var(--tx)}
         <div class="fname">Drop or click to choose .xlsx</div>
         <div class="status">Not loaded</div>
       </label>
-      <button type="button" id="ebtpOnlineBtn" style="margin-top:8px;width:100%;padding:8px 12px;
-        border-radius:var(--radius-sm);border:1px solid var(--bdrHi);background:var(--input-bg);
-        color:var(--tx);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
-        cursor:pointer">⟳ Fetch Online EBTP</button>
+          <button type="button" id="ebtpOnlineBtn" style="margin-top:8px;width:100%;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--bdrHi);background:var(--input-bg);color:var(--tx);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer">⟳ Fetch Online EBTP</button>
       <input type="file" id="file-ebtp" accept=".xlsx,.xls">
       <div id="ebtpmap" class="pormap"></div>
     </div>
@@ -875,6 +872,8 @@ function applyOnlineEbtpText(text,slot){
     slot.querySelector('.fname').textContent='Live EBTP (Google Sheet)';
     slot.querySelector('.status').textContent=`Sheet "${parsed.sheet}" · ${parsed.rows.length.toLocaleString()} rows · ${parsed.reqScore}/${parsed.reqN} required fields auto-mapped`;
     renderEbtpMapping(parsed);
+    // Auto-activate Cross Order mode when EBTP is loaded — Cross Order runs just on EBTP
+    if(TAG_MODE!=='cross'){ setGradeMode('cross'); }
   }
   updateRun();
 }
@@ -1169,6 +1168,8 @@ function readFile(kind,file){
         slot.querySelector('.fname').textContent=file.name;
         slot.querySelector('.status').textContent=`Sheet "${parsed.sheet}" · ${parsed.rows.length.toLocaleString()} rows · ${parsed.reqScore}/${parsed.reqN} required fields auto-mapped`;
         renderEbtpMapping(parsed);
+        // Auto-activate Cross Order mode when EBTP is loaded — Cross Order runs just on EBTP
+        if(TAG_MODE!=='cross'){ setGradeMode('cross'); }
       } else {
         const parsed=bestStockParse(wb);
         if(!parsed||!parsed.rows.length){ slot.classList.remove('ok'); slot.classList.add('err');
@@ -1256,18 +1257,29 @@ function rebuildEbtpRows(){
 }
 function mapComplete(){ return FIELDS.filter(f=>f.req).every(f=>PORMAP[f.k]) && EBTP_FIELDS.filter(f=>f.req).every(f=>EBTPMAP[f.k]); }
 function updateRun(){
-  document.getElementById('runBtn').disabled=!(FILES.por&&FILES.ebtp&&mapComplete());
+  const maplen = mapComplete();
+  const hasEbtp = !!FILES.ebtp;
+  const modeDisabled = TAG_MODE==='cross' && !hasEbtp;
+  document.getElementById('runBtn').disabled = !maplen || modeDisabled;
   syncGradeModeSwitch();
 }
 function syncGradeModeSwitch(){
   const extBtn=document.getElementById('gmOptExt');
+  const crossBtn=document.getElementById('gmOptCross');
   const hasExt=!!PORMAP.extGrade;
+  const hasEbtp=!!FILES.ebtp;
   extBtn.disabled=!hasExt;
+  crossBtn.disabled=!hasEbtp;
   extBtn.title=hasExt?'':'Map the optional External Grade plate-stock column to enable this mode';
+  crossBtn.title=hasEbtp?'Cross Order is active — only runs on the linked EBTP order book.':(hasEbtp?'Unlink an EBTP to activate Cross Order.' : 'Upload or fetch an EBTP order book to activate Cross Order.');
   if(!hasExt && TAG_MODE==='ext') setGradeMode('int');
+  if(!hasEbtp && TAG_MODE==='cross') setGradeMode('int');
 }
 function setGradeMode(mode){
-  TAG_MODE = (mode==='ext'||mode==='cross') ? mode : 'int';
+  const hasEbtp=!!FILES.ebtp;
+  if(mode==='cross' && hasEbtp) TAG_MODE='cross';
+  else if(mode==='cross' && !hasEbtp) TAG_MODE='int';
+  else TAG_MODE = (mode==='ext') ? mode : 'int';
   document.getElementById('gmOptInt').classList.toggle('active',TAG_MODE==='int');
   document.getElementById('gmOptExt').classList.toggle('active',TAG_MODE==='ext');
   document.getElementById('gmOptCross').classList.toggle('active',TAG_MODE==='cross');
@@ -1276,10 +1288,23 @@ function setGradeMode(mode){
     : TAG_MODE==='cross'
     ? 'Finds excess stock from over-covered orders (BTR ≤ 0) to donate to older ageing orders with matching dimensions & compatible Int Grade.'
     : 'Matches Order → Plate Int Grade via the embedded grade matrix.';
+  if(hasEbtp && TAG_MODE==='int' && mode==='cross'){
+    // Called via syncGradeModeSwitch (EBTP just loaded) — auto-activate Cross Order
+    document.getElementById('gmOptCross').classList.add('active');
+    TAG_MODE='cross';
+    document.getElementById('gradeModeHint').textContent = 'Finds excess stock from over-covered orders (BTR ≤ 0) to donate to older ageing orders with matching dimensions & compatible Int Grade.';
+  }
 }
 document.getElementById('gmOptInt').addEventListener('click',()=>setGradeMode('int'));
 document.getElementById('gmOptExt').addEventListener('click',()=>{ if(!document.getElementById('gmOptExt').disabled) setGradeMode('ext'); });
-document.getElementById('gmOptCross').addEventListener('click',()=>setGradeMode('cross'));
+document.getElementById('gmOptCross').addEventListener('click',()=>{
+  const hasEbtp=!!FILES.ebtp;
+  if(hasEbtp) setGradeMode('cross');
+  else if(TAG_MODE!=='cross'){
+    // EBTP not loaded — remind user to load it
+    alert('Upload or fetch an EBTP order book first. Cross Order Tagging only runs on EBTP.');
+  }
+});
 
 let RESULT=null;
 let DASH_CHARTS=[];
@@ -1300,6 +1325,11 @@ function showResultsSkeleton(){
 }
 function execute(){
   if(!mapComplete()){ alert('Please map all required plate-stock columns (marked *).'); return; }
+  const hasEbtp = !!FILES.ebtp;
+  if(TAG_MODE==='cross' && !hasEbtp){
+    alert('Upload or fetch an EBTP order book first. Cross Order Tagging only runs on EBTP.');
+    return;
+  }
   const btn=document.getElementById('runBtn'); btn.disabled=true; btn.textContent='Processing…';
   showResultsSkeleton();
   setTimeout(()=>{
@@ -1308,6 +1338,7 @@ function execute(){
       RESULT=runCrossOrder(FILES.por,PORMAP,FILES.ebtp,gmRows);
       renderCrossOrder(RESULT);
     } else {
+      if(!FILES.ebtp){ alert('No EBTP loaded. Run on EBTP only.'); return; }
       RESULT=runTagging(FILES.por,PORMAP,FILES.ebtp,gmRows,TAG_MODE);
       renderKPIs(RESULT); renderDashboard(RESULT); renderTables(RESULT);
     }
