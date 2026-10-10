@@ -43,8 +43,53 @@ export default async function handler(req) {
   const state = url.searchParams.get('state');
   const expectedState = readCookie(req, 'oauth_state');
 
-  if (!code || !state || state !== expectedState) {
-    return new Response('Invalid or expired sign-in attempt. Go back and try again.', { status: 400 });
+  if (!code || !state || !expectedState || state !== expectedState) {
+    // This is the "Invalid or expired sign-in attempt" case. The common
+    // causes are: the oauth_state cookie expired (user spent a long time on
+    // Google's account-chooser/consent screen), cookies blocked for the site,
+    // or a second sign-in tab overwrote the cookie. Clear the stale cookie
+    // and send the user back through login instead of leaving them on a
+    // dead-end plain-text error.
+    let retryNext = '/';
+    try {
+      const decoded = JSON.parse(atob(state || '')).next;
+      if (typeof decoded === 'string' && decoded.startsWith('/') && !decoded.startsWith('//')) retryNext = decoded;
+    } catch {
+      try {
+        const decoded = JSON.parse(atob(expectedState || '')).next;
+        if (typeof decoded === 'string' && decoded.startsWith('/') && !decoded.startsWith('//')) retryNext = decoded;
+      } catch { /* fall back to '/' */ }
+    }
+    const retryUrl = new URL('/api/auth/login', url.origin).toString() + `?next=${encodeURIComponent(retryNext)}`;
+    const html = `<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sign-in expired</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Sans', system-ui, -apple-system, Segoe UI, sans-serif; background: #0f172a; color: #f8fafc; padding: 24px; }
+  .card { max-width: 440px; width: 100%; background: rgba(30,41,59,0.75); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 22px; padding: 36px 32px; text-align: center; box-shadow: 0 10px 40px rgba(2,6,23,0.4); }
+  h1 { font-size: 19px; margin: 0 0 12px; color: #fbbf24; }
+  p { font-size: 13.5px; color: #94a3b8; line-height: 1.6; margin: 0 0 10px; }
+  a { display: inline-block; margin-top: 18px; padding: 10px 20px; border-radius: 999px; background: #8dcdff;
+    color: #00344f; font-weight: 700; font-size: 13px; text-decoration: none; }
+</style></head>
+<body>
+  <div class="card">
+    <h1>Sign-in expired — try again</h1>
+    <p>This usually happens if the Google sign-in page was open for a while, if cookies are blocked for this site, or if sign-in was started twice. Your account is fine — just retry.</p>
+    <a href="${esc(retryUrl)}">Retry sign-in</a>
+  </div>
+</body></html>`;
+    return new Response(html, {
+      status: 400,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Set-Cookie': 'oauth_state=; Path=/; HttpOnly; Max-Age=0',
+      },
+    });
   }
   let next = '/';
   try {
@@ -111,8 +156,12 @@ export default async function handler(req) {
     recordLogin({ email: claims.email, name: claims.name, picture: claims.picture, domain: emailDomain })
       .catch(() => { /* blob not configured or unreachable — never block sign-in over it */ })
   );
+  // Same `Secure`-only-on-https rule as login.js: on plain http the browser
+  // would drop a Secure session cookie, bouncing the user straight back to
+  // login after a successful Google exchange.
+  const secureFlag = url.protocol === 'https:' ? '; Secure' : '';
   return redirectWithCookies(new URL(next, url.origin).toString(), [
-    `session=${encodeURIComponent(session)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=43200`,
+    `session=${encodeURIComponent(session)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=43200${secureFlag}`,
     `oauth_state=; Path=/; HttpOnly; Max-Age=0`,
   ]);
 }

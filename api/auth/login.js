@@ -19,7 +19,12 @@ export default function handler(req) {
   authUrl.searchParams.set('prompt', 'select_account');
   authUrl.searchParams.set('state', state);
 
+  // `Secure` must only be set on https — on plain http (local network / http
+  // bookmark) the browser silently drops a Secure cookie, so the callback
+  // later sees no cookie and reports "Invalid or expired sign-in attempt".
+  // 1800s (30 min) gives first-time users room for account-chooser + consent.
+  const secureFlag = url.protocol === 'https:' ? '; Secure' : '';
   return redirectWithCookies(authUrl.toString(), [
-    `oauth_state=${encodeURIComponent(state)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`,
+    `oauth_state=${encodeURIComponent(state)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=1800${secureFlag}`,
   ]);
 }
