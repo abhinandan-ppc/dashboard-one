@@ -14,3 +14,6 @@ service-account.json
 .env*
 DESIGN-CONTEXT.md
 .vscode/settings.json
+.local-auth.err
+.local-auth.log
+jspl-local-api.js
