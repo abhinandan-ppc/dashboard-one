@@ -1748,7 +1748,7 @@ function STag({code}){
 }
 function KCard({label,value,sub,accent,mob}){
   const ac=accent||C.amber;
-  return<div style={{...card,padding:mob?'12px 14px':'16px 18px',
+  return<div className="kcard kpi-card" style={{...card,padding:mob?'12px 14px':'16px 18px',
     flex:mob?'0 0 auto':'1 0 auto',minWidth:mob?156:undefined,
     borderRadius:'var(--component-radius)',
     background:`linear-gradient(145deg,color-mix(in srgb,${ac} 10%,var(--glass-card)),color-mix(in srgb,${ac} 5%,var(--glass-card)))`}}
@@ -6023,5 +6023,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   }
 })();
 </script>
+<script src="glow.js"></script>
 </body>
 </html>

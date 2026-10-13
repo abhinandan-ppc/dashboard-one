@@ -1218,3 +1218,105 @@ html[data-reduce-transparency="1"] .loader-track{background:var(--s3)}
   .page-order .glass-card.header-enter.app-header,
   .page-rake .glass-card.header-enter.app-header{padding:10px!important}
 }
+
+
+/* ══════════════════════════════════════════════════════════
+   NON-DESTRUCTIVE ISOLATED CURSOR & EDGE GLOW EFFECT
+   Uses self-contained DOM elements (.glow-sheen, .glow-edge, .glow-ripple)
+   Never touches ::before or ::after, never alters container position
+   ══════════════════════════════════════════════════════════ */
+.has-glow-fx {
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --glow-edge-opacity: 0;
+  --glow-sheen-opacity: 0;
+  --glow-radius: inherit;
+}
+
+/* 1. Dynamic Soft Border / Edge Glow with subtle seamless feathering */
+.glow-edge {
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--glow-radius, inherit);
+  padding: 1px;
+  pointer-events: none;
+  z-index: 2;
+  opacity: var(--glow-edge-opacity, 0);
+  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  background: radial-gradient(
+    380px circle at var(--glow-x) var(--glow-y),
+    rgba(var(--primary-rgb), 0.38) 0%,
+    rgba(var(--primary-rgb), 0.12) 30%,
+    rgba(var(--primary-rgb), 0.02) 55%,
+    transparent 75%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  filter: drop-shadow(0 0 3px rgba(var(--primary-rgb), calc(var(--glow-edge-opacity, 0) * 0.18)));
+}
+
+/* 2. Soft Ambient Surface Spotlight */
+.glow-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--glow-radius, inherit);
+  pointer-events: none;
+  z-index: 1;
+  opacity: var(--glow-sheen-opacity, 0);
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  background: radial-gradient(
+    420px circle at var(--glow-x) var(--glow-y),
+    rgba(var(--primary-rgb), 0.05) 0%,
+    rgba(var(--primary-rgb), 0.015) 45%,
+    transparent 70%
+  );
+}
+
+/* Special treatment for tables: table rows and data cells shouldn't have sharp hard box outlines */
+tr.has-glow-fx .glow-edge,
+.data-table-wrap tr .glow-edge {
+  border-radius: 6px;
+  -webkit-mask: none;
+  mask: none;
+  padding: 0;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(var(--primary-rgb), 0.03) 15%,
+    rgba(var(--primary-rgb), 0.08) 50%,
+    rgba(var(--primary-rgb), 0.03) 85%,
+    transparent 100%
+  );
+  box-shadow: inset 0 -1px 0 rgba(var(--primary-rgb), calc(var(--glow-edge-opacity, 0) * 0.22)),
+              inset 0 1px 0 rgba(var(--primary-rgb), calc(var(--glow-edge-opacity, 0) * 0.08));
+  filter: none;
+}
+
+tr.has-glow-fx .glow-sheen,
+.data-table-wrap tr .glow-sheen {
+  border-radius: 6px;
+}
+
+/* 3. Ripple on click/tap */
+.glow-ripple {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+  transform: translate(-50%, -50%) scale(0);
+  background: radial-gradient(circle, rgba(var(--primary-rgb), 0.28) 0%, rgba(var(--primary-rgb), 0) 70%);
+  animation: glowRippleAnim 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes glowRippleAnim {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.6);
+    opacity: 0;
+  }
+}
