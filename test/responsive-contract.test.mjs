@@ -10,6 +10,7 @@ const pages = [
   'admin.html',
   'Grade-Clubbing-Matrix.html',
   'Order-Status-Report.html',
+  'Plate-Tracker.html',
   'PM-Yard.html',
   'Plate-Tagging-Tool.html',
   'Rake-Planner.html',
@@ -77,6 +78,50 @@ test('responsive pages do not hide document-level horizontal defects', async () 
       `${page} must fix overflow at its source instead of hiding it on body`,
     );
   }
+});
+
+test('the Plate Tracker header and its content share one measure', async () => {
+  const trace = await read('Plate-Tracker.html');
+
+  // <main> is capped so the content stops widening on a large monitor, and the
+  // header shell must be capped by the SAME value. They looked aligned below the
+  // cap only because both were flush to the viewport; above it the header ran the
+  // full width while the content stayed centred — measured 420px of overhang on
+  // each side at 2560px.
+  //
+  // Asserting the rendered number is what actually matters, and that needs a
+  // browser, so the rule is pinned at source level here and measured by
+  // scripts/measure-header.mjs.
+  assert.match(
+    trace,
+    /\.page-trace\{--page-measure:\d+px\}/,
+    'Plate Tracker must declare one --page-measure token',
+  );
+  assert.match(
+    trace,
+    /\.page-trace \.app-header-shell\{max-width:var\(--page-measure\)!important\}/,
+    'the header shell must be capped by --page-measure',
+  );
+  // <main> reads the token rather than repeating the number, so the two cannot
+  // drift apart the next time the measure is changed.
+  assert.match(
+    trace,
+    /<main class="app" style="max-width:var\(--page-measure\)/,
+    '<main> must take its max-width from --page-measure, not a literal',
+  );
+  assert.doesNotMatch(
+    trace,
+    /<main class="app" style="[^"]*max-width:\d+px/,
+    '<main> must not carry a hardcoded max-width alongside the token',
+  );
+  // The !important is load-bearing: theme.css sets max-width on
+  // .app-header-shell!important, so a plain declaration is silently discarded and
+  // the header goes full-bleed again.
+  assert.match(
+    trace,
+    /\.page-trace \.app-header-shell\{[^}]*!important/,
+    'the max-width override needs !important to beat the shared theme rule',
+  );
 });
 
 test('the Plate header spans the same inset as its content on narrow screens', async () => {
@@ -1119,6 +1164,7 @@ test('standalone dashboard headers opt into the shared hub chrome', async () => 
     'Order-Status-Report.html',
     'PM-Yard.html',
     'Plate-Tagging-Tool.html',
+    'Plate-Tracker.html',
     'Rake-Planner.html',
     'SMS-Heat-Planner.html',
     'VDO-Generator.html',
