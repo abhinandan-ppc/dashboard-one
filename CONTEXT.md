@@ -3,9 +3,10 @@
 Full design and development context for `Plate-Tracker.html` and everything it
 depends on. Read this before changing the page.
 
-**Status:** working and verified locally. The dashboard header refresh reloads
-EBTP through the hub's service-account cache and Balance Heat through the
-authenticated Plate Tracker proxy.
+**Status:** working and verified. **Not yet committed** — `Plate-Tracker.html`,
+`Plate-Tracker.js`, `plate-tracker-core.mjs`, `plate-tracker-worker.js` and the
+Plate-Tracker scripts are all still untracked (`??`) on branch `dev` (HEAD
+`d5c1a22`). See *Next* at the end.
 
 ---
 
@@ -71,11 +72,6 @@ per group. Multi-row groups start collapsed with an expand control to reveal
 the remaining campaign, serial, and balance quantity rows. Issued Heat has a
 search field in the same position and pattern as the standard Find a plate
 search; it filters by SO number or customer and is hidden in every other view.
-The top-right dashboard refresh forces the shared EBTP service-account fetch;
-Plate Tracker then reads the refreshed CSV from the hub's IndexedDB cache and
-fetches Balance Heat `SAP` through its authenticated proxy. Both sheets are
-validated as one worker job before refreshing order context; production and
-stock records stay intact.
 Newly parsed values
 are used when present; older cached Balance Heat rows fall back to the same
 columns in their preserved raw data. If an old cache contains neither normalized

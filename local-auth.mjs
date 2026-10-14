@@ -1,7 +1,7 @@
 // local-auth.mjs — serve this repo on localhost WITH live sheet data.
 //
-// In production the sheet proxies run as Vercel Edge Functions
-// (api/ebtp-proxy, api/balance-heat-proxy, api/zstk-proxy, api/autobtr-proxy), authenticated by the
+// In production the three sheet proxies run as Vercel Edge Functions
+// (api/ebtp-proxy, api/zstk-proxy, api/autobtr-proxy), authenticated by the
 // SHEETS_SA_* env vars. On localhost neither half exists: static hosting has
 // no /api layer, and the credential lives in the gitignored key file
 // service-account.json instead of an env var. This file bridges both gaps
@@ -89,7 +89,6 @@ process.env.SHEETS_SA_PRIVATE_KEY = sa.private_key;
 // ── The same Edge handlers Vercel runs — imported, not re-implemented ──────
 const API_ROUTES = {
   '/api/ebtp-proxy': new URL('./api/ebtp-proxy.js', import.meta.url),
-  '/api/balance-heat-proxy': new URL('./api/balance-heat-proxy.js', import.meta.url),
   '/api/zstk-proxy': new URL('./api/zstk-proxy.js', import.meta.url),
   '/api/autobtr-proxy': new URL('./api/autobtr-proxy.js', import.meta.url),
 };
@@ -193,7 +192,7 @@ const server = createServer(async (req, res) => {
         'Content-Type': 'application/json; charset=utf-8',
         'Access-Control-Allow-Origin': '*',
       }, JSON.stringify({
-        error: `No local handler for ${pathname} — local-auth.mjs only mounts the configured sheet proxies.`,
+        error: `No local handler for ${pathname} — local-auth.mjs only mounts the three sheet proxies.`,
       }));
     }
     if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -225,6 +224,7 @@ server.on('error', (err) => {
 server.listen(port, '127.0.0.1', () => {
   console.log('local-auth: service account →', sa.client_email);
   console.log(`local-auth: dashboards      → http://127.0.0.1:${port}/`);
-  console.log('local-auth: sheet proxies   → /api/ebtp-proxy  /api/balance-heat-proxy  /api/zstk-proxy  /api/autobtr-proxy');
+  console.log('local-auth: sheet proxies   → /api/ebtp-proxy  /api/zstk-proxy  /api/autobtr-proxy');
   console.log('local-auth: Ctrl+C to stop');
 });
+
