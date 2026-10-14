@@ -3,9 +3,10 @@
 Full design and development context for `Plate-Tracker.html` and everything it
 depends on. Read this before changing the page.
 
-**Status:** working and verified locally. The dashboard header refresh reloads
-EBTP through the hub's service-account cache and Balance Heat through the
-authenticated Plate Tracker proxy.
+**Status:** working and verified locally. The dashboard header shows live
+status for ZSTK, AutoBTR, EBTP, and Balance Heat (`Heats`); Plate Tracker
+refreshes EBTP through the hub's service-account cache and Balance Heat through
+the authenticated proxy.
 
 ---
 

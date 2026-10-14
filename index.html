@@ -163,7 +163,7 @@ input { font: inherit; color: inherit; }
   transition: transform 0.2s cubic-bezier(.22,1,.36,1);
 }
 
-/* ─── Live sheet sync status (ZSTK / AutoBTR / EBTP), sits before the 4
+/* ─── Live sheet sync status (ZSTK / AutoBTR / EBTP / Balance Heat), sits before the 4
    home/refresh/theme/account buttons ─── */
 .sheet-sync { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-right: 2px; }
 .sheet-sync-chip {
@@ -192,9 +192,9 @@ input { font: inherit; color: inherit; }
 .sheet-sync-label, .sheet-sync-code { color: color-mix(in srgb, var(--tm) 72%, var(--chip-accent, var(--tm))); }
 .sheet-sync-chip.is-ok .sheet-sync-label, .sheet-sync-chip.is-ok .sheet-sync-code { color: color-mix(in srgb, #10b981 70%, var(--tx)); }
 .sheet-sync-chip.is-error .sheet-sync-label, .sheet-sync-chip.is-error .sheet-sync-code { color: color-mix(in srgb, #ef4444 78%, var(--tx)); }
-/* Mobile codes are two letters (ZS / BT / EB) so each source stays
+/* Mobile codes are two letters (ZS / BT / EB / HT) so each source stays
    distinguishable at a glance — single letters (Z/B/E) all read alike on a
-   small header. Monospace + fixed width keeps the three chips visually even;
+   small header. Monospace + fixed width keeps the chips visually even;
    32px min-height meets the tap-target floor. */
 .sheet-sync-code {
   display: none;
@@ -208,8 +208,8 @@ input { font: inherit; color: inherit; }
   .sheet-sync-club { display: inline-flex; }
 }
 /* ─── Clubbed mobile sync button (≤760px) ──────────────────────────────
-   One compact button beside the header text replacing the three chips. The
-   aggregate dot shows the worst health of the three sources (red > amber-
+   One compact button beside the header text replacing the four chips. The
+   aggregate dot shows the worst health of the sources (red > amber-
    pulsing > green > grey); the fraction tells how many are synced. Tapping
    it opens #sheetSyncPanel, a per-source popup (same fixed + body-appended
    pattern as .theme-panel, so the top-bar's backdrop-filter never breaks
@@ -991,7 +991,7 @@ input { font: inherit; color: inherit; }
         <h1>Dashboard One</h1>
       </div>
       <button class="sheet-sync-club" id="sheetSyncClub" type="button" title="Sync status" aria-label="Sync status" aria-expanded="false" aria-controls="sheetSyncPanel">
-        <span class="sheet-sync-dot" id="sheetSyncClubDot"></span><span class="sheet-sync-club-count" id="sheetSyncClubCount" aria-hidden="true">–/3</span>
+        <span class="sheet-sync-dot" id="sheetSyncClubDot"></span><span class="sheet-sync-club-count" id="sheetSyncClubCount" aria-hidden="true">–/4</span>
       </button>
     </div>
     <div class="hdr-r">
@@ -1004,6 +1004,9 @@ input { font: inherit; color: inherit; }
         </button>
         <button class="sheet-sync-chip" data-src="ebtp" data-label="EBTP" data-accent="#34d399" type="button" title="EBTP — never synced. Click to sync." aria-label="Sync EBTP">
           <span class="sheet-sync-dot"></span><span class="sheet-sync-label">EBTP</span><span class="sheet-sync-code" aria-hidden="true">EB</span>
+        </button>
+        <button class="sheet-sync-chip" data-src="heats" data-label="Balance Heat SAP" data-accent="#fbbf24" type="button" title="Heats — never synced. Click to sync." aria-label="Sync Balance Heat SAP">
+          <span class="sheet-sync-dot"></span><span class="sheet-sync-label">Heats</span><span class="sheet-sync-code" aria-hidden="true">HT</span>
         </button>
       </div>
       <button class="add-btn home-btn" id="homeBtn" type="button" title="Home" aria-label="Home">
@@ -1074,6 +1077,11 @@ input { font: inherit; color: inherit; }
   <button class="sheet-sync-row" data-src="ebtp" type="button">
     <span class="sheet-sync-row-dot"></span>
     <span class="sheet-sync-row-body"><span class="sheet-sync-row-name">EBTP</span><span class="sheet-sync-row-sub"></span></span>
+    <span class="sheet-sync-row-act"><i class="sheet-sync-row-act-spin" aria-hidden="true"></i><span class="sheet-sync-row-act-txt">Sync</span></span>
+  </button>
+  <button class="sheet-sync-row" data-src="heats" type="button">
+    <span class="sheet-sync-row-dot"></span>
+    <span class="sheet-sync-row-body"><span class="sheet-sync-row-name">Heats</span><span class="sheet-sync-row-sub"></span></span>
     <span class="sheet-sync-row-act"><i class="sheet-sync-row-act-spin" aria-hidden="true"></i><span class="sheet-sync-row-act-txt">Sync</span></span>
   </button>
 </div>
@@ -2947,6 +2955,7 @@ setAccent(readStoredAccent());
     <span class="fetch-status-src" data-src="EBTP"><i class="fetch-status-src-dot"></i><span>EBTP</span></span>
     <span class="fetch-status-src" data-src="AutoBTR"><i class="fetch-status-src-dot"></i><span>BTR</span></span>
     <span class="fetch-status-src" data-src="ZSTK"><i class="fetch-status-src-dot"></i><span>ZSTK</span></span>
+    <span class="fetch-status-src" data-src="Heats"><i class="fetch-status-src-dot"></i><span>Heats</span></span>
   </div>
   <div class="loader-track"><div class="loader-bar" id="fetchStatusBar"></div></div>
   <div class="fetch-status-log" id="fetchStatusLog"></div>
@@ -3109,7 +3118,7 @@ function clearLegacyEbtpCaches(){
 // or red (✗) once it settles.
 var _fetchStatusActive = {};
 var _fetchStatusOutcome = {}; // source -> 'ok' | 'error', set by a ✓/✗ log line
-var _FETCH_SRC_LABEL = { EBTP: 'EBTP', AutoBTR: 'BTR', ZSTK: 'ZSTK' };
+var _FETCH_SRC_LABEL = { EBTP: 'EBTP', AutoBTR: 'BTR', ZSTK: 'ZSTK', Heats: 'Heats' };
 function fetchSrcName(s){ return _FETCH_SRC_LABEL[s] || s; }
 function renderFetchSources(){
   var badges = document.querySelectorAll('#fetchStatus .fetch-status-src');
@@ -3594,13 +3603,13 @@ function fetchAndCacheSegment(force){
     renderPanelRow(src, cls, st);
   }
 
-  var SRC_LABEL = { zstk: 'ZSTK', autobtr: 'AutoBTR', ebtp: 'EBTP' };
-  var SRC_ORDER = ['zstk', 'autobtr', 'ebtp'];
-  var SRC_ACCENT = { zstk: '#38bdf8', autobtr: '#a78bfa', ebtp: '#34d399' };
+  var SRC_LABEL = { zstk: 'ZSTK', autobtr: 'AutoBTR', ebtp: 'EBTP', heats: 'Heats' };
+  var SRC_ORDER = ['zstk', 'autobtr', 'ebtp', 'heats'];
+  var SRC_ACCENT = { zstk: '#38bdf8', autobtr: '#a78bfa', ebtp: '#34d399', heats: '#fbbf24' };
 
   // ── Clubbed mobile button + popup ─────────────────────────────────────
   // The single #sheetSyncClub button (≤760px, beside the header text) shows
-  // the worst health of the three sources and how many are synced; tapping
+  // the worst health of the four sources and how many are synced; tapping
   // it opens #sheetSyncPanel with one full row per source. Both refresh from
   // the same status store on every render(), so they never go stale.
   function srcClass(src){
@@ -3620,7 +3629,7 @@ function fetchAndCacheSegment(force){
       : classes.every(function(c){ return c === 'ok'; }) ? 'ok' : 'unknown';
     dot.className = 'sheet-sync-dot ' + worst;
     var okN = classes.filter(function(c){ return c === 'ok'; }).length;
-    count.textContent = okN + '/3';
+    count.textContent = okN + '/4';
     var bits = SRC_ORDER.map(function(src){
       var c = srcClass(src);
       return (SRC_LABEL[src] || src) + ': ' + (c === 'ok' ? 'synced' : c === 'error' ? 'failed' : c === 'checking' ? 'syncing' : 'not synced');
@@ -3724,7 +3733,9 @@ function fetchAndCacheSegment(force){
     }
 
     var label = SRC_LABEL[src];
-    var endpoint = src === 'zstk' ? '/api/zstk-proxy' : '/api/autobtr-proxy';
+    var endpoint = src === 'zstk' ? '/api/zstk-proxy'
+      : src === 'heats' ? '/api/balance-heat-proxy'
+      : '/api/autobtr-proxy';
     fetchStatusShow('fetching', label);
     fetchStatusLog('→ Requesting ' + label + '…', label);
     return fetch(endpoint, { cache: 'no-store' }).then(function(r){
@@ -3744,6 +3755,18 @@ function fetchAndCacheSegment(force){
         });
       }
       if(!r.ok) return r.text().then(function(t){ throw new Error(t || ('HTTP ' + r.status)); });
+      if(src === 'heats'){
+        return r.text().then(function(csv){
+          var firstLine = csv.split(/\r?\n/, 1)[0] || '';
+          if(csv.length < 50 || firstLine.indexOf(',') === -1){
+            throw new Error('Unexpected response — Balance Heat did not return a valid CSV.');
+          }
+          var rows = Math.max(0, csv.split(/\r?\n/).filter(function(line){ return line.trim(); }).length - 1);
+          fetchStatusShow('parsing', label);
+          fetchStatusLog('✓ Verified ' + rows.toLocaleString() + ' rows from Balance Heat SAP', label);
+          return { rows: rows };
+        });
+      }
       return r.arrayBuffer().then(function(buf){
         fetchStatusShow('parsing', label);
         return writeAutoBtrCache(buf).then(function(){
@@ -3868,7 +3891,7 @@ function fetchAndCacheSegment(force){
   });
 
   // ── Club button + popup wiring (mobile) ──────────────────────────────
-  // The club button lives beside the header text; the popup lists all three
+  // The club button lives beside the header text; the popup lists all four
   // sources with full names + per-source Sync/Retry. Tapping a row also
   // surfaces the bottom #fetchStatus loader, exactly like a desktop chip tap.
   var clubBtn = document.getElementById('sheetSyncClub');
@@ -3927,10 +3950,10 @@ function fetchAndCacheSegment(force){
   renderClub();
   renderPanelAll();
 
-  // One quiet status check per source on load, staggered so the three don't
+  // One quiet status check per source on load, staggered so they don't
   // all hit the token endpoint in the same instant (a burst of simultaneous
   // cold-start token requests was part of what made this flaky).
-  [['zstk', 300], ['autobtr', 900], ['ebtp', 1500]].forEach(function(pair){
+  [['zstk', 300], ['autobtr', 900], ['ebtp', 1500], ['heats', 2100]].forEach(function(pair){
     setTimeout(function(){ syncSheet(pair[0], false); }, pair[1]);
   });
 })();

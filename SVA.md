@@ -1,8 +1,8 @@
 # Service Account Integration (ZSTK / AutoBTR / EBTP / Balance Heat)
 
 Context dump of the Google service-account integration added to pull live
-ZSTK, AutoBTR, and EBTP data from private Google Sheets/Drive — for whoever
-picks this up next.
+ZSTK, AutoBTR, EBTP, and Balance Heat data from private Google Sheets/Drive —
+for whoever picks this up next.
 
 ## The service account
 
@@ -97,23 +97,26 @@ EBTP already had:
   `readDbCache(key)` helpers (pre-existing, just reused with new keys) —
   `payload` can be anything structured-cloneable: a CSV string, a
   `values` array-of-arrays (ZSTK), or a raw `ArrayBuffer` (AutoBTR).
-- The hub is the **only** thing that calls the three proxies. Three status
-  chips in the hub header (before the Home/Refresh/Theme/Account buttons),
-  one per source, each: shows a status dot (greyed/amber-pulsing/green/red),
+- The hub owns status checks for all four proxies. Three status chips in the
+  hub header (before the Home/Refresh/Theme/Account buttons), one per cached
+  source, each shows a status dot (greyed/amber-pulsing/green/red),
   does the fetch via the matching proxy, writes the result into the shared
   cache, and broadcasts `{ type: '<src>-cache-updated', fetchedAt, rowCount? }`
   to every open dashboard iframe via the existing `broadcastToFrame()`.
+- A fourth `Heats` chip checks `/api/balance-heat-proxy` (the Balance Heat
+  `SAP` tab), reports its live request/row-count status, and can be clicked to
+  retry. Plate Tracker continues to fetch that sheet when it loads.
 - `window.__hubSyncSheet` exposes the chips' internal `syncSheet(src, force)`
   function globally so the hub's cross-frame message listener can trigger it
   (a dashboard iframe can ask the hub to do a fetch — see below).
-- On hub load, all three sources get one quiet status check, **staggered**
-  (zstk at 300ms, autobtr at 900ms, ebtp at 1500ms) rather than firing
+- On hub load, all four sources get one quiet status check, **staggered**
+  (zstk at 300ms, autobtr at 900ms, ebtp at 1500ms, heats at 2100ms) rather than firing
   together — see "Diagnosed issues" for why that mattered.
 - Bottom-of-screen fetch/parse popup (`#fetchStatus`, originally EBTP-only)
   was generalized to support multiple concurrent sources: `fetchStatusShow`/
   `fetchStatusLog` take an optional `source` label (defaults to `'EBTP'` for
   backward compat), and `fetchStatusHide(source)` only actually hides the
-  panel once every active source has called hide — so ZSTK/AutoBTR/EBTP
+  panel once every active source has called hide — so ZSTK/AutoBTR/EBTP/Heats
   popups can overlap in time without stomping each other.
 
 ## Dashboard side (PM-Yard.html)

@@ -74,6 +74,16 @@ test('Plate Tracker requests fresh live sheets after restoring its cache on star
   assert.match(hub, /e\.source === pageFrame\.contentWindow && e\.data && e\.data\.type === 'request-live-plate-tracker-refresh'/);
 });
 
+test('hub reports live Balance Heat status as Heats on desktop and mobile', () => {
+  const hub = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(hub, /data-src="heats" data-label="Balance Heat SAP"/);
+  assert.match(hub, /data-src="heats"[\s\S]*?sheet-sync-row-name">Heats/);
+  assert.match(hub, /var SRC_LABEL = \{[^}]*heats: 'Heats'/);
+  assert.match(hub, /src === 'heats' \? '\/api\/balance-heat-proxy'/);
+  assert.match(hub, /\['heats', 2100\]/);
+  assert.match(hub, /count\.textContent = okN \+ '\/4'/);
+});
+
 test('refreshing live order context preserves production and removes stale order values', () => {
   const key = plateKey('607866894', '280');
   const existing = buildIndex({
