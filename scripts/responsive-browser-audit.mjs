@@ -13,7 +13,6 @@ const pages = [
   'Order-Status-Report.html',
   'PM-Yard.html',
   'Plate-Tagging-Tool.html',
-  'Plate-Tracker.html',
   'Rake-Planner.html',
   'SMS-Heat-Planner.html',
   'SMS Heat Planner Daily.html',
