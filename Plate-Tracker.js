@@ -6,10 +6,10 @@
 
 import {
   STAGES, STAGE_IDS, STAGE_LABEL, SOURCES,
-  buildTimeline, buildLineage, layoutTree, elbowPath, defaultExpandedIds,
+  buildTimeline, buildLineage, layoutTree, elbowPath, defaultExpandedIds, mergeOrderContext,
   searchPlates, summarise, SLICERS, slicerValues, parseNumber, filterIssuedHeatOrders, balanceHeatValue, balanceHeatDisplayRows, isOpenBalanceHeatRecord,
   plateStem, ebtpWorkInProgress, uniqueEbtpOrders,
-} from './plate-tracker-core.mjs?v=20261014-11';
+} from './plate-tracker-core.mjs?v=20261014-15';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s)
@@ -202,13 +202,15 @@ function setProgress(done, total, label) {
 
 let worker = null;
 let jobId = 0;
+let liveSheetJobId = null;
+let liveSheetsRequestInFlight = false;
 
 function getWorker() {
   if (worker) return worker;
   // A CLASSIC worker: the vendored SheetJS is a classic script loaded via
   // importScripts, which a module worker cannot call. The shared core is pulled
   // in by the worker itself with a dynamic import.
-  worker = new Worker('./plate-tracker-worker.js?v=20261014-11');
+  worker = new Worker('./plate-tracker-worker.js?v=20261014-15');
   worker.onmessage = onWorkerMessage;
   worker.onerror = (e) => {
     $('dataStatus').classList.remove('live');
@@ -221,8 +223,120 @@ function getWorker() {
 function ingest(files) {
   if (!files.length) return;
   const id = ++jobId;
+  liveSheetJobId = null;
+  liveSheetsRequestInFlight = false;
   setProgress(0, files.length, 'Reading ' + files[0].name + '…');
   getWorker().postMessage({ id, files });
+  return id;
+}
+
+function readHubEbtpCache() {
+  return new Promise((resolve, reject) => {
+    let request;
+    try {
+      request = indexedDB.open('jspl-ebtp-shared-db', 1);
+    } catch (error) {
+      reject(new Error(`Could not open the dashboard EBTP cache: ${error.message || error}`));
+      return;
+    }
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains('cache')) request.result.createObjectStore('cache');
+    };
+    request.onerror = () => reject(new Error('Could not open the dashboard EBTP cache.'));
+    request.onsuccess = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('cache')) {
+        db.close();
+        reject(new Error('The dashboard EBTP cache is unavailable. Refresh EBTP from the dashboard first.'));
+        return;
+      }
+      try {
+        const transaction = db.transaction('cache', 'readonly');
+        const read = transaction.objectStore('cache').get('latest');
+        read.onsuccess = () => {
+          const csvText = read.result?.csvText;
+          if (typeof csvText !== 'string' || !csvText.trim()) {
+            reject(new Error('No EBTP data was found in the dashboard cache after refresh.'));
+            return;
+          }
+          resolve(csvText);
+        };
+        read.onerror = () => reject(new Error('Could not read EBTP data from the dashboard cache.'));
+        transaction.oncomplete = () => db.close();
+        transaction.onerror = () => {
+          db.close();
+          reject(new Error('Could not read EBTP data from the dashboard cache.'));
+        };
+      } catch (error) {
+        db.close();
+        reject(new Error(`Could not read EBTP data from the dashboard cache: ${error.message || error}`));
+      }
+    };
+  });
+}
+
+async function readLiveEbtpCsv() {
+  if (window.parent !== window) return readHubEbtpCache();
+  if (location.protocol === 'file:') {
+    throw new Error('Live sheets require opening Plate Tracker through the authenticated dashboard server.');
+  }
+  const response = await fetch('/api/ebtp-proxy', { cache: 'no-store', credentials: 'same-origin' });
+  if (!response.ok) {
+    throw new Error(`EBTP request failed (HTTP ${response.status}). Check the live EBTP proxy and service-account access.`);
+  }
+  return response.text();
+}
+
+async function loadLiveServiceSheets() {
+  if (liveSheetsRequestInFlight) return;
+  liveSheetsRequestInFlight = true;
+  const startingJobId = jobId;
+  const report = $('linkReport');
+  report.hidden = false;
+  report.textContent = 'Loading refreshed EBTP and Balance Heat SAP…';
+  let handedToWorker = false;
+  try {
+    const [ebtpCsv, balanceHeatResponse] = await Promise.all([
+      readLiveEbtpCsv(),
+      fetch('/api/balance-heat-proxy', { cache: 'no-store', credentials: 'same-origin' }),
+    ]);
+    if (!balanceHeatResponse.ok) {
+      throw new Error(`Balance Heat request failed (HTTP ${balanceHeatResponse.status}). Check the live Balance Heat proxy and service-account access.`);
+    }
+    const balanceHeatCsv = await balanceHeatResponse.text();
+    if (jobId !== startingJobId) return;
+    if (!ebtpCsv.trim() || !balanceHeatCsv.trim()) {
+      throw new Error('EBTP or Balance Heat returned no data. Check that both source tabs contain their header rows.');
+    }
+    const id = ++jobId;
+    liveSheetJobId = id;
+    setProgress(0, 2, 'Reading BTPDATA-LIVE.csv…');
+    getWorker().postMessage({
+      id,
+      files: [
+        new File([ebtpCsv], 'BTPDATA-LIVE.csv', { type: 'text/csv' }),
+        new File([balanceHeatCsv], 'BALANCE-HEAT-SAP.csv', { type: 'text/csv' }),
+      ],
+      mergeOrderContext: true,
+      requiredSources: ['ebtp', 'balanceHeat'],
+    });
+    handedToWorker = true;
+  } catch (error) {
+    liveSheetJobId = null;
+    report.hidden = false;
+    report.textContent = `Could not load live EBTP and Balance Heat data: ${error instanceof Error ? error.message : String(error)}`;
+    console.error('Plate Tracker live-sheet refresh failed', error);
+  } finally {
+    if (!handedToWorker) liveSheetsRequestInFlight = false;
+  }
+}
+
+function requestLiveDataOnStartup() {
+  if (window.parent !== window) {
+    window.parent.postMessage({ type: 'request-live-plate-tracker-refresh' }, '*');
+    return;
+  }
+  loadLiveServiceSheets();
 }
 
 function onWorkerMessage(event) {
@@ -247,6 +361,10 @@ function onWorkerMessage(event) {
     return;
   }
   if (msg.type === 'fatal') {
+    if (liveSheetJobId === msg.id) {
+      liveSheetJobId = null;
+      liveSheetsRequestInFlight = false;
+    }
     setProgress(0, 0, '');
     $('dataStatus').classList.remove('live');
     $('dataStatusText').textContent = 'Parser failed to start';
@@ -255,9 +373,24 @@ function onWorkerMessage(event) {
     return;
   }
   if (msg.type === 'done') {
-    state.plates = msg.plates;
-    state.stocks = msg.stocks || { slab: [], plate: [] };
-    state.loaded = msg.loaded;
+    const wasLiveSheetJob = liveSheetJobId === msg.id;
+    if (msg.mergeOrderContext === false && wasLiveSheetJob) {
+      setProgress(0, 0, '');
+      $('linkReport').hidden = false;
+      $('linkReport').textContent = 'Live sheets were not applied because one or both did not match the expected columns. Existing data was kept; check the EBTP and Balance Heat slot errors.';
+      liveSheetJobId = null;
+      liveSheetsRequestInFlight = false;
+      return;
+    }
+    if (msg.mergeOrderContext) {
+      state.plates = mergeOrderContext(state.plates, msg.plates);
+      state.stocks = state.stocks || { slab: [], plate: [] };
+      state.loaded = { ...state.loaded, ...msg.loaded };
+    } else {
+      state.plates = msg.plates;
+      state.stocks = msg.stocks || { slab: [], plate: [] };
+      state.loaded = msg.loaded;
+    }
     state.selectedKey = null;
     $('detail').hidden = true;
     renderSlots();
@@ -276,6 +409,10 @@ function onWorkerMessage(event) {
     // Only cache once the index is built; a half-parsed set would be worse
     // than none, because it would look authoritative on the next visit.
     idbPut({ plates: state.plates, stocks: state.stocks, loaded: state.loaded, savedAt: Date.now() });
+    if (wasLiveSheetJob) {
+      liveSheetJobId = null;
+      liveSheetsRequestInFlight = false;
+    }
   }
 }
 
@@ -2607,6 +2744,20 @@ function wireTree() {
 /* ═══════════════════ Controls + boot ═══════════════════ */
 
 function wireControls() {
+  window.addEventListener('message', (event) => {
+    if (event.source !== window.parent || !event.data) return;
+    if (event.data.type === 'plate-tracker-refresh-start') {
+      const report = $('linkReport');
+      report.hidden = false;
+      report.textContent = 'Refreshing EBTP and Balance Heat from the service account…';
+    } else if (event.data.type === 'refresh-plate-tracker-sheets') {
+      loadLiveServiceSheets();
+    } else if (event.data.type === 'plate-tracker-refresh-error') {
+      const report = $('linkReport');
+      report.hidden = false;
+      report.textContent = `Could not refresh EBTP from the service account: ${event.data.error}`;
+    }
+  });
   const dropAll = $('dropAll');
   dropAll.addEventListener('dragover', (e) => { e.preventDefault(); dropAll.classList.add('drag'); });
   dropAll.addEventListener('dragleave', () => dropAll.classList.remove('drag'));
@@ -2850,6 +3001,7 @@ function init() {
   refresh();
   restoreCache().then((restored) => {
     if (!restored) setDataStatus(0, {});
+    requestLiveDataOnStartup();
   });
   // The hub (index.html) mounts its controls and pushes theme into this page.
   try { if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'ready' }, '*'); } catch {}

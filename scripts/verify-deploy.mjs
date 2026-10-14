@@ -1,13 +1,10 @@
-// Checks that the repo is in a state a static host can actually deploy, and
-// that the Plate Tracker does not secretly depend on a file the server will not
-// have.
+// Checks that the repo is deployable on Vercel, including the authenticated
+// live-sheet functions used by the dashboard and Plate Tracker.
 //
 //   node scripts/verify-deploy.mjs
 //
-// The page reads every workbook in the browser — drag-and-drop or file picker —
-// so it needs no data on the server. That is the property this verifies, because
-// it is easy to break by accident with a stray fetch() or a hard-coded path,
-// and the failure only shows up after deploying.
+// The page parses uploaded production workbooks in the browser and reads live
+// EBTP and Balance Heat only through authenticated same-origin API proxies.
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
@@ -17,7 +14,7 @@ function check(name, ok, detail) {
   console.log(`${ok ? 'ok  ' : 'FAIL'}  ${name}${detail === undefined ? '' : ` — ${detail}`}`);
 }
 
-/* ═══════════════════ 1 · THE PAGE LOADS WITH NO DATA FILES ═══════════════════ */
+/* ═══════════════════ 1 · THE PAGE LOADS WITHOUT DEPLOYED WORKBOOKS ═════════════ */
 
 const PAGE = 'Plate-Tracker.html';
 check('page exists', existsSync(PAGE));
@@ -26,17 +23,16 @@ const html = existsSync(PAGE) ? readFileSync(PAGE, 'utf8') : '';
 const js = existsSync('Plate-Tracker.js') ? readFileSync('Plate-Tracker.js', 'utf8') : '';
 const worker = existsSync('plate-tracker-worker.js') ? readFileSync('plate-tracker-worker.js', 'utf8') : '';
 
-// Nothing may fetch a workbook or hit an API for data. The page is offline by
-// design, and a deployment that quietly depends on an endpoint the host does not
-// serve would fail only in production.
-const remoteCalls = [
-  [/\bfetch\s*\(/, 'fetch()'],
-  [/XMLHttpRequest/, 'XMLHttpRequest'],
-  [/\bimport\s*\(\s*['"]https?:/, 'dynamic import from a URL'],
-].filter(([re]) => re.test(html) || re.test(js) || re.test(worker));
-
-check('the tracker makes no network calls for data', remoteCalls.length === 0,
-  remoteCalls.length ? remoteCalls.map(([, n]) => n).join(', ') : 'fully client-side');
+const fetchTargets = [...js.matchAll(/\bfetch\s*\(\s*(['"])([^'"]+)\1/g)].map((match) => match[2]);
+check('the tracker fetches live data only through the authenticated sheet proxies',
+  fetchTargets.length === 2
+    && fetchTargets.includes('/api/ebtp-proxy')
+    && fetchTargets.includes('/api/balance-heat-proxy'),
+  fetchTargets.length ? fetchTargets.join(', ') : 'no live-data endpoint found');
+check('the tracker does not upload workbook data',
+  !/\bXMLHttpRequest\b|\bFormData\b|method\s*:\s*['"]POST['"]/i.test(html + js + worker));
+check('the tracker does not import code from a remote URL',
+  !/\bimport\s*\(\s*['"]https?:/.test(js + worker));
 
 // The workbooks the page expects are chosen by the user at runtime. It must not
 // name a path under sheets/ as though the server served it.
@@ -104,7 +100,8 @@ check('sheets-schema/ fixtures are present', fixtures.length === 5, `${fixtures.
 
 /* ═══════════════════ 3 · THE HOSTING CONFIG ═══════════════════ */
 
-check('vercel.json exists', existsSync('vercel.json'));
+check('Vercel sheet API functions are present',
+  existsSync('api/ebtp-proxy.js') && existsSync('api/balance-heat-proxy.js'));
 if (existsSync('vercel.json')) {
   let cfg = null;
   try { cfg = JSON.parse(readFileSync('vercel.json', 'utf8')); } catch { /* handled below */ }

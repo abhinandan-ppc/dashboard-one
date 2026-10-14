@@ -86,9 +86,11 @@ export default async function middleware(req) {
 
     if (admin) return; // admins (env-configured or promoted) have full access everywhere, including dev previews
 
-    if (path === 'api/ebtp-proxy' || path === 'api/zstk-proxy' || path === 'api/autobtr-proxy') {
+    if (path === 'api/ebtp-proxy' || path === 'api/balance-heat-proxy'
+      || path === 'api/zstk-proxy' || path === 'api/autobtr-proxy') {
       // Shared live-data proxies used by Rake-Planner, Order-Status-Report,
-      // VDO-Generator (EBTP) and PM-Yard / Plate-Tagging-Tool (ZSTK, AutoBTR).
+      // VDO-Generator and Plate Tracker (EBTP), Plate Tracker (Balance Heat),
+      // and PM-Yard / Plate-Tagging-Tool (ZSTK, AutoBTR).
       // Any authenticated user may call them — the page-level ACL below
       // already gates access to those tools themselves. Without this, a
       // non-admin gets the HTML "Access pending" deny page here, and the

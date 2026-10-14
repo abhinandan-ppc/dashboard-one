@@ -935,6 +935,24 @@ export function buildIndex(byStage) {
   return { plates, list };
 }
 
+export function mergeOrderContext(existingPlates, refreshedPlates) {
+  const refreshedByKey = new Map((refreshedPlates || []).map((plate) => [plate.key, plate]));
+  const merged = (existingPlates || []).map((plate) => {
+    const refreshed = refreshedByKey.get(plate.key);
+    refreshedByKey.delete(plate.key);
+    const next = { ...plate, orders: refreshed?.orders || [] };
+    for (const field of [
+      'order', 'orderQty', 'delivered', 'balanceToDeliver', 'plateStockBal',
+      'btr', 'slabStockBal', 'btc', 'issued', 'btp', 'orderStatus',
+      'paymentStatus', 'soDate', 'firstPromiseDate', 'lastPromiseDate',
+      'firstProdDate', 'orderRemarks',
+    ]) delete next[field];
+    return finalisePlate(next);
+  });
+  for (const plate of refreshedByKey.values()) merged.push(plate);
+  return merged;
+}
+
 export function finalisePlate(plate) {
   let present = 0;
   let weight = 0;

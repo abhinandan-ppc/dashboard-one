@@ -309,6 +309,7 @@ test('middleware gates the tool pages but not theme-boot.js, static assets or ap
     'Plate-Tagging-Tool.html',
     'SMS-Heat-Planner.html',
     'api/ebtp-proxy',
+    'api/balance-heat-proxy',
   ];
   const mustPass = [
     'theme-boot.js',
@@ -330,4 +331,3 @@ test('middleware gates the tool pages but not theme-boot.js, static assets or ap
     assert.ok(!re.test(p), `${p} must not go through the access check`);
   }
 });
-
