@@ -62,6 +62,7 @@ test('Issued Heat Balance Heat detail columns use the requested order', () => {
   const headerPositions = expectedHeaders.map((header) => controller.indexOf(`<th scope="col">${header}</th>`));
   assert.ok(headerPositions.every((position) => position >= 0));
   assert.deepEqual(headerPositions, [...headerPositions].sort((a, b) => a - b));
+  assert.match(controller, /<th scope="col" aria-label="Expand Balance Heat group"><\/th>/);
 });
 
 // Guard the threshold the bug sat on, so the record counts that broke it are
@@ -212,18 +213,27 @@ test('Balance Heat display values fall back to raw columns in older cached recor
   assert.equal(balanceHeatValue({ serialNo: 0, raw: { 'Serial no': 12 } }, 'serialNo', 'Serial no'), 0);
 });
 
-test('Balance Heat details group repeated consecutive thickness, width, and casting grade', () => {
+test('Balance Heat details group matching thickness, width, and casting grade rows', () => {
   const rows = [
-    { thicknessMm: 200, widthMm: 1550, castingGrade: 'JA27MGTM02-VD', serialNo: '1' },
-    { thicknessMm: '200', widthMm: 1550, castingGrade: ' ja27mgtm02-vd ', serialNo: '2' },
-    { thicknessMm: 200, widthMm: 1550, castingGrade: 'JA27MGTM02-VD', serialNo: '12' },
+    { thicknessMm: 300, widthMm: 2300, castingGrade: 'JA35WYNR01-VD', serialNo: '9' },
+    { thicknessMm: 300, widthMm: 2100, castingGrade: 'JA35WYNR01-VD', serialNo: '1' },
+    { thicknessMm: '300', widthMm: 2300, castingGrade: ' ja35wynr01-vd ', serialNo: '2' },
     { thicknessMm: 200, widthMm: 1600, castingGrade: 'JA27MGTM02-VD', serialNo: '15' },
     { thicknessMm: 200, widthMm: 1600, castingGrade: 'JA27MGTM02-VD', serialNo: '16' },
   ];
-  assert.deepEqual(
-    balanceHeatDisplayRows(rows).map(({ showDimensions }) => showDimensions),
-    [true, false, false, true, false],
-  );
+  const displayRows = balanceHeatDisplayRows(rows);
+  assert.deepEqual(displayRows.map(({ record }) => record.serialNo), ['9', '2', '1', '15', '16']);
+  assert.deepEqual(displayRows.map(({ showDimensions }) => showDimensions), [true, false, true, true, false]);
+  assert.deepEqual(displayRows.map(({ groupSize }) => groupSize), [2, 2, 1, 2, 2]);
+  assert.deepEqual(displayRows.map(({ groupPosition }) => groupPosition), [0, 1, 0, 0, 1]);
+  assert.deepEqual(displayRows.map(({ groupIndex }) => groupIndex), [0, 0, 1, 2, 2]);
+});
+
+test('Balance Heat multi-row groups start collapsed and expose a toggle', () => {
+  const controller = readFileSync(new URL('../Plate-Tracker.js', import.meta.url), 'utf8');
+  assert.match(controller, /data-balance-heat-group-toggle/);
+  assert.match(controller, /groupRows\.slice\(1\)\.forEach\(\(row\) => \{ row\.hidden = !expanded; \}\)/);
+  assert.match(controller, /groupPosition > 0 \? ' hidden' : ''/);
 });
 
 /* ═══════════════════ COLUMN RESOLUTION ═══════════════════ */

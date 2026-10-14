@@ -262,7 +262,7 @@ self.onmessage = async (event) => {
   activeJobId = data.id;
   if (!core) {
     try {
-      core = await import('./plate-tracker-core.mjs?v=20261014-9');
+      core = await import('./plate-tracker-core.mjs?v=20261014-11');
     } catch (err) {
       self.postMessage({ type: 'fatal', id: data.id, error: 'Could not load the parser core: ' + ((err && err.message) || err) });
       return;

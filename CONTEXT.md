@@ -66,10 +66,13 @@ Casting Status is Open. Casting Status is stored as a normalized field, with a
 legacy raw-column fallback; if status is absent from cached rows, the detail
 prompts for a Balance Heat re-upload. Header matching ignores case and whitespace.
 The displayed Balance Heat columns are Thickness, Width, Casting Grade, Campaign
-Plan No, Serial No, and Balance qty; repeated consecutive dimension/grade groups
-are displayed once. Issued Heat has a search field in the same
-position and pattern as the standard Find a plate search; it filters by SO
-number or customer and is hidden in every other view. Newly parsed values
+Plan No, Serial No, and Balance qty; rows with matching thickness, width, and
+casting grade are grouped together, and those shared values are displayed once
+per group. Multi-row groups start collapsed with an expand control to reveal
+the remaining campaign, serial, and balance quantity rows. Issued Heat has a
+search field in the same position and pattern as the standard Find a plate
+search; it filters by SO number or customer and is hidden in every other view.
+Newly parsed values
 are used when present; older cached Balance Heat rows fall back to the same
 columns in their preserved raw data. If an old cache contains neither normalized
 nor raw values for Serial No, Bal Plate QTY, or Casting Grade, the expanded row

@@ -490,18 +490,25 @@ export function balanceHeatValue(record, field, header) {
 }
 
 export function balanceHeatDisplayRows(records) {
-  let previousDimensions = null;
-  return (records || []).map((record) => {
+  const groups = new Map();
+  for (const record of records || []) {
     const dimensions = [
       record?.thicknessMm,
       record?.widthMm,
       balanceHeatValue(record, 'castingGrade', 'Casting Grade'),
     ].map((value) => String(value ?? '').trim().toLowerCase());
-    const showDimensions = !previousDimensions
-      || dimensions.some((value, index) => value !== previousDimensions[index]);
-    previousDimensions = dimensions;
-    return { record, showDimensions };
-  });
+    const key = JSON.stringify(dimensions);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(record);
+  }
+  return [...groups.values()].flatMap((group, groupIndex) =>
+    group.map((record, index) => ({
+      record,
+      groupIndex,
+      groupSize: group.length,
+      groupPosition: index,
+      showDimensions: index === 0,
+    })));
 }
 
 export function isOpenBalanceHeatRecord(record) {

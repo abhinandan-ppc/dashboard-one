@@ -9,7 +9,7 @@ import {
   buildTimeline, buildLineage, layoutTree, elbowPath, defaultExpandedIds,
   searchPlates, summarise, SLICERS, slicerValues, parseNumber, filterIssuedHeatOrders, balanceHeatValue, balanceHeatDisplayRows, isOpenBalanceHeatRecord,
   plateStem, ebtpWorkInProgress, uniqueEbtpOrders,
-} from './plate-tracker-core.mjs?v=20261014-9';
+} from './plate-tracker-core.mjs?v=20261014-11';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s)
@@ -208,7 +208,7 @@ function getWorker() {
   // A CLASSIC worker: the vendored SheetJS is a classic script loaded via
   // importScripts, which a module worker cannot call. The shared core is pulled
   // in by the worker itself with a dynamic import.
-  worker = new Worker('./plate-tracker-worker.js?v=20261014-9');
+  worker = new Worker('./plate-tracker-worker.js?v=20261014-11');
   worker.onmessage = onWorkerMessage;
   worker.onerror = (e) => {
     $('dataStatus').classList.remove('live');
@@ -854,6 +854,19 @@ function renderIssuedHeatTable() {
     });
   });
   host.querySelector('.issued-heat-table tbody').addEventListener('click', (event) => {
+    const groupButton = event.target.closest('[data-balance-heat-group-toggle]');
+    if (groupButton) {
+      const groupId = groupButton.dataset.balanceHeatGroupToggle;
+      const detailBody = groupButton.closest('.issued-heat-detail-row')?.querySelector('tbody');
+      if (!detailBody) return;
+      const groupRows = [...detailBody.rows].filter((row) => row.dataset.balanceHeatGroup === groupId);
+      const expanded = groupButton.getAttribute('aria-expanded') !== 'true';
+      groupRows.slice(1).forEach((row) => { row.hidden = !expanded; });
+      groupButton.setAttribute('aria-expanded', String(expanded));
+      groupButton.setAttribute('aria-label', `${expanded ? 'Hide' : 'Show'} ${groupRows.length - 1} additional Balance Heat rows`);
+      groupButton.textContent = expanded ? '−' : '+';
+      return;
+    }
     const button = event.target.closest('[data-issued-heat-toggle]');
     if (!button) return;
     const order = orderByKey.get(button.dataset.issuedHeatToggle);
@@ -905,17 +918,26 @@ function renderIssuedHeatDetails(order) {
   const staleBalanceHeatNote = missingDetailFields.size
     ? `<p class="note" role="status">Cached Balance Heat data is missing ${esc([...missingDetailFields].join(', '))}. Re-upload the Balance Heat sheet to refresh these values.</p>`
     : '';
-  const detailRows = balanceHeatDisplayRows(balanceHeatRows).map(({ record: heat, showDimensions }) => '<tr>'
-    + `<td class="mono">${showDimensions ? num(heat.thicknessMm, 2) : ''}</td>`
-    + `<td class="mono">${showDimensions ? num(heat.widthMm, 2) : ''}</td>`
-    + `<td>${showDimensions ? esc(balanceHeatDisplayValue(balanceHeatValue(heat, 'castingGrade', 'Casting Grade'))) : ''}</td>`
-    + `<td>${esc(heat.campaignPlanNo || '—')}</td>`
-    + `<td class="mono">${esc(balanceHeatDisplayValue(balanceHeatValue(heat, 'serialNo', 'Serial no')))}</td>`
-    + `<td class="mono">${num(parseNumber(balanceHeatValue(heat, 'balPlateQty', 'Bal Plate QTY')), 2)}</td>`
-    + '</tr>').join('');
+  const detailRows = balanceHeatDisplayRows(balanceHeatRows).map(({
+    record: heat, groupIndex, groupSize, groupPosition, showDimensions,
+  }) => {
+    const groupToggle = groupPosition === 0 && groupSize > 1
+      ? `<button class="btn balance-heat-group-toggle" type="button" data-balance-heat-group-toggle="${groupIndex}" aria-expanded="false" aria-label="Show ${groupSize - 1} additional Balance Heat rows">+</button>`
+      : '';
+    return `<tr class="balance-heat-group-row" data-balance-heat-group="${groupIndex}"${groupPosition > 0 ? ' hidden' : ''}>`
+      + `<td>${groupToggle}</td>`
+      + `<td class="mono">${showDimensions ? num(heat.thicknessMm, 2) : ''}</td>`
+      + `<td class="mono">${showDimensions ? num(heat.widthMm, 2) : ''}</td>`
+      + `<td>${showDimensions ? esc(balanceHeatDisplayValue(balanceHeatValue(heat, 'castingGrade', 'Casting Grade'))) : ''}</td>`
+      + `<td>${esc(heat.campaignPlanNo || '—')}</td>`
+      + `<td class="mono">${esc(balanceHeatDisplayValue(balanceHeatValue(heat, 'serialNo', 'Serial no')))}</td>`
+      + `<td class="mono">${num(parseNumber(balanceHeatValue(heat, 'balPlateQty', 'Bal Plate QTY')), 2)}</td>`
+      + '</tr>';
+  }).join('');
   return staleBalanceHeatNote
     + `<div class="data-table-wrap" tabindex="0" role="region" aria-label="Balance Heat details for SO ${esc(order.so)}, item ${esc(order.lineItem)}">`
     + '<table class="data"><thead><tr>'
+    + '<th scope="col" aria-label="Expand Balance Heat group"></th>'
     + '<th scope="col">Thickness</th><th scope="col">Width</th><th scope="col">Casting Grade</th>'
     + '<th scope="col">Campaign Plan No</th><th scope="col">Serial No</th><th scope="col">Balance qty</th>'
     + `</tr></thead><tbody>${detailRows}</tbody></table></div>`;
