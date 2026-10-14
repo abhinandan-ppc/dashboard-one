@@ -15,12 +15,12 @@ import { resolveAccess, DEV_HOSTS, CHILD_PAGE_PARENTS, KNOWN_PAGES } from './api
 //                      non-admin got the HTML "Access pending" page served in
 //                      place of the script, breaking theme loading on every
 //                      tool page for ordinary users.
-//   static assets    — .js/.css/.png/.svg/.woff2 hold no user data. Gating
-//                      them cost a Blob read apiece on every page load and
-//                      broke the same way theme-boot.js did.
+//   static assets    — .js/.mjs/.css/.png/.svg/.woff2 hold no user data.
+//                      Gating them cost a Blob read apiece on every page load
+//                      and served HTML in place of JavaScript modules.
 export const config = {
   matcher: [
-    '/((?!api/auth|api/admin/|theme-boot\\.js|favicon\\.|.*\\.(?:js|css|png|svg|woff2)|index\\.html|$).*)',
+    '/((?!api/auth|api/admin/|theme-boot\\.js|favicon\\.|.*\\.(?:m?js|css|png|svg|woff2)|index\\.html|$).*)',
   ],
 };
 

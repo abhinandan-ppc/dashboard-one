@@ -293,7 +293,7 @@ test('a non-admin session is still refused with 403', async () => {
 // cost a Blob read apiece and (for theme-boot.js) served an HTML "Access
 // pending" page in place of the script, breaking theme loading for every
 // non-admin. This pins both halves of that behaviour.
-test('middleware gates the tool pages but not theme-boot.js, static assets or api/admin', async () => {
+test('middleware gates tool pages but not JavaScript assets or api/admin', async () => {
   const { config } = await import('../middleware.js');
   const source = config.matcher[0].replace(/^\//, '').replace(/\/$/, '');
   // Vercel anchors matcher patterns to the whole path; mirror that here.
@@ -313,6 +313,7 @@ test('middleware gates the tool pages but not theme-boot.js, static assets or ap
   ];
   const mustPass = [
     'theme-boot.js',
+    'plate-tracker-core.mjs',
     'theme.css',
     'jspl-logo.png',
     'favicon.ico',
