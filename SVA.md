@@ -1,4 +1,4 @@
-# Service Account Integration (ZSTK / AutoBTR / EBTP)
+# Service Account Integration (ZSTK / AutoBTR / EBTP / Balance Heat)
 
 Context dump of the Google service-account integration added to pull live
 ZSTK, AutoBTR, and EBTP data from private Google Sheets/Drive — for whoever
@@ -78,6 +78,12 @@ Key pieces:
   replaced the previous implementation, which just proxied a
   publish-to-web CSV export URL — that sheet is now private, so the old
   public-CSV approach stopped being an option.
+- **`api/balance-heat-proxy.js`** — Sheets API `values.get` on the `SAP` tab,
+  converted to CSV for Plate Tracker. Its top-right refresh reuses the newly
+  cached EBTP data from the dashboard and fetches Balance Heat through this
+  proxy; deployed Vercel environments use the same `SHEETS_SA_*` variables.
+  Unlike the three hub-cached proxies described below, this is called by Plate
+  Tracker after the dashboard's EBTP refresh completes.
 
 ## Hub-level caching architecture (index.html)
 

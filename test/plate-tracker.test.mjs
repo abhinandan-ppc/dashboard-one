@@ -8,7 +8,7 @@ import {
   resolveColumns, isSourceAcceptable, hasRequiredColumns, rowToRecord, rowToRecords, rowToStockRecord, buildIndex,
   buildTimeline, buildLineage, buildTree, layoutTree, elbowPath, defaultExpandedIds,
   searchPlates, summarise, SLICERS, slicerValues, STAGE_IDENTITY, plateStem,
-  filterIssuedHeatOrders, balanceHeatValue, balanceHeatDisplayRows, isOpenBalanceHeatRecord,
+  filterIssuedHeatOrders, balanceHeatValue, balanceHeatDisplayRows, isOpenBalanceHeatRecord, mergeOrderContext,
 } from '../plate-tracker-core.mjs';
 
 /* ═══════════════════ LARGE-EXTRACT SCALING ═══════════════════ */
@@ -45,6 +45,60 @@ test('page, worker and parser core use the same cache-busted parser version', ()
   ];
   assert.ok(versions.every(Boolean), 'all parser entry points must have a versioned URL');
   assert.equal(new Set(versions).size, 1, 'page, worker and parser core versions must stay aligned');
+});
+
+test('dashboard refresh supplies EBTP while Plate Tracker fetches live Balance Heat', () => {
+  const controller = readFileSync(new URL('../Plate-Tracker.js', import.meta.url), 'utf8');
+  const worker = readFileSync(new URL('../plate-tracker-worker.js', import.meta.url), 'utf8');
+  const hub = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const api = readFileSync(new URL('../api/balance-heat-proxy.js', import.meta.url), 'utf8');
+  const localAuth = readFileSync(new URL('../local-auth.mjs', import.meta.url), 'utf8');
+  assert.match(controller, /indexedDB\.open\('jspl-ebtp-shared-db', 1\)/);
+  assert.match(controller, /fetch\('\/api\/balance-heat-proxy'/);
+  assert.doesNotMatch(controller, /fetch\('\/api\/ebtp-proxy'/);
+  assert.match(hub, /requestLiveDataRefresh\(\)/);
+  assert.match(hub, /type: 'refresh-plate-tracker-sheets'/);
+  assert.match(worker, /requiredSources\.some\(\(sourceId\)/);
+  assert.match(api, /const SHEET_NAME = 'SAP'/);
+  assert.ok(localAuth.includes("'/api/balance-heat-proxy'"));
+});
+
+test('refreshing live order context preserves production and removes stale order values', () => {
+  const key = plateKey('607866894', '280');
+  const existing = buildIndex({
+    ebtp: [{
+      key, so: '607866894', lineItem: '280', orderQty: 12,
+      currentStatus: 'Old status', customer: 'OLD CUSTOMER', remarks: 'stale note',
+    }],
+    casting: [{
+      key, date: '2026-10-01', grade: 'JA35WYNR01-VD',
+      slabId: 'SLAB-1', weight: 10,
+    }],
+  }).list;
+  const refreshed = buildIndex({
+    ebtp: [{
+      key, so: '607866894', lineItem: '280', orderQty: 20,
+      currentStatus: 'Open', customer: 'VAYONA',
+    }],
+    balanceHeat: [{
+      key, castingStatus: 'OPEN', campaignPlanNo: 'PM 2610025',
+    }],
+  }).list;
+
+  const merged = mergeOrderContext(existing, refreshed);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].orderQty, 20);
+  assert.equal(merged[0].customer, 'VAYONA');
+  assert.equal(merged[0].orderStatus, 'Open');
+  assert.equal(merged[0].orderRemarks, undefined);
+  assert.equal(merged[0].records.casting.length, 1);
+  assert.equal(merged[0].stages.casting.count, 1);
+  assert.equal(merged[0].order.balanceHeat[0].campaignPlanNo, 'PM 2610025');
+
+  const removed = mergeOrderContext(existing, []);
+  assert.equal(removed[0].orders.length, 0);
+  assert.equal(removed[0].orderQty, undefined);
+  assert.equal(removed[0].records.casting.length, 1);
 });
 
 test('Issued Heat paginates visible rows and builds Balance Heat details on expansion', () => {
