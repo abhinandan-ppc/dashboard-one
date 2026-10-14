@@ -331,3 +331,8 @@ test('middleware gates the tool pages but not theme-boot.js, static assets or ap
   }
 });
 
+test('middleware grants authenticated users access to the Balance Heat live-data proxy', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('../middleware.js', import.meta.url), 'utf8');
+  assert.match(source, /path === 'api\/balance-heat-proxy'/);
+});

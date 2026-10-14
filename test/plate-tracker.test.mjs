@@ -9,6 +9,7 @@ import {
   buildTimeline, buildLineage, buildTree, layoutTree, elbowPath, defaultExpandedIds,
   searchPlates, summarise, SLICERS, slicerValues, STAGE_IDENTITY, plateStem,
   filterIssuedHeatOrders, balanceHeatValue, balanceHeatDisplayRows, isOpenBalanceHeatRecord,
+  mergeOrderContext,
 } from '../plate-tracker-core.mjs';
 
 /* ═══════════════════ LARGE-EXTRACT SCALING ═══════════════════ */
@@ -54,6 +55,28 @@ test('Issued Heat paginates visible rows and builds Balance Heat details on expa
   assert.match(controller, /visibleOrders\.map\(\(order\)/);
   assert.match(controller, /renderIssuedHeatDetails\(order\)/);
   assert.doesNotMatch(controller, /data-issued-heat-detail="\$\{key\}"/);
+});
+
+test('Plate Tracker refreshes EBTP and Balance Heat through the dashboard refresh control', () => {
+  const html = readFileSync(new URL('../Plate-Tracker.html', import.meta.url), 'utf8');
+  const controller = readFileSync(new URL('../Plate-Tracker.js', import.meta.url), 'utf8');
+  const worker = readFileSync(new URL('../plate-tracker-worker.js', import.meta.url), 'utf8');
+  const proxy = readFileSync(new URL('../api/balance-heat-proxy.js', import.meta.url), 'utf8');
+  const middleware = readFileSync(new URL('../middleware.js', import.meta.url), 'utf8');
+  const localAuth = readFileSync(new URL('../local-auth.mjs', import.meta.url), 'utf8');
+  const hub = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.doesNotMatch(html, /loadServiceSheetsBtn|Load live EBTP \+ Balance Heat/);
+  assert.ok(controller.includes("fetch('/api/ebtp-proxy'"));
+  assert.ok(controller.includes("fetch('/api/balance-heat-proxy'"));
+  assert.match(controller, /refresh-plate-tracker-sheets/);
+  assert.match(hub, /broadcastToFrame\(\{ type: 'refresh-plate-tracker-sheets' \}\)/);
+  assert.match(controller, /new File\(\[ebtpBlob\], 'BTPDATA-LIVE\.csv'/);
+  assert.match(controller, /new File\(\[balanceHeatBlob\], 'BALANCE-HEAT-SAP\.csv'/);
+  assert.match(worker, /ingestFiles\(files, id, !!mergeOrderContext, requiredSources \|\| \[\]\)/);
+  assert.match(proxy, /'1GTkvWjV890lVIZWc4d-SEz-2plHzeanMuTf9Q8P7pVo'/);
+  assert.match(proxy, /const SHEET_NAME = 'SAP'/);
+  assert.match(middleware, /path === 'api\/balance-heat-proxy'/);
+  assert.ok(localAuth.includes("'/api/balance-heat-proxy'"));
 });
 
 test('Issued Heat Balance Heat detail columns use the requested order', () => {
@@ -234,6 +257,44 @@ test('Balance Heat multi-row groups start collapsed and expose a toggle', () => 
   assert.match(controller, /data-balance-heat-group-toggle/);
   assert.match(controller, /groupRows\.slice\(1\)\.forEach\(\(row\) => \{ row\.hidden = !expanded; \}\)/);
   assert.match(controller, /groupPosition > 0 \? ' hidden' : ''/);
+});
+
+test('live order-context refresh preserves cached production while replacing order data', () => {
+  const key = plateKey('607866894', '280');
+  const existing = buildIndex({
+    ebtp: [{
+      key, so: '607866894', lineItem: '280', orderQty: 12,
+      currentStatus: 'Old status', customer: 'OLD CUSTOMER', remarks: 'stale note',
+    }],
+    casting: [{
+      key, date: '2026-10-01', grade: 'JA35WYNR01-VD',
+      slabId: 'SLAB-1', weight: 10,
+    }],
+  }).list;
+  const refreshed = buildIndex({
+    ebtp: [{
+      key, so: '607866894', lineItem: '280', orderQty: 20,
+      currentStatus: 'Open', customer: 'VAYONA',
+    }],
+    balanceHeat: [{
+      key, castingStatus: 'OPEN', campaignPlanNo: 'PM 2610025',
+    }],
+  }).list;
+
+  const merged = mergeOrderContext(existing, refreshed);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].orderQty, 20);
+  assert.equal(merged[0].customer, 'VAYONA');
+  assert.equal(merged[0].orderStatus, 'Open');
+  assert.equal(merged[0].orderRemarks, undefined);
+  assert.equal(merged[0].records.casting.length, 1);
+  assert.equal(merged[0].stages.casting.count, 1);
+  assert.equal(merged[0].order.balanceHeat[0].campaignPlanNo, 'PM 2610025');
+
+  const removed = mergeOrderContext(existing, []);
+  assert.equal(removed[0].orders.length, 0);
+  assert.equal(removed[0].orderQty, undefined);
+  assert.equal(removed[0].records.casting.length, 1);
 });
 
 /* ═══════════════════ COLUMN RESOLUTION ═══════════════════ */

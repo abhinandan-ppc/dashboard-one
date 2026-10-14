@@ -1047,6 +1047,24 @@ export function finalisePlate(plate) {
   return plate;
 }
 
+export function mergeOrderContext(existingPlates, refreshedPlates) {
+  const refreshedByKey = new Map((refreshedPlates || []).map((plate) => [plate.key, plate]));
+  const merged = (existingPlates || []).map((plate) => {
+    const refreshed = refreshedByKey.get(plate.key);
+    refreshedByKey.delete(plate.key);
+    const next = { ...plate, orders: refreshed?.orders || [] };
+    for (const field of [
+      'order', 'orderQty', 'delivered', 'balanceToDeliver', 'plateStockBal',
+      'btr', 'slabStockBal', 'btc', 'issued', 'btp', 'orderStatus',
+      'paymentStatus', 'soDate', 'firstPromiseDate', 'lastPromiseDate',
+      'firstProdDate', 'orderRemarks',
+    ]) delete next[field];
+    return finalisePlate(next);
+  });
+  for (const plate of refreshedByKey.values()) merged.push(plate);
+  return merged;
+}
+
 // The furthest stage that actually has records — NOT the last stage in the
 // pipeline. A plate cast and never rolled reports "casting" as its current
 // stage, meaning it is waiting at casting; the trace shows the missing stages

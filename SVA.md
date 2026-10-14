@@ -1,7 +1,7 @@
-# Service Account Integration (ZSTK / AutoBTR / EBTP)
+# Service Account Integration (ZSTK / AutoBTR / EBTP / Balance Heat)
 
 Context dump of the Google service-account integration added to pull live
-ZSTK, AutoBTR, and EBTP data from private Google Sheets/Drive — for whoever
+ZSTK, AutoBTR, EBTP, and Balance Heat data from private Google Sheets/Drive — for whoever
 picks this up next.
 
 ## The service account
@@ -19,7 +19,7 @@ picks this up next.
 - Required GCP APIs (must be enabled on the project, or every call fails with
   a "Service disabled" error): **Google Sheets API**, **Google Drive API**.
 - Sharing: the service account email must be added as Viewer (or better) on
-  each sheet/file it needs to read. It was added to all three sources below.
+  each sheet/file it needs to read. It was shared on the sources listed below.
 
 ## Data sources
 
@@ -28,6 +28,7 @@ picks this up next.
 | ZSTK    | Google Sheet       | Spreadsheet `1KP7GV1jcbKFrXUH5_ZjraQM5231nhs7yrkJyuJ2Dq5I`, tab `ZSTK_LIVE_TEMP` |
 | AutoBTR | Drive `.xlsx` file (not a native Sheet) | File `1mY8UlWqgTSZku0GYcrDRDzPb5XL7tf-v` |
 | EBTP    | Google Sheet (private; replaced an old publish-to-web CSV) | Spreadsheet `1mIoA3R9LCUozGBLx4okQoQYWHjZD4tDf-OFM9m6OsQU`, tab `LIVE` |
+| Balance Heat | Google Sheet | Spreadsheet `1GTkvWjV890lVIZWc4d-SEz-2plHzeanMuTf9Q8P7pVo`, tab `SAP` |
 
 ## Required Vercel env vars
 
@@ -78,6 +79,10 @@ Key pieces:
   replaced the previous implementation, which just proxied a
   publish-to-web CSV export URL — that sheet is now private, so the old
   public-CSV approach stopped being an option.
+- **`api/balance-heat-proxy.js`** — Sheets API `values.get` on the `SAP` tab,
+  converted to CSV for the Plate Tracker worker's existing workbook parser.
+  The Plate Tracker requests EBTP and Balance Heat only when its live-data
+  button is clicked; both files are parsed in-browser and cached locally.
 
 ## Hub-level caching architecture (index.html)
 

@@ -205,7 +205,24 @@ function coreInit() {
 }
 ['casting', 'rolling', 'finishing', 'dispatch', 'ebtp', 'balanceHeat', 'slabStock', 'plateStock'].forEach((id) => { store[id] = []; });
 
-async function ingestFiles(files, id) {
+function storeParsedFile(result, file, id) {
+  store[result.sourceId] = result.records;
+  loadedMeta[result.sourceId] = {
+    name: file.name,
+    sheet: result.sheet,
+    records: result.records.length,
+    totalRows: result.totalRows,
+    dropped: result.dropped,
+    splitFrom: result.splitFrom || 0,
+    missingOptional: result.missingOptional,
+    confident: result.confident,
+  };
+  self.postMessage({ type: 'file', id, sourceId: result.sourceId, loaded: loadedMeta[result.sourceId] });
+}
+
+async function ingestFiles(files, id, atomic = false, requiredSources = []) {
+  const pending = [];
+  let failed = false;
   for (let i = 0; i < files.length; i += 1) {
     const file = files[i];
     self.postMessage({ type: 'progress', id, index: i, total: files.length, name: file.name });
@@ -214,25 +231,20 @@ async function ingestFiles(files, id) {
       if (id !== activeJobId) return;
       const result = parseWorkbook(buffer, file.name);
       if (result.ok) {
-        // Each workbook is a complete snapshot for its source, not an
-        // incremental batch. Replace that source so re-uploading it cannot
-        // duplicate old orders or leave stale balances beside new ones.
-        store[result.sourceId] = result.records;
-        loadedMeta[result.sourceId] = {
-          name: file.name,
-          sheet: result.sheet,
-          records: result.records.length,
-          totalRows: result.totalRows,
-          dropped: result.dropped,
-          splitFrom: result.splitFrom || 0,
-          missingOptional: result.missingOptional,
-          confident: result.confident,
-        };
-        self.postMessage({ type: 'file', id, sourceId: result.sourceId, loaded: loadedMeta[result.sourceId] });
+        if (atomic && !result.records.length) {
+          failed = true;
+          self.postMessage({
+            type: 'file-error', id, name: file.name, sourceId: result.sourceId,
+            error: 'The sheet has valid headers but contains no usable rows.',
+          });
+        } else if (atomic) pending.push({ result, file });
+        else storeParsedFile(result, file, id);
       } else {
+        failed = true;
         self.postMessage({ type: 'file-error', id, name: file.name, sourceId: result.sourceId, error: result.error });
       }
     } catch (err) {
+      failed = true;
       // Include the stack: a RangeError from a large extract ("Maximum call
       // stack size exceeded") names the failing frame only in the stack, and
       // that frame is what identifies the fix.
@@ -243,16 +255,35 @@ async function ingestFiles(files, id) {
       });
     }
   }
+  if (atomic) {
+    const parsedSources = new Set(pending.map(({ result }) => result.sourceId));
+    if (failed || parsedSources.size !== requiredSources.length
+      || requiredSources.some((sourceId) => !parsedSources.has(sourceId))) {
+      failed = true;
+      self.postMessage({
+        type: 'file-error', id, name: 'Live sheets',
+        error: 'The fetched sheets did not both parse as their expected data sources.',
+      });
+    }
+  }
+  if (atomic && !failed) {
+    for (const { result, file } of pending) storeParsedFile(result, file, id);
+  }
+  return !failed;
 }
 
 async function handleJob(event) {
-  const { id, files } = event.data || {};
-  if (files && files.length) await ingestFiles(files, id);
+  const { id, files, mergeOrderContext, requiredSources } = event.data || {};
+  const ingestSucceeded = files && files.length
+    ? await ingestFiles(files, id, !!mergeOrderContext, requiredSources || [])
+    : true;
+  if (id !== activeJobId) return;
   // EBTP is order context rather than a production stage, so it is indexed
   // here but never becomes a fifth pipeline stage.
   const { list } = core.buildIndex(store);
   self.postMessage({
     type: 'done', id, plates: list, loaded: loadedMeta,
+    mergeOrderContext: !!mergeOrderContext && ingestSucceeded,
     stocks: { slab: store.slabStock, plate: store.plateStock },
   });
 }
@@ -262,7 +293,7 @@ self.onmessage = async (event) => {
   activeJobId = data.id;
   if (!core) {
     try {
-      core = await import('./plate-tracker-core.mjs?v=20261014-11');
+      core = await import('./plate-tracker-core.mjs?v=20261014-13');
     } catch (err) {
       self.postMessage({ type: 'fatal', id: data.id, error: 'Could not load the parser core: ' + ((err && err.message) || err) });
       return;

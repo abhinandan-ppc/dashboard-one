@@ -65,6 +65,12 @@ Issued Heat expands each order to show only matched Balance Heat rows whose
 Casting Status is Open. Casting Status is stored as a normalized field, with a
 legacy raw-column fallback; if status is absent from cached rows, the detail
 prompts for a Balance Heat re-upload. Header matching ignores case and whitespace.
+Plate Tracker uses the dashboard's top-right refresh control to fetch EBTP from
+BTPDATA/LIVE and Balance Heat from BALANCE HEAT/SAP through authenticated
+service-account proxies; both CSV responses are parsed in the browser.
+Refreshing these two sources preserves existing production and stock records.
+If either response cannot be parsed, neither refreshed source replaces the
+currently displayed data.
 The displayed Balance Heat columns are Thickness, Width, Casting Grade, Campaign
 Plan No, Serial No, and Balance qty; rows with matching thickness, width, and
 casting grade are grouped together, and those shared values are displayed once
