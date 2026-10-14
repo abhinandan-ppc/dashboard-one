@@ -545,6 +545,13 @@ function stashDupCols(obj,row){
   obj['_BTR']=Number(row[37])||0;                        // col 37 — BTR (first occurrence)
   obj['_MODE_HI']=String(row[216]!=null?row[216]:'');    // col 216 — secondary MODE (CAPTIVE etc, wins in obj['MODE'])
   obj['_BTR_HI']=Number(row[219])||0;                    // col 219 — secondary BTR (wins in obj['BTR'])
+  // cols HM/HN (raw idx 220/221) — Segment and Grade Segment, read positionally by
+  // explicit business ask so the Segment / Grade Segment slicers bind to exactly these
+  // columns regardless of header text (a renamed, blank or duplicated header elsewhere
+  // cannot silently re-point them). Trimmed here, and both the option lists and the
+  // filter checks below read these same keys, so matching stays exact.
+  obj['_SEGMENT']=String(row[220]!=null?row[220]:'').trim();      // col HM — Segment
+  obj['_GRADE_SEG']=String(row[221]!=null?row[221]:'').trim();    // col HN — Grade Segment
   return obj;
 }
 
@@ -1078,6 +1085,7 @@ const IDX={
   SUPPLY_COND:47, INSP_BY:49, CRTN_DT:54, SO_DATE:55, FI_REL_STA:70,
   ORDER_QTY:80, MATGRP:124, REGION_NAME:144, STO:145, FINISHING_LINE:205,
   VAG_STATUS:207, PRODUCED:212, MODE_HI:216, CASTING_PLANNED:218, BTR_HI:219,
+  SEGMENT:220, GRADE_SEGMENT:221,
 };
 
 /* "Released" was previously defined off `FI Rel Sta`. Redefined per business ask to be driven by
@@ -1218,8 +1226,9 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
   const intGradeOptions=useMemo(()=>[...new Set(baseRows.map(r=>r['Int Grade']).filter(Boolean))].sort(),[baseRows]);
   const extGradeOptions=useMemo(()=>[...new Set(baseRows.map(r=>r['Ext Grade']).filter(Boolean))].sort(),[baseRows]);
   const inspByOptions=useMemo(()=>[...new Set(baseRows.map(r=>r['Insp By']).filter(Boolean))],[baseRows]);
-  const segOptions=useMemo(()=>[...new Set(baseRows.map(r=>r['Region Name']).filter(Boolean))],[baseRows]);
-  const gradeSegOptions=useMemo(()=>[...new Set(baseRows.map(r=>r['MatGrp Desc']).filter(Boolean))],[baseRows]);
+  // Segment (col HM) and Grade Segment (col HN) — stashed positionally in stashDupCols.
+  const segOptions=useMemo(()=>[...new Set(baseRows.map(r=>r._SEGMENT).filter(Boolean))],[baseRows]);
+  const gradeSegOptions=useMemo(()=>[...new Set(baseRows.map(r=>r._GRADE_SEG).filter(Boolean))],[baseRows]);
   const lineOptions=useMemo(()=>[...new Set(baseRows.map(r=>String(r['Finishing Line']||'').trim().toUpperCase()).filter(Boolean))],[baseRows]);
   const custOptions=useMemo(()=>[...new Set(baseRows.map(r=>r['Sold To Party Name']).filter(Boolean))].sort(),[baseRows]);
   const dateOptions=useMemo(()=>{
@@ -1239,8 +1248,8 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       if(inspBySel.size&&!inspBySel.has(r['Insp By']))return false;
       if(releasedOnly&&!isReleasedRow(r))return false;
       if(rakeChip&&r['_MODE_SIMPLE']!==rakeChip)return false;
-      if(segSel.size&&!segSel.has(r['Region Name']))return false;
-      if(gradeSegSel.size&&!gradeSegSel.has(r['MatGrp Desc']))return false;
+      if(segSel.size&&!segSel.has(r._SEGMENT))return false;
+      if(gradeSegSel.size&&!gradeSegSel.has(r._GRADE_SEG))return false;
       if(dateSel.size&&(!r._soDate||!dateSel.has(r._soDate.toISOString().slice(0,10))))return false;
       if(lineSel.size&&!lineSel.has(String(r['Finishing Line']||'').trim().toUpperCase()))return false;
       // ── cross-filters (chart-click filters), AND-combined across every active field ──
