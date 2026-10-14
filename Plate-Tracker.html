@@ -279,6 +279,38 @@ table.data td.mono{font-family:var(--mono);font-size:11px}
 table.data tbody tr{cursor:pointer}
 table.data tbody tr:hover{background:var(--input-hover)}
 table.data tbody tr.sel{background:var(--sky-bg)}
+#orderFilters[hidden]{display:none}
+.issued-heat-table tbody tr{cursor:default}
+.issued-heat-table tbody tr.issued-heat-detail-row,
+.issued-heat-table tbody tr.issued-heat-detail-row:hover{background:var(--input-bg)}
+.issued-heat-detail-row td{padding:12px 14px;white-space:normal}
+.trace-stack .issued-heat-detail-row .data-table-wrap{
+  display:block;width:calc(100vw - 64px);max-width:calc(100vw - 64px);box-sizing:border-box;
+  max-height:32vh;margin-top:0;overflow-x:scroll;overflow-y:auto;
+  overscroll-behavior-x:contain;scrollbar-width:auto;
+}
+.trace-stack .issued-heat-detail-row .data-table-wrap::-webkit-scrollbar:horizontal{height:12px}
+.trace-stack .issued-heat-detail-row .data-table-wrap::-webkit-scrollbar-thumb:horizontal{
+  background:var(--bdrHi);border:3px solid var(--input-bg);border-radius:var(--radius-pill)
+}
+.trace-stack .issued-heat-detail-row .data-table-wrap::-webkit-scrollbar-track:horizontal{background:var(--input-bg)}
+.trace-stack .issued-heat-detail-row table.data{min-width:1200px}
+@media (max-width:700px){
+  .trace-stack .issued-heat-detail-row .data-table-wrap{
+    width:calc(100vw - 40px);max-width:calc(100vw - 40px)
+  }
+}
+.issued-heat-toggle{min-width:40px;padding:6px 10px;font-size:17px;line-height:1}
+.issued-heat-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.issued-heat-pagination{display:flex;align-items:center;gap:8px}
+.issued-heat-pagination .note{margin:0;white-space:nowrap}
+#trace .issued-heat-search{flex:1 1 260px}
+#trace .issued-heat-search[hidden]{display:none}
+#trace .issued-heat-search input{width:100%;min-width:0}
+#orderSearchField[hidden],
+#issuedHeatSearchField[hidden],
+#orderFilterOptions[hidden]{display:none!important}
+#orderFilterOptions{display:contents}
 .genealogy-detail-row{cursor:default}
 .genealogy-detail-row:hover{background:transparent}
 .genealogy-detail-row td{padding:0 11px 14px;white-space:normal}
@@ -450,7 +482,7 @@ button.stage-marker{cursor:pointer}button.stage-marker:hover{border-color:curren
 .flow-stage-card h3{margin-top:24px;font-size:17px;line-height:1.15;letter-spacing:-.02em;text-wrap:balance}.flow-stage-id{margin-top:8px;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.flow-stage-meta{margin-top:8px;font-size:11px;line-height:1.45;color:var(--tm);font-weight:600;font-variant-numeric:tabular-nums}.flow-stock-note{display:inline-flex;margin-top:11px;padding:4px 7px;border-radius:5px;background:rgba(45,212,191,.1);color:#5eead4;font-size:11px;font-weight:800}
 .flow-link{height:2px;background:var(--bdrHi);position:relative}.flow-link::before{content:'';position:absolute;inset:-1px 50% -1px 0;background:var(--primary)}.flow-link::after{content:'›';position:absolute;right:-3px;top:-15px;color:var(--primary);font-size:25px;font-weight:600}
 .tree-legend .flow-ok{background:var(--success-bg);border-color:var(--success)}.tree-legend .flow-stock{background:rgba(45,212,191,.14);border-color:#2dd4bf}
-@media (max-width:700px){.tree-wrap{overflow:visible;padding:18px 14px}.process-flow{min-width:0;grid-template-columns:1fr;gap:0}.flow-link{width:2px;height:34px;justify-self:center}.flow-link::before{inset:0 -1px 50% -1px}.flow-link::after{content:'⌄';right:-10px;top:9px}.flow-stage-card{min-height:142px}.view-switch{width:100%}.kpi-crossfilters{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi-filter{min-height:76px;padding:11px}.kpi-filter-value{font-size:19px}}
+@media (max-width:700px){.tree-wrap{overflow:visible;padding:18px 14px}.process-flow{min-width:0;grid-template-columns:1fr;gap:0}.flow-link{width:2px;height:34px;justify-self:center}.flow-link::before{inset:0 -1px 50% -1px}.flow-link::after{content:'⌄';right:-10px;top:9px}.flow-stage-card{min-height:142px}.view-switch{width:100%;flex-wrap:wrap}.kpi-crossfilters{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi-filter{min-height:76px;padding:11px}.kpi-filter-value{font-size:19px}}
 
 /* Compact the repeated page rhythm without shrinking interactive targets. */
 .page-trace .trace-stack[hidden]{display:none!important}
@@ -487,7 +519,7 @@ button.stage-marker{cursor:pointer}button.stage-marker:hover{border-color:curren
 #trace .table-intro{margin-top:0;padding:9px 12px}
 #trace .data-table-wrap{margin-top:0}
 #trace .empty-msg{margin-top:0}
-@media (max-width:700px){#trace .trace-toolbar{align-items:stretch}#trace .view-switch{width:100%}#trace .chips{flex-basis:100%}}
+@media (max-width:700px){#trace .trace-toolbar{align-items:stretch}#trace .view-switch{width:100%}#trace .issued-heat-search{flex-basis:100%}#trace .chips{flex-basis:100%}}
 
 /* Shared glass + Material 3 control language. Keep the tracker on the same
    surface hierarchy as the other project pages: one translucent work surface,
@@ -735,7 +767,7 @@ button.stage-marker{cursor:pointer}button.stage-marker:hover{border-color:curren
   <section class="glass-card trace-stack" style="padding:18px 20px" aria-labelledby="loadH">
     <div class="section-title" id="loadH">Load the extracts</div>
     <p class="note" style="margin-top:0">
-      Drop all seven workbooks at once and each is routed automatically, or load them one at a time.
+      Drop all eight workbooks at once and each is routed automatically, or load them one at a time.
       Everything is parsed in your browser and cached locally — no file is uploaded anywhere.
     </p>
 
@@ -755,31 +787,37 @@ button.stage-marker{cursor:pointer}button.stage-marker:hover{border-color:curren
   <!-- ══════════ Find a plate ══════════ -->
   <section class="glass-card trace-stack" id="trace" style="padding:18px 20px" aria-labelledby="findH">
     <div class="section-title" id="findH">Find a plate</div>
-    <div class="controls">
-      <div class="field" style="flex:1 1 260px">
+    <div class="controls" id="orderFilters">
+      <div class="field" id="orderSearchField" style="flex:1 1 260px">
         <label for="q">SO No. · Line Item · batch · slab · customer</label>
         <input id="q" type="search" placeholder="e.g. 607831786, F6204202A0, PES ENGINEERS" autocomplete="off"/>
       </div>
-      <div class="field">
-        <label for="from">From</label>
-        <input id="from" type="date"/>
+      <div class="field issued-heat-search" id="issuedHeatSearchField" hidden>
+        <label for="issuedHeatSearch">SO No. · Customer</label>
+        <input id="issuedHeatSearch" type="search" placeholder="e.g. 607866894, VAYONA" autocomplete="off"/>
       </div>
-      <div class="field">
-        <label for="to">To</label>
-        <input id="to" type="date"/>
+      <div id="orderFilterOptions">
+        <div class="field">
+          <label for="from">From</label>
+          <input id="from" type="date"/>
+        </div>
+        <div class="field">
+          <label for="to">To</label>
+          <input id="to" type="date"/>
+        </div>
+        <button class="btn primary" id="searchBtn" type="button">Search</button>
+        <button class="btn" id="resetBtn" type="button">Reset</button>
       </div>
-      <button class="btn primary" id="searchBtn" type="button">Search</button>
-      <button class="btn" id="resetBtn" type="button">Reset</button>
     </div>
     <div class="trace-toolbar">
       <div class="view-switch" id="viewSwitch" role="tablist" aria-label="Plate Tracker view">
         <button class="view-tab active" type="button" role="tab" aria-selected="true" data-view="orders">Order view</button>
         <button class="view-tab" type="button" role="tab" aria-selected="false" data-view="stock">Stock view</button>
         <button class="view-tab" type="button" role="tab" aria-selected="false" data-view="genealogy">Genealogy</button>
+        <button class="view-tab" type="button" role="tab" aria-selected="false" data-view="issuedHeat">Issued Heat</button>
       </div>
       <div class="chips" id="stageChips" role="group" aria-label="Cross-filter by stage reached"></div>
     </div>
-
     <!-- Slicers: order-book facets, sitting directly above the table they filter. -->
     <div class="slicer-bar" id="slicerBar" hidden>
       <div class="slicer-bar-head">
@@ -859,7 +897,7 @@ button.stage-marker{cursor:pointer}button.stage-marker:hover{border-color:curren
           <span class="schema-node-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></svg></span>
           <span class="schema-step">01</span>
         </div>
-        <div class="eyebrow">SOURCE LAYER</div><strong>7 workbook extracts</strong><span>Casting · Slab stock · Rolling · Plate stock · FG · Dispatch · EBTP</span>
+        <div class="eyebrow">SOURCE LAYER</div><strong>8 workbook extracts</strong><span>Casting · Balance Heat · Slab stock · Rolling · Plate stock · FG · Dispatch · EBTP</span>
       </div>
       <div class="schema-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></div>
       <div class="schema-node">
@@ -898,8 +936,7 @@ button.stage-marker{cursor:pointer}button.stage-marker:hover{border-color:curren
   importScripts() in the page, where it does not exist.
 -->
 <script src="plate-tracker-xlsx.js"></script>
-<script type="module" src="Plate-Tracker.js"></script>
+<script type="module" src="Plate-Tracker.js?v=20261014-9"></script>
 <script src="glow.js"></script>
 </body>
 </html>
-

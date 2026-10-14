@@ -153,9 +153,13 @@ export const SOURCES = {
       thickness: { header: 'Thick' },
       width: { header: 'Width' },
       length: { header: 'Length Plan' },
+      pieceWeight: { header: 'Piece Wt.' },
       orderQty: { header: 'Order Qty_Live' },
+      billed: { header: 'Billed' },
+      balanceToBill: { header: 'Bal to bill' },
       delivered: { header: 'Delivered' },
       balanceToDeliver: { header: 'Bal To deliver' },
+      fgUrStock: { header: 'FG UR Stock' },
       currentStatus: { header: 'Current Order Status' },
       paymentStatus: { header: 'Payment Status' },
       firstPrdDt: { header: 'First PrdDt' },
@@ -170,6 +174,7 @@ export const SOURCES = {
       plateStockBal: { header: 'Plate Stock', col: 36 },
       btr: { header: 'BTR', col: 37 },
       slabStockBal: { header: 'Slab Stock', col: 39 },
+      noPlan: { header: 'NO PLAN' },
       btc: { header: 'BTC', col: 41 },
       issued: { header: 'Issued', col: 43 },
       btp: { header: 'BTP', col: 45 },
@@ -181,6 +186,25 @@ export const SOURCES = {
       customerType: { header: 'Customer TYPE' },
       supplyCondition: { header: 'Supply Condition' },
       inspBy: { header: 'Insp By' },
+    },
+    unit: 'mm',
+  },
+  balanceHeat: {
+    id: 'balanceHeat',
+    label: 'Balance Heat sheet',
+    hint: 'Campaign plan and slab details matched to the EBTP order.',
+    fields: {
+      so: { header: 'Sales document number', alt: ['Sales document no'], required: true },
+      lineItem: { header: 'Sales document item', required: true },
+      slabSalesDocumentNumber: { header: 'Slab Sales document number', required: true },
+      campaignPlanNo: { header: 'Campaign plan No', required: true },
+      serialNo: { header: 'Serial no' },
+      castingStatus: { header: 'Casting status' },
+      thickness: { header: 'Thickness', required: true },
+      width: { header: 'Width', required: true },
+      length: { header: 'Slab length', required: true },
+      balPlateQty: { header: 'Bal Plate QTY' },
+      castingGrade: { header: 'Casting Grade' },
     },
     unit: 'mm',
   },
@@ -267,6 +291,23 @@ export function parseDimension(raw) {
   if (unit === 'cm') return value * 10;
   if (unit === 'in' || unit === '"') return value * 25.4;
   return value; // mm, or a bare number the source already means as mm
+}
+
+export function ebtpWorkInProgress(order) {
+  const plateStock = typeof order?.plateStockBal === 'number'
+    ? order.plateStockBal : parseNumber(order?.raw?.['Plate Stock']);
+  const fgStock = typeof order?.fgUrStock === 'number'
+    ? order.fgUrStock : parseNumber(order?.raw?.['FG UR Stock']);
+  if (plateStock === null || fgStock === null) return null;
+  return plateStock - fgStock;
+}
+
+export function uniqueEbtpOrders(plates) {
+  const ordersByKey = new Map();
+  for (const plate of plates || []) {
+    for (const order of plate.orders || []) ordersByKey.set(order.key, order);
+  }
+  return [...ordersByKey.values()];
 }
 
 export function parseNumber(raw) {
@@ -419,6 +460,56 @@ function readIdPairs(row, mapping) {
   return pairs;
 }
 
+function readBalanceHeatIdPairs(row, mapping) {
+  const so = mapping.so ? row[mapping.so] : undefined;
+  const lineItem = mapping.lineItem ? row[mapping.lineItem] : undefined;
+  if (so === null || so === undefined || lineItem === null || lineItem === undefined) return [];
+  if (!String(so).trim() || !String(lineItem).trim()) return [];
+  const hasClubbedSalesOrders = /\b\d{9}\s*\/\/\s*\d{9}\b/.test(String(so));
+  if (!hasClubbedSalesOrders) {
+    if (/[/\r\n]/.test(String(so)) || /[/\r\n]/.test(String(lineItem))) return [];
+    if (!isPlausibleLineItem(lineItem)) return [];
+    return [{ so, lineItem }];
+  }
+
+  return readIdPairs(row, mapping).filter((pair) => /^\d+$/.test(normalizeKey(pair.so)));
+}
+
+export function filterIssuedHeatOrders(orders, search) {
+  const query = String(search || '').trim().toLowerCase();
+  if (!query) return orders;
+  return orders.filter((order) =>
+    String(order.so || '').toLowerCase().includes(query)
+    || String(order.customer || '').toLowerCase().includes(query));
+}
+
+export function balanceHeatValue(record, field, header) {
+  const value = record?.[field];
+  if (value !== undefined && value !== null && value !== '') return value;
+  return record?.raw?.[header];
+}
+
+export function balanceHeatDisplayRows(records) {
+  let previousDimensions = null;
+  return (records || []).map((record) => {
+    const dimensions = [
+      record?.thicknessMm,
+      record?.widthMm,
+      balanceHeatValue(record, 'castingGrade', 'Casting Grade'),
+    ].map((value) => String(value ?? '').trim().toLowerCase());
+    const showDimensions = !previousDimensions
+      || dimensions.some((value, index) => value !== previousDimensions[index]);
+    previousDimensions = dimensions;
+    return { record, showDimensions };
+  });
+}
+
+export function isOpenBalanceHeatRecord(record) {
+  const status = record?.castingStatus ?? Object.entries(record?.raw || {})
+    .find(([header]) => normalizeHeader(header) === 'casting status')?.[1];
+  return typeof status === 'string' && status.trim().toLowerCase() === 'open';
+}
+
 // Line items carry a bracketed piece count — "50(2)" for item 50. Every other
 // source (EBTP's SOItm, FG's Item, dispatch's SO Item) carries the bare number,
 // so the suffix has to come off or the join finds nothing to match on.
@@ -487,6 +578,10 @@ export function isSourceAcceptable(result) {
   return result.missing.filter((m) => m.required).length === 0;
 }
 
+export function hasRequiredColumns(headers, sourceId) {
+  return isSourceAcceptable(resolveColumns(headers, sourceId));
+}
+
 /* ═══════════════════ ROW → RECORD ═══════════════════ */
 
 function toMillimetres(value, unit) {
@@ -502,6 +597,8 @@ const PASSTHROUGH_FIELDS = [
   'edgeCondition', 'route', 'charging', 'sloc', 'shift', 'seq', 'holdReason',
   'movementType', 'fromSloc', 'toSloc', 'mode', 'shipTo', 'shipToCity',
   'currentStatus', 'paymentStatus', 'rakePoint', 'lotRef',
+  'slabSalesDocumentNumber', 'campaignPlanNo',
+  'serialNo', 'castingGrade', 'castingStatus',
   // EBTP order-book context: quantities, promise dates and remarks are the whole
   // reason the order book is loaded, so they ride along on the record rather
   // than only surviving in `raw`.
@@ -518,7 +615,9 @@ const PASSTHROUGH_FIELDS = [
 // Unmapped columns are preserved on `raw` so "every characteristic" stays
 // available in the UI without re-parsing.
 export function rowToRecords(row, sourceId, mapping) {
-  const pairs = readIdPairs(row, mapping);
+  const pairs = sourceId === 'balanceHeat'
+    ? readBalanceHeatIdPairs(row, mapping)
+    : readIdPairs(row, mapping);
   if (!pairs.length) return [];
   if (pairs.length === 1) {
     const record = buildRecord(row, sourceId, mapping, pairs[0]);
@@ -592,8 +691,8 @@ function buildRecord(row, sourceId, mapping, ids) {
     if (iso) record[prop] = iso;
   }
   const numericOrderFields = [
-    'orderQty', 'delivered', 'balanceToDeliver',
-    'plateStockBal', 'btr', 'slabStockBal', 'btc', 'issued', 'btp',
+    'pieceWeight', 'orderQty', 'billed', 'balanceToBill', 'delivered', 'balanceToDeliver',
+    'fgUrStock', 'plateStockBal', 'balPlateQty', 'btr', 'slabStockBal', 'noPlan', 'btc', 'issued', 'btp',
   ];
   for (const field of numericOrderFields) {
     if (!mapping[field]) continue;
@@ -729,6 +828,15 @@ export function buildIndex(byStage) {
     const plate = ensure(record.key);
     if (!plate.orders) plate.orders = [];
     plate.orders.push(record);
+  }
+  for (const record of byStage.balanceHeat || []) {
+    const plate = plates.get(record.key);
+    if (!plate) continue;
+    for (const order of plate.orders) {
+      if (order.key !== record.key) continue;
+      if (!order.balanceHeat) order.balanceHeat = [];
+      order.balanceHeat.push(record);
+    }
   }
 
   for (const stageId of STAGE_IDS) {

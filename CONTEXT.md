@@ -13,7 +13,7 @@ Plate-Tracker scripts are all still untracked (`??`) on branch `dev` (HEAD
 ## 1. What the page is for
 
 A browser-only tool for tracing a steel plate through the plant. The user drops
-in seven operational workbooks; the page links every row to an order and answers
+in eight operational workbooks; the page links every row to an order and answers
 one question:
 
 > **What happened to this metal, in order?**
@@ -43,11 +43,12 @@ page and the worker. Do not put rendering into it.
 
 ## 3. The data
 
-Seven extracts, with genuinely different shapes — verified against the real
-workbooks:
+Seven operational extracts with genuinely different shapes — verified against
+the real workbooks — plus a supplemental Balance Heat order-context workbook:
 
 ```
 CASTING   57,632 rows · SO + Line item + Slab id      · dims in METRES
+BALANCE HEAT            · SO/item + campaign and plate details
 SLAB STOCK   854 rows · Batch (slab) + stock/location · current inventory
 ROLLING    7,208 rows · SO + Line Item + SLAB_ID      · dims in MM
 PLATE STOCK 9,584 rows · Batch + SLAB ID + bin/crane  · current inventory
@@ -55,6 +56,29 @@ FG       133,021 rows · Sales Order + Item + BATCH    · dims as STRINGS
 DISPATCH 132,880 rows · SO No. + SO Item + Batch      · dims in MM
 EBTP       5,462 rows · SO No. + SOItm                · order book
 ```
+
+The Balance Heat workbook is an additional upload. Its `Sales document no` and
+`Sales document item` are matched to EBTP SO/item. Clubbed identifiers are split
+and paired positionally when Sales document no contains two adjacent 9-digit
+numbers separated by `//`.
+Issued Heat expands each order to show only matched Balance Heat rows whose
+Casting Status is Open. Casting Status is stored as a normalized field, with a
+legacy raw-column fallback; if status is absent from cached rows, the detail
+prompts for a Balance Heat re-upload. Header matching ignores case and whitespace.
+The displayed Balance Heat columns are Thickness, Width, Casting Grade, Campaign
+Plan No, Serial No, and Balance qty; repeated consecutive dimension/grade groups
+are displayed once. Issued Heat has a search field in the same
+position and pattern as the standard Find a plate search; it filters by SO
+number or customer and is hidden in every other view. Newly parsed values
+are used when present; older cached Balance Heat rows fall back to the same
+columns in their preserved raw data. If an old cache contains neither normalized
+nor raw values for Serial No, Bal Plate QTY, or Casting Grade, the expanded row
+asks the user to re-upload the Balance Heat workbook; the browser cache does not
+retain the workbook bytes needed to reconstruct omitted fields. The expanded
+detail card is sized to the available viewport width; its table scrolls
+horizontally within the card when needed. Issued Heat renders 250 orders per
+page and creates Balance Heat detail rows only when expanded, keeping large
+order books responsive while preserving access to every matching order.
 
 The `sheets/` directory also contains two alternate-format exports:
 `FG-FORMAT.xlsx` (finishing) and `DISP-FORMAT.xlsx` (dispatch). They are
@@ -83,6 +107,10 @@ produced an empty column rather than an error).
 3. **Find the header row** by scanning the first 25 rows — real exports carry a
    title or blank line above the header, so row 1 is not assumed.
 4. **Map columns** by name, then normalise.
+
+The page controller, worker, and parser core use matching versioned URLs so a
+browser cannot keep running an older cached parser after a schema fix; bump all
+three together when changing parser behavior.
 
 > The worker is **classic, not a module worker**: SheetJS is a classic script
 > publishing a global, and a module worker cannot call `importScripts()`. The
@@ -143,6 +171,15 @@ dateless lineage nodes.
 - **Stock view** — one table for slab and plate inventory. Exact single-order
   matches open the same process trace; unallocated and ambiguous rows stay in
   the stock table.
+- **Issued Heat** — shows every parsed EBTP order record, independently of the
+  order-view search and stage filters, with dimensions, billing/delivery,
+  commercial balance columns and remarks. WIP is calculated per record as
+  Plate Stock minus FG UR Stock. If an older cached extract lacks the added
+  EBTP fields, the view asks the user to clear the cache and reload all extracts.
+  Its SO No. search filters by sales order. Balance Heat rows expand to show
+  Campaign Plan No, Serial No, Thickness, Width, Bal Plate QTY and Casting Grade.
+  Each successful workbook upload replaces that source snapshot; repeated
+  SO/item rows in an existing cache display only the most recently loaded record.
 - **KPI cross-filters** — every summary KPI is a button, not a passive total.
   Order view can isolate complete, in-progress, not-started, in-stock and
   balance-due orders; Stock view can isolate slab, plate, exact-linked,

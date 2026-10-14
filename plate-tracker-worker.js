@@ -26,6 +26,7 @@ const PROBE = {
   finishing: ['Sales Order', 'BATCH', 'MATERIAL DOC.', 'S_SLOC'],
   dispatch: ['SO No.', 'SO Item', 'Bill No.', 'Vehicle No.'],
   ebtp: ['SO No.', 'SOItm', 'UID', 'Current Order Status'],
+  balanceHeat: ['Slab Sales document number', 'Sales document no', 'Sales document item', 'Campaign Plan No'],
   slabStock: ['Batch', 'Total Qty', 'LOCATION', 'ROLLABLE STATUS', 'HEAT ID'],
   plateStock: ['Batch', 'Total Qty', 'Storage Bin', 'Crane Area', 'SLAB ID'],
 };
@@ -48,6 +49,9 @@ function scoreHeaders(headers, sourceId) {
 let core = null;
 
 function identifySource(headers, fileName) {
+  if (core.hasRequiredColumns(headers, 'balanceHeat')) {
+    return { sourceId: 'balanceHeat', confident: true, score: PROBE.balanceHeat.length };
+  }
   const scores = core.SOURCE_IDS.map((id) => ({ id, score: scoreHeaders(headers, id) }));
   scores.sort((a, b) => b.score - a.score);
   const best = scores[0];
@@ -58,6 +62,7 @@ function identifySource(headers, fileName) {
   if (name.includes('cast')) return { sourceId: 'casting', confident: false, score: best.score };
   if (name.includes('roll')) return { sourceId: 'rolling', confident: false, score: best.score };
   if (name.includes('ebtp')) return { sourceId: 'ebtp', confident: false, score: best.score };
+  if (name.includes('balance') && name.includes('heat')) return { sourceId: 'balanceHeat', confident: false, score: best.score };
   if (name.includes('dispatch')) return { sourceId: 'dispatch', confident: false, score: best.score };
   if (name.includes('slab') && name.includes('stock')) return { sourceId: 'slabStock', confident: false, score: best.score };
   if (name.includes('plate') && name.includes('stock')) return { sourceId: 'plateStock', confident: false, score: best.score };
@@ -99,14 +104,9 @@ function pickSheet(workbook, fileName) {
 // columns. Real exports sometimes carry a title or blank line above the
 // header, so the header is not assumed to be row 1.
 function findHeaderRow(rows, sourceId) {
-  const required = Object.entries(core.SOURCES[sourceId].fields)
-    .filter(([, spec]) => spec.required)
-    .map(([, spec]) => norm(spec.header));
   const limit = Math.min(rows.length, 25);
   for (let i = 0; i < limit; i += 1) {
-    const present = new Set((rows[i] || []).map(norm));
-    const hits = required.filter((h) => present.has(h)).length;
-    if (hits === required.length) return i;
+    if (core.hasRequiredColumns(rows[i] || [], sourceId)) return i;
   }
   return -1;
 }
@@ -191,13 +191,11 @@ function parseWorkbook(buffer, fileName) {
   };
 }
 
-// The worker keeps the accumulated records itself. Files usually arrive one at
-// a time (or in a partial batch), so re-sending every previously parsed record
-// back across the boundary on each upload would be wasteful — and rebuilding
-// from only the newest batch would silently drop the earlier stages, which is
-// exactly the "Rolling: not loaded" regression this replaced.
+// The worker keeps the latest complete snapshot for each source. Uploading one
+// workbook replaces only that source; previously loaded stages remain intact.
 const store = {};
 const loadedMeta = {};
+let activeJobId = 0;
 
 // `core` is still null while this module is being evaluated (it arrives via a
 // dynamic import on the first message), so the stage buckets are created here
@@ -205,7 +203,7 @@ const loadedMeta = {};
 function coreInit() {
   for (const stageId of core.STAGE_IDS) if (!store[stageId]) store[stageId] = [];
 }
-['casting', 'rolling', 'finishing', 'dispatch', 'ebtp', 'slabStock', 'plateStock'].forEach((id) => { store[id] = []; });
+['casting', 'rolling', 'finishing', 'dispatch', 'ebtp', 'balanceHeat', 'slabStock', 'plateStock'].forEach((id) => { store[id] = []; });
 
 async function ingestFiles(files, id) {
   for (let i = 0; i < files.length; i += 1) {
@@ -213,21 +211,17 @@ async function ingestFiles(files, id) {
     self.postMessage({ type: 'progress', id, index: i, total: files.length, name: file.name });
     try {
       const buffer = await file.arrayBuffer();
+      if (id !== activeJobId) return;
       const result = parseWorkbook(buffer, file.name);
       if (result.ok) {
-        // Append WITHOUT spreading. `push(...records)` passes one argument per
-        // record, and the engines cap the argument count (~65k-125k depending on
-        // browser). The FG extract yields ~129k records and dispatch ~133k, so
-        // that spread died with "RangeError: Maximum call stack size exceeded"
-        // and both stages silently reported as not loaded — while the same files
-        // parsed fine under Node, which has a far higher limit. Looping, or
-        // concat, has no such ceiling and is measurably faster as well.
-        const bucket = store[result.sourceId];
-        for (let r = 0; r < result.records.length; r += 1) bucket.push(result.records[r]);
+        // Each workbook is a complete snapshot for its source, not an
+        // incremental batch. Replace that source so re-uploading it cannot
+        // duplicate old orders or leave stale balances beside new ones.
+        store[result.sourceId] = result.records;
         loadedMeta[result.sourceId] = {
           name: file.name,
           sheet: result.sheet,
-          records: bucket.length,
+          records: result.records.length,
           totalRows: result.totalRows,
           dropped: result.dropped,
           splitFrom: result.splitFrom || 0,
@@ -265,15 +259,17 @@ async function handleJob(event) {
 
 self.onmessage = async (event) => {
   const data = event.data || {};
+  activeJobId = data.id;
   if (!core) {
     try {
-      core = await import('./plate-tracker-core.mjs');
+      core = await import('./plate-tracker-core.mjs?v=20261014-9');
     } catch (err) {
       self.postMessage({ type: 'fatal', id: data.id, error: 'Could not load the parser core: ' + ((err && err.message) || err) });
       return;
     }
     coreInit();
   }
+  if (data.id !== activeJobId) return;
   if (data.type === 'reset') {
     for (const sourceId of core.SOURCE_IDS) store[sourceId] = [];
     for (const key of Object.keys(loadedMeta)) delete loadedMeta[key];

@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   STAGE_IDS, SOURCES,
-  parseDimension, parseNumber, excelSerialToISO, toISODate, daysBetween,
+  parseDimension, parseNumber, ebtpWorkInProgress, uniqueEbtpOrders, excelSerialToISO, toISODate, daysBetween,
   splitCustomerRef, normalizeKey, plateKey, normalizeHeader,
-  resolveColumns, isSourceAcceptable, rowToRecord, rowToRecords, rowToStockRecord, buildIndex,
+  resolveColumns, isSourceAcceptable, hasRequiredColumns, rowToRecord, rowToRecords, rowToStockRecord, buildIndex,
   buildTimeline, buildLineage, buildTree, layoutTree, elbowPath, defaultExpandedIds,
   searchPlates, summarise, SLICERS, slicerValues, STAGE_IDENTITY, plateStem,
+  filterIssuedHeatOrders, balanceHeatValue, balanceHeatDisplayRows, isOpenBalanceHeatRecord,
 } from '../plate-tracker-core.mjs';
 
 /* ═══════════════════ LARGE-EXTRACT SCALING ═══════════════════ */
@@ -24,6 +25,43 @@ test('worker never spreads a record list into a call', () => {
   const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
   const spreads = code.match(/\.\s*push\s*\(\s*\.\.\./g) || [];
   assert.equal(spreads.length, 0, 'push(...records) overflows the engine argument limit on large extracts');
+});
+
+test('worker replaces each successfully parsed source snapshot', () => {
+  const src = readFileSync(new URL('../plate-tracker-worker.js', import.meta.url), 'utf8');
+  assert.match(src, /store\[result\.sourceId\]\s*=\s*result\.records/);
+  assert.doesNotMatch(src, /store\[result\.sourceId\]\.push/);
+});
+
+test('page, worker and parser core use the same cache-busted parser version', () => {
+  const page = readFileSync(new URL('../Plate-Tracker.html', import.meta.url), 'utf8');
+  const controller = readFileSync(new URL('../Plate-Tracker.js', import.meta.url), 'utf8');
+  const worker = readFileSync(new URL('../plate-tracker-worker.js', import.meta.url), 'utf8');
+  const versions = [
+    page.match(/Plate-Tracker\.js\?v=([^"']+)/)?.[1],
+    controller.match(/plate-tracker-worker\.js\?v=([^"']+)/)?.[1],
+    controller.match(/plate-tracker-core\.mjs\?v=([^"']+)/)?.[1],
+    worker.match(/plate-tracker-core\.mjs\?v=([^"']+)/)?.[1],
+  ];
+  assert.ok(versions.every(Boolean), 'all parser entry points must have a versioned URL');
+  assert.equal(new Set(versions).size, 1, 'page, worker and parser core versions must stay aligned');
+});
+
+test('Issued Heat paginates visible rows and builds Balance Heat details on expansion', () => {
+  const controller = readFileSync(new URL('../Plate-Tracker.js', import.meta.url), 'utf8');
+  assert.match(controller, /const ISSUED_HEAT_PAGE_SIZE = 250/);
+  assert.match(controller, /orders\.slice\(pageStart, pageStart \+ ISSUED_HEAT_PAGE_SIZE\)/);
+  assert.match(controller, /visibleOrders\.map\(\(order\)/);
+  assert.match(controller, /renderIssuedHeatDetails\(order\)/);
+  assert.doesNotMatch(controller, /data-issued-heat-detail="\$\{key\}"/);
+});
+
+test('Issued Heat Balance Heat detail columns use the requested order', () => {
+  const controller = readFileSync(new URL('../Plate-Tracker.js', import.meta.url), 'utf8');
+  const expectedHeaders = ['Thickness', 'Width', 'Casting Grade', 'Campaign Plan No', 'Serial No', 'Balance qty'];
+  const headerPositions = expectedHeaders.map((header) => controller.indexOf(`<th scope="col">${header}</th>`));
+  assert.ok(headerPositions.every((position) => position >= 0));
+  assert.deepEqual(headerPositions, [...headerPositions].sort((a, b) => a - b));
 });
 
 // Guard the threshold the bug sat on, so the record counts that broke it are
@@ -132,6 +170,62 @@ test('normalizeHeader is case- and whitespace-insensitive', () => {
   assert.equal(normalizeHeader(null), '');
 });
 
+test('Issued Heat SO search filters by SO number and ignores case and padding', () => {
+  const orders = [
+    { so: '607837477', lineItem: '340', customer: 'PES Engineers' },
+    { so: '607837477', lineItem: '330', customer: 'Tata Projects' },
+    { so: '607849489', lineItem: '400', customer: 'PES Industries' },
+  ];
+  assert.equal(filterIssuedHeatOrders(orders, ''), orders);
+  assert.deepEqual(filterIssuedHeatOrders(orders, ' 6078374 '), orders.slice(0, 2));
+  assert.deepEqual(filterIssuedHeatOrders(orders, '607849489'), [orders[2]]);
+  assert.deepEqual(filterIssuedHeatOrders(orders, 'pes'), [orders[0], orders[2]]);
+  assert.deepEqual(filterIssuedHeatOrders(orders, 'TATA PROJECTS'), [orders[1]]);
+  assert.deepEqual(filterIssuedHeatOrders(orders, 'not-an-so'), []);
+});
+
+test('only Balance Heat records with an Open Casting Status are displayable', () => {
+  assert.equal(isOpenBalanceHeatRecord({ raw: { 'Casting Status': 'Open' } }), true);
+  assert.equal(isOpenBalanceHeatRecord({ raw: { ' casting   status ': ' open ' } }), true);
+  assert.equal(isOpenBalanceHeatRecord({ castingStatus: 'OPEN' }), true);
+  assert.equal(isOpenBalanceHeatRecord({ castingStatus: 'CLOSE', raw: { 'Casting Status': 'OPEN' } }), false);
+  assert.equal(isOpenBalanceHeatRecord({ raw: { 'Casting Status': 'Closed' } }), false);
+  assert.equal(isOpenBalanceHeatRecord({ raw: {} }), false);
+  assert.equal(isOpenBalanceHeatRecord({}), false);
+});
+
+test('Balance Heat display values fall back to raw columns in older cached records', () => {
+  const cached = {
+    campaignPlanNo: 'PM 2609086',
+    thicknessMm: 300,
+    widthMm: 2300,
+    raw: {
+      'Serial no': 12,
+      'Bal Plate QTY': 42.5,
+      'Casting Grade': 'JA35WYNR01-VD',
+    },
+  };
+  assert.equal(balanceHeatValue(cached, 'serialNo', 'Serial no'), 12);
+  assert.equal(balanceHeatValue(cached, 'balPlateQty', 'Bal Plate QTY'), 42.5);
+  assert.equal(balanceHeatValue(cached, 'castingGrade', 'Casting Grade'), 'JA35WYNR01-VD');
+  assert.equal(balanceHeatValue({ serialNo: '13', raw: { 'Serial no': 12 } }, 'serialNo', 'Serial no'), '13');
+  assert.equal(balanceHeatValue({ serialNo: 0, raw: { 'Serial no': 12 } }, 'serialNo', 'Serial no'), 0);
+});
+
+test('Balance Heat details group repeated consecutive thickness, width, and casting grade', () => {
+  const rows = [
+    { thicknessMm: 200, widthMm: 1550, castingGrade: 'JA27MGTM02-VD', serialNo: '1' },
+    { thicknessMm: '200', widthMm: 1550, castingGrade: ' ja27mgtm02-vd ', serialNo: '2' },
+    { thicknessMm: 200, widthMm: 1550, castingGrade: 'JA27MGTM02-VD', serialNo: '12' },
+    { thicknessMm: 200, widthMm: 1600, castingGrade: 'JA27MGTM02-VD', serialNo: '15' },
+    { thicknessMm: 200, widthMm: 1600, castingGrade: 'JA27MGTM02-VD', serialNo: '16' },
+  ];
+  assert.deepEqual(
+    balanceHeatDisplayRows(rows).map(({ showDimensions }) => showDimensions),
+    [true, false, false, true, false],
+  );
+});
+
 /* ═══════════════════ COLUMN RESOLUTION ═══════════════════ */
 
 test('every source declares a resolvable field map', () => {
@@ -160,6 +254,77 @@ test('a file missing a required column is rejected, optional ones are not', () =
   // No slab id / hold reason: still a usable casting file.
   const minimal = resolveColumns(['SO', 'Line item', 'DATE', 'Weight'], 'casting');
   assert.equal(isSourceAcceptable(minimal), true);
+});
+
+test('Balance Heat resolves the uploaded export headers including Sales document no', () => {
+  const headers = [
+    'Campaign Plan No', 'Slab Sales document number', 'Sales document no',
+    'Sales document item', 'Serial no', 'Thickness', 'Width', 'Slab Length',
+    'Bal Plate QTY', 'Casting Grade', 'Casting Status',
+  ];
+  const result = resolveColumns(headers, 'balanceHeat');
+  assert.equal(hasRequiredColumns(headers, 'balanceHeat'), true);
+  assert.equal(isSourceAcceptable(result), true);
+  assert.equal(result.mapping.so, 'Sales document no');
+  assert.equal(result.mapping.castingStatus, 'Casting Status');
+  assert.equal(result.mapping.length, 'Slab Length');
+
+  const record = rowToRecord({
+    'Campaign Plan No': 'CP-17',
+    'Slab Sales document number': 'R000025437',
+    'Sales document no': '607866894',
+    'Sales document item': '280',
+    'Serial no': 17,
+    Thickness: 250,
+    Width: 1800,
+    'Slab Length': 3200,
+    'Bal Plate QTY': 25,
+    'Casting Grade': 'JA35OPTN01-VD',
+    'Casting Status': 'Open',
+  }, 'balanceHeat', result.mapping);
+  assert.equal(record.key, '607866894|280');
+  assert.equal(record.campaignPlanNo, 'CP-17');
+  assert.equal(record.thicknessMm, 250);
+  assert.equal(record.widthMm, 1800);
+  assert.equal(record.lengthMm, 3200);
+  assert.equal(record.serialNo, '17');
+  assert.equal(record.balPlateQty, 25);
+  assert.equal(record.castingGrade, 'JA35OPTN01-VD');
+  assert.equal(record.castingStatus, 'Open');
+  assert.equal(record.raw, undefined);
+  assert.equal(isOpenBalanceHeatRecord(record), true);
+
+  const closed = rowToRecord({
+    'Campaign Plan No': 'CP-16',
+    'Sales document no': '607866894',
+    'Sales document item': '280',
+    'Serial no': 29,
+    Thickness: 300,
+    Width: 2300,
+    'Slab Length': 3200,
+    'Bal Plate QTY': 0,
+    'Casting Grade': 'JA45EXM01-VD',
+    'Casting Status': 'CLOSE',
+  }, 'balanceHeat', result.mapping);
+  const secondOpen = rowToRecord({
+    'Campaign Plan No': 'CP-18',
+    'Sales document no': '607866894',
+    'Sales document item': '280',
+    'Serial no': 18,
+    Thickness: 300,
+    Width: 2300,
+    'Slab Length': 3200,
+    'Bal Plate QTY': 18.51,
+    'Casting Grade': 'JA45EXM02-VD',
+    'Casting Status': 'OPEN',
+  }, 'balanceHeat', result.mapping);
+  const { list } = buildIndex({ ebtp: [rec('ebtp', '607866894|280')], balanceHeat: [closed, record, secondOpen] });
+  const matchedHeat = uniqueEbtpOrders(list)[0].balanceHeat[0];
+  const matchingOrder = uniqueEbtpOrders(list)[0];
+  const openRows = matchingOrder.balanceHeat.filter(isOpenBalanceHeatRecord);
+  assert.equal(matchedHeat.serialNo, '29');
+  assert.equal(openRows.length, 2);
+  assert.deepEqual(openRows.map((heat) => heat.serialNo), ['17', '18']);
 });
 
 /* ═══════════════════ ROW → RECORD ═══════════════════ */
@@ -487,6 +652,144 @@ test('EBTP promise dates and quantities convert to real dates and numbers', () =
   assert.equal(records[0].orderQty, 0.001);
   assert.equal(records[0].balanceToDeliver, 0.001);
   assert.equal(records[0].currentStatus, 'Short Close Pending');
+});
+
+test('EBTP issued-heat fields preserve distinct billing, delivery and stock balances', () => {
+  const mapping = map({
+    so: 'SO No.', lineItem: 'SOItm', customer: 'Sold To Party Name',
+    thickness: 'Thick', width: 'Width', length: 'Length Plan', pieceWeight: 'Piece Wt.',
+    orderQty: 'Order Qty_Live', billed: 'Billed', balanceToBill: 'Bal to bill',
+    delivered: 'Delivered', balanceToDeliver: 'Bal To deliver', fgUrStock: 'FG UR Stock',
+    plateStockBal: 'Plate Stock', btr: 'BTR', slabStockBal: 'Slab Stock',
+    noPlan: 'NO PLAN', btc: 'BTC', issued: 'ISSUED', btp: 'BTP', remarks: 'Remarks',
+  });
+  const records = rowToRecords({
+    'SO No.': '600704854', SOItm: 170, 'Sold To Party Name': 'JINDAL STEEL LIMITED',
+    Thick: 10, Width: 2500, 'Length Plan': 12, 'Piece Wt.': 2.355,
+    'Order Qty_Live': 95, Billed: 2, 'Bal to bill': 93,
+    Delivered: 3, 'Bal To deliver': 92, 'FG UR Stock': 5,
+    'Plate Stock': 14, BTR: 30, 'Slab Stock': 6, 'NO PLAN': 7,
+    BTC: 8, ISSUED: 9, BTP: 10, Remarks: 'Priority',
+  }, 'ebtp', mapping);
+  assert.equal(records.length, 1);
+  const [order] = records;
+  assert.equal(order.thicknessMm, 10);
+  assert.equal(order.widthMm, 2500);
+  assert.equal(order.lengthMm, 12);
+  assert.equal(order.pieceWeight, 2.355);
+  assert.equal(order.billed, 2);
+  assert.equal(order.balanceToBill, 93);
+  assert.equal(order.delivered, 3);
+  assert.equal(order.balanceToDeliver, 92);
+  assert.equal(order.noPlan, 7);
+  assert.equal(order.remarks, 'Priority');
+  assert.equal(ebtpWorkInProgress(order), 9);
+  assert.equal(ebtpWorkInProgress({ plateStockBal: 14 }), null);
+  assert.equal(ebtpWorkInProgress({ plateStockBal: 14, raw: { 'FG UR Stock': '5' } }), 9);
+});
+
+test('Issued Heat keeps the most recently loaded EBTP row for each SO/item key', () => {
+  const orders = uniqueEbtpOrders([
+    { orders: [
+      { key: '600704979|10', btr: 4, source: 'older upload' },
+      { key: '600704979|20', btr: 8, source: 'different item' },
+    ] },
+    { orders: [{ key: '600704979|10', btr: 0.86, source: 'latest upload' }] },
+  ]);
+  assert.equal(orders.length, 2);
+  assert.deepEqual(orders[0], { key: '600704979|10', btr: 0.86, source: 'latest upload' });
+  assert.equal(orders[1].key, '600704979|20');
+});
+
+test('Balance Heat clubbed rows link each SO/item pair to its EBTP order', () => {
+  const mapping = map({
+    so: 'Sales document number',
+    lineItem: 'Sales document item',
+    slabSalesDocumentNumber: 'Slab Sales document number',
+    campaignPlanNo: 'Campaign plan No',
+    thickness: 'Thickness',
+    width: 'Width',
+    length: 'Slab length',
+  });
+  const heatRecords = rowToRecords({
+    'Slab Sales document number': 'R000025437',
+    'Sales document number': '607837477//607837477',
+    'Sales document item': '340(3)//330(4)',
+    'Campaign plan No': 'CP-17',
+    Thickness: 250,
+    Width: 1800,
+    'Slab length': 3200,
+  }, 'balanceHeat', mapping);
+  assert.deepEqual(heatRecords.map((record) => record.key), ['607837477|340', '607837477|330']);
+  assert.ok(heatRecords.every((record) => record.slabSalesDocumentNumber === 'R000025437'));
+  assert.ok(heatRecords.every((record) => record.campaignPlanNo === 'CP-17'));
+  assert.ok(heatRecords.every((record) => record.thicknessMm === 250 && record.widthMm === 1800 && record.lengthMm === 3200));
+
+  const { list } = buildIndex({
+    ebtp: [rec('ebtp', '607837477|340'), rec('ebtp', '607837477|330'), rec('ebtp', '607837477|500')],
+    balanceHeat: heatRecords,
+  });
+  const orders = uniqueEbtpOrders(list);
+  assert.equal(orders.find((order) => order.lineItem === '340').balanceHeat.length, 1);
+  assert.equal(orders.find((order) => order.lineItem === '330').balanceHeat.length, 1);
+  assert.equal(orders.find((order) => order.lineItem === '500').balanceHeat, undefined);
+});
+
+test('Balance Heat splits non-R rows too when their SO/item cells contain clubbed identifiers', () => {
+  const mapping = map({
+    so: 'Sales document no',
+    lineItem: 'Sales document item',
+    slabSalesDocumentNumber: 'Slab Sales document number',
+    campaignPlanNo: 'Campaign Plan No',
+    thickness: 'Thickness',
+    width: 'Width',
+    length: 'Slab Length',
+  });
+  const direct = rowToRecords({
+    'Slab Sales document number': '607853547/',
+    'Sales document no': '607853547//607853547',
+    'Sales document item': '50(2)/60(2)',
+    'Campaign Plan No': 'CP-17',
+    Thickness: 250,
+    Width: 1800,
+    'Slab Length': 3200,
+  }, 'balanceHeat', mapping);
+  assert.deepEqual(direct.map((record) => record.key), ['607853547|50', '607853547|60']);
+
+  const withNonOrderToken = rowToRecords({
+    'Slab Sales document number': '607849489/',
+    'Sales document no': '607849489//607849489//607849489//V',
+    'Sales document item': '400(1)//410(1)//440(1)//450(1)',
+    'Campaign Plan No': 'CP-18',
+    Thickness: 250,
+    Width: 1800,
+    'Slab Length': 3200,
+  }, 'balanceHeat', mapping);
+  assert.deepEqual(withNonOrderToken.map((record) => record.key), [
+    '607849489|400', '607849489|410', '607849489|440',
+  ]);
+});
+
+test('Balance Heat requires a pair of 9-digit SOs to treat a row as clubbed', () => {
+  const mapping = map({
+    so: 'Sales document no',
+    lineItem: 'Sales document item',
+    slabSalesDocumentNumber: 'Slab Sales document number',
+  });
+  const clubbed = rowToRecords({
+    'Sales document no': '607837477//607837478',
+    'Sales document item': '340(3)//330(4)',
+  }, 'balanceHeat', mapping);
+  assert.deepEqual(clubbed.map((record) => record.key), ['607837477|340', '607837478|330']);
+
+  assert.deepEqual(rowToRecords({
+    'Sales document no': '607837477',
+    'Sales document item': '340(3)//330(4)',
+  }, 'balanceHeat', mapping), []);
+  assert.deepEqual(rowToRecords({
+    'Sales document no': '607837477//V',
+    'Sales document item': '340(3)//330(4)',
+  }, 'balanceHeat', mapping), []);
 });
 
 /* ═══════════════════ CLUBBED ROWS (continued) ═══════════════════ */

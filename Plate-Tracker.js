@@ -7,20 +7,24 @@
 import {
   STAGES, STAGE_IDS, STAGE_LABEL, SOURCES,
   buildTimeline, buildLineage, layoutTree, elbowPath, defaultExpandedIds,
-  searchPlates, summarise, SLICERS, slicerValues,
-  plateStem,
-} from './plate-tracker-core.mjs';
+  searchPlates, summarise, SLICERS, slicerValues, parseNumber, filterIssuedHeatOrders, balanceHeatValue, balanceHeatDisplayRows, isOpenBalanceHeatRecord,
+  plateStem, ebtpWorkInProgress, uniqueEbtpOrders,
+} from './plate-tracker-core.mjs?v=20261014-9';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const balanceHeatDisplayValue = (value) =>
+  value === undefined || value === null || (typeof value === 'string' && !value.trim()) ? '—' : value;
 
 const state = {
   plates: [],
   stocks: { slab: [], plate: [] },
   loaded: {},        // stageId -> { name, sheet, records, ... }
   view: 'orders',
+  issuedHeatSearch: '',
+  issuedHeatPage: 0,
   selectedKey: null,
   expanded: new Set(),
   stageFilter: [],
@@ -50,6 +54,17 @@ const state = {
 
 const num = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v.toLocaleString(undefined, { maximumFractionDigits: d }) : '—');
 const dt = (v) => (v ? String(v) : '—');
+const issuedHeatNumber = (record, field, rawHeader) => (
+  typeof record[field] === 'number' ? record[field] : parseNumber(record.raw?.[rawHeader])
+);
+const ISSUED_HEAT_FIELDS = [
+  ['pieceWeight', 'Piece Wt.'],
+  ['billed', 'Billed'],
+  ['balanceToBill', 'Bal to bill'],
+  ['fgUrStock', 'FG UR Stock'],
+  ['noPlan', 'NO PLAN'],
+];
+const ISSUED_HEAT_PAGE_SIZE = 250;
 
 /* ═══════════════════ IndexedDB cache ═══════════════════
    The normalised plate index runs to tens of megabytes, well past
@@ -119,7 +134,7 @@ function idbClear() {
 
 /* ═══════════════════ Upload slots ═══════════════════ */
 
-const SLOT_ORDER = ['casting', 'slabStock', 'rolling', 'plateStock', 'finishing', 'dispatch', 'ebtp'];
+const SLOT_ORDER = ['casting', 'balanceHeat', 'slabStock', 'rolling', 'plateStock', 'finishing', 'dispatch', 'ebtp'];
 
 function renderSlots() {
   $('slots').innerHTML = SLOT_ORDER.map((id) => {
@@ -193,7 +208,7 @@ function getWorker() {
   // A CLASSIC worker: the vendored SheetJS is a classic script loaded via
   // importScripts, which a module worker cannot call. The shared core is pulled
   // in by the worker itself with a dynamic import.
-  worker = new Worker('./plate-tracker-worker.js');
+  worker = new Worker('./plate-tracker-worker.js?v=20261014-9');
   worker.onmessage = onWorkerMessage;
   worker.onerror = (e) => {
     $('dataStatus').classList.remove('live');
@@ -403,7 +418,7 @@ function positionSlicerPanel(details, panel) {
 
 function renderSlicers() {
   const bar = $('slicerBar');
-  if (state.view === 'stock') { bar.hidden = true; return; }
+  if (state.view === 'stock' || state.view === 'issuedHeat') { bar.hidden = true; return; }
   if (!state.plates.length) { bar.hidden = true; return; }
   bar.hidden = false;
 
@@ -580,6 +595,10 @@ function refresh() {
 }
 
 function syncSelectedTrace() {
+  if (state.view === 'issuedHeat') {
+    $('detail').hidden = true;
+    return;
+  }
   if (!state.selectedKey) return;
   const visible = state.view !== 'stock'
     ? currentResults(Infinity).some((plate) => plate.key === state.selectedKey)
@@ -602,7 +621,7 @@ function renderCrossFilteredViews() {
 
 function renderStageChips() {
   const host = $('stageChips');
-  if (state.view === 'stock') { host.innerHTML = ''; return; }
+  if (state.view === 'stock' || state.view === 'issuedHeat') { host.innerHTML = ''; return; }
   if (!state.plates.length) { host.innerHTML = ''; return; }
   // Count stages inside the population produced by every other active filter.
   // Excluding the stage facet itself keeps unselected options useful.
@@ -625,6 +644,7 @@ function renderStageChips() {
 
 function renderSummaryChips() {
   const host = $('summaryChips');
+  if (state.view === 'issuedHeat') { host.innerHTML = ''; return; }
   if (state.view === 'stock') {
     const rows = currentStockResults(Infinity, false);
     const slab = rows.filter((r) => r.stockKind === 'slab');
@@ -677,6 +697,7 @@ function renderKpiCrossFilters(host, definitions, view) {
 }
 
 function renderTable() {
+  if (state.view === 'issuedHeat') { renderIssuedHeatTable(); return; }
   if (state.view === 'stock') { renderStockTable(); return; }
   if (state.view === 'genealogy') { renderGenealogyTable(); return; }
   const host = $('tableHost');
@@ -748,6 +769,156 @@ function renderTable() {
       $('trace').scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
+}
+
+function renderIssuedHeatTable() {
+  const host = $('tableHost');
+  if (!state.loaded.ebtp) {
+    host.innerHTML = '<div class="empty-msg">Load the EBTP (order book) extract above to view issued heat.</div>';
+    return;
+  }
+  const allOrders = uniqueEbtpOrders(state.plates);
+  if (!allOrders.length) {
+    host.innerHTML = '<div class="empty-msg">The loaded EBTP extract contains no order rows with a valid SO number and item.</div>';
+    return;
+  }
+  const missingFields = ISSUED_HEAT_FIELDS.filter(([field, header]) =>
+    !allOrders.some((order) => issuedHeatNumber(order, field, header) !== null));
+  if (missingFields.length) {
+    host.innerHTML = `<div class="empty-msg">The cached EBTP data does not include ${missingFields.map(([, header]) => esc(header)).join(', ')}. Clear cached data above, then reload the EBTP order book to populate these fields.</div>`;
+    return;
+  }
+  const orders = filterIssuedHeatOrders(allOrders, state.issuedHeatSearch);
+  if (!orders.length) {
+    host.innerHTML = `<div class="empty-msg">No Issued Heat orders match SO No. or customer “${esc(state.issuedHeatSearch)}”.</div>`;
+    return;
+  }
+  const pageCount = Math.ceil(orders.length / ISSUED_HEAT_PAGE_SIZE);
+  state.issuedHeatPage = Math.min(state.issuedHeatPage, pageCount - 1);
+  const pageStart = state.issuedHeatPage * ISSUED_HEAT_PAGE_SIZE;
+  const visibleOrders = orders.slice(pageStart, pageStart + ISSUED_HEAT_PAGE_SIZE);
+  const head = [
+    '',
+    'So.No', 'Item', 'Customer name', 'Thickness', 'Width', 'Length', 'Piece weight',
+    'Order quantity', 'Billed', 'Bal to bill', 'Deliver', 'Bal to deliver',
+    'FG UR Stock', 'WIP', 'Plate Stock', 'BTR', 'Slab Stock', 'No Plan',
+    'BTC', 'Issued', 'BTP', 'Remarks',
+  ];
+  const orderByKey = new Map(visibleOrders.map((order) => [order.key, order]));
+  const rows = visibleOrders.map((order) => {
+    const plateStock = issuedHeatNumber(order, 'plateStockBal', 'Plate Stock');
+    const fgStock = issuedHeatNumber(order, 'fgUrStock', 'FG UR Stock');
+    const key = esc(order.key);
+    return `<tr>
+    <td><button class="btn issued-heat-toggle" type="button" data-issued-heat-toggle="${key}" aria-expanded="false" aria-label="Show Balance Heat details for ${esc(order.so)}, item ${esc(order.lineItem)}">+</button></td>
+    <td class="mono">${esc(order.so)}</td>
+    <td class="mono">${esc(order.lineItem)}</td>
+    <td>${esc(order.customer || '—')}</td>
+    <td class="mono">${num(order.thicknessMm, 2)}</td>
+    <td class="mono">${num(order.widthMm, 2)}</td>
+    <td class="mono">${num(order.lengthMm, 2)}</td>
+    <td class="mono">${num(issuedHeatNumber(order, 'pieceWeight', 'Piece Wt.'), 3)}</td>
+    <td class="mono">${num(order.orderQty, 2)}</td>
+    <td class="mono">${num(issuedHeatNumber(order, 'billed', 'Billed'), 2)}</td>
+    <td class="mono">${num(issuedHeatNumber(order, 'balanceToBill', 'Bal to bill'), 2)}</td>
+    <td class="mono">${num(order.delivered, 2)}</td>
+    <td class="mono">${num(order.balanceToDeliver, 2)}</td>
+    <td class="mono">${num(fgStock, 2)}</td>
+    <td class="mono">${num(ebtpWorkInProgress({ plateStockBal: plateStock, fgUrStock: fgStock }), 2)}</td>
+    <td class="mono">${num(plateStock, 2)}</td>
+    <td class="mono">${num(order.btr, 2)}</td>
+    <td class="mono">${num(order.slabStockBal, 2)}</td>
+    <td class="mono">${num(issuedHeatNumber(order, 'noPlan', 'NO PLAN'), 2)}</td>
+    <td class="mono">${num(order.btc, 2)}</td>
+    <td class="mono">${num(order.issued, 2)}</td>
+    <td class="mono">${num(order.btp, 2)}</td>
+    <td>${esc(order.remarks || '—')}</td>
+  </tr>`;
+  }).join('');
+  const headerHtml = head.map((h) => '<th scope="col">' + esc(h) + '</th>').join('');
+  host.innerHTML = `<div class="data-table-wrap"><table class="data issued-heat-table">
+    <thead><tr>${headerHtml}</tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    <div class="issued-heat-footer">
+      <p class="note">Showing ${(pageStart + 1).toLocaleString()}–${Math.min(pageStart + visibleOrders.length, orders.length).toLocaleString()} of ${orders.length.toLocaleString()} matching EBTP orders (${allOrders.length.toLocaleString()} total). WIP = Plate Stock − FG UR Stock.</p>
+      ${pageCount > 1 ? `<div class="issued-heat-pagination" aria-label="Issued Heat pages">
+        <button class="btn" type="button" data-issued-page="prev" ${state.issuedHeatPage === 0 ? 'disabled' : ''}>Previous</button>
+        <span class="note">Page ${(state.issuedHeatPage + 1).toLocaleString()} of ${pageCount.toLocaleString()}</span>
+        <button class="btn" type="button" data-issued-page="next" ${state.issuedHeatPage >= pageCount - 1 ? 'disabled' : ''}>Next</button>
+      </div>` : ''}
+    </div>`;
+  host.querySelectorAll('[data-issued-page]').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.issuedHeatPage += button.dataset.issuedPage === 'next' ? 1 : -1;
+      renderIssuedHeatTable();
+    });
+  });
+  host.querySelector('.issued-heat-table tbody').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-issued-heat-toggle]');
+    if (!button) return;
+    const order = orderByKey.get(button.dataset.issuedHeatToggle);
+    const orderRow = button.closest('tr');
+    if (!order || !orderRow) return;
+    const expanded = button.getAttribute('aria-expanded') !== 'true';
+    let detailRow = orderRow.nextElementSibling;
+    if (!detailRow?.matches('.issued-heat-detail-row')) {
+      detailRow = document.createElement('tr');
+      detailRow.className = 'issued-heat-detail-row';
+      detailRow.innerHTML = `<td colspan="${head.length}">${renderIssuedHeatDetails(order)}</td>`;
+      orderRow.after(detailRow);
+    }
+    button.setAttribute('aria-expanded', String(expanded));
+    button.setAttribute('aria-label', `${expanded ? 'Hide' : 'Show'} Balance Heat details for ${order.so}, item ${order.lineItem}`);
+    button.textContent = expanded ? '−' : '+';
+    detailRow.hidden = !expanded;
+  });
+}
+
+function renderIssuedHeatDetails(order) {
+  const allBalanceHeatRows = order.balanceHeat || [];
+  const balanceHeatRows = allBalanceHeatRows.filter(isOpenBalanceHeatRecord);
+  const missingCastingStatus = allBalanceHeatRows.some((heat) =>
+    heat.castingStatus === undefined
+    && !Object.keys(heat.raw || {}).some((header) => header.trim().toLowerCase().replace(/\s+/g, ' ') === 'casting status'));
+  if (!state.loaded.balanceHeat) {
+    return '<div class="empty-msg">Load the Balance Heat sheet above to show matching campaign and slab details.</div>';
+  }
+  if (missingCastingStatus) {
+    return '<div class="empty-msg">The cached Balance Heat data does not include Casting Status. Re-upload the Balance Heat sheet to show rows with status Open.</div>';
+  }
+  if (!balanceHeatRows.length) {
+    return '<div class="empty-msg">No Balance Heat rows with Casting Status “Open” match this SO.No and item.</div>';
+  }
+
+  const missingDetailFields = new Set();
+  for (const heat of balanceHeatRows) {
+    for (const [label, value] of [
+      ['Serial No', balanceHeatValue(heat, 'serialNo', 'Serial no')],
+      ['Bal Plate QTY', balanceHeatValue(heat, 'balPlateQty', 'Bal Plate QTY')],
+      ['Casting Grade', balanceHeatValue(heat, 'castingGrade', 'Casting Grade')],
+    ]) {
+      if (value === undefined || value === null || (typeof value === 'string' && !value.trim())) {
+        missingDetailFields.add(label);
+      }
+    }
+  }
+  const staleBalanceHeatNote = missingDetailFields.size
+    ? `<p class="note" role="status">Cached Balance Heat data is missing ${esc([...missingDetailFields].join(', '))}. Re-upload the Balance Heat sheet to refresh these values.</p>`
+    : '';
+  const detailRows = balanceHeatDisplayRows(balanceHeatRows).map(({ record: heat, showDimensions }) => '<tr>'
+    + `<td class="mono">${showDimensions ? num(heat.thicknessMm, 2) : ''}</td>`
+    + `<td class="mono">${showDimensions ? num(heat.widthMm, 2) : ''}</td>`
+    + `<td>${showDimensions ? esc(balanceHeatDisplayValue(balanceHeatValue(heat, 'castingGrade', 'Casting Grade'))) : ''}</td>`
+    + `<td>${esc(heat.campaignPlanNo || '—')}</td>`
+    + `<td class="mono">${esc(balanceHeatDisplayValue(balanceHeatValue(heat, 'serialNo', 'Serial no')))}</td>`
+    + `<td class="mono">${num(parseNumber(balanceHeatValue(heat, 'balPlateQty', 'Bal Plate QTY')), 2)}</td>`
+    + '</tr>').join('');
+  return staleBalanceHeatNote
+    + `<div class="data-table-wrap" tabindex="0" role="region" aria-label="Balance Heat details for SO ${esc(order.so)}, item ${esc(order.lineItem)}">`
+    + '<table class="data"><thead><tr>'
+    + '<th scope="col">Thickness</th><th scope="col">Width</th><th scope="col">Casting Grade</th>'
+    + '<th scope="col">Campaign Plan No</th><th scope="col">Serial No</th><th scope="col">Balance qty</th>'
+    + `</tr></thead><tbody>${detailRows}</tbody></table></div>`;
 }
 
 /* ═══════════════════ Genealogy view ═══════════════════
@@ -902,6 +1073,11 @@ function syncViewChrome() {
   });
   const stock = state.view === 'stock';
   const genealogy = state.view === 'genealogy';
+  const issuedHeat = state.view === 'issuedHeat';
+  $('orderFilters').hidden = false;
+  $('orderSearchField').hidden = issuedHeat;
+  $('issuedHeatSearchField').hidden = !issuedHeat;
+  $('orderFilterOptions').hidden = issuedHeat;
   const label = document.querySelector('label[for="q"]');
   if (label) label.textContent = stock
     ? 'Slab · plate · SO No. · grade · location · stock status'
@@ -909,12 +1085,15 @@ function syncViewChrome() {
   $('q').placeholder = stock
     ? 'e.g. F6341608E0, PM STOCK, NO PLAN'
     : 'e.g. 607831786, F6204202A0, PES ENGINEERS';
-  $('tableIntroTitle').textContent = stock ? 'Current slab and plate stock' : (genealogy ? 'Order genealogy' : 'Order-book coverage');
+  $('tableIntroTitle').textContent = stock ? 'Current slab and plate stock'
+    : (genealogy ? 'Order genealogy' : (issuedHeat ? 'Issued heat' : 'Order-book coverage'));
   $('tableIntroText').textContent = stock
     ? 'Rows with one exact order match open the same Heat → Slab → Plate → Dispatch lineage. Unallocated and ambiguous stock stays visible.'
     : (genealogy
       ? 'Every order against its billing balances and what actually happened to its metal. Expand a row for the heat-by-heat, slab-by-slab trail.'
-      : 'Click any row to open its production trace. Stage markers show presence, not completion.');
+      : (issuedHeat
+        ? 'Every parsed row from the uploaded EBTP order book, including its billing, delivery and stock balances.'
+        : 'Click any row to open its production trace. Stage markers show presence, not completion.'));
 }
 
 function renderStockTable() {
@@ -2432,6 +2611,11 @@ function wireControls() {
   $('searchBtn').addEventListener('click', refresh);
   $('q').addEventListener('input', renderCrossFilteredViews);
   $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') refresh(); });
+  $('issuedHeatSearch').addEventListener('input', () => {
+    state.issuedHeatSearch = $('issuedHeatSearch').value;
+    state.issuedHeatPage = 0;
+    if (state.view === 'issuedHeat') renderIssuedHeatTable();
+  });
   $('from').addEventListener('change', refresh);
   $('to').addEventListener('change', refresh);
   $('clearSlicersBtn').addEventListener('click', () => {
@@ -2441,7 +2625,7 @@ function wireControls() {
 
   document.querySelectorAll('#viewSwitch [data-view]').forEach((button) => {
     button.addEventListener('click', () => {
-      state.view = ['stock', 'genealogy'].includes(button.dataset.view) ? button.dataset.view : 'orders';
+      state.view = ['stock', 'genealogy', 'issuedHeat'].includes(button.dataset.view) ? button.dataset.view : 'orders';
       state.stageFilter = [];
       state.slicers = {};
       hideTip();
@@ -2462,6 +2646,9 @@ function wireControls() {
 
   $('resetBtn').addEventListener('click', () => {
     $('q').value = '';
+    $('issuedHeatSearch').value = '';
+    state.issuedHeatSearch = '';
+    state.issuedHeatPage = 0;
     $('from').value = '';
     $('to').value = '';
     state.stageFilter = [];

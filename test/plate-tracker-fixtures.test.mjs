@@ -94,6 +94,39 @@ test('the order book fixture offers real slicer choices', () => {
   assert.ok(tested >= 5, `only ${tested} slicer columns present in the ebtp fixture`);
 });
 
+test('the order book fixture parses all Issued Heat fields from EBTP headers', () => {
+  const { header, rows } = readRows('ebtp');
+  const { mapping } = resolveColumns(header, 'ebtp');
+  const source = SOURCES.ebtp;
+  const records = rows.flatMap((row) => {
+    const parserRow = {};
+    const parserMapping = {};
+    for (const [field, value] of Object.entries(mapping)) {
+      const column = source.fields[field].col;
+      if (column !== undefined) {
+        parserRow[field] = row[header[column]];
+        parserMapping[field] = field;
+      } else {
+        parserRow[value] = row[value];
+        parserMapping[field] = value;
+      }
+    }
+    return rowToRecords(parserRow, 'ebtp', parserMapping);
+  });
+  const fields = [
+    ['pieceWeight', 'Piece Wt.'],
+    ['billed', 'Billed'],
+    ['balanceToBill', 'Bal to bill'],
+    ['fgUrStock', 'FG UR Stock'],
+    ['plateStockBal', 'Plate Stock'],
+    ['noPlan', 'NO PLAN'],
+  ];
+  for (const [field, headerName] of fields) {
+    assert.ok(records.some((record) => typeof record[field] === 'number'),
+      `EBTP "${headerName}" did not populate an Issued Heat record`);
+  }
+});
+
 test('fixtures still cover the awkward row shapes the real extracts contain', () => {
   // These shapes are why the parser is shape-aware. If fixture generation stops
   // preserving them, the parser can quietly regress on exactly the rows that
