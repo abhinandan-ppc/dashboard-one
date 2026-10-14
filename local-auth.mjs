@@ -89,7 +89,6 @@ process.env.SHEETS_SA_PRIVATE_KEY = sa.private_key;
 // ── The same Edge handlers Vercel runs — imported, not re-implemented ──────
 const API_ROUTES = {
   '/api/ebtp-proxy': new URL('./api/ebtp-proxy.js', import.meta.url),
-  '/api/balance-heat-proxy': new URL('./api/balance-heat-proxy.js', import.meta.url),
   '/api/zstk-proxy': new URL('./api/zstk-proxy.js', import.meta.url),
   '/api/autobtr-proxy': new URL('./api/autobtr-proxy.js', import.meta.url),
 };
@@ -225,6 +224,7 @@ server.on('error', (err) => {
 server.listen(port, '127.0.0.1', () => {
   console.log('local-auth: service account →', sa.client_email);
   console.log(`local-auth: dashboards      → http://127.0.0.1:${port}/`);
-  console.log('local-auth: sheet proxies   → /api/ebtp-proxy  /api/balance-heat-proxy  /api/zstk-proxy  /api/autobtr-proxy');
+  console.log('local-auth: sheet proxies   → /api/ebtp-proxy  /api/zstk-proxy  /api/autobtr-proxy');
   console.log('local-auth: Ctrl+C to stop');
 });
+
