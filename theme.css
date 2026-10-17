@@ -912,18 +912,6 @@ body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page
 }
 /* Preserve established semantic edge cues and compound layouts. */
 body.page-vdo .card{border-left-color:var(--md-sys-color-primary)!important}
-body.page-sms-child .kpi{border-top-color:var(--tm)!important}
-body.page-sms-daily .kpi:nth-child(1){border-top-color:var(--md-sys-color-primary)!important}
-body.page-sms-daily .kpi:nth-child(2){border-top-color:var(--sg)!important}
-body.page-sms-daily .kpi:nth-child(3){border-top-color:var(--md-sys-color-secondary)!important}
-body.page-sms-daily .kpi:nth-child(4){border-top-color:var(--mo)!important}
-body.page-sms-daily .kpi:nth-child(5){border-top-color:var(--pu)!important}
-body.page-sms-monthly .kpi-tot{border-top-color:var(--tx)!important}
-body.page-sms-monthly .kpi-s1{border-top-color:var(--md-sys-color-secondary)!important}
-body.page-sms-monthly .kpi-s2{border-top-color:var(--mo)!important}
-body.page-sms-monthly .kpi-sl{border-top-color:var(--sg)!important}
-body.page-sms-monthly .kpi-bl{border-top-color:var(--pu)!important}
-body.page-sms-monthly .kpi-eb{border-top-color:var(--gd)!important}
 .page-plate .slot.ok{border-color:rgba(74,222,128,.35)!important}
 .page-plate .slot.err{border-color:rgba(248,113,113,.36)!important}
 .page-pm .upload-opt.has-data{border-color:rgba(16,185,129,.3)!important}

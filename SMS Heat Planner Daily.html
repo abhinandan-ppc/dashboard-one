@@ -178,12 +178,6 @@ button, select { font: inherit; cursor: pointer; transition: all 0.2s; border: n
     background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
     border-radius: var(--radius-l); padding: 18px 20px; border: var(--glass-border); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; box-shadow: var(--glass-shadow); transition: transform 0.2s, background 0.3s; border-top: 4px solid var(--tm);
 }
-.kpi:nth-child(1) { border-top-color: var(--md-sys-color-primary); }
-.kpi:nth-child(2) { border-top-color: var(--sg); }
-.kpi:nth-child(3) { border-top-color: var(--md-sys-color-secondary); }
-.kpi:nth-child(4) { border-top-color: var(--mo); }
-.kpi:nth-child(5) { border-top-color: var(--pu); }
-
 /* The shared card-surface contract puts margin-bottom on .kpi for pages
    that stack with margins. This page stacks with gap, so clear it — otherwise
    every KPI card gets 16px of phantom space under it on top of the row gap. */
@@ -191,7 +185,8 @@ button, select { font: inherit; cursor: pointer; transition: all 0.2s; border: n
 .kpi:hover { transform: translateY(-3px); background: var(--glass-bg-hover); box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
 .kpi .k { font-size: 11px; font-weight: 800; color: var(--tm); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; transition: color 0.3s; }
 .kpi .v { font-size: 22px; font-weight: 900; color: var(--tx); letter-spacing: -0.5px; transition: color 0.3s; margin: 4px 0; font-family: inherit;}
-.kpi .v.ok-c { color: var(--sg); } .kpi .v.bad-c { color: var(--rd); }
+.kpi .v.bad-c { color: var(--rd); }            /* red — warnings only */
+.kpi .v.profit { color: var(--green); }        /* green — profit only */
 .kpi .s { font-size: 10px; color: var(--tm); margin-top: 4px; font-weight: 700; line-height: 1.2; transition: color 0.3s; }
 
 /* ---- LAYOUT & TABLES ---- */
@@ -1037,8 +1032,8 @@ function renderOutputs(R){
   }
 
   var kh='';
-  kh+=`<div class="kpi"><div class="k">EBITDA Achieved</div><div class="v hot">${money(achieved)}</div><div class="s">vs Target: ${money(t.potential)}</div></div>`;
-  kh+=`<div class="kpi"><div class="k">Heats Allocated</div><div class="v ${t.dropped>0?'bad-c':'ok-c'}">${t.alloc}${t.bonus>0?`<span style="font-size:0.6em;color:var(--success)"> +${t.bonus}</span>`:''} <span class="dim">/ ${t.planHeats}</span></div><div class="s">${t.dropped>0?t.dropped+' unallocated':'Plan fully met'}</div></div>`;
+  kh+=`<div class="kpi"><div class="k">EBITDA Achieved</div><div class="v profit">${money(achieved)}</div><div class="s">vs Target: ${money(t.potential)}</div></div>`;
+  kh+=`<div class="kpi"><div class="k">Heats Allocated</div><div class="v ${t.dropped>0?'bad-c':''}">${t.alloc}${t.bonus>0?`<span style="font-size:0.6em;color:var(--success)"> +${t.bonus}</span>`:''} <span class="dim">/ ${t.planHeats}</span></div><div class="s">${t.dropped>0?t.dropped+' unallocated':'Plan fully met'}</div></div>`;
   kh+=`<div class="kpi"><div class="k">LIQUID STEEL</div><div class="v mv">${n0(t.tons+t.bonusTons)} t</div><div class="s">semis to casters</div></div>`;
   kh+=`<div class="kpi"><div class="k">HOT METAL USED</div><div class="v mv">${hmPct}%</div><div class="s">${n0(t.hmUsed)} used / ${n0(t.hmSupply)} total</div></div>`;
   kh+=`<div class="kpi"><div class="k">VD HEATS</div><div class="v mv ${t.vdAlloc<t.vdReq?'bad-c':''}">${t.vdAlloc} <span class="dim">/ ${t.vdReq}</span></div><div class="s">through VD / RH degassing</div></div>`;
