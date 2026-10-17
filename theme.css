@@ -1320,3 +1320,828 @@ tr.has-glow-fx .glow-sheen,
     opacity: 0;
   }
 }
+
+/* ══════════════════════════════════════════════════════════
+   SAP CLASSIC + FROSTED GLASS THEME (data-theme-style="classic")
+   Faithful fusion of SAP GUI Signature/CorBu enterprise aesthetic
+   with luminous frosted glassmorphism depth.
+   Supports continuous light and dark slider modes (--theme-d 0..100)
+   with crisp enterprise contrast and 100% boxy architecture.
+   Strictly non-destructive: zero shifts in element layout or position.
+   ══════════════════════════════════════════════════════════ */
+
+html[data-theme-style="classic"],
+[data-theme-style="classic"] {
+  /* Surfaces & Canvas: smoothly blend from SAP CorBu ice-blue (#d9e5f2) to deep enterprise slate-navy (#101724) */
+  --bg: color-mix(in srgb, #d9e5f2, #101724 var(--td));
+  --bg-color: var(--bg);
+  --s0: color-mix(in srgb, rgba(255, 255, 255, 0.94), rgba(28, 40, 58, 0.92) var(--td));
+  --s1: color-mix(in srgb, rgba(244, 249, 254, 0.88), rgba(22, 33, 48, 0.88) var(--td));
+  --s2: color-mix(in srgb, rgba(234, 242, 251, 0.82), rgba(18, 27, 40, 0.84) var(--td));
+  --s3: color-mix(in srgb, rgba(222, 234, 247, 0.78), rgba(15, 22, 34, 0.80) var(--td));
+  --s4: color-mix(in srgb, rgba(210, 225, 241, 0.74), rgba(12, 18, 28, 0.76) var(--td));
+  --bdr: color-mix(in srgb, rgba(140, 168, 196, 0.50), rgba(76, 106, 140, 0.40) var(--td));
+  --bdrHi: color-mix(in srgb, rgba(95, 136, 175, 0.75), rgba(110, 150, 196, 0.60) var(--td));
+  --bdr-10: color-mix(in srgb, rgba(140, 168, 196, 0.25), rgba(76, 106, 140, 0.20) var(--td));
+
+  /* Typography default (Dark end) — high-contrast crisp text */
+  --text: #f0f4f9;
+  --text-hi: #ffffff;
+  --dim: #9eb5cd;
+  --mute: #738da8;
+  --tx: var(--text);
+  --tm: var(--dim);
+  --br: var(--bdr);
+
+  /* Glass Tokens */
+  --glass: color-mix(in srgb, rgba(240, 246, 252, 0.82), rgba(24, 35, 52, 0.85) var(--td));
+  --glass-card: color-mix(in srgb, rgba(248, 251, 254, 0.88), rgba(20, 30, 45, 0.82) var(--td));
+  --glass-hi: color-mix(in srgb, rgba(224, 236, 248, 0.95), rgba(30, 44, 64, 0.94) var(--td));
+  --glass-border: 1px solid var(--bdr);
+  --glass-border-hi: 1px solid var(--bdrHi);
+  --glass-blur: blur(14px) saturate(135%);
+  --glass-shadow: 0 4px 20px rgb(0 0 0 / calc(0.08 + 0.22 * var(--tdsn)));
+  --glass-bg: var(--glass);
+  --glass-bg-solid: var(--glass-hi);
+  --glass-bg-hover: color-mix(in srgb, rgba(255, 255, 255, 0.98), rgba(36, 52, 75, 0.92) var(--td));
+
+  /* Elevation Shadows */
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / calc(0.06 + 0.18 * var(--tdsn)));
+  --shadow-sm: 0 2px 6px rgb(0 0 0 / calc(0.08 + 0.20 * var(--tdsn))), 0 1px 2px rgb(0 0 0 / calc(0.04 + 0.10 * var(--tdsn)));
+  --shadow-md: 0 4px 12px rgb(0 0 0 / calc(0.10 + 0.22 * var(--tdsn))), 0 1px 4px rgb(0 0 0 / calc(0.05 + 0.12 * var(--tdsn)));
+  --shadow-lg: 0 8px 24px rgb(0 0 0 / calc(0.12 + 0.26 * var(--tdsn))), 0 3px 8px rgb(0 0 0 / calc(0.06 + 0.14 * var(--tdsn)));
+  --shadow-xl: 0 16px 40px rgb(0 0 0 / calc(0.14 + 0.30 * var(--tdsn))), 0 6px 16px rgb(0 0 0 / calc(0.08 + 0.16 * var(--tdsn)));
+  --shadow-inset: inset 0 1px 0 rgb(255 255 255 / calc(0.90 - 0.82 * var(--tdsn)));
+
+  /* Dynamic Accent Colour Integration:
+     Classic theme responds dynamically to user's selected hue, saturation & lightness */
+  --primary: color-mix(in srgb,
+    hsl(var(--ah) var(--as) calc(var(--al) * 0.88)),
+    hsl(var(--ah) var(--as) calc(var(--al) * 1.08)) var(--td)
+  );
+  --primary-hover: color-mix(in srgb,
+    hsl(var(--ah) var(--as) calc(var(--al) * 0.76)),
+    hsl(var(--ah) var(--as) calc(var(--al) * 1.18)) var(--td)
+  );
+  --primary-active: color-mix(in srgb,
+    hsl(var(--ah) var(--as) calc(var(--al) * 0.64)),
+    hsl(var(--ah) var(--as) calc(var(--al) * 1.25)) var(--td)
+  );
+  --on-primary: #ffffff;
+  --primary-bg: hsl(var(--ah) var(--as) var(--al) / calc(0.10 + 0.08 * var(--tdsn)));
+  --border-accent: color-mix(in srgb,
+    hsl(var(--ah) calc(var(--as) * 0.75) 55%),
+    hsl(var(--ah) calc(var(--as) * 0.85) 65%) var(--td)
+  );
+  --border-accent-hi: color-mix(in srgb,
+    hsl(var(--ah) var(--as) 42%),
+    hsl(var(--ah) var(--as) 72%) var(--td)
+  );
+  --component-primary-hover: var(--primary-hover);
+
+  --secondary: color-mix(in srgb, #4a5c6d, #8ea7c2 var(--td));
+  --on-secondary: #ffffff;
+  --secondary-bg: color-mix(in srgb, rgba(74, 92, 109, 0.10), rgba(142, 167, 194, 0.14) var(--td));
+  --success: color-mix(in srgb, #107e3e, #22c55e var(--td));
+  --success-bg: color-mix(in srgb, rgba(16, 126, 62, 0.12), rgba(34, 197, 94, 0.15) var(--td));
+  --warning: color-mix(in srgb, #c27800, #f59e0b var(--td));
+  --warning-bg: color-mix(in srgb, rgba(194, 120, 0, 0.12), rgba(245, 158, 11, 0.15) var(--td));
+  --danger: color-mix(in srgb, #bb0000, #ef4444 var(--td));
+  --danger-bg: color-mix(in srgb, rgba(187, 0, 0, 0.12), rgba(239, 68, 68, 0.15) var(--td));
+
+  --amber: var(--warning);       --amber-bg: var(--warning-bg);
+  --sky: var(--primary);         --sky-bg: var(--primary-bg);
+  --green: var(--success);       --green-bg: var(--success-bg);
+  --rose: var(--danger);         --rose-bg: var(--danger-bg);
+  --violet: color-mix(in srgb, #5a5286, #9d91d4 var(--td));
+  --violet-bg: color-mix(in srgb, rgba(90, 82, 134, 0.10), rgba(157, 145, 212, 0.14) var(--td));
+  --orange: color-mix(in srgb, #d97706, #fb923c var(--td));
+  --orange-bg: color-mix(in srgb, rgba(217, 119, 6, 0.12), rgba(251, 146, 60, 0.15) var(--td));
+
+  --md-sys-color-primary: var(--primary);
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: color-mix(in srgb, hsl(var(--ah) calc(var(--as) * 0.5) 90%), hsl(var(--ah) 55% 26%) var(--td));
+  --md-sys-color-on-primary-container: color-mix(in srgb, hsl(var(--ah) var(--as) 18%), hsl(var(--ah) 70% 88%) var(--td));
+  --md-sys-color-secondary: var(--secondary);
+
+  /* Inputs */
+  --input-bg: color-mix(in srgb, rgba(255, 255, 255, 0.94), rgba(22, 34, 49, 0.92) var(--td));
+  --input-hover: color-mix(in srgb, rgba(255, 255, 255, 1.0), rgba(28, 42, 60, 0.96) var(--td));
+  --header-border-color: color-mix(in srgb, rgba(125, 156, 188, 0.65), rgba(70, 96, 126, 0.55) var(--td));
+
+  /* Component Surfaces */
+  --component-surface: color-mix(in srgb,
+    linear-gradient(145deg, rgba(255, 255, 255, 0.90), rgba(234, 243, 252, 0.82)),
+    linear-gradient(145deg, rgba(26, 38, 54, 0.92), rgba(18, 27, 40, 0.84)) var(--td)
+  );
+  --component-shadow: 0 2px 10px rgb(0 0 0 / calc(0.08 + 0.18 * var(--tdsn))), inset 0 1px 0 rgb(255 255 255 / calc(0.95 - 0.90 * var(--tdsn)));
+
+  /* Complete Boxy Corner Radius Scale (0px everywhere in Classic mode) */
+  --component-radius: 0px !important;
+  --radius-xs: 0px !important;
+  --radius-sm: 0px !important;
+  --radius-md: 0px !important;
+  --radius-lg: 0px !important;
+  --radius-xl: 0px !important;
+  --radius-pill: 0px !important;
+  --radius-s: 0px !important;
+  --radius-m: 0px !important;
+  --radius-l: 0px !important;
+  --header-main-radius: 0px !important;
+  --header-radius: 0px !important;
+  --glow-radius: 0px !important;
+}
+
+/* Light side text snap for Classic */
+html[data-theme-style="classic"][data-theme="light"],
+[data-theme-style="classic"][data-theme="light"] {
+  --text: #132a42;
+  --text-hi: #0b1a2a;
+  --dim: #3f5a77;
+  --mute: #627d98;
+}
+
+/* Dark side text snap for Classic */
+html[data-theme-style="classic"][data-theme="dark"],
+[data-theme-style="classic"][data-theme="dark"] {
+  --text: #f0f4f9;
+  --text-hi: #ffffff;
+  --dim: #9eb5cd;
+  --mute: #738da8;
+}
+
+/* ══════════════════════════════════════════════════════════
+   BOXY ARCHITECTURE — ZERO ROUNDED CORNERS ACROSS ALL ELEMENTS
+   ══════════════════════════════════════════════════════════ */
+html[data-theme-style="classic"] :is(
+  .app-header,
+  .top-bar,
+  header,
+  .app-header-shell,
+  .page-order .glass-card.header-enter,
+  .page-rake .glass-card.header-enter,
+  .card,
+  .glass-card,
+  .panel,
+  .hero,
+  .slot,
+  .kpi,
+  .stat,
+  .kcard,
+  .kpi-card,
+  .stat-card,
+  .kpi-pill,
+  .kpi-group,
+  .kpi-dashboard > div,
+  .tot-eb-card,
+  .user-card,
+  .embed,
+  .banner,
+  .sms-blk,
+  .analysis-detail,
+  .pormap-panel,
+  .chartcard,
+  .coll-panel,
+  .pm-card,
+  .best-card,
+  .compat-card,
+  .target-card,
+  .upload-card,
+  .upload-opt,
+  .login-box,
+  .theme-panel,
+  .user-panel,
+  .sheet-sync-panel,
+  .sheet-sync-chip,
+  .sheet-sync-club,
+  .theme-preset-grid,
+  .theme-preset-btn,
+  .modal,
+  .data-table-wrap,
+  .table-wrap,
+  .table-responsive,
+  .tw,
+  .app-side-panel,
+  .app-side-drawer,
+  .flow-wrapper,
+  .flow-toolbar,
+  .flow-controls,
+  .detail-drawer,
+  .m3-popover,
+  .dropdown-panel,
+  .dd-menu,
+  .filterpop,
+  .alert,
+  .alert-box,
+  .fc-node,
+  .fn,
+  .tab-bar,
+  .tabs-hdr,
+  .ctrl-tabs,
+  .view-tabs,
+  .tabs,
+  .panel-head,
+  .ph,
+  .coll-h,
+  .action-btn,
+  .btn,
+  .m3-button,
+  .button,
+  button,
+  input,
+  select,
+  textarea,
+  .m3-field,
+  .page-chip,
+  .switch-chip,
+  .hchip,
+  .ochip,
+  .theme-opt,
+  .has-glow-fx,
+  .glow-edge,
+  .glow-sheen,
+  .glow-ripple,
+  table,
+  thead,
+  tbody,
+  tr,
+  th,
+  td
+) {
+  border-radius: 0 !important;
+}
+
+html[data-theme-style="classic"] thead tr th:first-child,
+html[data-theme-style="classic"] thead tr th:last-child,
+html[data-theme-style="classic"] table tbody tr td:first-child,
+html[data-theme-style="classic"] table tbody tr td:last-child {
+  border-radius: 0 !important;
+}
+
+html[data-theme-style="classic"] #hubFrameHeaderSlot button,
+html[data-theme-style="classic"] #hubFrameHeaderSlot button img {
+  border-radius: 0 !important;
+}
+
+/* 1. Global Canvas & Body Atmosphere in Classic Mode (Light & Dark) */
+html[data-theme-style="classic"][data-theme="light"] body {
+  background: linear-gradient(180deg, #d1e0f0 0%, #e3edf7 35%, #edf3f9 100%) fixed!important;
+  color: #132a42!important;
+}
+html[data-theme-style="classic"][data-theme="dark"] body {
+  background: linear-gradient(180deg, #0e1520 0%, #121a28 35%, #151e2e 100%) fixed!important;
+  color: #f0f4f9!important;
+}
+
+/* 2. Elevated Header Styles — Authentic Boxy SAP GUI Titlebar with Dynamic Accent */
+html[data-theme-style="classic"][data-theme="light"] :is(
+  .app-header,
+  .top-bar,
+  header.app-header,
+  .page-order .glass-card.header-enter,
+  .page-rake .glass-card.header-enter
+) {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, rgba(162, 190, 220, 0.94) 84%, hsl(var(--ah) var(--as) 70%)) 0%,
+    color-mix(in srgb, rgba(198, 218, 238, 0.88) 84%, hsl(var(--ah) var(--as) 85%)) 48%,
+    color-mix(in srgb, rgba(179, 204, 230, 0.92) 84%, hsl(var(--ah) var(--as) 75%)) 100%
+  )!important;
+  backdrop-filter: var(--glass-blur)!important;
+  -webkit-backdrop-filter: var(--glass-blur)!important;
+  border: 1px solid color-mix(in srgb, rgba(125, 156, 188, 0.75) 75%, hsl(var(--ah) var(--as) 50%))!important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95),
+              inset 0 -1px 0 rgba(115, 148, 182, 0.45),
+              0 3px 12px rgba(20, 50, 80, 0.12)!important;
+}
+
+html[data-theme-style="classic"][data-theme="dark"] :is(
+  .app-header,
+  .top-bar,
+  header.app-header,
+  .page-order .glass-card.header-enter,
+  .page-rake .glass-card.header-enter
+) {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, rgba(27, 46, 68, 0.95) 82%, hsl(var(--ah) var(--as) 24%)) 0%,
+    color-mix(in srgb, rgba(37, 61, 90, 0.90) 82%, hsl(var(--ah) var(--as) 32%)) 48%,
+    color-mix(in srgb, rgba(31, 52, 77, 0.94) 82%, hsl(var(--ah) var(--as) 26%)) 100%
+  )!important;
+  backdrop-filter: var(--glass-blur)!important;
+  -webkit-backdrop-filter: var(--glass-blur)!important;
+  border: 1px solid color-mix(in srgb, rgba(74, 108, 146, 0.65) 75%, hsl(var(--ah) var(--as) 45%))!important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15),
+              inset 0 -1px 0 rgba(10, 20, 32, 0.60),
+              0 4px 18px rgba(0, 0, 0, 0.40)!important;
+}
+
+/* Header Titles & Eyebrows (Light) */
+html[data-theme-style="classic"][data-theme="light"] .app-header h1,
+html[data-theme-style="classic"][data-theme="light"] .app-header h2,
+html[data-theme-style="classic"][data-theme="light"] .app-header .app-header-title,
+html[data-theme-style="classic"][data-theme="light"] .top-bar h1,
+html[data-theme-style="classic"][data-theme="light"] header h1 {
+  color: #0e2742!important;
+  font-weight: 800!important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  letter-spacing: -0.01em;
+}
+html[data-theme-style="classic"][data-theme="light"] .app-header .eyebrow,
+html[data-theme-style="classic"][data-theme="light"] .app-header .jspl-brand-l2,
+html[data-theme-style="classic"][data-theme="light"] .app-header .brand-site,
+html[data-theme-style="classic"][data-theme="light"] .app-header .title-block .eyebrow {
+  color: #385878!important;
+  letter-spacing: 0.08em!important;
+  font-weight: 700!important;
+}
+html[data-theme-style="classic"][data-theme="light"] .app-header .jspl-brand-l1,
+html[data-theme-style="classic"][data-theme="light"] .app-header .brand-name {
+  color: #091e33!important;
+  font-weight: 900!important;
+}
+
+/* Header Titles & Eyebrows (Dark) */
+html[data-theme-style="classic"][data-theme="dark"] .app-header h1,
+html[data-theme-style="classic"][data-theme="dark"] .app-header h2,
+html[data-theme-style="classic"][data-theme="dark"] .app-header .app-header-title,
+html[data-theme-style="classic"][data-theme="dark"] .top-bar h1,
+html[data-theme-style="classic"][data-theme="dark"] header h1 {
+  color: #ffffff!important;
+  font-weight: 800!important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  letter-spacing: -0.01em;
+}
+html[data-theme-style="classic"][data-theme="dark"] .app-header .eyebrow,
+html[data-theme-style="classic"][data-theme="dark"] .app-header .jspl-brand-l2,
+html[data-theme-style="classic"][data-theme="dark"] .app-header .brand-site,
+html[data-theme-style="classic"][data-theme="dark"] .app-header .title-block .eyebrow {
+  color: #9eb5cd!important;
+  letter-spacing: 0.08em!important;
+  font-weight: 700!important;
+}
+html[data-theme-style="classic"][data-theme="dark"] .app-header .jspl-brand-l1,
+html[data-theme-style="classic"][data-theme="dark"] .app-header .brand-name {
+  color: #ffffff!important;
+  font-weight: 900!important;
+}
+
+/* Header Buttons: Classic Boxy Segmented Toolbar Buttons */
+html[data-theme-style="classic"][data-theme="light"] .app-header :is(.top-l,.hdr-r,.h-actions,.top-right)>button,
+html[data-theme-style="classic"][data-theme="light"] .app-header .view-tabs button,
+html[data-theme-style="classic"][data-theme="light"] .app-header .h-actions .dropdown-wrapper>button,
+html[data-theme-style="classic"][data-theme="light"] .app-header .theme-menu>button,
+html[data-theme-style="classic"][data-theme="light"] .app-header :is(.app-header-brand-row,.app-header-filter-actions,.app-header-actions)>button {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(226, 238, 250, 0.88) 100%)!important;
+  color: #122a42!important;
+  border: 1px solid rgba(125, 156, 188, 0.70)!important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95),
+              0 1px 2px rgba(25, 55, 88, 0.08)!important;
+}
+
+html[data-theme-style="classic"][data-theme="light"] .app-header :is(.top-l,.hdr-r,.h-actions,.top-right)>button:hover,
+html[data-theme-style="classic"][data-theme="light"] .app-header .theme-menu>button:hover,
+html[data-theme-style="classic"][data-theme="light"] .app-header .view-tabs button:hover,
+html[data-theme-style="classic"][data-theme="light"] .app-header .h-actions .dropdown-wrapper>button:hover,
+html[data-theme-style="classic"][data-theme="light"] .app-header :is(.app-header-brand-row,.app-header-filter-actions,.app-header-actions)>button:hover {
+  background: linear-gradient(180deg, #ffffff 0%, rgba(242, 248, 255, 0.98) 100%)!important;
+  border-color: var(--primary)!important;
+  color: var(--primary)!important;
+  box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.22),
+              inset 0 1px 0 rgba(255, 255, 255, 1.0)!important;
+}
+
+html[data-theme-style="classic"][data-theme="dark"] .app-header :is(.top-l,.hdr-r,.h-actions,.top-right)>button,
+html[data-theme-style="classic"][data-theme="dark"] .app-header .view-tabs button,
+html[data-theme-style="classic"][data-theme="dark"] .app-header .h-actions .dropdown-wrapper>button,
+html[data-theme-style="classic"][data-theme="dark"] .app-header .theme-menu>button,
+html[data-theme-style="classic"][data-theme="dark"] .app-header :is(.app-header-brand-row,.app-header-filter-actions,.app-header-actions)>button {
+  background: linear-gradient(180deg, rgba(38, 56, 78, 0.92) 0%, rgba(28, 42, 60, 0.88) 100%)!important;
+  color: #f0f4f9!important;
+  border: 1px solid rgba(75, 108, 145, 0.60)!important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12),
+              0 1px 3px rgba(0, 0, 0, 0.30)!important;
+}
+
+html[data-theme-style="classic"][data-theme="dark"] .app-header :is(.top-l,.hdr-r,.h-actions,.top-right)>button:hover,
+html[data-theme-style="classic"][data-theme="dark"] .app-header .theme-menu>button:hover,
+html[data-theme-style="classic"][data-theme="dark"] .app-header .view-tabs button:hover,
+html[data-theme-style="classic"][data-theme="dark"] .app-header .h-actions .dropdown-wrapper>button:hover,
+html[data-theme-style="classic"][data-theme="dark"] .app-header :is(.app-header-brand-row,.app-header-filter-actions,.app-header-actions)>button:hover {
+  background: linear-gradient(180deg, rgba(48, 70, 96, 0.96) 0%, rgba(36, 54, 76, 0.94) 100%)!important;
+  border-color: var(--primary)!important;
+  color: #ffffff!important;
+  box-shadow: 0 2px 10px rgba(var(--primary-rgb), 0.35),
+              inset 0 1px 0 rgba(255, 255, 255, 0.20)!important;
+}
+
+/* Primary / Active Header Actions with Dynamic Accent */
+html[data-theme-style="classic"] .app-header :is(.add-btn:not(.home-btn),.upload-btn,.btn-primary),
+html[data-theme-style="classic"] .app-header .view-tabs button.on {
+  background: linear-gradient(180deg,
+    hsl(var(--ah) var(--as) calc(var(--al) * 0.98)) 0%,
+    hsl(var(--ah) var(--as) calc(var(--al) * 0.82)) 100%
+  )!important;
+  color: #ffffff!important;
+  border: 1px solid hsl(var(--ah) var(--as) calc(var(--al) * 0.65))!important;
+  box-shadow: 0 2px 6px rgba(var(--primary-rgb), 0.30),
+              inset 0 1px 0 rgba(255, 255, 255, 0.40)!important;
+}
+
+/* 3. Improved KPI Cards — Boxy SAP Enterprise Group Box with Accent Highlights */
+html[data-theme-style="classic"][data-theme="light"] :is(
+  .kpi,
+  .stat,
+  .kcard,
+  .kpi-card,
+  .stat-card,
+  .kpi-pill,
+  .kpi-group,
+  .kpi-dashboard > div
+) {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(236, 245, 253, 0.86) 100%)!important;
+  border: 1px solid rgba(135, 168, 198, 0.65)!important;
+  border-top: 3px solid var(--primary)!important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95),
+              0 2px 8px rgba(25, 55, 88, 0.08)!important;
+  backdrop-filter: var(--glass-blur)!important;
+  -webkit-backdrop-filter: var(--glass-blur)!important;
+}
+
+html[data-theme-style="classic"][data-theme="dark"] :is(
+  .kpi,
+  .stat,
+  .kcard,
+  .kpi-card,
+  .stat-card,
+  .kpi-pill,
+  .kpi-group,
+  .kpi-dashboard > div
+) {
+  background: linear-gradient(180deg, rgba(28, 41, 58, 0.92) 0%, rgba(20, 30, 44, 0.86) 100%)!important;
+  border: 1px solid rgba(68, 98, 132, 0.55)!important;
+  border-top: 3px solid var(--primary)!important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12),
+              0 3px 12px rgba(0, 0, 0, 0.35)!important;
+  backdrop-filter: var(--glass-blur)!important;
+  -webkit-backdrop-filter: var(--glass-blur)!important;
+}
+
+html[data-theme-style="classic"] :is(.kpi, .stat, .kcard, .kpi-card, .stat-card):hover {
+  border-color: var(--primary)!important;
+  border-top-color: var(--primary)!important;
+  box-shadow: 0 6px 18px rgba(var(--primary-rgb), 0.22)!important;
+}
+
+html[data-theme-style="classic"][data-theme="light"] :is(.kpi, .stat, .kcard, .kpi-card, .pm-card) :is(.num, .val, .value, .stat-val, .kpi-num, h3, h4) {
+  color: #0c233c!important;
+  font-family: 'JetBrains Mono', 'Segoe UI', monospace!important;
+  font-weight: 800!important;
+  letter-spacing: -0.02em;
+}
+
+html[data-theme-style="classic"][data-theme="dark"] :is(.kpi, .stat, .kcard, .kpi-card, .pm-card) :is(.num, .val, .value, .stat-val, .kpi-num, h3, h4) {
+  color: #ffffff!important;
+  font-family: 'JetBrains Mono', 'Segoe UI', monospace!important;
+  font-weight: 800!important;
+  letter-spacing: -0.02em;
+}
+
+html[data-theme-style="classic"][data-theme="light"] :is(.kpi, .stat, .kcard, .kpi-card, .pm-card) :is(.lbl, .label, .sub, .kpi-lbl, .eyebrow) {
+  color: #3e5d7c!important;
+  font-size: 11px!important;
+  font-weight: 700!important;
+  text-transform: uppercase!important;
+  letter-spacing: 0.06em;
+}
+
+html[data-theme-style="classic"][data-theme="dark"] :is(.kpi, .stat, .kcard, .kpi-card, .pm-card) :is(.lbl, .label, .sub, .kpi-lbl, .eyebrow) {
+  color: #9eb5cd!important;
+  font-size: 11px!important;
+  font-weight: 700!important;
+  text-transform: uppercase!important;
+  letter-spacing: 0.06em;
+}
+
+/* General Panels, Cards & Containers in Classic (All Boxy) */
+html[data-theme-style="classic"][data-theme="light"] body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo,.page-trace) :is(
+  .panel:not(.app-header),
+  .glass-card:not(.app-header),
+  .card:not(.app-header),
+  .hero,
+  .slot,
+  .user-card,
+  .embed,
+  .banner,
+  .sms-blk,
+  .analysis-detail,
+  .pormap-panel,
+  .chartcard,
+  .coll-panel,
+  .pm-card,
+  .best-card,
+  .compat-card,
+  .target-card,
+  .upload-card,
+  .login-box,
+  .theme-panel,
+  .modal,
+  .data-table-wrap,
+  .table-wrap,
+  .app-side-panel
+) {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.92) 0%, rgba(234, 244, 253, 0.84) 100%)!important;
+  border: 1px solid rgba(140, 168, 196, 0.55)!important;
+  box-shadow: 0 3px 12px rgba(25, 55, 88, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95)!important;
+  backdrop-filter: var(--glass-blur)!important;
+  -webkit-backdrop-filter: var(--glass-blur)!important;
+}
+
+html[data-theme-style="classic"][data-theme="dark"] body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo,.page-trace) :is(
+  .panel:not(.app-header),
+  .glass-card:not(.app-header),
+  .card:not(.app-header),
+  .hero,
+  .slot,
+  .user-card,
+  .embed,
+  .banner,
+  .sms-blk,
+  .analysis-detail,
+  .pormap-panel,
+  .chartcard,
+  .coll-panel,
+  .pm-card,
+  .best-card,
+  .compat-card,
+  .target-card,
+  .upload-card,
+  .login-box,
+  .theme-panel,
+  .modal,
+  .data-table-wrap,
+  .table-wrap,
+  .app-side-panel
+) {
+  background: linear-gradient(145deg, rgba(26, 38, 54, 0.92) 0%, rgba(18, 27, 40, 0.86) 100%)!important;
+  border: 1px solid rgba(68, 98, 132, 0.50)!important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12)!important;
+  backdrop-filter: var(--glass-blur)!important;
+  -webkit-backdrop-filter: var(--glass-blur)!important;
+}
+
+/* 4. Improved ALV Tables & Data Grids (Faithful to SAP ALV Grid) */
+html[data-theme-style="classic"][data-theme="light"] table thead th,
+html[data-theme-style="classic"][data-theme="light"] .data-table-wrap th,
+html[data-theme-style="classic"][data-theme="light"] .table-wrap th,
+html[data-theme-style="classic"][data-theme="light"] th {
+  background: linear-gradient(180deg, #e4eff8 0%, #cce0f2 100%)!important;
+  color: #0f2c4a!important;
+  border-right: 1px solid #94b2cd!important;
+  border-bottom: 2px solid #7597b8!important;
+  border-top: 1px solid #ffffff!important;
+  border-left: 1px solid #ffffff!important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95)!important;
+  font-weight: 700!important;
+  font-size: 12px!important;
+  text-transform: none!important;
+  padding: 8px 12px!important;
+}
+
+html[data-theme-style="classic"][data-theme="dark"] table thead th,
+html[data-theme-style="classic"][data-theme="dark"] .data-table-wrap th,
+html[data-theme-style="classic"][data-theme="dark"] .table-wrap th,
+html[data-theme-style="classic"][data-theme="dark"] th {
+  background: linear-gradient(180deg, #1e334a 0%, #253e5a 100%)!important;
+  color: #ffffff!important;
+  border-right: 1px solid #3d5877!important;
+  border-bottom: 2px solid var(--primary)!important;
+  border-top: 1px solid #364f6b!important;
+  border-left: 1px solid #364f6b!important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15)!important;
+  font-weight: 700!important;
+  font-size: 12px!important;
+  text-transform: none!important;
+  padding: 8px 12px!important;
+}
+
+/* Table zebra striping & cell gridlines (Light) */
+html[data-theme-style="classic"][data-theme="light"] table tbody tr:nth-child(even) td,
+html[data-theme-style="classic"][data-theme="light"] .data-table-wrap tbody tr:nth-child(even) td {
+  background: rgba(244, 249, 254, 0.85);
+}
+html[data-theme-style="classic"][data-theme="light"] table tbody tr:nth-child(odd) td,
+html[data-theme-style="classic"][data-theme="light"] .data-table-wrap tbody tr:nth-child(odd) td {
+  background: rgba(255, 255, 255, 0.94);
+}
+html[data-theme-style="classic"][data-theme="light"] table td,
+html[data-theme-style="classic"][data-theme="light"] .data-table-wrap td {
+  border-right: 1px solid rgba(170, 195, 220, 0.55)!important;
+  border-bottom: 1px solid rgba(170, 195, 220, 0.55)!important;
+  color: #122a42!important;
+  font-size: 12.5px!important;
+  padding: 6px 10px!important;
+}
+
+/* Table zebra striping & cell gridlines (Dark) */
+html[data-theme-style="classic"][data-theme="dark"] table tbody tr:nth-child(even) td,
+html[data-theme-style="classic"][data-theme="dark"] .data-table-wrap tbody tr:nth-child(even) td {
+  background: rgba(20, 31, 45, 0.85);
+}
+html[data-theme-style="classic"][data-theme="dark"] table tbody tr:nth-child(odd) td,
+html[data-theme-style="classic"][data-theme="dark"] .data-table-wrap tbody tr:nth-child(odd) td {
+  background: rgba(24, 37, 54, 0.92);
+}
+html[data-theme-style="classic"][data-theme="dark"] table td,
+html[data-theme-style="classic"][data-theme="dark"] .data-table-wrap td {
+  border-right: 1px solid rgba(60, 88, 120, 0.45)!important;
+  border-bottom: 1px solid rgba(60, 88, 120, 0.45)!important;
+  color: #f0f4f9!important;
+  font-size: 12.5px!important;
+  padding: 6px 10px!important;
+}
+
+/* SAP Key / Lead Column */
+html[data-theme-style="classic"][data-theme="light"] table tbody tr td:first-child,
+html[data-theme-style="classic"][data-theme="light"] .data-table-wrap tbody tr td:first-child {
+  background: rgba(204, 226, 246, 0.92)!important;
+  color: #0b2540!important;
+  font-weight: 700!important;
+  border-right: 1px solid #8faec9!important;
+}
+html[data-theme-style="classic"][data-theme="dark"] table tbody tr td:first-child,
+html[data-theme-style="classic"][data-theme="dark"] .data-table-wrap tbody tr td:first-child {
+  background: rgba(34, 56, 80, 0.94)!important;
+  color: #ffffff!important;
+  font-weight: 700!important;
+  border-right: 1px solid #486a92!important;
+}
+
+/* Row Hover State with Accent Soft Wash */
+html[data-theme-style="classic"][data-theme="light"] table tbody tr:hover td,
+html[data-theme-style="classic"][data-theme="light"] .data-table-wrap tbody tr:hover td {
+  background: color-mix(in srgb, rgba(208, 230, 252, 0.88) 82%, var(--primary-bg))!important;
+}
+html[data-theme-style="classic"][data-theme="dark"] table tbody tr:hover td,
+html[data-theme-style="classic"][data-theme="dark"] .data-table-wrap tbody tr:hover td {
+  background: color-mix(in srgb, rgba(38, 62, 92, 0.90) 80%, var(--primary-bg))!important;
+}
+
+/* Iconic SAP Warm Amber/Gold Selected Row */
+html[data-theme-style="classic"][data-theme="light"] table tbody tr:is(.selected, .active, [aria-selected="true"], .row-selected) td,
+html[data-theme-style="classic"][data-theme="light"] .data-table-wrap tbody tr:is(.selected, .active, [aria-selected="true"], .row-selected) td {
+  background: linear-gradient(180deg, #f5cb74 0%, #ebd08f 100%)!important;
+  color: #151515!important;
+  border-top: 1px solid #ffd880!important;
+  border-bottom: 1px solid #d4a342!important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65)!important;
+  font-weight: 700!important;
+}
+html[data-theme-style="classic"][data-theme="dark"] table tbody tr:is(.selected, .active, [aria-selected="true"], .row-selected) td,
+html[data-theme-style="classic"][data-theme="dark"] .data-table-wrap tbody tr:is(.selected, .active, [aria-selected="true"], .row-selected) td {
+  background: linear-gradient(180deg, #9c741e 0%, #b88e2c 100%)!important;
+  color: #ffffff!important;
+  border-top: 1px solid #cfa33e!important;
+  border-bottom: 1px solid #7d5b12!important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25)!important;
+  font-weight: 700!important;
+}
+
+/* 5. Inputs & Form Controls — Boxy with Accent Focus Ring */
+html[data-theme-style="classic"][data-theme="light"] input,
+html[data-theme-style="classic"][data-theme="light"] select,
+html[data-theme-style="classic"][data-theme="light"] textarea,
+html[data-theme-style="classic"][data-theme="light"] .m3-field {
+  background: rgba(255, 255, 255, 0.94)!important;
+  border: 1px solid #8ca8c4!important;
+  color: #122a42!important;
+  box-shadow: inset 0 1px 2px rgba(25, 55, 88, 0.06)!important;
+}
+
+html[data-theme-style="classic"][data-theme="dark"] input,
+html[data-theme-style="classic"][data-theme="dark"] select,
+html[data-theme-style="classic"][data-theme="dark"] textarea,
+html[data-theme-style="classic"][data-theme="dark"] .m3-field {
+  background: rgba(22, 35, 50, 0.94)!important;
+  border: 1px solid #4a6c92!important;
+  color: #f0f4f9!important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35)!important;
+}
+
+/* Iconic SAP Yellow Input Active / Focus */
+html[data-theme-style="classic"][data-theme="light"] input:focus,
+html[data-theme-style="classic"][data-theme="light"] select:focus,
+html[data-theme-style="classic"][data-theme="light"] textarea:focus,
+html[data-theme-style="classic"][data-theme="light"] .m3-field:focus {
+  background: #fffde4!important;
+  border-color: var(--primary)!important;
+  color: #122a42!important;
+  box-shadow: inset 0 1px 2px rgba(25, 55, 88, 0.06), 0 0 0 2px rgba(var(--primary-rgb), 0.35)!important;
+  outline: none!important;
+}
+
+html[data-theme-style="classic"][data-theme="dark"] input:focus,
+html[data-theme-style="classic"][data-theme="dark"] select:focus,
+html[data-theme-style="classic"][data-theme="dark"] textarea:focus,
+html[data-theme-style="classic"][data-theme="dark"] .m3-field:focus {
+  background: #2b2a14!important;
+  border-color: var(--primary)!important;
+  color: #fffde4!important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 0 2px rgba(var(--primary-rgb), 0.45)!important;
+  outline: none!important;
+}
+
+/* 6. Button Styling in Body (Boxy Rectangles) */
+html[data-theme-style="classic"][data-theme="light"] body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo,.page-trace) button:not(.app-header button) {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(228, 239, 250, 0.88) 100%);
+  color: #122a42;
+  border: 1px solid rgba(135, 166, 196, 0.70);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 1px 2px rgba(25, 55, 88, 0.06);
+}
+
+html[data-theme-style="classic"][data-theme="light"] body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo,.page-trace) button:not(.app-header button):hover:not(:disabled) {
+  background: linear-gradient(180deg, #ffffff 0%, rgba(240, 247, 255, 0.98) 100%);
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 3px 10px rgba(var(--primary-rgb), 0.20), inset 0 1px 0 rgba(255, 255, 255, 1.0);
+}
+
+html[data-theme-style="classic"][data-theme="dark"] body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo,.page-trace) button:not(.app-header button) {
+  background: linear-gradient(180deg, rgba(36, 54, 76, 0.92) 0%, rgba(26, 40, 58, 0.88) 100%);
+  color: #f0f4f9;
+  border: 1px solid rgba(75, 108, 145, 0.60);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme-style="classic"][data-theme="dark"] body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo,.page-trace) button:not(.app-header button):hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(46, 68, 94, 0.96) 0%, rgba(34, 52, 74, 0.92) 100%);
+  border-color: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 3px 12px rgba(var(--primary-rgb), 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.20);
+}
+
+html[data-theme-style="classic"] body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo,.page-trace) button:not(.app-header button):is(.primary,.btn-primary,.m3-button-primary,#runBtn),
+html[data-theme-style="classic"] body:is(.page-hub,.page-admin,.page-grade,.page-order,.page-pm,.page-plate,.page-rake,.page-sms-child,.page-vdo,.page-trace) button:not(.app-header button):is(.on,.active,.act,[aria-selected="true"],[aria-pressed="true"]) {
+  background: linear-gradient(180deg,
+    hsl(var(--ah) var(--as) calc(var(--al) * 0.98)) 0%,
+    hsl(var(--ah) var(--as) calc(var(--al) * 0.82)) 100%
+  )!important;
+  color: #ffffff!important;
+  border: 1px solid hsl(var(--ah) var(--as) calc(var(--al) * 0.65))!important;
+  box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.40)!important;
+}
+
+/* 7. PM Yard Specifics (HUD Panels & Toolbar — Boxy) */
+html[data-theme-style="classic"][data-theme="light"] .page-pm aside,
+html[data-theme-style="classic"][data-theme="light"] .page-pm .inspector,
+html[data-theme-style="classic"][data-theme="light"] .page-pm .panel {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.94) 0%, rgba(232, 243, 253, 0.86) 100%)!important;
+  border: 1px solid rgba(135, 166, 196, 0.60)!important;
+  box-shadow: 0 4px 18px rgba(25, 55, 88, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.95)!important;
+}
+html[data-theme-style="classic"][data-theme="light"] .page-pm .panel-head,
+html[data-theme-style="classic"][data-theme="light"] .page-pm .ctrl-tabs {
+  background: linear-gradient(180deg, #d6e4f3 0%, #c2d6ea 100%)!important;
+  border-bottom: 1px solid #99b6d3!important;
+  color: #122a42!important;
+}
+
+html[data-theme-style="classic"][data-theme="dark"] .page-pm aside,
+html[data-theme-style="classic"][data-theme="dark"] .page-pm .inspector,
+html[data-theme-style="classic"][data-theme="dark"] .page-pm .panel {
+  background: linear-gradient(145deg, rgba(26, 38, 54, 0.94) 0%, rgba(18, 27, 40, 0.88) 100%)!important;
+  border: 1px solid rgba(68, 98, 132, 0.55)!important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.12)!important;
+}
+html[data-theme-style="classic"][data-theme="dark"] .page-pm .panel-head,
+html[data-theme-style="classic"][data-theme="dark"] .page-pm .ctrl-tabs {
+  background: linear-gradient(180deg, #223750 0%, #192a3e 100%)!important;
+  border-bottom: 1px solid #416288!important;
+  color: #f0f4f9!important;
+}
+
+/* 8. Glow Integration with Dynamic Accent + Boxy Edges */
+html[data-theme-style="classic"] .glow-edge {
+  background: radial-gradient(
+    380px circle at var(--glow-x) var(--glow-y),
+    rgba(var(--primary-rgb), 0.40) 0%,
+    rgba(245, 203, 116, 0.22) 30%,
+    rgba(var(--primary-rgb), 0.05) 55%,
+    transparent 75%
+  );
+  filter: drop-shadow(0 0 3px rgba(var(--primary-rgb), calc(var(--glow-edge-opacity, 0) * 0.25)));
+}
+
+html[data-theme-style="classic"] tr.has-glow-fx .glow-edge,
+html[data-theme-style="classic"] .data-table-wrap tr .glow-edge {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(245, 203, 116, 0.15) 15%,
+    rgba(245, 203, 116, 0.35) 50%,
+    rgba(245, 203, 116, 0.15) 85%,
+    transparent 100%
+  );
+  box-shadow: inset 0 -1px 0 rgba(217, 173, 80, calc(var(--glow-edge-opacity, 0) * 0.40)),
+              inset 0 1px 0 rgba(255, 222, 138, calc(var(--glow-edge-opacity, 0) * 0.35));
+}
+
+
