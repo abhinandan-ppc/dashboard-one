@@ -25,6 +25,27 @@
   "use strict";
   var THEME_KEY = "jspl-hub-theme";
   var ACCENT_KEY = "jspl-hub-accent";
+  var STYLE_KEY = "jspl-hub-theme-style";
+
+  function read(key) {
+    try { return localStorage.getItem(key); } catch (e) { return null; }
+  }
+
+  function storedStyle() {
+    var raw = read(STYLE_KEY);
+    return raw === "classic" ? "classic" : "modern";
+  }
+
+  function applyStyle(style) {
+    var el = document.documentElement;
+    if (!el) return;
+    if (style === "classic") {
+      el.setAttribute("data-theme-style", "classic");
+    } else {
+      el.removeAttribute("data-theme-style");
+    }
+  }
+
   // Below this the derived data-theme is "light", at or above it "dark". It is
   // 41, not 50, because the surfaces ramp steeper than the slider (see
   // theme.css --tds): by 41 the background is already well past mid, so the
@@ -47,10 +68,6 @@
   // had already picked a theme on one of those pages keeps it instead of
   // silently snapping back to dark.
   var LEGACY_THEME_KEYS = ["jspl-theme", "jspl-osr-theme"];
-
-  function read(key) {
-    try { return localStorage.getItem(key); } catch (e) { return null; }
-  }
 
   function clamp(n, lo, hi) { return n < lo ? lo : n > hi ? hi : n; }
 
@@ -183,7 +200,13 @@
     },
     DARK_THRESHOLD: DARK_THRESHOLD,
     DEFAULT_DARKNESS: DEFAULT_DARKNESS,
-    DEFAULT_ACCENT: DEFAULT_ACCENT
+    DEFAULT_ACCENT: DEFAULT_ACCENT,
+    readStyle: function () { return storedStyle(); },
+    setStyle: function (s) {
+      var st = s === "classic" ? "classic" : "modern";
+      applyStyle(st);
+      try { localStorage.setItem(STYLE_KEY, st); } catch (e) {}
+    }
   };
 
   // ── Reduced-transparency escape hatch ───────────────────────────────────
@@ -222,6 +245,7 @@
   };
 
   // 1. Apply the stored values immediately, before first paint.
+  applyStyle(storedStyle());
   apply(storedDarkness(), storedAccent());
 
   // 2. Live push from the hub while embedded. The continuous payload is
@@ -230,6 +254,13 @@
   window.addEventListener("message", function (e) {
     var d = e && e.data;
     if (!d) return;
+    if (d.type === "theme-style" && typeof d.value === "string") {
+      applyStyle(d.value);
+      return;
+    }
+    if (d.style && typeof d.style === "string") {
+      applyStyle(d.style);
+    }
     if (d.type === "theme-vars" && typeof d.darkness === "number") {
       apply(d.darkness, d.accent || storedAccent());
       return;
@@ -244,6 +275,9 @@
   //    (e.newValue === null), which resets this page to the defaults.
   window.addEventListener("storage", function (e) {
     if (!e || !e.key) return;
+    if (e.key === STYLE_KEY) {
+      applyStyle(storedStyle());
+    }
     if (e.key === THEME_KEY || e.key === ACCENT_KEY) {
       apply(storedDarkness(), storedAccent());
     }

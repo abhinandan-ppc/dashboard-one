@@ -325,6 +325,51 @@ input { font: inherit; color: inherit; }
    whole panel, "Accent colour" read as a caption for the theme row. */
 .theme-field { display: flex; flex-direction: column; gap: 8px; }
 .theme-panel-label { font-size: 11px; font-weight: 700; color: var(--tm); text-transform: uppercase; letter-spacing: 0.4px; }
+.theme-preset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: var(--input-bg);
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  border: var(--glass-border);
+}
+.theme-preset-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--tm);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+.theme-preset-btn:hover {
+  color: var(--tx);
+  background: var(--input-hover);
+}
+.theme-preset-btn.active {
+  background: var(--md-sys-color-primary)!important;
+  color: var(--md-sys-color-on-primary)!important;
+  box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.35)!important;
+  border-color: transparent!important;
+}
+
+html[data-theme-style="classic"] .theme-preset-grid,
+html[data-theme-style="classic"] .theme-preset-btn,
+html[data-theme-style="classic"] .theme-range::-webkit-slider-runnable-track,
+html[data-theme-style="classic"] .theme-range::-moz-range-track,
+html[data-theme-style="classic"] .theme-range::-webkit-slider-thumb,
+html[data-theme-style="classic"] .theme-range::-moz-range-thumb,
+html[data-theme-style="classic"] .theme-chip {
+  border-radius: 0 !important;
+}
 
 /* Range inputs, not buttons. theme.css's 44px tap-target rule explicitly
    excludes [type=range] (`input:not([type=checkbox]):not([type=radio]):not([type=range])`),
@@ -1018,6 +1063,19 @@ input { font: inherit; color: inherit; }
       <div class="theme-menu" id="themeMenu">
         <button class="theme-toggle" id="themeToggle" type="button" title="Theme" aria-label="Theme"></button>
         <div class="theme-panel" id="themePanel">
+          <div class="theme-field">
+            <span class="theme-panel-label">Theme Preset</span>
+            <div class="theme-preset-grid" id="themePresetGrid" role="group" aria-label="Theme Preset">
+              <button type="button" class="theme-preset-btn active" id="presetModernBtn" data-style="modern" title="Modern Glass Theme">
+                <svg viewBox="0 0 24 24" aria-hidden="true" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                <span>Modern Glass</span>
+              </button>
+              <button type="button" class="theme-preset-btn" id="presetClassicBtn" data-style="classic" title="Classic SAP Enterprise Frosted Glass">
+                <svg viewBox="0 0 24 24" aria-hidden="true" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                <span>Classic (SAP)</span>
+              </button>
+            </div>
+          </div>
           <div class="theme-field">
             <span class="theme-panel-label">Theme</span>
             <div class="theme-slider-row">
@@ -2170,6 +2228,10 @@ window.addEventListener('storage', function(e){
       } else {
         setAccent(readStoredAccent());
       }
+    } else if(e.key === (typeof STYLE_KEY !== 'undefined' ? STYLE_KEY : 'jspl-hub-theme-style')){
+      if(typeof setStyle === 'function'){
+        setStyle(e.newValue === 'classic' ? 'classic' : 'modern');
+      }
     }
   }catch(err){}
 });
@@ -2398,6 +2460,37 @@ function syncInjectedFrameHomeAccent(){
 
 var THEME_KEY = "jspl-hub-theme";
 var ACCENT_KEY = "jspl-hub-accent";
+var STYLE_KEY = "jspl-hub-theme-style";
+
+function readStoredStyle(){
+  var s = null;
+  try{ s = localStorage.getItem(STYLE_KEY); }catch(e){}
+  return s === "classic" ? "classic" : "modern";
+}
+
+var currentStyle = readStoredStyle();
+
+function setStyle(s){
+  currentStyle = s === "classic" ? "classic" : "modern";
+  try{ localStorage.setItem(STYLE_KEY, currentStyle); }catch(e){}
+  if(currentStyle === "classic"){
+    root.setAttribute("data-theme-style", "classic");
+  } else {
+    root.removeAttribute("data-theme-style");
+  }
+  syncStyleControls();
+  pushThemeToPages();
+}
+
+function syncStyleControls(){
+  try{
+    var modBtn = document.getElementById("presetModernBtn");
+    var clsBtn = document.getElementById("presetClassicBtn");
+    if(modBtn) modBtn.classList.toggle("active", currentStyle !== "classic");
+    if(clsBtn) clsBtn.classList.toggle("active", currentStyle === "classic");
+  }catch(e){}
+}
+
 // 41, not 50: the surfaces ramp steeper than the slider (theme.css --tds), so
 // by 41 the background is already well past mid and the step to light text
 // lands on a surface dark enough to carry it. Must match theme-boot.js.
@@ -2523,6 +2616,13 @@ function applyThemeToDocument(doc){
     }
   }catch(e){}
   try{
+    if(currentStyle === "classic"){
+      el.setAttribute("data-theme-style", "classic");
+    } else {
+      el.removeAttribute("data-theme-style");
+    }
+  }catch(e){}
+  try{
     var st = el.style;
     st.setProperty("--theme-d", String(currentDarkness));
     st.setProperty("--ah", String(currentAccent.h));
@@ -2562,7 +2662,8 @@ function pushThemeToPages(retriesLeft){
     // holding a pre-slider copy of the boot script keeps up rather than
     // silently freezing on whatever it booted with.
     var post = function(win){
-      try{ win.postMessage({ type: "theme-vars", darkness: currentDarkness, accent: currentAccent }, "*"); }catch(e){}
+      try{ win.postMessage({ type: "theme-style", value: currentStyle }, "*"); }catch(e){}
+      try{ win.postMessage({ type: "theme-vars", darkness: currentDarkness, accent: currentAccent, style: currentStyle }, "*"); }catch(e){}
       try{ win.postMessage({ type: "theme", value: currentDarkness < DARK_THRESHOLD ? "light" : "dark" }, "*"); }catch(e){}
     };
     post(pageFrame.contentWindow);
@@ -2595,8 +2696,10 @@ function clearStoredTheme(){
   try{
     localStorage.removeItem(THEME_KEY);
     localStorage.removeItem(ACCENT_KEY);
+    localStorage.removeItem(STYLE_KEY);
   }catch(e){}
   try{
+    setStyle("modern");
     applyThemeVars(DEFAULT_DARKNESS, DEFAULT_ACCENT);
     syncThemeControls();
   }catch(e){}
@@ -2656,6 +2759,7 @@ function syncThemeControls(){
     setTrack(hEl, "hue");
     setTrack(sEl, "sat");
     setTrack(lEl, "light");
+    syncStyleControls();
   }catch(e){}
 }
 
@@ -2711,6 +2815,7 @@ function setAccent(a){
   pushThemeToPages();
 }
 setAccent(readStoredAccent());
+setStyle(readStoredStyle());
 
 (function(){
   var themeMenu = document.getElementById("themeMenu");
@@ -2761,6 +2866,11 @@ setAccent(readStoredAccent());
     themePanel.style.top = top + "px";
   };
   syncThemeControls();
+
+  var modBtn = document.getElementById("presetModernBtn");
+  var clsBtn = document.getElementById("presetClassicBtn");
+  if(modBtn) modBtn.addEventListener("click", function(){ setStyle("modern"); });
+  if(clsBtn) clsBtn.addEventListener("click", function(){ setStyle("classic"); });
 
   themeBtn.addEventListener("click", function(e){
     e.stopPropagation();
