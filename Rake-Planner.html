@@ -1746,12 +1746,18 @@ function STag({code}){
     {code}
   </span>;
 }
-function KCard({label,value,sub,accent,mob}){
-  const ac=accent||C.amber;
+function KCard({label,value,sub,intent,mob}){
+  // intent: 'warning' → red, 'profit' → green; every other card uses a single
+  // neutral colour for text and value so KPI cards carry no per-card accent.
+  let ac='var(--tx)';   // single colour for values; labels stay var(--mute)
+  let tint=null;        // no background tint by default
+  if (intent==='warning'){ac=C.rose;tint=C.rose;}        // red — warnings
+  else if (intent==='profit'){ac=C.green;tint=C.green;}  // green — profit
+  const bg=tint?`linear-gradient(145deg,color-mix(in srgb,${tint} 10%,var(--glass-card)),color-mix(in srgb,${tint} 5%,var(--glass-card)))`:'var(--component-surface)';
   return<div className="kcard kpi-card" style={{...card,padding:mob?'12px 14px':'16px 18px',
     flex:mob?'0 0 auto':'1 0 auto',minWidth:mob?156:undefined,
     borderRadius:'var(--component-radius)',
-    background:`linear-gradient(145deg,color-mix(in srgb,${ac} 10%,var(--glass-card)),color-mix(in srgb,${ac} 5%,var(--glass-card)))`}}
+    background:bg}}
     onMouseEnter={e=>{e.currentTarget.style.boxShadow='var(--shadow-xl),var(--shadow-inset)';e.currentTarget.style.transform='translateY(-2px)'}}
     onMouseLeave={e=>{e.currentTarget.style.boxShadow='var(--component-shadow)';e.currentTarget.style.transform='translateY(0)'}}>
     <div style={{fontSize:10,fontFamily:F.b,letterSpacing:'.08em',textTransform:'uppercase',
@@ -5852,17 +5858,17 @@ function App(){
     <div className="kpi-strip" style={{display:'flex',padding:`12px var(--page-gutter) ${mob?'12px':'var(--space-stack)'}`,flexShrink:0,
       flexWrap:mob?'nowrap':'wrap',
       overflowX:mob?'auto':'visible',overscrollBehaviorX:mob?'contain':'auto'}}>
-      <KCard label="Orders"       value={kpis.cnt.toLocaleString()} sub={actCnt?`${actCnt} filter active`:'All orders'} accent="var(--dim)" mob={mob}/>
-      <KCard label="Order Qty"    value={fmt(kpis.qty)} sub="MT" accent={C.amber} mob={mob}/>
-      <KCard label="Bal to PGI"  value={fmt(kpis.bal)}  sub="MT" accent={C.sky} mob={mob}/>
-      <KCard label="FG Stock"    value={fmt(kpis.fg)}   sub="MT" accent={C.green} mob={mob}/>
-      <KCard label="WIP Stock"   value={fmt(kpis.wip)}  sub="MT" accent='#f97316' mob={mob}/>
-      <KCard label="BTR"         value={fmt(kpis.btr)}  sub="MT" accent={C.violet} mob={mob}/>
-      <KCard label="Slab Stock"  value={fmt(kpis.slab)} sub="MT" accent='#facc15' mob={mob}/>
-      <KCard label="BTC"         value={fmt(kpis.btc)}  sub="MT" accent='#38bdf8' mob={mob}/>
-      <KCard label="Issued"      value={fmt(kpis.issued)} sub="MT" accent='#94a3b8' mob={mob}/>
-      <KCard label="Est. Rakes"  value={kpis.estRk.toLocaleString()} sub={`@ ${RAKE_CAP} MT`} accent={C.amber} mob={mob}/>
-      <KCard label="Road Orders" value={`${kpis.rPct}%`} sub={`${kpis.rN} orders`} accent={C.rose} mob={mob}/>
+      <KCard label="Orders"       value={kpis.cnt.toLocaleString()} sub={actCnt?`${actCnt} filter active`:'All orders'} mob={mob}/>
+      <KCard label="Order Qty"    value={fmt(kpis.qty)} sub="MT" mob={mob}/>
+      <KCard label="Bal to PGI"  value={fmt(kpis.bal)}  sub="MT" mob={mob}/>
+      <KCard label="FG Stock"    value={fmt(kpis.fg)}   sub="MT" intent="profit" mob={mob}/>
+      <KCard label="WIP Stock"   value={fmt(kpis.wip)}  sub="MT" mob={mob}/>
+      <KCard label="BTR"         value={fmt(kpis.btr)}  sub="MT" mob={mob}/>
+      <KCard label="Slab Stock"  value={fmt(kpis.slab)} sub="MT" mob={mob}/>
+      <KCard label="BTC"         value={fmt(kpis.btc)}  sub="MT" mob={mob}/>
+      <KCard label="Issued"      value={fmt(kpis.issued)} sub="MT" mob={mob}/>
+      <KCard label="Est. Rakes"  value={kpis.estRk.toLocaleString()} sub={`@ ${RAKE_CAP} MT`} mob={mob}/>
+      <KCard label="Road Orders" value={`${kpis.rPct}%`} sub={`${kpis.rN} orders`} intent="warning" mob={mob}/>
     </div>
 
     {/* ── Body ── */}
