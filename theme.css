@@ -1332,8 +1332,11 @@ tr.has-glow-fx .glow-sheen,
 
 html[data-theme-style="classic"],
 [data-theme-style="classic"] {
-  /* Surfaces & Canvas: smoothly blend from SAP CorBu ice-blue (#d9e5f2) to deep enterprise slate-navy (#101724) */
-  --bg: color-mix(in srgb, #d9e5f2, #101724 var(--td));
+  /* Surfaces & Canvas: smoothly blend from SAP CorBu ice-blue to deep enterprise slate-navy, retinted with accent */
+  --bg: color-mix(in srgb,
+    color-mix(in srgb, #d9e5f2 92%, hsl(var(--ah) var(--as) 92%)),
+    color-mix(in srgb, #101724 90%, hsl(var(--ah) var(--as) 12%)) var(--td)
+  );
   --bg-color: var(--bg);
   --s0: color-mix(in srgb, rgba(255, 255, 255, 0.94), rgba(28, 40, 58, 0.92) var(--td));
   --s1: color-mix(in srgb, rgba(244, 249, 254, 0.88), rgba(22, 33, 48, 0.88) var(--td));
@@ -1583,13 +1586,32 @@ html[data-theme-style="classic"] #hubFrameHeaderSlot button img {
   border-radius: 0 !important;
 }
 
-/* 1. Global Canvas & Body Atmosphere in Classic Mode (Light & Dark) */
+/* 1. Global Canvas & Body Atmosphere in Classic Mode (Light & Dark with Dynamic Accent Retinting) */
 html[data-theme-style="classic"][data-theme="light"] body {
-  background: linear-gradient(180deg, #d1e0f0 0%, #e3edf7 35%, #edf3f9 100%) fixed!important;
+  background-color: color-mix(in srgb, #d9e5f2 92%, hsl(var(--ah) var(--as) 92%))!important;
+  background-image:
+    radial-gradient(ellipse 75% 55% at 15% 10%, color-mix(in srgb, hsl(var(--ah) calc(var(--as) * 0.70) 65%) calc(18% * var(--tint-k)), transparent) 0%, transparent 65%),
+    radial-gradient(ellipse 65% 75% at 85% 90%, color-mix(in srgb, hsl(calc(var(--ah) + 35) calc(var(--as) * 0.60) 60%) calc(14% * var(--tint-k)), transparent) 0%, transparent 65%),
+    linear-gradient(180deg,
+      color-mix(in srgb, #d1e0f0 90%, hsl(var(--ah) var(--as) 90%)) 0%,
+      color-mix(in srgb, #e3edf7 93%, hsl(var(--ah) var(--as) 94%)) 35%,
+      color-mix(in srgb, #edf3f9 95%, hsl(var(--ah) var(--as) 96%)) 100%
+    )!important;
+  background-attachment: fixed!important;
   color: #132a42!important;
 }
+
 html[data-theme-style="classic"][data-theme="dark"] body {
-  background: linear-gradient(180deg, #0e1520 0%, #121a28 35%, #151e2e 100%) fixed!important;
+  background-color: color-mix(in srgb, #101724 90%, hsl(var(--ah) var(--as) 12%))!important;
+  background-image:
+    radial-gradient(ellipse 75% 55% at 15% 10%, color-mix(in srgb, hsl(var(--ah) calc(var(--as) * 0.85) 55%) calc(22% * var(--tint-k)), transparent) 0%, transparent 65%),
+    radial-gradient(ellipse 65% 75% at 85% 90%, color-mix(in srgb, hsl(calc(var(--ah) + 35) calc(var(--as) * 0.75) 50%) calc(16% * var(--tint-k)), transparent) 0%, transparent 65%),
+    linear-gradient(180deg,
+      color-mix(in srgb, #0e1520 88%, hsl(var(--ah) var(--as) 10%)) 0%,
+      color-mix(in srgb, #121a28 90%, hsl(var(--ah) var(--as) 14%)) 35%,
+      color-mix(in srgb, #151e2e 92%, hsl(var(--ah) var(--as) 16%)) 100%
+    )!important;
+  background-attachment: fixed!important;
   color: #f0f4f9!important;
 }
 
