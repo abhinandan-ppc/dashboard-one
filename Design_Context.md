@@ -39,7 +39,8 @@
    - Table rows feature an ambient horizontal glow wash (`linear-gradient(90deg, ...)`) and subtle top/bottom seam highlights (`box-shadow: inset 0 -1px 0 ...`).
 
 4. **KPI Cards in Rake Planner & Across Pages:**
-   - Fully enabled on Rake Planner KPI cards (`<KCard>` with `.kcard.kpi-card`).
+   - Fully enabled on Rake Planner KPI cards (`<KCard>` with `.kcard.kpi-card`) and consistent across every page's KPI cards.
+   - Colours are deliberately minimal: red only for warnings, green only for profit, and a single neutral colour (`--tx` values / `--mute` labels) for everything else — no per-card accent variation.
    - Active across all KPI strips, status tiles, cards, and header bars.
 
 ---

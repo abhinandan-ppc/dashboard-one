@@ -146,15 +146,9 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
     border-radius: var(--radius-l); padding: 18px 20px; border: var(--glass-border); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; box-shadow: var(--glass-shadow); transition: transform 0.2s, background 0.3s; cursor: pointer; border-top: 4px solid var(--tm);
 }
 .kpi:hover { transform: translateY(-3px); background: var(--glass-bg-hover); box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
-.kpi-tot { border-top-color: var(--tx); }
-.kpi-s1 { border-top-color: var(--md-sys-color-secondary); } 
-.kpi-s2 { border-top-color: var(--mo); }
-.kpi-sl { border-top-color: var(--sg); } 
-.kpi-bl { border-top-color: var(--pu); }
-.kpi-eb { border-top-color: var(--gd); }
-
 .kpi-label { font-size: 11px; font-weight: 800; color: var(--tm); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; transition: color 0.3s;}
 .kpi-value { font-size: 22px; font-weight: 900; color: var(--tx); letter-spacing: -0.5px; transition: color 0.3s;}
+.kpi-eb .kpi-value { color: var(--green); }   /* green — profit (EBITDA) */
 .kpi-sub { font-size: 10px; color: var(--tm); margin-top: 4px; font-weight: 700; line-height: 1.2; transition: color 0.3s;}
 
 /* Side-by-Side Layout Grid */
