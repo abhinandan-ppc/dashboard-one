@@ -112,3 +112,46 @@ A high-performance enterprise interface marrying the time-tested structure and e
 ### 5. Seamless Cursor Glow (`glow.js`)
 - Harmonized edge glow responding to `--primary-rgb` with boxy 0px contours (`--glow-radius: 0px !important;`).
 - Table rows display the iconic SAP gold row highlight on cursor interaction.
+
+### 6. Status Badges & Chips (`.sap-badge`, `.status-chip`, `.kpi-status`)
+- Boxy 0px rectangular pills with 1px crisp border.
+- **Success** (`good`/`ok`): Green background (`--success-bg`) with SAP green text.
+- **Warning** (`warn`): Amber background (`--warning-bg`) with SAP amber text.
+- **Danger** (`bad`/`err`): Red background (`--danger-bg`) with SAP red text.
+- All variants respond to light/dark theme modes with appropriate contrast.
+
+### 7. Alert Boxes (`.alert-box`, `.alert`)
+- Boxy 0px rectangular alert containers with crisp 1px border.
+- **Success**: Green-tinted background with dark green text.
+- **Warning**: Amber-tinted background with dark amber text.
+- **Error/Danger**: Red-tinted background with dark red text.
+- Flex layout with icon/gap support for status messaging.
+
+### 8. Progress Bar (`.sap-progress`, `.progress-bar`)
+- Boxy 0px rectangular progress track with 10px height.
+- Animated fill bar using dynamic accent gradient with outer glow.
+- Responsive width transitions (0.3s ease).
+
+### 9. Tabs & Segmented Controls (`.tab-bar button`, `.tabs button`, `.segmented-control button`)
+- Boxy 0px rectangular tabs with transparent background and 2px bottom indicator.
+- Inactive state: muted text color, no bottom border.
+- Active state: accent-colored bottom border, accent-tinted background, inset accent shine.
+- Hover state: subtle surface lift with text brightening.
+
+### 10. Focus Visible (Accessibility)
+- All interactive elements (`button`, `input`, `select`, `textarea`, `a`) show a crisp 2px accent focus ring with soft outer halo when keyboard-focused via `:focus-visible`.
+- Never relies on colour alone for focus indication.
+
+### 11. Disabled States
+- All disabled controls (`button:disabled`, `input:disabled`, `select:disabled`, `textarea:disabled`) show reduced opacity (0.55), grayscale filter (0.4), `not-allowed` cursor, and `pointer-events: none`.
+
+### 12. Reduced Transparency Fallback (`data-reduce-transparency="1"`)
+- When reduced transparency is preferred (OS signal or user toggle), all glass surfaces in Classic mode fall back to solid opaque backgrounds with no `backdrop-filter`, preserving readability on low-end devices while maintaining the SAP aesthetic.
+
+### 13. KPI Card Color Unification (`.kpi`, `.kcard`, `.kpi-card`, `.stat-card`)
+- Colours are deliberately minimal per the design system:
+  - **Red** (`--danger`) only for warnings (`.intent-warning`, `[data-intent="warning"]`, `.warning`).
+  - **Green** (`--success`) only for profit (`.intent-profit`, `[data-intent="profit"]`, `.profit`).
+  - Single neutral colour (`--tx` values / `--mute` labels) for everything else — no per-card accent variation.
+- In Classic mode, warning KPI cards get a red border-top and red value text; profit KPI cards get a green border-top and green value text.
+- All KPI cards share optimized hover transitions (border-color, box-shadow, background, transform).
