@@ -2,7 +2,8 @@
 
 ## Design System Overview
 
-**Style:** Glassmorphism — frosted-glass surfaces, translucent layers, subtle blur, luminous borders.  
+**Style:** Glassmorphism — frosted-glass surfaces, translucent layers, subtle blur, luminous borders.
+Three switchable style presets: **Modern Glass** (default), **Classic SAP** (boxy enterprise), **Neomorphism** (soft extruded Soft-UI).  
 **Single source of truth:** [`theme.css`](file:///d:/Projects/dashboard-one-1/theme.css) (linked by every page).  
 **Typography:** Plus Jakarta Sans (open-license twin of Product Sans) + JetBrains Mono for data/numbers.  
 **Accent:** Continuous HSL slider (`--ah`, `--as`, `--al`). The RGB triple is exposed as `--primary-rgb` for alpha compositing.

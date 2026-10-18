@@ -327,12 +327,15 @@ input { font: inherit; color: inherit; }
 .theme-panel-label { font-size: 11px; font-weight: 700; color: var(--tm); text-transform: uppercase; letter-spacing: 0.4px; }
 .theme-preset-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 6px;
   background: var(--input-bg);
   padding: 3px;
   border-radius: var(--radius-pill);
   border: var(--glass-border);
+}
+html[data-theme-style="neomorph"] .theme-preset-grid {
+  border-radius: var(--component-radius, var(--radius-pill));
 }
 .theme-preset-btn {
   display: inline-flex;
@@ -361,8 +364,8 @@ input { font: inherit; color: inherit; }
   border-color: transparent!important;
 }
 
-html[data-theme-style="classic"] .theme-preset-grid,
 html[data-theme-style="classic"] .theme-preset-btn,
+html[data-theme-style="neomorph"] .theme-preset-btn,
 html[data-theme-style="classic"] .theme-range::-webkit-slider-runnable-track,
 html[data-theme-style="classic"] .theme-range::-moz-range-track,
 html[data-theme-style="classic"] .theme-range::-webkit-slider-thumb,
@@ -1073,6 +1076,10 @@ html[data-theme-style="classic"] .theme-chip {
               <button type="button" class="theme-preset-btn" id="presetClassicBtn" data-style="classic" title="Classic SAP Enterprise Frosted Glass">
                 <svg viewBox="0 0 24 24" aria-hidden="true" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
                 <span>Classic (SAP)</span>
+              </button>
+              <button type="button" class="theme-preset-btn" id="presetNeoBtn" data-style="neomorph" title="Neomorphism Soft UI — extruded tactile surfaces">
+                <svg viewBox="0 0 24 24" aria-hidden="true" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>
+                <span>Neomorphism</span>
               </button>
             </div>
           </div>
@@ -2230,7 +2237,7 @@ window.addEventListener('storage', function(e){
       }
     } else if(e.key === (typeof STYLE_KEY !== 'undefined' ? STYLE_KEY : 'jspl-hub-theme-style')){
       if(typeof setStyle === 'function'){
-        setStyle(e.newValue === 'classic' ? 'classic' : 'modern');
+        setStyle((e.newValue === 'classic' || e.newValue === 'neomorph') ? e.newValue : 'modern');
       }
     }
   }catch(err){}
@@ -2465,16 +2472,17 @@ var STYLE_KEY = "jspl-hub-theme-style";
 function readStoredStyle(){
   var s = null;
   try{ s = localStorage.getItem(STYLE_KEY); }catch(e){}
-  return s === "classic" ? "classic" : "modern";
+  if(s === "classic" || s === "neomorph") return s;
+  return "modern";
 }
 
 var currentStyle = readStoredStyle();
 
 function setStyle(s){
-  currentStyle = s === "classic" ? "classic" : "modern";
+  currentStyle = (s === "classic" || s === "neomorph") ? s : "modern";
   try{ localStorage.setItem(STYLE_KEY, currentStyle); }catch(e){}
-  if(currentStyle === "classic"){
-    root.setAttribute("data-theme-style", "classic");
+  if(currentStyle === "classic" || currentStyle === "neomorph"){
+    root.setAttribute("data-theme-style", currentStyle);
   } else {
     root.removeAttribute("data-theme-style");
   }
@@ -2486,8 +2494,10 @@ function syncStyleControls(){
   try{
     var modBtn = document.getElementById("presetModernBtn");
     var clsBtn = document.getElementById("presetClassicBtn");
-    if(modBtn) modBtn.classList.toggle("active", currentStyle !== "classic");
+    var neoBtn = document.getElementById("presetNeoBtn");
+    if(modBtn) modBtn.classList.toggle("active", currentStyle === "modern");
     if(clsBtn) clsBtn.classList.toggle("active", currentStyle === "classic");
+    if(neoBtn) neoBtn.classList.toggle("active", currentStyle === "neomorph");
   }catch(e){}
 }
 
@@ -2616,8 +2626,8 @@ function applyThemeToDocument(doc){
     }
   }catch(e){}
   try{
-    if(currentStyle === "classic"){
-      el.setAttribute("data-theme-style", "classic");
+    if(currentStyle === "classic" || currentStyle === "neomorph"){
+      el.setAttribute("data-theme-style", currentStyle);
     } else {
       el.removeAttribute("data-theme-style");
     }
@@ -2869,8 +2879,10 @@ setStyle(readStoredStyle());
 
   var modBtn = document.getElementById("presetModernBtn");
   var clsBtn = document.getElementById("presetClassicBtn");
+  var neoBtn = document.getElementById("presetNeoBtn");
   if(modBtn) modBtn.addEventListener("click", function(){ setStyle("modern"); });
   if(clsBtn) clsBtn.addEventListener("click", function(){ setStyle("classic"); });
+  if(neoBtn) neoBtn.addEventListener("click", function(){ setStyle("neomorph"); });
 
   themeBtn.addEventListener("click", function(e){
     e.stopPropagation();

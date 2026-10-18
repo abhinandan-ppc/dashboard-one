@@ -33,14 +33,15 @@
 
   function storedStyle() {
     var raw = read(STYLE_KEY);
-    return raw === "classic" ? "classic" : "modern";
+    if (raw === "classic" || raw === "neomorph") return raw;
+    return "modern";
   }
 
   function applyStyle(style) {
     var el = document.documentElement;
     if (!el) return;
-    if (style === "classic") {
-      el.setAttribute("data-theme-style", "classic");
+    if (style === "classic" || style === "neomorph") {
+      el.setAttribute("data-theme-style", style);
     } else {
       el.removeAttribute("data-theme-style");
     }
@@ -203,7 +204,7 @@
     DEFAULT_ACCENT: DEFAULT_ACCENT,
     readStyle: function () { return storedStyle(); },
     setStyle: function (s) {
-      var st = s === "classic" ? "classic" : "modern";
+      var st = (s === "classic" || s === "neomorph") ? s : "modern";
       applyStyle(st);
       try { localStorage.setItem(STYLE_KEY, st); } catch (e) {}
     }
