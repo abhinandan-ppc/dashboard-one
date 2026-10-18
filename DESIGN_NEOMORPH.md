@@ -42,8 +42,8 @@ Status colours keep the project's SAP-derived baseline, retinted for the ramp: `
 
 | # | Section | Treatment |
 |---|---------|-----------|
-| — | Body / Canvas | Fixed radial + linear gradient on a single grey (light `#e8eaed` / dark `#1e2228`) |
-| — | Header | Neo-bg band, 1px `#b6b9c0` edge, small opposed shadows, extruded toolbar buttons |
+| — | Body / Canvas | `background-color: var(--neo-bg)` + soft dual radial sheens — canvas and cards are the *same* colour by construction |
+| — | Header | Topmost plane: deep opposed shadows + `inset 0 1px 0` light-source highlight, `--header-border-color` edge, brand lockup (`l1` at `--text-hi`/900, eyebrow/l2 at `--mute`), extruded toolbar buttons (token borders, press-in hover/active), accent active `.view-tabs` |
 | 1 | Surfaces (cards/panels/KPI/modals/drawers) | Raised dual shadows; hover lifts `-2px` with deeper shadow; `:active` flips inset |
 | 2 | Buttons | Raised; hover brightens to `--primary`; active/`.on/.active` = inset pressed |
 | — | Primary buttons | Accent gradient (`--ah/--as/--al`), white text, specular inset highlight |
@@ -60,6 +60,18 @@ Status colours keep the project's SAP-derived baseline, retinted for the ramp: `
 | 13 | Glow integration | Cursor-follow edge glow softened (0.7× opacity, drop-shadow) — no boxy mask |
 | 14 | Hover transitions | Optimised to `box-shadow/transform/background/color` only — no layout thrash |
 | 15 | Theme-picker controls | Rounded preset grid/sliders/chips inside the panel |
+
+## Refinements (colour & header pass)
+
+A defect/parity pass aligned the theme with its own doctrine and the typeui.sh `neumorphism` skill guidance (installed at `.claude/skills/design-system/SKILL.md`):
+
+- **Canvas = cards, always.** The body no longer hard-codes `#e8eaed`/`#1e2228`; it paints `var(--neo-bg)` (accent-tinted, slider-blended) with two soft radial sheens whose own colours ramp via `--td`. Extrusion reads purely from shadow.
+- **No fixed greys.** `--bdr`, `--glass-border`, `--glass-hi`, `--header-border-color`, `--input-hover`, and the header-button fills were hard-coded light values that glaringly broke in dark mode — all now `color-mix(... var(--td))` ramps.
+- **Contrast fixes (WCAG AA on the `#e8eaed` canvas):** `--dim` `#68788b→#55677a`, `--mute` `#5d707f→#4d5d6e`, `--secondary` `#6c7580→#545f6c`. `--on-primary` rewritten to the base token shape (white → near-black), fixing a malformed double-percentage mix that produced mid-grey button text.
+- **Header as the top plane.** Deepest dual shadow (6px/14px), inset top-edge highlight (light source), token border, brand lockup hierarchy (`jspl-brand-l1`/`brand-name` at `--text-hi` weight 900), full classic-parity button selectors (`.theme-menu`, `.dropdown-wrapper`, `.app-header-actions`), and an inset-accent active state for `.view-tabs`.
+- **KPI intent stripe parity:** warning-intent cards get `border-top-color: var(--danger)`, profit `var(--success)` — width stays 1px (zero geometry change).
+- **Theme-picker sliders:** track presses in (inset pair), thumb is a raised circular nub (`50%`, dual shadow, `grab/grabbing` cursor) — previously a `12px` radius was being forced onto the 16px round thumbs.
+- **Housekeeping:** Classic sections 16–17 (KPI unification, hover transitions) moved out of the neomorph region back to the end of the Classic block.
 
 ## Accessibility & Performance Notes
 

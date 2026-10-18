@@ -20,6 +20,8 @@ const width = Number(process.env.WIDTH || 1440);
 const height = Number(process.env.HEIGHT || 1000);
 const theme = process.env.THEME || '100';
 const accent = process.env.ACCENT || '199,90,52';
+// Style preset: modern (default when unset) | classic | neomorph.
+const style = process.env.STYLE || '';
 const out = process.env.OUT || join(root, 'page.png');
 
 const TYPES = {
@@ -41,6 +43,7 @@ const server = createServer(async (req, res) => {
     return res.end(`
       localStorage.setItem('jspl-hub-theme', ${JSON.stringify(theme)});
       localStorage.setItem('jspl-hub-accent', ${JSON.stringify(accent)});
+      ${style ? `localStorage.setItem('jspl-hub-theme-style', ${JSON.stringify(style)});` : ''}
       // The hub gates the dashboard behind an authenticated frame, so reveal
       // the page itself rather than screenshotting a login box.
       document.addEventListener('DOMContentLoaded', function () {

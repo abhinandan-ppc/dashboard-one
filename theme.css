@@ -2371,144 +2371,6 @@ html[data-theme-style="classic"][data-reduce-transparency="1"][data-theme="dark"
   background: rgba(20, 30, 45, 0.96) !important;
 }
 
-/* ══════════════════════════════════════════════════════════════════════════════════════════
-   NEOMORPHISM THEME (data-theme-style="neomorph")
-   Soft UI — elements extrude from / press into background. Two-tone soft shadows,
-   monochromatic palette, generous border-radius. Mirrors SAP theme's continuous
-   light/dark slider (--theme-d) and dynamic accent (--ah/--as/--al).
-   ══════════════════════════════════════════════════════════════════════════════════════════ */
-
-html[data-theme-style="neomorph"] {
-  --neo-bg: color-mix(in srgb,
-      color-mix(in srgb, #e8eaed 92%, hsl(var(--ah) var(--as) 90%)),
-      color-mix(in srgb, #1e2228 90%, hsl(var(--ah) var(--as) 10%)) var(--td));
-  --neo-bg-color: var(--neo-bg);
-  --neo-shadow-light: color-mix(in srgb, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.06) var(--td));
-  --neo-shadow-dark: color-mix(in srgb, rgba(36, 46, 61, 0.22), rgba(0, 0, 0, 0.55) var(--td));
-  --text: color-mix(in srgb, #33404f, #eef3f8 var(--td));
-  --text-hi: color-mix(in srgb, #26313e, #ffffff var(--td));
-  --dim: color-mix(in srgb, #68788b, #9eb1c6 var(--td));
-  --mute: color-mix(in srgb, #5d707f, #7f93a8 var(--td));
-  --tx: var(--text);
-  --tm: var(--dim);
-  --bdr: #c6c9ce;
-  --glass: color-mix(in srgb, rgba(232, 234, 237, 0.85), rgba(30, 34, 40, 0.82) var(--td));
-  --glass-card: var(--glass);
-  --glass-hi: rgba(220, 224, 228, 0.90);
-  --glass-border: 1px solid #c6c9ce;
-  --glass-blur: blur(12px) saturate(120%);
-  --shadow-xs: 1px 1px 2px var(--neo-shadow-dark), -1px -1px 2px var(--neo-shadow-light);
-  --shadow-sm: 2px 2px 4px var(--neo-shadow-dark), -2px -2px 4px var(--neo-shadow-light);
-  --shadow-md: 4px 4px 8px var(--neo-shadow-dark), -4px -4px 8px var(--neo-shadow-light);
-  --shadow-lg: 6px 6px 12px var(--neo-shadow-dark), -6px -6px 12px var(--neo-shadow-light);
-  --shadow-xl: 8px 8px 16px var(--neo-shadow-dark), -8px -8px 16px var(--neo-shadow-light);
-  --shadow-inset: inset 1px 1px 2px var(--neo-shadow-dark), inset -1px -1px 2px var(--neo-shadow-light);
-  --primary: color-mix(in srgb,
-    hsl(var(--ah) var(--as) calc(var(--al) * 0.85)),
-    hsl(var(--ah) var(--as) calc(var(--al) * 1.12)) var(--td));
-  --primary-hover: color-mix(in srgb,
-    hsl(var(--ah) var(--as) calc(var(--al) * 0.75)),
-    hsl(var(--ah) var(--as) calc(var(--al) * 1.20)) var(--td));
-  --primary-active: color-mix(in srgb,
-    hsl(var(--ah) var(--as) calc(var(--al) * 0.65)),
-    hsl(var(--ah) var(--as) calc(var(--al) * 1.28)) var(--td));
-  --on-primary: color-mix(in srgb, #ffffff 85%, hsl(var(--ah) var(--as) 15%) var(--td));
-  --primary-bg: hsl(var(--ah) var(--as) var(--al) / calc(0.10 + 0.06 * var(--tdsn)));
-  --success: color-mix(in srgb, #107e3e, #22c55e var(--td));
-  --success-bg: color-mix(in srgb, rgba(16, 126, 62, 0.14), rgba(34, 197, 94, 0.18) var(--td));
-  --warning: color-mix(in srgb, #c27800, #f59e0b var(--td));
-  --warning-bg: color-mix(in srgb, rgba(194, 120, 0, 0.14), rgba(245, 158, 11, 0.18) var(--td));
-  --danger: color-mix(in srgb, #bb0000, #ef4444 var(--td));
-  --danger-bg: color-mix(in srgb, rgba(187, 0, 0, 0.14), rgba(239, 68, 68, 0.18) var(--td));
-  --amber: var(--warning); --amber-bg: var(--warning-bg);
-  --sky: var(--primary); --sky-bg: var(--primary-bg);
-  --green: var(--success); --green-bg: var(--success-bg);
-  --rose: var(--danger); --rose-bg: var(--danger-bg);
-  --violet: color-mix(in srgb, #5a5286, #9d91d4 var(--td));
-  --violet-bg: color-mix(in srgb, rgba(90, 82, 134, 0.10), rgba(157, 145, 212, 0.14) var(--td));
-  --orange: color-mix(in srgb, #d97706, #fb923c var(--td));
-  --orange-bg: color-mix(in srgb, rgba(217, 119, 6, 0.12), rgba(251, 146, 60, 0.15) var(--td));
-  --md-sys-color-primary: var(--primary);
-  --md-sys-color-on-primary: var(--on-primary);
-  --md-sys-color-primary-container: var(--primary-bg);
-  --secondary: color-mix(in srgb, #6c7580, #8a93a0 var(--td));
-  --on-secondary: var(--text-hi);
-  --secondary-bg: color-mix(in srgb, rgba(108, 117, 128, 0.10), rgba(138, 147, 160, 0.14) var(--td));
-  --input-bg: var(--neo-bg);
-  --input-hover: color-mix(in srgb, #ffffff 0%, #d4d8dc 100%);
-  --header-border-color: #b6b9c0;
-  --component-surface: var(--neo-bg);
-  --component-shadow: var(--shadow-md);
-  --component-primary-hover: var(--primary-hover);
-  --component-radius: 16px !important;
-  --radius-xs: 8px !important;
-  --radius-sm: 12px !important;
-  --radius-md: 16px !important;
-  --radius-lg: 20px !important;
-  --radius-xl: 24px !important;
-  --radius-pill: 999px !important;
-  --space-section: 24px;
-  --space-stack: 32px;
-}
-
-/* ── Neomorph Body / Canvas ── */
-html[data-theme-style="neomorph"][data-theme="light"] body {
-  background-color: #e8eaed !important;
-  background-image:
-    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(255, 255, 255, 0.6) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 50% at 80% 75%, rgba(210, 216, 222, 0.5) 0%, transparent 55%),
-    linear-gradient(180deg, #e2e5e9 0%, #ecefef 55%, #e8eaed 100%) !important;
-  background-attachment: fixed !important;
-  color: var(--text) !important;
-}
-html[data-theme-style="neomorph"][data-theme="dark"] body {
-  background-color: #1e2228 !important;
-  background-image:
-    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(255, 255, 255, 0.04) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 50% at 80% 75%, rgba(14, 17, 21, 0.6) 0%, transparent 55%),
-    linear-gradient(180deg, #1c2026 0%, #1e2228 55%, #21252c 100%) !important;
-  background-attachment: fixed !important;
-  color: var(--text) !important;
-}
-
-/* ── Neomorph Header ── */
-html[data-theme-style="neomorph"] :is(.app-header, .top-bar, header.app-header,
-  .page-order .glass-card.header-enter, .page-rake .glass-card.header-enter) {
-  background: var(--neo-bg) !important;
-  border: 1px solid #b6b9c0 !important;
-  box-shadow: 2px 2px 4px var(--neo-shadow-dark), -2px -2px 4px var(--neo-shadow-light) !important;
-  backdrop-filter: var(--glass-blur) !important;
-  -webkit-backdrop-filter: var(--glass-blur) !important;
-}
-html[data-theme-style="neomorph"] .app-header h1,
-html[data-theme-style="neomorph"] .app-header h2,
-html[data-theme-style="neomorph"] .top-bar h1,
-html[data-theme-style="neomorph"] header h1 {
-  color: var(--text-hi) !important;
-  font-weight: 800 !important;
-  letter-spacing: -0.01em !important;
-}
-html[data-theme-style="neomorph"] .app-header .eyebrow,
-html[data-theme-style="neomorph"] .app-header .jspl-brand-l2,
-html[data-theme-style="neomorph"] .app-header .title-block .eyebrow {
-  color: var(--mute) !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.06em !important;
-}
-html[data-theme-style="neomorph"] .app-header :is(.top-l,.hdr-r,.h-actions,.top-right)>button,
-html[data-theme-style="neomorph"] .app-header .view-tabs button {
-  background: color-mix(in srgb, #ffffff 0%, #d4d8dc 100%) !important;
-  color: var(--text-hi) !important;
-  border: 1px solid #b6b9c0 !important;
-  box-shadow: 1px 1px 2px var(--neo-shadow-dark), -1px -1px 2px var(--neo-shadow-light) !important;
-  border-radius: 10px !important;
-}
-html[data-theme-style="neomorph"] .app-header :is(.top-l,.hdr-r,.h-actions,.top-right)>button:hover,
-html[data-theme-style="neomorph"] .app-header .view-tabs button:hover {
-  box-shadow: inset 1px 1px 2px var(--neo-shadow-dark), inset -1px -1px 2px var(--neo-shadow-light) !important;
-  color: var(--primary) !important;
-}
-
 /* 16. KPI Card Color Unification — Respect Red/Green/Neutral Rule in Classic */
 html[data-theme-style="classic"] :is(.kpi, .kcard, .kpi-card, .stat-card).intent-warning,
 html[data-theme-style="classic"] :is(.kpi, .kcard, .kpi-card, .stat-card)[data-intent="warning"],
@@ -2541,6 +2403,172 @@ html[data-theme-style="classic"] :is(.kpi, .kcard, .kpi-card, .stat-card, .card,
 }
 html[data-theme-style="classic"] :is(.kpi, .kcard, .kpi-card, .stat-card, .card, .panel, .glass-card):hover {
   transform: translateY(-1px) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════
+   NEOMORPHISM THEME (data-theme-style="neomorph")
+   Soft UI — elements extrude from / press into background. Two-tone soft shadows,
+   monochromatic palette, generous border-radius. Mirrors SAP theme's continuous
+   light/dark slider (--theme-d) and dynamic accent (--ah/--as/--al).
+   ══════════════════════════════════════════════════════════════════════════════════════════ */
+
+html[data-theme-style="neomorph"] {
+  --neo-bg: color-mix(in srgb,
+      color-mix(in srgb, #e8eaed 92%, hsl(var(--ah) var(--as) 90%)),
+      color-mix(in srgb, #1e2228 90%, hsl(var(--ah) var(--as) 10%)) var(--td));
+  --neo-bg-color: var(--neo-bg);
+  --neo-shadow-light: color-mix(in srgb, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.06) var(--td));
+  --neo-shadow-dark: color-mix(in srgb, rgba(36, 46, 61, 0.22), rgba(0, 0, 0, 0.55) var(--td));
+  --text: color-mix(in srgb, #33404f, #eef3f8 var(--td));
+  --text-hi: color-mix(in srgb, #26313e, #ffffff var(--td));
+  /* Light-mode dim/mute darkened to clear 4.5:1 against the #e8eaed canvas
+     (labels are body text, not decoration — WCAG AA applies to them too). */
+  --dim: color-mix(in srgb, #55677a, #9eb1c6 var(--td));
+  --mute: color-mix(in srgb, #4d5d6e, #7f93a8 var(--td));
+  --tx: var(--text);
+  --tm: var(--dim);
+  /* Borders follow the same light→dark ramp as every other token: a soft
+     slate line on light, a faint pale line on dark. Never a fixed grey. */
+  --bdr: color-mix(in srgb, rgba(36, 46, 61, 0.20), rgba(226, 232, 240, 0.16) var(--td));
+  --glass: color-mix(in srgb, rgba(232, 234, 237, 0.85), rgba(30, 34, 40, 0.82) var(--td));
+  --glass-card: var(--glass);
+  --glass-hi: color-mix(in srgb, rgba(236, 239, 242, 0.95), rgba(38, 44, 53, 0.95) var(--td));
+  --glass-border: 1px solid var(--bdr);
+  --glass-blur: blur(12px) saturate(120%);
+  --shadow-xs: 1px 1px 2px var(--neo-shadow-dark), -1px -1px 2px var(--neo-shadow-light);
+  --shadow-sm: 2px 2px 4px var(--neo-shadow-dark), -2px -2px 4px var(--neo-shadow-light);
+  --shadow-md: 4px 4px 8px var(--neo-shadow-dark), -4px -4px 8px var(--neo-shadow-light);
+  --shadow-lg: 6px 6px 12px var(--neo-shadow-dark), -6px -6px 12px var(--neo-shadow-light);
+  --shadow-xl: 8px 8px 16px var(--neo-shadow-dark), -8px -8px 16px var(--neo-shadow-light);
+  --shadow-inset: inset 1px 1px 2px var(--neo-shadow-dark), inset -1px -1px 2px var(--neo-shadow-light);
+  --primary: color-mix(in srgb,
+    hsl(var(--ah) var(--as) calc(var(--al) * 0.85)),
+    hsl(var(--ah) var(--as) calc(var(--al) * 1.12)) var(--td));
+  --primary-hover: color-mix(in srgb,
+    hsl(var(--ah) var(--as) calc(var(--al) * 0.75)),
+    hsl(var(--ah) var(--as) calc(var(--al) * 1.20)) var(--td));
+  --primary-active: color-mix(in srgb,
+    hsl(var(--ah) var(--as) calc(var(--al) * 0.65)),
+    hsl(var(--ah) var(--as) calc(var(--al) * 1.28)) var(--td));
+  /* White text on light-side accent, near-black on the dark-side (lightened)
+     accent — same shape as the base token so contrast holds at both ends. */
+  --on-primary: color-mix(in srgb, hsl(var(--ah) 20% 100%), hsl(var(--ah) 70% 8%) var(--td));
+  --primary-bg: hsl(var(--ah) var(--as) var(--al) / calc(0.10 + 0.06 * var(--tdsn)));
+  --success: color-mix(in srgb, #107e3e, #22c55e var(--td));
+  --success-bg: color-mix(in srgb, rgba(16, 126, 62, 0.14), rgba(34, 197, 94, 0.18) var(--td));
+  --warning: color-mix(in srgb, #c27800, #f59e0b var(--td));
+  --warning-bg: color-mix(in srgb, rgba(194, 120, 0, 0.14), rgba(245, 158, 11, 0.18) var(--td));
+  --danger: color-mix(in srgb, #bb0000, #ef4444 var(--td));
+  --danger-bg: color-mix(in srgb, rgba(187, 0, 0, 0.14), rgba(239, 68, 68, 0.18) var(--td));
+  --amber: var(--warning); --amber-bg: var(--warning-bg);
+  --sky: var(--primary); --sky-bg: var(--primary-bg);
+  --green: var(--success); --green-bg: var(--success-bg);
+  --rose: var(--danger); --rose-bg: var(--danger-bg);
+  --violet: color-mix(in srgb, #5a5286, #9d91d4 var(--td));
+  --violet-bg: color-mix(in srgb, rgba(90, 82, 134, 0.10), rgba(157, 145, 212, 0.14) var(--td));
+  --orange: color-mix(in srgb, #d97706, #fb923c var(--td));
+  --orange-bg: color-mix(in srgb, rgba(217, 119, 6, 0.12), rgba(251, 146, 60, 0.15) var(--td));
+  --md-sys-color-primary: var(--primary);
+  --md-sys-color-on-primary: var(--on-primary);
+  --md-sys-color-primary-container: var(--primary-bg);
+  /* Secondary ink darkened on the light side: #6c7580 only reached ~3.5:1 on
+     the #e8eaed canvas, and this token carries small text (PM-Yard, VDO). */
+  --secondary: color-mix(in srgb, #545f6c, #8a93a0 var(--td));
+  --on-secondary: var(--text-hi);
+  --secondary-bg: color-mix(in srgb, rgba(108, 117, 128, 0.10), rgba(138, 147, 160, 0.14) var(--td));
+  --input-bg: var(--neo-bg);
+  /* Hover wash, not a flat grey: same ramp logic as the base theme. */
+  --input-hover: color-mix(in srgb, rgba(36, 46, 61, 0.10), rgba(226, 232, 240, 0.12) var(--td));
+  --header-border-color: color-mix(in srgb, rgba(36, 46, 61, 0.22), rgba(226, 232, 240, 0.14) var(--td));
+  --component-surface: var(--neo-bg);
+  --component-shadow: var(--shadow-md);
+  --component-primary-hover: var(--primary-hover);
+  --component-radius: 16px !important;
+  --radius-xs: 8px !important;
+  --radius-sm: 12px !important;
+  --radius-md: 16px !important;
+  --radius-lg: 20px !important;
+  --radius-xl: 24px !important;
+  --radius-pill: 999px !important;
+  --space-section: 24px;
+  --space-stack: 32px;
+}
+
+/* ── Neomorph Body / Canvas ── */
+/* The canvas IS --neo-bg: cards rest at the identical colour (accent-tinted,
+   slider-blended), so extrusion reads purely from shadow, per Soft-UI law. */
+html[data-theme-style="neomorph"] body {
+  background-color: var(--neo-bg) !important;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 20% 30%,
+      color-mix(in srgb, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.05) var(--td)) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 80% 75%,
+      color-mix(in srgb, rgba(36, 46, 61, 0.09), rgba(0, 0, 0, 0.42) var(--td)) 0%, transparent 55%) !important;
+  background-attachment: fixed !important;
+  color: var(--text) !important;
+}
+
+/* ── Neomorph Header ── */
+/* The header is the topmost plane of the UI: deepest soft shadow beneath,
+   a thin light-source inset along the top edge, canvas-coloured fill. */
+html[data-theme-style="neomorph"] :is(.app-header, .top-bar, header.app-header,
+  .page-order .glass-card.header-enter, .page-rake .glass-card.header-enter) {
+  background: var(--neo-bg) !important;
+  border: 1px solid var(--header-border-color) !important;
+  box-shadow: 6px 6px 14px var(--neo-shadow-dark), -6px -6px 14px var(--neo-shadow-light),
+    inset 0 1px 0 color-mix(in srgb, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.10) var(--td)) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+}
+html[data-theme-style="neomorph"] .app-header h1,
+html[data-theme-style="neomorph"] .app-header h2,
+html[data-theme-style="neomorph"] .app-header .app-header-title,
+html[data-theme-style="neomorph"] .top-bar h1,
+html[data-theme-style="neomorph"] header h1 {
+  color: var(--text-hi) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em !important;
+}
+/* Brand lockup: "Jindal Steel" reads as the strongest line, the site/eyebrow
+   lines sit one step down in --mute with tracked-out spacing. */
+html[data-theme-style="neomorph"] .app-header :is(.jspl-brand-l1, .brand-name),
+html[data-theme-style="neomorph"] .top-bar :is(.jspl-brand-l1, .brand-name) {
+  color: var(--text-hi) !important;
+  font-weight: 900 !important;
+}
+html[data-theme-style="neomorph"] .app-header .eyebrow,
+html[data-theme-style="neomorph"] .app-header .jspl-brand-l2,
+html[data-theme-style="neomorph"] .app-header .brand-site,
+html[data-theme-style="neomorph"] .app-header .title-block .eyebrow {
+  color: var(--mute) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+}
+html[data-theme-style="neomorph"] .app-header :is(.top-l,.hdr-r,.h-actions,.top-right)>button,
+html[data-theme-style="neomorph"] .app-header .theme-menu>button,
+html[data-theme-style="neomorph"] .app-header .h-actions .dropdown-wrapper>button,
+html[data-theme-style="neomorph"] .app-header :is(.app-header-brand-row,.app-header-filter-actions,.app-header-actions)>button,
+html[data-theme-style="neomorph"] .app-header .view-tabs button {
+  background: var(--neo-bg) !important;
+  color: var(--text-hi) !important;
+  border: 1px solid var(--bdr) !important;
+  box-shadow: 2px 2px 5px var(--neo-shadow-dark), -2px -2px 5px var(--neo-shadow-light) !important;
+  border-radius: 10px !important;
+}
+html[data-theme-style="neomorph"] .app-header :is(.top-l,.hdr-r,.h-actions,.top-right)>button:hover,
+html[data-theme-style="neomorph"] .app-header .theme-menu>button:hover,
+html[data-theme-style="neomorph"] .app-header .h-actions .dropdown-wrapper>button:hover,
+html[data-theme-style="neomorph"] .app-header :is(.app-header-brand-row,.app-header-filter-actions,.app-header-actions)>button:hover,
+html[data-theme-style="neomorph"] .app-header .view-tabs button:hover {
+  box-shadow: inset 2px 2px 5px var(--neo-shadow-dark), inset -2px -2px 5px var(--neo-shadow-light) !important;
+  color: var(--primary) !important;
+}
+/* Active/selected header tabs press in and pick up the accent, matching the
+   segmented-control language used elsewhere in the theme. */
+html[data-theme-style="neomorph"] .app-header .view-tabs button:is(.on, .active, [aria-selected="true"]) {
+  background: var(--neo-bg) !important;
+  color: var(--primary) !important;
+  box-shadow: inset 2px 2px 5px var(--neo-shadow-dark), inset -2px -2px 5px var(--neo-shadow-light) !important;
 }
 
 /* ── 1. NEOMORPH SURFACES — Cards / Panels / KPI Cards (Raised / Extruded) ── */
@@ -2633,6 +2661,15 @@ html[data-theme-style="neomorph"] :is(.kpi, .kcard, .kpi-card, .stat-card):is(.i
 html[data-theme-style="neomorph"] :is(.kpi, .kcard, .kpi-card, .stat-card):is(.intent-profit,[data-intent="profit"],.profit) :is(.num, .val, .value, h3, h4) {
   color: var(--success) !important;
 }
+/* Intent stripe parity with Classic: the card's top edge picks up the intent
+   colour (width stays 1px — zero geometry change, per the layout contract). */
+html[data-theme-style="neomorph"] :is(.kpi, .kcard, .kpi-card, .stat-card):is(.intent-warning,[data-intent="warning"],.warning) {
+  border-top-color: var(--danger) !important;
+}
+html[data-theme-style="neomorph"] :is(.kpi, .kcard, .kpi-card, .stat-card):is(.intent-profit,[data-intent="profit"],.profit) {
+  border-top-color: var(--success) !important;
+}
+
 
 /* ── 4. NEOMORPH BADGES & CHIPS — Soft Raised Pills ── */
 html[data-theme-style="neomorph"] :is(.sap-badge, .status-chip, .kpi-status, .badge, .chip) {
@@ -2835,10 +2872,26 @@ html[data-theme-style="neomorph"] :is(.kpi, .kcard, .kpi-card, .stat-card, .card
 /* ── 15. NEOMORPH THEME-PICKER CONTROLS ── */
 html[data-theme-style="neomorph"] .theme-preset-grid,
 html[data-theme-style="neomorph"] .theme-preset-btn,
-html[data-theme-style="neomorph"] .theme-range::-webkit-slider-runnable-track,
-html[data-theme-style="neomorph"] .theme-range::-moz-range-track,
-html[data-theme-style="neomorph"] .theme-range::-webkit-slider-thumb,
-html[data-theme-style="neomorph"] .theme-range::-moz-range-thumb,
 html[data-theme-style="neomorph"] .theme-chip {
   border-radius: 12px !important;
+}
+/* The slider track presses into the panel; the thumb is a raised circular
+   nub with the standard dual-shadow pair. Thumbs stay round (50%). */
+html[data-theme-style="neomorph"] .theme-range::-webkit-slider-runnable-track,
+html[data-theme-style="neomorph"] .theme-range::-moz-range-track {
+  border-radius: 999px !important;
+  box-shadow: inset 2px 2px 4px var(--neo-shadow-dark), inset -2px -2px 4px var(--neo-shadow-light) !important;
+}
+html[data-theme-style="neomorph"] .theme-range::-webkit-slider-thumb,
+html[data-theme-style="neomorph"] .theme-range::-moz-range-thumb {
+  border-radius: 50% !important;
+  background: var(--neo-bg) !important;
+  border: 1px solid var(--bdr) !important;
+  box-shadow: 2px 2px 5px var(--neo-shadow-dark), -2px -2px 5px var(--neo-shadow-light) !important;
+  cursor: grab;
+}
+html[data-theme-style="neomorph"] .theme-range:active::-webkit-slider-thumb,
+html[data-theme-style="neomorph"] .theme-range:active::-moz-range-thumb {
+  cursor: grabbing;
+  box-shadow: inset 2px 2px 5px var(--neo-shadow-dark), inset -2px -2px 5px var(--neo-shadow-light) !important;
 }

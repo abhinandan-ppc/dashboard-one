@@ -3,6 +3,7 @@ node_modules/
 service-account.json
 *service-account*.json
 .claude/
+.agents/
 .playwright-cli/
 .env
 .env.*
