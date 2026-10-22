@@ -20,8 +20,12 @@
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-bg-solid: rgba(255, 255, 255, 0.95);
   --glass-bg-hover: rgba(255, 255, 255, 0.9);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.8);
-  --glass-border-heavy: 1px solid rgba(255, 255, 255, 1);
+  /* --glass-border / --glass-border-heavy now come from theme.css as COLORS.
+     They used to be redefined here as `1px solid rgba(...)` shorthands, which
+     broke this page's own `border: 1px solid var(--glass-border)` usages
+     (an invalid `1px solid 1px solid <color>` that silently dropped the
+     declaration) and pinned the page to fixed alphas that ignored the
+     hub's light/dark switch. theme.css's --td ramp covers both. */
   --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
 
   /* Text & Lines */
@@ -72,8 +76,7 @@
   --glass-bg: rgba(30, 41, 59, 0.65);
   --glass-bg-solid: rgba(30, 41, 59, 0.95);
   --glass-bg-hover: rgba(30, 41, 59, 0.85);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
-  --glass-border-heavy: 1px solid rgba(255, 255, 255, 0.15);
+  /* See the light-mode note above: the border tokens now come from theme.css. */
   --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 
   --br: rgba(255,255,255,0.1);
@@ -135,7 +138,7 @@ button, select { font: inherit; cursor: pointer; transition: all 0.2s; border: n
 ::-webkit-scrollbar-thumb:hover { background: var(--sky); }
 
 /* ---- PREVENT WIDOW BLOWOUTS ON MOBILE ---- */
-.table-wrap { width: 100%; max-width: 100%; overflow-x: auto; overflow-y: auto; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; display: block; border-radius: var(--radius-m); border: var(--glass-border); background: var(--input-bg);}
+.table-wrap { width: 100%; max-width: 100%; overflow-x: auto; overflow-y: auto; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; display: block; border-radius: var(--radius-m); border:  1px solid var(--glass-border); background: var(--input-bg);}
 .main-container, .dashboard-top-section, .dashboard-side-controls, .dashboard-main-summary, .eq-grid, .card {
   min-width: 0; max-width: 100%; 
 }
@@ -144,7 +147,7 @@ button, select { font: inherit; cursor: pointer; transition: all 0.2s; border: n
 .hdr-wrapper { position: sticky; top: 12px; z-index: 100; padding: 0 var(--page-gutter); max-width: 1600px; margin: 0 auto; width: 100%; box-sizing: border-box; }
 .hdr {
     background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-    padding: 16px 32px; border-radius: var(--radius-m); border: var(--glass-border); box-shadow: var(--glass-shadow);
+    padding: 16px 32px; border-radius: var(--radius-m); border:  1px solid var(--glass-border); box-shadow: var(--glass-shadow);
     display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; transition: all 0.3s ease;
 }
 .hdr-l { display: flex; align-items: center; gap: 16px; min-width: 0; }
@@ -152,7 +155,7 @@ button, select { font: inherit; cursor: pointer; transition: all 0.2s; border: n
 .hdr-l .eyebrow { font-size: 11px; color: var(--tm); letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; margin-top:-2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hdr-l h1 { font-size: 17px; font-weight: 800; color: var(--md-sys-color-primary); letter-spacing: -0.2px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.3s ease;}
 .hdr-r { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-.hdr-btn { height: 40px; padding: 0 20px; border-radius: 20px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; background: var(--input-bg); color: var(--tx); border: var(--glass-border); }
+.hdr-btn { height: 40px; padding: 0 20px; border-radius: 20px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; background: var(--input-bg); color: var(--tx); border:  1px solid var(--glass-border); }
 .hdr-btn:hover { background: var(--input-hover); transform: scale(1.02); }
 
 /* ---- ALERTS ---- */
@@ -176,7 +179,7 @@ button, select { font: inherit; cursor: pointer; transition: all 0.2s; border: n
 .kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); padding: var(--space-stack) var(--page-gutter); max-width: 1600px; margin: 0 auto; width: 100%; }
 .kpi { 
     background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-    border-radius: var(--radius-l); padding: 18px 20px; border: var(--glass-border); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; box-shadow: var(--glass-shadow); transition: transform 0.2s, background 0.3s; border-top: 4px solid var(--tm);
+    border-radius: var(--radius-l); padding: 18px 20px; border:  1px solid var(--glass-border); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; box-shadow: var(--glass-shadow); transition: transform 0.2s, background 0.3s; border-top: 4px solid var(--tm);
 }
 /* The shared card-surface contract puts margin-bottom on .kpi for pages
    that stack with margins. This page stacks with gap, so clear it — otherwise
@@ -196,7 +199,7 @@ button, select { font: inherit; cursor: pointer; transition: all 0.2s; border: n
 .card { 
     display: flex; flex-direction: column; 
     background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-    border-radius: var(--radius-l); border: var(--glass-border); box-shadow: var(--glass-shadow); 
+    border-radius: var(--radius-l); border:  1px solid var(--glass-border); box-shadow: var(--glass-shadow); 
     transition: background 0.3s, border-color 0.3s; flex-shrink: 0; overflow: hidden; max-width: 100%; padding: 20px;
 }
 .card-hd { font-size: 13px; font-weight: 800; color: var(--md-sys-color-primary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
@@ -246,7 +249,7 @@ tr:hover td { background: var(--stripe-hover); }
 .eq-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);}
 @media(max-width: 1400px) { .eq-grid { grid-template-columns: minmax(0, 1fr); } }
 .hroom { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-.hchip { padding: 8px 16px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 700; letter-spacing: 0.3px; border: var(--glass-border); background: var(--input-bg); box-shadow: 0 2px 4px rgba(0,0,0,0.02); white-space: nowrap; color: var(--tm);}
+.hchip { padding: 8px 16px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 700; letter-spacing: 0.3px; border:  1px solid var(--glass-border); background: var(--input-bg); box-shadow: 0 2px 4px rgba(0,0,0,0.02); white-space: nowrap; color: var(--tm);}
 .hchip b { color: var(--tx); font-family: inherit; font-weight: 800; }
 
 /* ---- TABS & EXPANDABLE PANELS ---- */
@@ -289,13 +292,13 @@ tr:hover td { background: var(--stripe-hover); }
 }
 
 /* ---- INTERACTIVE FLOWCHART (ABSOLUTE COORDS) ---- */
-.flow-wrapper { position: relative; height: 75vh; height: 75dvh; min-height: 650px; background: var(--glass-bg-solid); border-radius: 0 0 var(--radius-m) var(--radius-m); border: var(--glass-border); border-top: none; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--glass-shadow);}
+.flow-wrapper { position: relative; height: 75vh; height: 75dvh; min-height: 650px; background: var(--glass-bg-solid); border-radius: 0 0 var(--radius-m) var(--radius-m); border:  1px solid var(--glass-border); border-top: none; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--glass-shadow);}
 .flow-wrapper:fullscreen { height: 100vh !important; min-height: 100vh !important; border-radius: 0; border: none; }
 .flow-scroll-content { flex: 1; position: relative; width: 100%; height: 100%; overflow: hidden; cursor: grab; user-select: none; touch-action: none; background: var(--input-bg); box-shadow: inset 0 2px 8px rgba(0,0,0,0.02);}
 .flow-scroll-content:active { cursor: grabbing; }
 
 /* Zoom Controls (Pill) */
-.flow-controls { position: absolute; top: 16px; right: 16px; display: flex; align-items: center; gap: 4px; z-index: 100; background: var(--glass-bg-solid); padding: 4px 8px; border-radius: var(--radius-pill); border: var(--glass-border); box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: grab; user-select: none; transition: box-shadow 0.2s; touch-action: none; backdrop-filter: blur(12px);}
+.flow-controls { position: absolute; top: 16px; right: 16px; display: flex; align-items: center; gap: 4px; z-index: 100; background: var(--glass-bg-solid); padding: 4px 8px; border-radius: var(--radius-pill); border:  1px solid var(--glass-border); box-shadow: 0 4px 12px rgba(0,0,0,0.1); cursor: grab; user-select: none; transition: box-shadow 0.2s; touch-action: none; backdrop-filter: blur(12px);}
 .flow-controls:active { cursor: grabbing; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
 .flow-drag-handle { padding: 4px 8px; color: var(--tm); font-size: 16px; line-height: 1; cursor: grab; }
 .flow-controls button { background: transparent; color: var(--tx); border: none; border-radius: var(--radius-pill); padding: 6px 12px; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s;}
@@ -306,7 +309,7 @@ tr:hover td { background: var(--stripe-hover); }
 
 /* Disabled Dock Area */
 .dock-area { position: absolute; top: 840px; left: 40px; right: 40px; height: 160px; border: 2px dashed var(--bdrHi); border-radius: var(--radius-m); pointer-events: none; z-index: 1; }
-.dock-title { position: absolute; top: -12px; left: 24px; background: var(--glass-bg); padding: 4px 12px; font-size: 11px; font-weight: 800; color: var(--tm); letter-spacing: 0.5px; text-transform: uppercase; border-radius: var(--radius-pill); border: var(--glass-border);}
+.dock-title { position: absolute; top: -12px; left: 24px; background: var(--glass-bg); padding: 4px 12px; font-size: 11px; font-weight: 800; color: var(--tm); letter-spacing: 0.5px; text-transform: uppercase; border-radius: var(--radius-pill); border:  1px solid var(--glass-border);}
 
 /* Glassmorphism Nodes */
 .fc-node {
@@ -360,7 +363,7 @@ tr:hover td { background: var(--stripe-hover); }
 @keyframes flowDash { to { stroke-dashoffset: -20; } }
 
 #flow-labels { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-.fc-label { font-family: inherit; padding: 4px 10px; border-radius: var(--radius-pill); position: absolute; transform: translate(-50%, -50%); background: var(--glass-bg-solid); border: var(--glass-border); pointer-events: none; text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display:flex; flex-direction:column; align-items:center; gap:2px;}
+.fc-label { font-family: inherit; padding: 4px 10px; border-radius: var(--radius-pill); position: absolute; transform: translate(-50%, -50%); background: var(--glass-bg-solid); border:  1px solid var(--glass-border); pointer-events: none; text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display:flex; flex-direction:column; align-items:center; gap:2px;}
 .fc-label .lbl-t { font-size: 11px; font-weight: 800; color: var(--tx); line-height:1;}
 .fc-label .lbl-h { font-size: 11px; font-weight: 700; color: inherit; opacity: 0.9; line-height:1;}
 
@@ -375,7 +378,7 @@ div.google-visualization-tooltip {
 }
 .m3-tooltip { 
     background: var(--glass-bg-solid); 
-    border: var(--glass-border); 
+    border:  1px solid var(--glass-border); 
     backdrop-filter: var(--glass-blur); 
     -webkit-backdrop-filter: var(--glass-blur); 
     border-radius: var(--radius-m); 

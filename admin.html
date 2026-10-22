@@ -11,9 +11,12 @@
 <link rel="stylesheet" href="theme.css"/>
 <style>
 :root {
-  /* --glass-border here is a full border shorthand (width+style+color), unlike
-     theme.css's color-only --glass-border, so it must stay locally defined. */
-  --glass-border: 1px solid rgba(0,0,0,0.08);
+  /* --glass-border comes from theme.css and is a COLOR, not a shorthand.
+     It used to be redefined here as `1px solid rgba(...)`, which meant the
+     shared `border: 1px solid var(--glass-border)` form used by other pages
+     became the invalid `1px solid 1px solid <color>` and was dropped. It also
+     pinned this page to two fixed alphas, ignoring the classic/neomorph
+     theme-style overrides. Inheriting the ramped token fixes both. */
   --good: #15803d; --bad: #b91c1c; --warn: #b45309;
   --page-side: var(--page-gutter);
   /* Vertical rhythm. The gap under the header bar and the gaps between the
@@ -28,7 +31,10 @@
   :root { --admin-block-gap: var(--space-stack-sm); }
 }
 [data-theme="dark"] {
-  --glass-border: 1px solid rgba(255,255,255,0.1);
+  /* --glass-border used to be redefined here as `1px solid rgba(255,255,255,.1)`.
+     It is a COLOR token now (theme.css), and the light/dark difference is
+     already carried by theme.css's --td ramp, so the override only made
+     this page disagree with the shared contract. */
   --good: #4ade80; --bad: #f87171; --warn: #fbbf24;
 }
 * { box-sizing: border-box; }
@@ -40,7 +46,7 @@ input, select { font: inherit; color: inherit; }
 .dd { position: relative; flex-shrink: 0; }
 .dd-btn {
   display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px;
-  border-radius: var(--radius-pill); border: var(--glass-border); background: var(--input-bg);
+  border-radius: var(--radius-pill); border:  1px solid var(--glass-border); background: var(--input-bg);
   color: var(--tx); font-size: 13px; font-weight: 600; white-space: nowrap;
 }
 .dd-btn:hover { background: var(--glass-bg-hover, var(--input-bg)); }
@@ -49,7 +55,7 @@ input, select { font: inherit; color: inherit; }
 .dd-menu {
   position: absolute; top: calc(100% + 8px); left: 0; min-width: 100%; width: max-content; max-width: 280px;
   max-height: 280px; overflow-y: auto; background: var(--glass-bg-solid); backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur); border: var(--glass-border); border-radius: var(--radius-m);
+  -webkit-backdrop-filter: var(--glass-blur); border:  1px solid var(--glass-border); border-radius: var(--radius-m);
   box-shadow: var(--glass-shadow); padding: 6px; display: none; flex-direction: column; gap: 2px; z-index: 50;
 }
 .dd.open .dd-menu { display: flex; }
@@ -78,7 +84,7 @@ a { color: var(--primary); }
 .top-bar {
   position: relative; min-height: 64px; box-sizing: border-box;
   background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-  padding: 12px 20px; border-radius: var(--radius-lg); border: var(--glass-border); box-shadow: var(--shadow-md);
+  padding: 12px 20px; border-radius: var(--radius-lg); border:  1px solid var(--glass-border); box-shadow: var(--shadow-md);
   display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
 }
 @media (max-width: 640px) {
@@ -146,23 +152,23 @@ a { color: var(--primary); }
   .hd .sub.hdr-sub-collapsed { max-height: 0; opacity: 0; margin-top: 0; }
 }
 .hd-actions { display: flex; align-items: center; gap: 10px; }
-.btn { padding: 9px 16px; border-radius: var(--radius-pill); font-weight: 700; font-size: 13px; background: var(--input-bg); color: var(--tx); border: var(--glass-border); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.btn { padding: 9px 16px; border-radius: var(--radius-pill); font-weight: 700; font-size: 13px; background: var(--input-bg); color: var(--tx); border:  1px solid var(--glass-border); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
 .btn:hover { filter: brightness(1.05); }
 .btn.primary { background: var(--primary); color: var(--on-primary); }
 
-.banner { padding: 14px 18px; border-radius: var(--radius-m); background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: var(--glass-border); margin-bottom: var(--admin-block-gap); font-size: 13px; color: var(--tm); }
+.banner { padding: 14px 18px; border-radius: var(--radius-m); background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border:  1px solid var(--glass-border); margin-bottom: var(--admin-block-gap); font-size: 13px; color: var(--tm); }
 .banner.error { color: var(--bad); border-color: var(--bad); }
 
-.panel { background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--glass-shadow); padding: 18px; margin-bottom: var(--admin-block-gap); }
+.panel { background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border:  1px solid var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--glass-shadow); padding: 18px; margin-bottom: var(--admin-block-gap); }
 .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--tm); margin: 0 0 12px; }
 
 .stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: var(--admin-block-gap); }
-.stat { flex: 1; min-width: 120px; background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: var(--glass-border); border-radius: var(--radius-m); padding: 14px 16px; }
+.stat { flex: 1; min-width: 120px; background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border:  1px solid var(--glass-border); border-radius: var(--radius-m); padding: 14px 16px; }
 .stat .num { font-size: 24px; font-weight: 800; }
 .stat .lbl { font-size: 11.5px; color: var(--tm); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
 
 .users { display: flex; flex-direction: column; gap: var(--admin-list-gap); }
-.user-card { background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border: var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--glass-shadow); padding: 12px 14px; }
+.user-card { background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); border:  1px solid var(--glass-border); border-radius: var(--radius-lg); box-shadow: var(--glass-shadow); padding: 12px 14px; }
 /* The toggle used to be positioned absolute: right:10px; top:50% against
    .user-card itself — centered on the card's TOTAL height. That height
    includes the action-button row below and, once expanded, the whole
@@ -177,7 +183,7 @@ a { color: var(--primary); }
 .expand-toggle {
   position: absolute; right: 0; top: 50%; transform: translateY(-50%);
   width: 26px; height: 26px; padding: 0; display: flex; align-items: center; justify-content: center;
-  border-radius: 50%; background: var(--input-bg); border: var(--glass-border); color: var(--tm);
+  border-radius: 50%; background: var(--input-bg); border:  1px solid var(--glass-border); color: var(--tm);
   font-size: 13px; line-height: 1; cursor: pointer; transition: transform 0.2s ease, background 0.2s ease;
 }
 .expand-toggle:hover { background: var(--input-hover); }
@@ -194,7 +200,7 @@ a { color: var(--primary); }
 .badge.pending { background: rgba(251,191,36,0.15); color: var(--warn); }
 .badge.blocked { background: rgba(239,68,68,0.15); color: var(--bad); }
 
-.user-actions { display: flex; margin-top: 10px; background: var(--input-bg); border: var(--glass-border); border-radius: var(--radius-pill); overflow: hidden; }
+.user-actions { display: flex; margin-top: 10px; background: var(--input-bg); border:  1px solid var(--glass-border); border-radius: var(--radius-pill); overflow: hidden; }
 .action-btn { flex: 1; height: 30px; padding: 0 6px; border-radius: 0; font-size: 10.5px; font-weight: 700; background: transparent; border: none; color: var(--tx); display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; position: relative; transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease; }
 .action-btn:not(:first-child)::before { content: ''; position: absolute; left: 0; top: 22%; bottom: 22%; width: 1px; background: var(--br); }
 .action-btn:hover { background: rgba(var(--primary-rgb),0.14); color: var(--primary); box-shadow: inset 0 0 14px rgba(var(--primary-rgb),0.22); }
@@ -202,7 +208,7 @@ a { color: var(--primary); }
 .action-btn.bad:hover { background: rgba(239,68,68,0.16); color: var(--bad); box-shadow: inset 0 0 14px rgba(239,68,68,0.28); }
 .action-btn.warn:hover { background: rgba(251,191,36,0.16); color: var(--warn); box-shadow: inset 0 0 14px rgba(251,191,36,0.28); }
 
-.mini-btn { height: 30px; padding: 0 14px; border-radius: var(--radius-pill); font-size: 11.5px; font-weight: 700; background: var(--input-bg); border: var(--glass-border); color: var(--tx); display: inline-flex; align-items: center; cursor: pointer; transition: background 0.15s ease; }
+.mini-btn { height: 30px; padding: 0 14px; border-radius: var(--radius-pill); font-size: 11.5px; font-weight: 700; background: var(--input-bg); border:  1px solid var(--glass-border); color: var(--tx); display: inline-flex; align-items: center; cursor: pointer; transition: background 0.15s ease; }
 .mini-btn:hover { background: var(--input-hover); }
 
 .divider { height: 1px; background: var(--br); margin: 14px 0; }
@@ -210,17 +216,17 @@ a { color: var(--primary); }
 .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--tm); margin-bottom: 10px; }
 
 .pages-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-.page-chip { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: var(--radius-m); background: var(--input-bg); border: var(--glass-border); font-size: 12px; cursor: pointer; user-select: none; overflow: hidden; }
+.page-chip { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: var(--radius-m); background: var(--input-bg); border:  1px solid var(--glass-border); font-size: 12px; cursor: pointer; user-select: none; overflow: hidden; }
 .page-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .page-chip input { accent-color: var(--primary); width: 15px; height: 15px; flex-shrink: 0; }
 .page-chip.on { background: rgba(var(--primary-rgb),0.14); border-color: var(--primary); color: var(--primary); }
 
 .toggle-row { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
-.switch-chip { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-m); background: var(--input-bg); border: var(--glass-border); font-size: 12.5px; font-weight: 600; cursor: pointer; user-select: none; }
+.switch-chip { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-m); background: var(--input-bg); border:  1px solid var(--glass-border); font-size: 12.5px; font-weight: 600; cursor: pointer; user-select: none; }
 .switch-chip input { width: 16px; height: 16px; accent-color: var(--primary); flex-shrink: 0; }
 
 .add-page-row { display: flex; gap: 8px; margin-top: 12px; }
-.add-page-row input { flex: 1; min-width: 160px; padding: 7px 12px; border-radius: var(--radius-pill); border: var(--glass-border); background: var(--input-bg); color: var(--tx); font-size: 12.5px; }
+.add-page-row input { flex: 1; min-width: 160px; padding: 7px 12px; border-radius: var(--radius-pill); border:  1px solid var(--glass-border); background: var(--input-bg); color: var(--tx); font-size: 12.5px; }
 
 .save-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
 
@@ -285,9 +291,9 @@ a { color: var(--primary); }
     <h2>Add a user manually</h2>
     <form id="addUserForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <input type="email" id="addUserEmail" list="knownEmails" placeholder="name@jindalsteel.in" required
-        style="flex:1;min-width:220px;padding:9px 14px;border-radius:999px;border:var(--glass-border);background:var(--input-bg);color:var(--tx);font-size:13px">
+        style="flex:1;min-width:220px;padding:9px 14px;border-radius:999px;border: 1px solid var(--glass-border);background:var(--input-bg);color:var(--tx);font-size:13px">
       <input type="text" id="addUserName" placeholder="Display name (optional)"
-        style="flex:1;min-width:180px;padding:9px 14px;border-radius:999px;border:var(--glass-border);background:var(--input-bg);color:var(--tx);font-size:13px">
+        style="flex:1;min-width:180px;padding:9px 14px;border-radius:999px;border: 1px solid var(--glass-border);background:var(--input-bg);color:var(--tx);font-size:13px">
       <datalist id="knownEmails"></datalist>
       <button type="submit" class="btn primary">Add &amp; approve</button>
     </form>
@@ -303,7 +309,7 @@ a { color: var(--primary); }
 
   <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
     <input type="search" id="searchInput" placeholder="Search by name or email&hellip;"
-      style="flex:1;min-width:200px;padding:9px 14px;border-radius:999px;border:var(--glass-border);background:var(--input-bg);color:var(--tx);font-size:13px">
+      style="flex:1;min-width:200px;padding:9px 14px;border-radius:999px;border: 1px solid var(--glass-border);background:var(--input-bg);color:var(--tx);font-size:13px">
     <div class="dd" id="statusFilterDd" data-value="">
       <button type="button" class="dd-btn"><span class="dd-label">All statuses</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
       <div class="dd-menu">

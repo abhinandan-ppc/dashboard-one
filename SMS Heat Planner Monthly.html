@@ -27,8 +27,12 @@
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-bg-solid: rgba(255, 255, 255, 0.95);
   --glass-bg-hover: rgba(255, 255, 255, 0.9);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.8);
-  --glass-border-heavy: 1px solid rgba(255, 255, 255, 1);
+  /* --glass-border / --glass-border-heavy now come from theme.css as COLORS.
+     They used to be redefined here as `1px solid rgba(...)` shorthands, which
+     broke this page's own `border: 1px solid var(--glass-border)` usages
+     (an invalid `1px solid 1px solid <color>` that silently dropped the
+     declaration) and pinned the page to fixed alphas that ignored the
+     hub's light/dark switch. theme.css's --td ramp covers both. */
   --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
 
   /* Text & Lines */
@@ -60,8 +64,7 @@
   --glass-bg: rgba(30, 41, 59, 0.65);
   --glass-bg-solid: rgba(30, 41, 59, 0.95);
   --glass-bg-hover: rgba(30, 41, 59, 0.85);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
-  --glass-border-heavy: 1px solid rgba(255, 255, 255, 0.15);
+  /* See the light-mode note above: the border tokens now come from theme.css. */
   --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 
   --br: rgba(255,255,255,0.1);
@@ -110,7 +113,7 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
 .sticky-wrapper { position: sticky; top: 12px; z-index: 100; padding: 0 var(--page-gutter); max-width: 1600px; margin: 0 auto; width: 100%; box-sizing: border-box;}
 .site-header { 
     background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-    padding: 16px 32px; border-radius: var(--radius-m); border: var(--glass-border); box-shadow: var(--glass-shadow);
+    padding: 16px 32px; border-radius: var(--radius-m); border:  1px solid var(--glass-border); box-shadow: var(--glass-shadow);
     display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; transition: all 0.3s ease;
 }
 .brand { display: flex; align-items: center; gap: 16px; }
@@ -124,12 +127,12 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
 .brand-text p { font-size: 11px; color: var(--tm); letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; margin-top:-2px;}
 
 .hbadges { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.hb { padding: 8px 16px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 800; letter-spacing: 0.3px; border: var(--glass-border); background: var(--input-bg); box-shadow: 0 2px 4px rgba(0,0,0,0.02); white-space: nowrap; }
+.hb { padding: 8px 16px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 800; letter-spacing: 0.3px; border:  1px solid var(--glass-border); background: var(--input-bg); box-shadow: 0 2px 4px rgba(0,0,0,0.02); white-space: nowrap; }
 .hb-b { color: var(--md-sys-color-secondary); }
 .hb-a { color: var(--mo); }
 
 .h-actions { display: flex; gap: 12px; align-items: center; }
-.btn-header { height: 40px; padding: 0 20px; border-radius: 20px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; background: var(--input-bg); color: var(--tx); border: var(--glass-border); outline: none; }
+.btn-header { height: 40px; padding: 0 20px; border-radius: 20px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; background: var(--input-bg); color: var(--tx); border:  1px solid var(--glass-border); outline: none; }
 .btn-header:hover { background: var(--input-hover); transform: scale(1.02); }
 /* ─── APP SHELL & LAYOUT ─── */
 /* Section/row gaps come from the shared vertical-rhythm contract in theme.css
@@ -143,7 +146,7 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
 .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); }
 .kpi { 
     background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-    border-radius: var(--radius-l); padding: 18px 20px; border: var(--glass-border); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; box-shadow: var(--glass-shadow); transition: transform 0.2s, background 0.3s; cursor: pointer; border-top: 4px solid var(--tm);
+    border-radius: var(--radius-l); padding: 18px 20px; border:  1px solid var(--glass-border); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; box-shadow: var(--glass-shadow); transition: transform 0.2s, background 0.3s; cursor: pointer; border-top: 4px solid var(--tm);
 }
 .kpi:hover { transform: translateY(-3px); background: var(--glass-bg-hover); box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
 .kpi-label { font-size: 11px; font-weight: 800; color: var(--tm); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; transition: color 0.3s;}
@@ -168,7 +171,7 @@ div.google-visualization-tooltip { border: none !important; box-shadow: none !im
 .panel { 
     display: flex; flex-direction: column; 
     background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-    border-radius: var(--radius-l); border: var(--glass-border); box-shadow: var(--glass-shadow); 
+    border-radius: var(--radius-l); border:  1px solid var(--glass-border); box-shadow: var(--glass-shadow); 
     transition: background 0.3s, border-color 0.3s; flex-shrink: 0; overflow: hidden; max-width: 100%;
 }
 /* Gap-stacked here, so clear the shared contract's margin-bottom on these
@@ -229,7 +232,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 .cap-micro-grid-wrap::-webkit-scrollbar-thumb { background: var(--bdrHi); border-radius: 10px; }
 
 /* ─── COLLAPSIBLES (Individual M3 Cards) ─── */
-.coll-panel { width: 100%; box-sizing: border-box; border-radius: var(--radius-m); overflow: hidden; background: var(--glass-bg); border: var(--glass-border); box-shadow: var(--glass-shadow); flex-shrink: 0; }
+.coll-panel { width: 100%; box-sizing: border-box; border-radius: var(--radius-m); overflow: hidden; background: var(--glass-bg); border:  1px solid var(--glass-border); box-shadow: var(--glass-shadow); flex-shrink: 0; }
 .coll-h { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 16px 18px; user-select: none; background: var(--glass-bg-solid); transition: background 0.2s;}
 .coll-h:hover { background: var(--input-hover); }
 .coll-h span { font-size: 12px; font-weight: 800; color: var(--md-sys-color-primary); text-transform: uppercase; letter-spacing: 0.5px; }
@@ -252,7 +255,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 .tc { display: none; padding: 24px; width: 100%; box-sizing: border-box; overflow-x: auto;} .tc.act { display: block; animation: fadeIn 0.3s ease; }
 
 /* ─── TABLES ─── */
-.table-responsive { overflow-x: auto; overflow-y: auto; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; border-radius: var(--radius-m); border: var(--glass-border); background: var(--input-bg); width: 100%; max-width: 100%; }
+.table-responsive { overflow-x: auto; overflow-y: auto; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; border-radius: var(--radius-m); border:  1px solid var(--glass-border); background: var(--input-bg); width: 100%; max-width: 100%; }
 .sc-tbl { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: auto; }
 .sc-tbl th { padding: 14px 16px; text-align: right; font-size: 11px; font-weight: 800; color: var(--tm); text-transform: uppercase; border-bottom: 1px solid var(--br); white-space: nowrap; }
 .sc-tbl th:first-child { text-align: left; white-space: normal; }
@@ -273,7 +276,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 .expand-btn { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: var(--md-sys-color-primary); font-weight: bold; transition: transform 0.2s; font-size: 12px; border-radius: 50%; flex-shrink:0;}
 
 /* ─── FLOW TABLE (M3 Design) ─── */
-.flow-tbl-wrap { margin-top: 16px; background: var(--glass-bg-solid); border-radius: var(--radius-m); box-shadow: var(--glass-shadow); border: var(--glass-border); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.flow-tbl-wrap { margin-top: 16px; background: var(--glass-bg-solid); border-radius: var(--radius-m); box-shadow: var(--glass-shadow); border:  1px solid var(--glass-border); overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .flow-tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 700px; }
 .flow-tbl th { background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 800; text-transform: uppercase; white-space: nowrap; border-bottom: none; letter-spacing: 0.5px;}
 .flow-tbl td { padding: 14px 16px; border-bottom: 1px solid var(--br); font-weight: 500; color: var(--tx); white-space: nowrap;}
@@ -301,15 +304,15 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 .eb-row .vl { font-size: 12px; font-weight: 900; width: 80px; text-align: right; color: var(--tx); flex-shrink: 0;}
 
 /* ─── FLOWCHART & SVG ─── */
-.flow-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; background: var(--input-bg); padding: 12px; border-radius: var(--radius-m); border: var(--glass-border); }
-.flow-view-btn { padding: 8px 16px; border-radius: var(--radius-pill); border: var(--glass-border); background: var(--glass-bg-solid); font-size: 12px; font-weight: 700; cursor: pointer; color: var(--tm); transition: all 0.2s; }
+.flow-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; background: var(--input-bg); padding: 12px; border-radius: var(--radius-m); border:  1px solid var(--glass-border); }
+.flow-view-btn { padding: 8px 16px; border-radius: var(--radius-pill); border:  1px solid var(--glass-border); background: var(--glass-bg-solid); font-size: 12px; font-weight: 700; cursor: pointer; color: var(--tm); transition: all 0.2s; }
 .flow-view-btn:hover { filter: brightness(0.95); color: var(--tx); }
 .flow-view-btn.act { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: var(--md-sys-color-primary); box-shadow: 0 4px 8px rgba(var(--primary-rgb),0.2); }
 .flow-legend { display: flex; gap: 14px; margin-left: auto; flex-wrap: wrap; }
 .leg-item { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; color: var(--tm); }
 .leg-dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
 
-.flow-scroll-wrapper { width: 100%; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; border-radius: var(--radius-l); border: var(--glass-border); background: var(--input-bg); box-shadow: inset 0 2px 8px rgba(0,0,0,0.02); display: block; max-width: 100vw;}
+.flow-scroll-wrapper { width: 100%; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; border-radius: var(--radius-l); border:  1px solid var(--glass-border); background: var(--input-bg); box-shadow: inset 0 2px 8px rgba(0,0,0,0.02); display: block; max-width: 100vw;}
 .flow-wrap-container { position: relative; margin: 0 auto; padding: 40px 20px 50px; min-width: 900px; display: flex; flex-direction: column; gap: 80px; align-items: center; }
 
 .fn { border-radius: var(--radius-m); padding: 14px 18px; cursor: pointer; transition: all 0.2s cubic-bezier(0.2, 0, 0, 1); border: 2px solid transparent; min-width: 120px; text-align: center; position: relative; z-index: 2; background: var(--glass-bg-solid); box-shadow: 0 4px 12px rgba(0,0,0,0.15); backdrop-filter: blur(5px);}
@@ -336,7 +339,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 .pm-grid { display: grid; grid-template-columns: 1fr 1fr; width: 100%; min-width: 0; }
 /* .pm-grid is gap-stacked by the shared contract (--space-stack), so this card
    must not carry a margin as well — 24+16=40px between product-mix cards. */
-.pm-card { background: var(--input-bg); border-radius: var(--radius-m); padding: 18px; margin-bottom: 0; border: var(--glass-border); width: 100%; max-width: 100%; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.02);}
+.pm-card { background: var(--input-bg); border-radius: var(--radius-m); padding: 18px; margin-bottom: 0; border:  1px solid var(--glass-border); width: 100%; max-width: 100%; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.02);}
 .pm-blended { font-size: 12px; font-weight: 800; padding: 6px 12px; border-radius: var(--radius-pill); background: var(--glass-bg-solid); color: var(--sg); border: 1px solid var(--sl); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 .pm-tbl { width: 100%; border-collapse: collapse; font-size: 12px; background: var(--glass-bg-solid); border-radius: var(--radius-s); min-width: 450px; overflow: hidden;}
 .pm-tbl th { font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--tm); padding: 10px; border-bottom: 1px solid var(--br); text-align: right; background: var(--input-bg); white-space: nowrap;}
@@ -351,7 +354,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 /* ─── M3 BOTTOM SHEET DRAWER ─── */
 .drawer-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 9998; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);}
 .drawer-overlay.open { opacity: 1; pointer-events: all; }
-.detail-drawer { position: fixed; bottom: 0; left: 0; right: 0; max-height: 85vh; max-height: 85dvh; background: var(--glass-bg-solid); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-radius: var(--radius-xl) var(--radius-xl) 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.3); transform: translateY(105%); transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1); z-index: 9999; display: flex; flex-direction: column; border-top: var(--glass-border-heavy);}
+.detail-drawer { position: fixed; bottom: 0; left: 0; right: 0; max-height: 85vh; max-height: 85dvh; background: var(--glass-bg-solid); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-radius: var(--radius-xl) var(--radius-xl) 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.3); transform: translateY(105%); transition: transform 0.4s cubic-bezier(0.2, 0, 0, 1); z-index: 9999; display: flex; flex-direction: column; border-top: 1px solid var(--glass-border-heavy);}
 .detail-drawer.open { transform: translateY(0); }
 .drawer-handle { width: 48px; height: 5px; background: var(--tm); opacity: 0.3; border-radius: var(--radius-pill); margin: 16px auto 8px; flex-shrink: 0; }
 .drawer-header { display: flex; align-items: center; gap: 12px; padding: 8px 24px 16px; border-bottom: 1px solid var(--br); flex-shrink: 0; }
@@ -656,7 +659,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
         <div id="t-ov" class="tc act">
           <div id="alertBox"></div>
           
-          <div id="casterVisualBox" style="margin-bottom:24px; background:var(--input-bg); border:var(--glass-border); border-radius:var(--radius-m); padding:20px;"></div>
+          <div id="casterVisualBox" style="margin-bottom:24px; background:var(--input-bg); border: 1px solid var(--glass-border); border-radius:var(--radius-m); padding:20px;"></div>
 
           <div class="ov-grid">
             <div>
@@ -693,7 +696,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
           <div class="ov-grid">
             <div>
               <p class="sec-lbl">EBITDA by Mill — Mean Scenario (₹ Crores)</p>
-              <div id="ebBars" style="padding:20px; background:var(--input-bg); border-radius:var(--radius-m); border:var(--glass-border);"></div>
+              <div id="ebBars" style="padding:20px; background:var(--input-bg); border-radius:var(--radius-m); border: 1px solid var(--glass-border);"></div>
               <div class="tot-eb-card">
                 <span class="tot-eb-lbl">Total EBITDA (Mean)</span>
                 <span class="tot-eb-val" id="totEb">—</span>
@@ -701,13 +704,13 @@ select option { background-color: var(--bg-color); color: var(--tx); }
             </div>
             <div>
               <p class="sec-lbl">Marginal Rank (₹/t of liquid steel)</p>
-              <div id="margRank" style="padding:20px; background:var(--input-bg); border-radius:var(--radius-m); border:var(--glass-border);"></div>
+              <div id="margRank" style="padding:20px; background:var(--input-bg); border-radius:var(--radius-m); border: 1px solid var(--glass-border);"></div>
             </div>
           </div>
         </div>
 
         <div id="t-pm" class="tc">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:20px; background:var(--input-bg); padding:20px; border-radius:var(--radius-m); border:var(--glass-border)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:20px; background:var(--input-bg); padding:20px; border-radius:var(--radius-m); border: 1px solid var(--glass-border)">
             <p style="font-size:13px;color:var(--tx);flex:1;min-width:250px; line-height:1.6; font-weight:500;">
               Product grade breakdown. Volumes scale with actual mill output. EBITDA ₹/t rates are blended from these grades. 
               <br><span style="color:var(--tm); display:inline-block; margin-top:6px;"><b>Auto-Maximize</b> optimizes the mix by mathematically shifting % to higher-margin grades (dynamically capped at 200% of base plan to preserve operational realism).</span>
@@ -917,7 +920,7 @@ function getMillMixM3(key, totalVol) {
     const millDef = PROD_MIX[key];
     if(!mix || !millDef || totalVol <= 0) return '';
     let html = `<div style="margin-top:20px;"><div style="font-size:11px; font-weight:800; color:var(--tm); text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Product Mix Breakdown</div>`;
-    html += `<div style="background:var(--input-bg); border-radius:var(--radius-m); padding:16px; border:var(--glass-border);">`;
+    html += `<div style="background:var(--input-bg); border-radius:var(--radius-m); padding:16px; border: 1px solid var(--glass-border);">`;
     millDef.groups.forEach(g => {
         g.prods.forEach(p => {
             const pct = mix.pcts[p.l] || 0;
@@ -1469,7 +1472,7 @@ window.recalc = function(){
     const pct=Math.min(100,c2.mat/c2.cap*100).toFixed(0);
     const ty=c2.lim?'🧱 Material-ltd':'🏭 Capacity-ltd',col=c2.lim?'var(--sg)':'var(--md-sys-color-primary)';
     
-    cch+=`<div style="background:var(--input-bg);border-radius:var(--radius-m);border:var(--glass-border);padding:14px 18px;margin-bottom:12px;box-shadow:var(--glass-shadow)">
+    cch+=`<div style="background:var(--input-bg);border-radius:var(--radius-m);border: 1px solid var(--glass-border);padding:14px 18px;margin-bottom:12px;box-shadow:var(--glass-shadow)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <span style="font-size:14px;font-weight:800;color:var(--tx)">${c2.l}</span>
         <span style="font-size:11px;font-weight:800;color:${col}">${ty}</span>
@@ -1567,7 +1570,7 @@ window.renderProdMix = function(ap) {
     html += '</div></div>';
     html += bar;
 
-    html += '<div style="overflow-x:auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-s); max-width: 100%; border: var(--glass-border);">';
+    html += '<div style="overflow-x:auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-s); max-width: 100%; border:  1px solid var(--glass-border);">';
     html += '<table class="pm-tbl"><thead><tr>';
     html += '<th>Product</th><th>EBITDA ₹/t</th><th>Mix% ✎</th>';
     html += '<th>Forecast(t)</th><th>EBITDA(₹Cr)</th></tr></thead><tbody>';
@@ -1724,19 +1727,19 @@ window.showDrawer = function(id) {
          let pmDetail = getMillMixM3('hsm', ma.pHS);
          body.innerHTML = `<div style="padding:20px; font-size:14px; color:var(--tx); max-height: 65vh; overflow-y: auto;">
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px">
-                <div style="background:var(--glass-bg); border:var(--glass-border); padding:16px; border-radius:var(--radius-m); box-shadow:var(--glass-shadow)">
+                <div style="background:var(--glass-bg); border: 1px solid var(--glass-border); padding:16px; border-radius:var(--radius-m); box-shadow:var(--glass-shadow)">
                    <div style="font-size:11px; font-weight:800; color:var(--tm); text-transform:uppercase; margin-bottom:6px;">Total Processed</div>
                    <div style="font-size:22px; font-weight:900; color:var(--tx)">${fmt(Math.round(ma.pHS))} t</div>
                 </div>
-                <div style="background:var(--glass-bg); border:var(--glass-border); padding:16px; border-radius:var(--radius-m); box-shadow:var(--glass-shadow)">
+                <div style="background:var(--glass-bg); border: 1px solid var(--glass-border); padding:16px; border-radius:var(--radius-m); box-shadow:var(--glass-shadow)">
                    <div style="font-size:11px; font-weight:800; color:var(--tm); text-transform:uppercase; margin-bottom:6px;">Commercial HRC Sales</div>
                    <div style="font-size:22px; font-weight:900; color:var(--sg)">${fmt(Math.round(ma.hsmSales))} t</div>
                 </div>
-                <div style="background:var(--glass-bg); border:var(--glass-border); padding:16px; border-radius:var(--radius-m); box-shadow:var(--glass-shadow)">
+                <div style="background:var(--glass-bg); border: 1px solid var(--glass-border); padding:16px; border-radius:var(--radius-m); box-shadow:var(--glass-shadow)">
                    <div style="font-size:11px; font-weight:800; color:var(--tm); text-transform:uppercase; margin-bottom:6px;">Routed to CRM feed</div>
                    <div style="font-size:22px; font-weight:900; color:var(--mo)">${fmt(Math.round(ma.crmIn))} t</div>
                 </div>
-                <div style="background:var(--glass-bg); border:var(--glass-border); padding:16px; border-radius:var(--radius-m); box-shadow:var(--glass-shadow)">
+                <div style="background:var(--glass-bg); border: 1px solid var(--glass-border); padding:16px; border-radius:var(--radius-m); box-shadow:var(--glass-shadow)">
                    <div style="font-size:11px; font-weight:800; color:var(--tm); text-transform:uppercase; margin-bottom:6px;">Direct HRC EBITDA</div>
                    <div style="font-size:22px; font-weight:900; color:var(--gd)">₹${fmt(Math.round(getMixBlended('hsm')||n('e_hs')))}/t</div>
                 </div>
@@ -1759,7 +1762,7 @@ window.showDrawer = function(id) {
              const utilPct = Math.min(100, (v / maxCap) * 100).toFixed(1);
              const utilClr = lim ? 'var(--sg)' : 'var(--rd)';
              utilHtml = `
-              <div style="margin-top:20px; margin-bottom:8px; padding: 18px; background: var(--input-bg); border-radius: var(--radius-m); border: var(--glass-border);">
+              <div style="margin-top:20px; margin-bottom:8px; padding: 18px; background: var(--input-bg); border-radius: var(--radius-m); border:  1px solid var(--glass-border);">
                  <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:10px; font-weight:800; color:var(--tm); text-transform:uppercase">
                    <span>Capacity Utilization</span>
                    <span style="color:${utilClr}">${utilPct}% (${fmt(Math.round(v))} / ${fmt(Math.round(maxCap))} t)</span>
@@ -1772,7 +1775,7 @@ window.showDrawer = function(id) {
     
          let metricsGrid = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px">`;
          const addMetric = (lbl, val, color='var(--tx)') => {
-             metricsGrid += `<div style="background:var(--glass-bg); border:var(--glass-border); padding:16px; border-radius:var(--radius-m); box-shadow:var(--glass-shadow)">
+             metricsGrid += `<div style="background:var(--glass-bg); border: 1px solid var(--glass-border); padding:16px; border-radius:var(--radius-m); box-shadow:var(--glass-shadow)">
                  <div style="font-size:11px; font-weight:800; color:var(--tm); text-transform:uppercase; margin-bottom:6px; letter-spacing:0.5px">${lbl}</div>
                  <div style="font-size:22px; font-weight:900; color:${color}">${val}</div>
              </div>`;
@@ -2091,7 +2094,7 @@ window.renderFlow = function() {
   }
   
   if (currentFlowView === 'sankey') {
-     $('flowCanvas').innerHTML = '<div style="width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--radius-m); border:var(--glass-border); box-shadow:var(--glass-shadow); background:var(--input-bg); backdrop-filter:blur(10px);"><div id="sankey_chart" style="min-width:800px; height:650px; padding:20px;"><div class="skeleton skeleton-block" style="height:100%"></div></div></div>';
+     $('flowCanvas').innerHTML = '<div style="width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--radius-m); border: 1px solid var(--glass-border); box-shadow:var(--glass-shadow); background:var(--input-bg); backdrop-filter:blur(10px);"><div id="sankey_chart" style="min-width:800px; height:650px; padding:20px;"><div class="skeleton skeleton-block" style="height:100%"></div></div></div>';
      if(typeof google !== 'undefined' && google.visualization && google.visualization.Sankey) {
          window.renderSankey();
      } else {

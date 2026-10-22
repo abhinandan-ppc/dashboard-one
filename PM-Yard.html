@@ -21,12 +21,11 @@
 /* ─── MATERIAL 3 & GLASSMORPHISM DESIGN SYSTEM ─── */
 /* Tokens are inherited from theme.css's :root (dark defaults) and
    [data-theme="light"] blocks. Only PM-Yard-specific structural
-   overrides remain here: theme.css's --glass-border is a bare color,
-   but this page consumes it as a full `border:` shorthand in many
-   places, so a distinct shorthand token is defined once and reused
-   for both themes via the canonical color var. */
+   overrides remain here. The --glass-border-rule shorthand token this
+   page used to define locally now lives in theme.css alongside the
+   color it derives from, so the light/dark and theme-style variants
+   stay in one place. */
 :root {
-  --glass-border-rule: 1px solid var(--glass-border);
   /* Inset shared by every floating HUD element (header bar, aside, inspector,
      compass). Deliberately NOT --page-gutter: the yard canvas is full-bleed and
      the HUD brackets it, so this is its own scale — a 24px page gutter left the
@@ -84,6 +83,41 @@ header::before {
      through, which is what actually looks like glass. */
   backdrop-filter: var(--glass-blur) saturate(140%); -webkit-backdrop-filter: var(--glass-blur) saturate(140%);
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   NEOMORPH HEADER OVERRIDES — soft bloom instead of hard edge shadow
+   Scoped to html[data-theme-style="neomorph"] so SAP / classic themes
+   keep their existing glass look. The header is a floating HUD surface
+   like .panel / .dropdown-panel, so it uses --neo-glow-hover for its
+   base lift and --neo-glow-hover-btn on its action buttons.
+   ════════════════════════════════════════════════════════════════════════ */
+
+html[data-theme-style="neomorph"] header {
+  box-shadow: none;
+}
+
+html[data-theme-style="neomorph"] header::before {
+  background: var(--neo-bg);
+}
+
+html[data-theme-style="neomorph"] .btn {
+  border: var(--glass-border-rule);
+  border-color: var(--neo-border, var(--glass-border));
+  box-shadow: none;
+  background: var(--neo-bg, var(--s2));
+  color: var(--neo-text, var(--dim));
+}
+
+html[data-theme-style="neomorph"] .btn:hover {
+  box-shadow: var(--neo-glow-hover-btn);
+}
+
+html[data-theme-style="neomorph"] .panel,
+html[data-theme-style="neomorph"] .dropdown-panel {
+  border: var(--glass-border-rule);
+  box-shadow: var(--neo-glow-hover);
+}
+
 .brand { 
   display: flex; align-items: center; gap: 12px; 
   padding: 0; flex-shrink: 0; background: transparent; border: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
@@ -126,7 +160,7 @@ header::before {
 }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 0 16px; border: 1.5px solid var(--bdrHi); border-radius: var(--radius-pill);
+  padding: 0 16px; border: var(--glass-border-rule); border-radius: var(--radius-pill);
   font-size: 12px; font-weight: 700; text-transform: uppercase; cursor: pointer; transition: all 0.15s;
   outline: none; background: var(--s2); color: var(--dim);
   height: 34px; box-sizing: border-box; font-family: inherit; white-space: nowrap; margin: 0;
@@ -677,6 +711,26 @@ aside.collapsed .left-toggle {
   .toolbar { width: calc(100% - var(--pm-hud-inset) * 2); bottom: 12px; overflow-x: auto; justify-content: flex-start; border-radius: var(--radius-s); }
   .tbtn { flex-shrink: 0; padding: 8px 14px; font-size: 10.5px; }
   .compass-wrapper { bottom: 80px; width: 44px; height: 44px; right: var(--pm-hud-inset);}
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   NEOMORPH HOVER BLOOM — soft omnidirectional bloom, neomorph theme only
+   Scoped to html[data-theme-style="neomorph"] so classic / light themes
+   are completely untouched. Uses the soft bloom tokens defined in theme.css.
+   ════════════════════════════════════════════════════════════════════════ */
+
+html[data-theme-style="neomorph"] .panel:hover,
+html[data-theme-style="neomorph"] .dropdown-panel:hover {
+  box-shadow: var(--neo-glow-hover);
+}
+
+html[data-theme-style="neomorph"] .btn:hover,
+html[data-theme-style="neomorph"] .tbtn:hover,
+html[data-theme-style="neomorph"] .side-toggle-btn:hover,
+html[data-theme-style="neomorph"] .theme-opt:hover,
+html[data-theme-style="neomorph"] .upload-opt:hover,
+html[data-theme-style="neomorph"] .ctab:hover {
+  box-shadow: var(--neo-glow-hover-btn);
 }
 
 /* Small Phones (320-480px) */

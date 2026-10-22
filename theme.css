@@ -163,6 +163,22 @@
   --glass-hi: color-mix(in srgb, rgba(255,255,255,.98), rgba(22,22,25,.94) var(--td));
   --glass-border: color-mix(in srgb, rgba(0,0,0,.12), rgba(255,255,255,.14) var(--td));
   --glass-border-hi: color-mix(in srgb, rgba(0,0,0,.22), rgba(255,255,255,.26) var(--td));
+  /* --glass-border and --glass-border-hi are COLORS, not shorthands. The
+     canonical `border: 1px solid var(--glass-border)` form is used pervasively
+     (Plate-Tracker, Grade-Clubbing-Matrix, theme.css itself), and a shorthand
+     value would turn that into the invalid `1px solid 1px solid <color>` —
+     silently dropping the declaration. The shorthand is spelled out by these
+     two rule tokens instead, so every theme block can override the COLORS and
+     the `1px solid` part stays in one place. */
+  --glass-border-rule: 1px solid var(--glass-border);
+  --glass-border-rule-hi: 1px solid var(--glass-border-hi);
+  /* "Heavy" is the strongest of the three border weights. It is a COLOR too:
+     the SMS Heat Planner pages used it both as a shorthand (`border: var(...)`)
+     and as a color (`border: 1px solid var(...)`), which cannot both work.
+     One level past --glass-border-hi, so a drawer edge or a divider still
+     reads as a step up from the surface without going opaque. */
+  --glass-border-heavy: color-mix(in srgb, rgba(0,0,0,.30), rgba(255,255,255,.36) var(--td));
+  --glass-border-heavy-rule: 1px solid var(--glass-border-heavy);
   /* Accent-tinted borders, a notch stronger than the neutral ones above so they
      read as the "this is interactive" edge rather than another hairline. The
      accent is mixed in at low weight on BOTH ends of the ramp — on light pages
@@ -1348,8 +1364,9 @@ html[data-theme-style="classic"],
   --glass: color-mix(in srgb, rgba(240, 246, 252, 0.82), rgba(24, 35, 52, 0.85) var(--td));
   --glass-card: color-mix(in srgb, rgba(248, 251, 254, 0.88), rgba(20, 30, 45, 0.82) var(--td));
   --glass-hi: color-mix(in srgb, rgba(224, 236, 248, 0.95), rgba(30, 44, 64, 0.94) var(--td));
-  --glass-border: 1px solid var(--bdr);
-  --glass-border-hi: 1px solid var(--bdrHi);
+  --glass-border: var(--bdr);
+  --glass-border-hi: var(--bdrHi);
+  --glass-border-heavy: var(--bdrHi);
   --glass-blur: blur(14px) saturate(135%);
   --glass-shadow: 0 4px 20px rgb(0 0 0 / calc(0.08 + 0.22 * var(--tdsn)));
   --glass-bg: var(--glass);
@@ -2430,10 +2447,23 @@ html[data-theme-style="neomorph"] {
   /* Borders follow the same light→dark ramp as every other token: a soft
      slate line on light, a faint pale line on dark. Never a fixed grey. */
   --bdr: color-mix(in srgb, rgba(36, 46, 61, 0.20), rgba(226, 232, 240, 0.16) var(--td));
-  --glass: color-mix(in srgb, rgba(232, 234, 237, 0.85), rgba(30, 34, 40, 0.82) var(--td));
-  --glass-card: var(--glass);
-  --glass-hi: color-mix(in srgb, rgba(236, 239, 242, 0.95), rgba(38, 44, 53, 0.95) var(--td));
-  --glass-border: 1px solid var(--bdr);
+  /* Surfaces derive FROM the canvas rather than restating it: the old values
+     were flat grey literals ramped only by --td, so a tinted --neo-bg canvas
+     and a neutral-grey popup/sidebar sat side by side — the grey read as
+     "foreign" (the bottom sync popup was the loudest example). Translucency
+     keeps the frosted-blur panels honest; --glass-hi stays solid because it
+     backs solid chrome (sticky table headers, the sync popup). */
+  --glass: color-mix(in srgb, var(--neo-bg) 88%, transparent);
+  --glass-card: color-mix(in srgb, var(--neo-bg) 94%, transparent);
+  --glass-hi: var(--neo-bg);
+  --glass-border: var(--bdr);
+  /* Neomorph had no --glass-border-hi at all, so every `var(--glass-border-hi)`
+     in a shared component (Plate-Tracker slicer panel, Order-Status-Report
+     dropdowns, Rake-Planner popovers) resolved to the invalid `1px solid <color>`
+     and the whole border declaration was dropped. Give it the same soft-UI
+     treatment as --bdr: a soft slate line on light, a faint pale line on dark. */
+  --glass-border-hi: color-mix(in srgb, rgba(36, 46, 61, 0.30), rgba(226, 232, 240, 0.24) var(--td));
+  --glass-border-heavy: color-mix(in srgb, rgba(36, 46, 61, 0.42), rgba(226, 232, 240, 0.34) var(--td));
   --glass-blur: blur(12px) saturate(120%);
   --shadow-xs: 1px 1px 2px var(--neo-shadow-dark), -1px -1px 2px var(--neo-shadow-light);
   --shadow-sm: 2px 2px 4px var(--neo-shadow-dark), -2px -2px 4px var(--neo-shadow-light);
@@ -2441,6 +2471,15 @@ html[data-theme-style="neomorph"] {
   --shadow-lg: 6px 6px 12px var(--neo-shadow-dark), -6px -6px 12px var(--neo-shadow-light);
   --shadow-xl: 8px 8px 16px var(--neo-shadow-dark), -8px -8px 16px var(--neo-shadow-light);
   --shadow-inset: inset 1px 1px 2px var(--neo-shadow-dark), inset -1px -1px 2px var(--neo-shadow-light);
+  /* Hover glow for neomorph — soft, omnidirectional bloom that lifts the
+     element off the canvas without the harsh directional "edge glow" of the
+     opposed shadow pair. A centred light rim keeps the neumorphic "lit edge"
+     cue but diffused; a dark outer bloom diffuses outward so the edge reads as
+     a gentle aura, not a line. Blends into --neo-bg on both light and dark. */
+  --neo-glow-hover: 0 0 0 1px color-mix(in srgb, var(--neo-shadow-light) 35%, transparent),
+                    0 12px 36px color-mix(in srgb, var(--neo-shadow-dark) 30%, transparent);
+  --neo-glow-hover-btn: 0 0 0 1px color-mix(in srgb, var(--neo-shadow-light) 40%, transparent),
+                        0 8px 24px color-mix(in srgb, var(--neo-shadow-dark) 24%, transparent);
   --primary: color-mix(in srgb,
     hsl(var(--ah) var(--as) calc(var(--al) * 0.85)),
     hsl(var(--ah) var(--as) calc(var(--al) * 1.12)) var(--td));
@@ -2514,7 +2553,12 @@ html[data-theme-style="neomorph"] body {
 html[data-theme-style="neomorph"] :is(.app-header, .top-bar, header.app-header,
   .page-order .glass-card.header-enter, .page-rake .glass-card.header-enter) {
   background: var(--neo-bg) !important;
-  border: 1px solid var(--header-border-color) !important;
+  /* No border. Soft-UI extrusion is shadow-only: the header is the top plane of
+     the canvas, so a --header-border-color ring around it (the classic-parity
+     edge from the refinement pass) reads as a framed bar, not a raised plane.
+     Base .app-header already forces border:0; re-stating none here also defeats
+     any page-local !important border (index/admin/Grade .top-bar hairlines). */
+  border: none !important;
   box-shadow: 6px 6px 14px var(--neo-shadow-dark), -6px -6px 14px var(--neo-shadow-light),
     inset 0 1px 0 color-mix(in srgb, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.10) var(--td)) !important;
   backdrop-filter: var(--glass-blur) !important;
@@ -2595,7 +2639,7 @@ html[data-theme-style="neomorph"] :is(.card, .glass-card, .panel, .hero, .slot,
 html[data-theme-style="neomorph"] :is(.kpi, .kcard, .kpi-card, .stat-card,
   .card, .panel, .glass-card):hover {
   transform: translateY(-2px) !important;
-  box-shadow: 7px 7px 15px var(--neo-shadow-dark), -7px -7px 15px var(--neo-shadow-light) !important;
+  box-shadow: var(--neo-glow-hover) !important;
 }
 html[data-theme-style="neomorph"] :is(.kpi, .kcard, .kpi-card, .stat-card,
   .card, .panel, .glass-card):active {
@@ -2626,7 +2670,7 @@ html[data-theme-style="neomorph"] button:not([type=range]):hover:not(:disabled),
 html[data-theme-style="neomorph"] .btn:hover:not(:disabled),
 html[data-theme-style="neomorph"] .theme-preset-btn:hover {
   color: var(--primary) !important;
-  box-shadow: 5px 5px 11px var(--neo-shadow-dark), -5px -5px 11px var(--neo-shadow-light) !important;
+  box-shadow: var(--neo-glow-hover-btn) !important;
 }
 html[data-theme-style="neomorph"] button:not([type=range]):active:not(:disabled),
 html[data-theme-style="neomorph"] .btn:active:not(:disabled),

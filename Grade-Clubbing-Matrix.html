@@ -1131,7 +1131,12 @@
     :root {
       --card: var(--glass-card);
       --card-strong: var(--glass-hi);
-      --border: var(--glass-border);
+      /* --border / --border-strong are COLORS, not shorthands. They used to be
+         `1px solid var(--glass-border)` / `var(--glass-border-hi)`, but every
+         use below is `border: 1px solid var(--border)` or
+         `border-right-color: var(--border)` — the shorthand value made the
+         color form invalid and those borders were silently dropped. */
+      --border:  var(--glass-border);
       --border-strong: var(--glass-border-hi);
       --muted: var(--dim);
       --muted-2: var(--mute);
