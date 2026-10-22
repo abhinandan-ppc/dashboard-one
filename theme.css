@@ -350,8 +350,32 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 input::placeholder{color:var(--mute);opacity:1}
 
 .card-lift{transition:transform .2s ease,box-shadow .2s ease}
-.card-lift:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.card-lift:hover{transform:translateY(-2px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg));box-shadow:var(--shadow-lg)}
 .card-lift:active{transform:translateY(0);box-shadow:var(--shadow-md)}
+
+/* ── Card cursor tilt — all themes ── */
+/* Default tilt angles; JS updates --tilt-x/--tilt-y on cursor move.
+   transform-style: preserve-3d lets the rotateX/rotateY values render as
+   a true 3D tilt instead of flattening against the canvas. */
+.card, .glass-card, .kpi, .stat, .kpi-card, .stat-card, .kcard,
+.kpi-pill, .kpi-group, .kpi-dashboard > div,
+.panel, .best-card, .compat-card, .target-card, .upload-card,
+.upload-opt, .pm-card, .chartcard, .coll-panel, .user-card,
+.slot, .hero {
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  --tilt-perspective: 800px;
+  transform-style: preserve-3d;
+}
+
+.card:hover, .glass-card:hover, .kpi-card:hover, .stat-card:hover,
+.kcard:hover, .kpi:hover, .stat:hover, .panel:hover,
+.best-card:hover, .compat-card:hover, .target-card:hover,
+.upload-card:hover, .upload-opt:hover, .pm-card:hover,
+.chartcard:hover, .coll-panel:hover, .user-card:hover,
+.slot:hover, .hero:hover {
+  transform: perspective(var(--tilt-perspective, 800px)) translateY(-2px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg)) !important;
+}
 
 /* ── Header entrance — a small, tasteful one-time lift when a page's
    header first mounts. Applied via .header-enter so no markup changes
@@ -2419,7 +2443,7 @@ html[data-theme-style="classic"] :is(.kpi, .kcard, .kpi-card, .stat-card, .card,
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, transform 0.12s ease !important;
 }
 html[data-theme-style="classic"] :is(.kpi, .kcard, .kpi-card, .stat-card, .card, .panel, .glass-card):hover {
-  transform: translateY(-1px) !important;
+  transform: perspective(var(--tilt-perspective, 800px)) translateY(-1px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) !important;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════════════════
@@ -2635,7 +2659,7 @@ html[data-theme-style="neomorph"] :is(.card, .glass-card, .panel, .hero, .slot,
 }
 html[data-theme-style="neomorph"] :is(.kpi, .kcard, .kpi-card, .stat-card,
   .card, .panel, .glass-card):hover {
-  transform: translateY(-2px) !important;
+  transform: perspective(var(--tilt-perspective, 800px)) translateY(-2px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) !important;
   box-shadow: var(--neo-glow-hover) !important;
 }
 html[data-theme-style="neomorph"] :is(.kpi, .kcard, .kpi-card, .stat-card,

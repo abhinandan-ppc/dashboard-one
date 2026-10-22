@@ -31,7 +31,24 @@
     'table tbody tr'
   ].join(', ');
 
+  /* ── Card cursor tilt selectors (cards & KPI cards only) ── */
+  var TILT_SELECTORS = [
+    '.kpi', '.stat', '.kpi-card', '.stat-card', '.kcard',
+    '.kpi-pill', '.kpi-group', '.kpi-dashboard > div',
+    '.card', '.glass-card', '.card-lift',
+    '.panel', '.best-card', '.compat-card', '.target-card',
+    '.upload-card', '.upload-opt', '.pm-card', '.chartcard',
+    '.coll-panel', '.user-card', '.slot', '.hero'
+  ].join(', ');
+
   var activeElements = [];
+
+  /* ── Tilt state ── */
+  var tiltElements = [];
+  var tiltTicking = false;
+  var tiltMouseX = 0;
+  var tiltMouseY = 0;
+  var TILT_MAX = 6; // degrees
 
   function updateActiveList() {
     activeElements = Array.prototype.slice.call(document.querySelectorAll('.has-glow-fx'));
@@ -94,6 +111,49 @@
     });
   }
 
+  function initTilt(el) {
+    if (el.dataset.tiltReady) return;
+    el.dataset.tiltReady = 'true';
+    tiltElements.push(el);
+  }
+
+  function updateTilt() {
+    if (tiltTicking) return;
+    tiltTicking = true;
+
+    window.requestAnimationFrame(function() {
+      var mx = tiltMouseX;
+      var my = tiltMouseY;
+      var len = tiltElements.length;
+
+      for (var i = 0; i < len; i++) {
+        var el = tiltElements[i];
+        var rect = el.getBoundingClientRect();
+
+        if (mx >= rect.left && mx <= rect.right &&
+            my >= rect.top && my <= rect.bottom) {
+          var x = mx - rect.left;
+          var y = my - rect.top;
+          var cx = rect.width / 2;
+          var cy = rect.height / 2;
+
+          var rotateX = ((cy - y) / cy) * TILT_MAX;
+          var rotateY = ((x - cx) / cx) * TILT_MAX;
+
+          rotateX = Math.max(-TILT_MAX, Math.min(TILT_MAX, rotateX));
+          rotateY = Math.max(-TILT_MAX, Math.min(TILT_MAX, rotateY));
+
+          el.style.setProperty('--tilt-x', rotateX.toFixed(2) + 'deg');
+          el.style.setProperty('--tilt-y', rotateY.toFixed(2) + 'deg');
+        } else {
+          el.style.setProperty('--tilt-x', '0deg');
+          el.style.setProperty('--tilt-y', '0deg');
+        }
+      }
+      tiltTicking = false;
+    });
+  }
+
   // Global mouse tracker with edge detection and proximity falloff
   var ticking = false;
   window.addEventListener('pointermove', function(e) {
@@ -153,12 +213,24 @@
     });
   }, { passive: true });
 
+  // Separate pointermove listener for tilt (shares the same event, lighter weight)
+  window.addEventListener('pointermove', function(e) {
+    tiltMouseX = e.clientX;
+    tiltMouseY = e.clientY;
+    updateTilt();
+  }, { passive: true });
+
   function scan(root) {
     var targets = (root || document).querySelectorAll(SELECTORS);
     for (var i = 0; i < targets.length; i++) {
       initGlow(targets[i]);
     }
     updateActiveList();
+
+    var tiltTargets = (root || document).querySelectorAll(TILT_SELECTORS);
+    for (var i = 0; i < tiltTargets.length; i++) {
+      initTilt(tiltTargets[i]);
+    }
   }
 
   if (document.readyState === 'loading') {
