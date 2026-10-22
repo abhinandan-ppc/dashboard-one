@@ -36,9 +36,9 @@
     '.kpi', '.stat', '.kpi-card', '.stat-card', '.kcard',
     '.kpi-pill', '.kpi-group', '.kpi-dashboard > div',
     '.card', '.glass-card', '.card-lift',
-    '.panel', '.best-card', '.compat-card', '.target-card',
+    '.best-card', '.compat-card', '.target-card',
     '.upload-card', '.upload-opt', '.pm-card', '.chartcard',
-    '.coll-panel', '.user-card', '.slot', '.hero'
+    '.coll-panel', '.user-card', '.slot'
   ].join(', ');
 
   var activeElements = [];
