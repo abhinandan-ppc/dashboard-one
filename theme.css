@@ -353,27 +353,42 @@ input::placeholder{color:var(--mute);opacity:1}
 .card-lift:hover{transform:translateY(-2px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg));box-shadow:var(--shadow-lg)}
 .card-lift:active{transform:translateY(0);box-shadow:var(--shadow-md)}
 
-/* ── Card cursor tilt — all themes ── */
+/* ── Card cursor tilt — KPI cards & dashboard cards only ── */
 /* Default tilt angles; JS updates --tilt-x/--tilt-y on cursor move.
    transform-style: preserve-3d lets the rotateX/rotateY values render as
    a true 3D tilt instead of flattening against the canvas. */
-.card, .glass-card, .kpi, .stat, .kpi-card, .stat-card, .kcard,
+.kpi, .stat, .kpi-card, .stat-card, .kcard,
 .kpi-pill, .kpi-group, .kpi-dashboard > div,
-.panel, .best-card, .compat-card, .target-card, .upload-card,
-.upload-opt, .pm-card, .chartcard, .coll-panel, .user-card,
-.slot, .hero {
+.card-lift,
+a.card {
   --tilt-x: 0deg;
   --tilt-y: 0deg;
   --tilt-perspective: 800px;
   transform-style: preserve-3d;
 }
 
-.card:hover, .glass-card:hover, .kpi-card:hover, .stat-card:hover,
+/* Page header bars never tilt — they are fixed/sticky chrome and a 3D
+   rotation would visibly detach them from their shell. A header can also
+   carry a card class (.app-header.glass-card on Plate-Tracker) or contain
+   tiltable children (PM-Yard's KPI pills), so the exclusion covers the
+   whole header subtree, not just the bar element itself.
+   NOTE: .hero is deliberately NOT excluded — on Grade-Clubbing it is a
+   content section (search panel), not a header bar. */
+.app-header, .app-header-shell, .top-bar, .top-wrapper,
+.header-fixed, .header-enter,
+.app-header *, .app-header-shell *, .top-bar *, .top-wrapper *,
+.header-fixed *, .header-enter * {
+  --tilt-x: 0deg !important;
+  --tilt-y: 0deg !important;
+  transform-style: flat !important;
+}
+
+/* Hover tilt transform — KPI cards & dashboard cards only.
+   JS updates --tilt-x/--tilt-y per-element on cursor move. */
+.kpi-card:hover, .stat-card:hover,
 .kcard:hover, .kpi:hover, .stat:hover,
-.best-card:hover, .compat-card:hover, .target-card:hover,
-.upload-card:hover, .upload-opt:hover, .pm-card:hover,
-.chartcard:hover, .coll-panel:hover, .user-card:hover,
-.slot:hover {
+.card-lift:hover,
+a.card:hover {
   transform: perspective(var(--tilt-perspective, 800px)) translateY(-2px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg)) !important;
 }
 

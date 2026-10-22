@@ -31,15 +31,30 @@
     'table tbody tr'
   ].join(', ');
 
-  /* ── Card cursor tilt selectors (cards & KPI cards only) ── */
+  /* ── Card cursor tilt selectors (KPI cards + index dashboard cards only) ── */
   var TILT_SELECTORS = [
     '.kpi', '.stat', '.kpi-card', '.stat-card', '.kcard',
     '.kpi-pill', '.kpi-group', '.kpi-dashboard > div',
-    '.card', '.glass-card', '.card-lift',
-    '.best-card', '.compat-card', '.target-card',
-    '.upload-card', '.upload-opt', '.pm-card', '.chartcard',
-    '.coll-panel', '.user-card', '.slot'
+    '.card-lift',
+    'a.card'
   ].join(', ');
+
+  /* ── Elements that must never tilt (page header bars / shells) ──
+     A header can carry a card class (e.g. .app-header.glass-card on
+     Plate-Tracker.html) and can contain tiltable children (PM-Yard's
+     KPI pills), so exclude the whole header subtree rather than
+     relying on class names alone. */
+  var TILT_EXCLUDE_SELECTORS = [
+    '.app-header', '.app-header-shell', '.top-bar', '.top-wrapper',
+    '.header-fixed', '.header-enter'
+  ].join(', ');
+
+  function isInExcludedTilt(el) {
+    if (!el.matches) return false;
+    if (el.matches(TILT_EXCLUDE_SELECTORS)) return true;
+    // Any descendant of a header container is excluded too.
+    return !!el.closest(TILT_EXCLUDE_SELECTORS);
+  }
 
   var activeElements = [];
 
@@ -113,6 +128,11 @@
 
   function initTilt(el) {
     if (el.dataset.tiltReady) return;
+
+    // Never tilt page header bars / shells (or anything inside them),
+    // even if they carry a card class
+    if (isInExcludedTilt(el)) return;
+
     el.dataset.tiltReady = 'true';
     tiltElements.push(el);
   }
