@@ -2456,14 +2456,14 @@ html[data-theme-style="neomorph"] {
   --glass: color-mix(in srgb, var(--neo-bg) 88%, transparent);
   --glass-card: color-mix(in srgb, var(--neo-bg) 94%, transparent);
   --glass-hi: var(--neo-bg);
-  --glass-border: var(--bdr);
-  /* Neomorph had no --glass-border-hi at all, so every `var(--glass-border-hi)`
-     in a shared component (Plate-Tracker slicer panel, Order-Status-Report
-     dropdowns, Rake-Planner popovers) resolved to the invalid `1px solid <color>`
-     and the whole border declaration was dropped. Give it the same soft-UI
-     treatment as --bdr: a soft slate line on light, a faint pale line on dark. */
-  --glass-border-hi: color-mix(in srgb, rgba(36, 46, 61, 0.30), rgba(226, 232, 240, 0.24) var(--td));
-  --glass-border-heavy: color-mix(in srgb, rgba(36, 46, 61, 0.42), rgba(226, 232, 240, 0.34) var(--td));
+  --glass-border: transparent !important;
+  /* Neomorph has NO borders — elevation is shadow-only. Override the base
+     --glass-border-rule (1px solid var(--glass-border)) so every page that
+     uses `border: var(--glass-border-rule)` gets border: none under neomorph. */
+  --glass-border-rule: none !important;
+  --glass-border-hi: none !important;
+  --glass-border-heavy: none !important;
+  --glass-border-heavy-rule: none !important;
   --glass-blur: blur(12px) saturate(120%);
   --shadow-xs: 1px 1px 2px var(--neo-shadow-dark), -1px -1px 2px var(--neo-shadow-light);
   --shadow-sm: 2px 2px 4px var(--neo-shadow-dark), -2px -2px 4px var(--neo-shadow-light);
@@ -2473,13 +2473,10 @@ html[data-theme-style="neomorph"] {
   --shadow-inset: inset 1px 1px 2px var(--neo-shadow-dark), inset -1px -1px 2px var(--neo-shadow-light);
   /* Hover glow for neomorph — soft, omnidirectional bloom that lifts the
      element off the canvas without the harsh directional "edge glow" of the
-     opposed shadow pair. A centred light rim keeps the neumorphic "lit edge"
-     cue but diffused; a dark outer bloom diffuses outward so the edge reads as
-     a gentle aura, not a line. Blends into --neo-bg on both light and dark. */
-  --neo-glow-hover: 0 0 0 1px color-mix(in srgb, var(--neo-shadow-light) 35%, transparent),
-                    0 12px 36px color-mix(in srgb, var(--neo-shadow-dark) 30%, transparent);
-  --neo-glow-hover-btn: 0 0 0 1px color-mix(in srgb, var(--neo-shadow-light) 40%, transparent),
-                        0 8px 24px color-mix(in srgb, var(--neo-shadow-dark) 24%, transparent);
+     opposed shadow pair. No 1px rim — pure diffused bloom only. Blends into
+     --neo-bg on both light and dark. */
+  --neo-glow-hover: 0 12px 36px color-mix(in srgb, var(--neo-shadow-dark) 30%, transparent);
+  --neo-glow-hover-btn: 0 8px 24px color-mix(in srgb, var(--neo-shadow-dark) 24%, transparent);
   --primary: color-mix(in srgb,
     hsl(var(--ah) var(--as) calc(var(--al) * 0.85)),
     hsl(var(--ah) var(--as) calc(var(--al) * 1.12)) var(--td));
@@ -2595,7 +2592,7 @@ html[data-theme-style="neomorph"] .app-header :is(.app-header-brand-row,.app-hea
 html[data-theme-style="neomorph"] .app-header .view-tabs button {
   background: var(--neo-bg) !important;
   color: var(--text-hi) !important;
-  border: 1px solid var(--bdr) !important;
+  border: none !important;
   box-shadow: 2px 2px 5px var(--neo-shadow-dark), -2px -2px 5px var(--neo-shadow-light) !important;
   border-radius: 10px !important;
 }
@@ -2630,7 +2627,7 @@ html[data-theme-style="neomorph"] :is(.card, .glass-card, .panel, .hero, .slot,
   .dd-menu, .filterpop, .fc-node, .fn, .tab-bar, .tabs-hdr,
   .ctrl-tabs, .view-tabs, .tabs) {
   background: var(--neo-bg) !important;
-  border: 1px solid transparent !important;
+  border: none !important;
   box-shadow: 4px 4px 9px var(--neo-shadow-dark), -4px -4px 9px var(--neo-shadow-light) !important;
   backdrop-filter: var(--glass-blur) !important;
   -webkit-backdrop-filter: var(--glass-blur) !important;
@@ -2661,7 +2658,7 @@ html[data-theme-style="neomorph"] .theme-opt,
 html[data-theme-style="neomorph"] .theme-preset-btn {
   background: var(--neo-bg) !important;
   color: var(--text-hi) !important;
-  border: 1px solid transparent !important;
+  border: none !important;
   border-radius: 12px !important;
   box-shadow: 3px 3px 7px var(--neo-shadow-dark), -3px -3px 7px var(--neo-shadow-light) !important;
   transition: box-shadow 0.18s ease, color 0.18s ease, transform 0.12s ease !important;
@@ -2684,7 +2681,7 @@ html[data-theme-style="neomorph"] .theme-preset-btn.active {
 html[data-theme-style="neomorph"] :is(.btn-primary,.primary,.m3-button-primary,#runBtn,.add-btn:not(.home-btn),.upload-btn) {
   background: linear-gradient(145deg, hsl(var(--ah) var(--as) calc(var(--al) * 1.05)), hsl(var(--ah) var(--as) calc(var(--al) * 0.85))) !important;
   color: #ffffff !important;
-  border: 1px solid transparent !important;
+  border: none !important;
   border-radius: 12px !important;
   box-shadow: 3px 3px 8px var(--neo-shadow-dark), -2px -2px 6px var(--neo-shadow-light), inset 1px 1px 1px rgba(255,255,255,0.35) !important;
 }
@@ -2743,7 +2740,7 @@ html[data-theme-style="neomorph"] select,
 html[data-theme-style="neomorph"] textarea,
 html[data-theme-style="neomorph"] .m3-field {
   background: var(--neo-bg) !important;
-  border: 1px solid transparent !important;
+  border: none !important;
   border-radius: 12px !important;
   color: var(--text-hi) !important;
   box-shadow: inset 3px 3px 7px var(--neo-shadow-dark), inset -3px -3px 7px var(--neo-shadow-light) !important;
@@ -2765,7 +2762,7 @@ html[data-theme-style="neomorph"] textarea::placeholder {
 html[data-theme-style="neomorph"] table,
 html[data-theme-style="neomorph"] .data-table-wrap table {
   background: var(--neo-bg) !important;
-  border: 1px solid transparent !important;
+  border: none !important;
   border-radius: 16px !important;
   overflow: hidden;
   box-shadow: 5px 5px 12px var(--neo-shadow-dark), -5px -5px 12px var(--neo-shadow-light) !important;
@@ -2780,7 +2777,6 @@ html[data-theme-style="neomorph"] .data-table-wrap thead th {
   letter-spacing: 0.06em !important;
   padding: 9px 12px !important;
   border: none !important;
-  border-bottom: 1px solid color-mix(in srgb, var(--neo-shadow-dark) 55%, transparent) !important;
   box-shadow: inset 0 -1px 2px var(--neo-shadow-dark), inset 0 1px 2px var(--neo-shadow-light) !important;
 }
 html[data-theme-style="neomorph"] table td,
@@ -2790,7 +2786,6 @@ html[data-theme-style="neomorph"] .data-table-wrap td {
   font-size: 12.5px !important;
   padding: 7px 12px !important;
   border: none !important;
-  border-bottom: 1px solid color-mix(in srgb, var(--neo-shadow-dark) 30%, transparent) !important;
 }
 html[data-theme-style="neomorph"] table tbody tr:hover td,
 html[data-theme-style="neomorph"] .data-table-wrap tbody tr:hover td {
@@ -2930,7 +2925,7 @@ html[data-theme-style="neomorph"] .theme-range::-webkit-slider-thumb,
 html[data-theme-style="neomorph"] .theme-range::-moz-range-thumb {
   border-radius: 50% !important;
   background: var(--neo-bg) !important;
-  border: 1px solid var(--bdr) !important;
+  border: none !important;
   box-shadow: 2px 2px 5px var(--neo-shadow-dark), -2px -2px 5px var(--neo-shadow-light) !important;
   cursor: grab;
 }
