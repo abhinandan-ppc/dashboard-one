@@ -168,6 +168,7 @@ export const KNOWN_PAGES = [
   'SMS-Heat-Planner.html',
   'VDO-Generator.html',
   'Plate-Tracker.html',
+  'Truck-Dashboard.html',
 ];
 
 // Pages that are sub-resources of another page rather than standalone tools.

@@ -29,6 +29,7 @@
 
 import { createServer } from 'node:http';
 import { readFile, writeFile, stat } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -92,6 +93,7 @@ const API_ROUTES = {
   '/api/balance-heat-proxy': new URL('./api/balance-heat-proxy.js', import.meta.url),
   '/api/zstk-proxy': new URL('./api/zstk-proxy.js', import.meta.url),
   '/api/autobtr-proxy': new URL('./api/autobtr-proxy.js', import.meta.url),
+  '/api/truckdb-proxy': new URL('./api/truckdb-proxy.js', import.meta.url),
 };
 
 const handlerCache = new Map();
@@ -134,14 +136,13 @@ function send(res, status, headers, body) {
   res.end(body);
 }
 
-// Edge handlers are `(request?) => Response`; pass a Request-shaped argument
-// for future handlers that read it — today's three ignore it. The response
-// body (CSV text, JSON, or the AutoBTR xlsx ArrayBuffer) is copied through
-// verbatim, and CORS is opened for convenience (local-only server, bound to
-// 127.0.0.1, so nothing leaves this machine uninvited).
-async function serveApi(pathname, res) {
-  const handler = await getHandler(pathname);
-  const upstream = await handler(new Request(`http://127.0.0.1${pathname}`));
+// Edge handlers are `(request?) => Response`; pass query parameters through so
+// routes that select a file (including the truck database) receive the right kind.
+// The body is copied verbatim; this local-only server is bound to 127.0.0.1.
+async function serveApi(url, res) {
+  const handler = await getHandler(url.pathname);
+  const requestUrl = `http://127.0.0.1${url.pathname}${url.search}`;
+  const upstream = await handler(new Request(requestUrl));
   const headers = {};
   upstream.headers.forEach((v, k) => { headers[k] = v; });
   headers['Access-Control-Allow-Origin'] = '*';
@@ -165,13 +166,15 @@ async function serveStatic(pathname, res) {
   try {
     const info = await stat(file);
     if (!info.isFile()) return send(res, 404, { 'Content-Type': 'text/plain' }, 'Not found');
-    const body = await readFile(file);
     const type = MIME[path.extname(file).toLowerCase()] || 'application/octet-stream';
-    send(res, 200, {
+    res.writeHead(200, {
       'Content-Type': type,
       'Cache-Control': 'no-cache', // always re-read edits while developing
-      'Content-Length': body.length,
-    }, body);
+      'Content-Length': info.size,
+    });
+    const stream = createReadStream(file);
+    stream.on('error', () => res.destroy());
+    stream.pipe(res);
   } catch {
     send(res, 404, { 'Content-Type': 'text/plain' }, 'Not found');
   }
@@ -187,7 +190,7 @@ const server = createServer(async (req, res) => {
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       });
     }
-    if (pathname in API_ROUTES) return await serveApi(pathname, res);
+    if (pathname in API_ROUTES) return await serveApi(new URL(req.url, 'http://localhost'), res);
     if (pathname.startsWith('/api/')) {
       return send(res, 404, {
         'Content-Type': 'application/json; charset=utf-8',

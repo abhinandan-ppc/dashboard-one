@@ -7,7 +7,7 @@
   if(!localHost || !window.location.port || window.location.port === '4173') return;
 
   var nativeFetch = window.fetch.bind(window);
-  var sheetRoutes = /^\/api\/(?:ebtp|zstk|autobtr)-proxy(?:\?|$)/;
+  var sheetRoutes = /^\/api\/(?:ebtp|zstk|autobtr|truckdb)-proxy(?:\?|$)/;
   window.fetch = function(input, init){
     var url = typeof input === 'string' ? input : (input && input.url);
     if(typeof url === 'string' && sheetRoutes.test(url)){

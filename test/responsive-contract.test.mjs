@@ -17,6 +17,7 @@ const pages = [
   'SMS-Heat-Planner.html',
   'SMS Heat Planner Daily.html',
   'SMS Heat Planner Monthly.html',
+  'Truck-Dashboard.html',
   'VDO-Generator.html',
 ];
 
@@ -376,6 +377,7 @@ const PAGES_WITH_CDN_SCRIPTS = [
   ['Plate-Tagging-Tool.html', ['https://cdnjs.cloudflare.com']],
   ['Order-Status-Report.html', ['https://unpkg.com', 'https://cdnjs.cloudflare.com']],
   ['Rake-Planner.html', ['https://unpkg.com', 'https://cdnjs.cloudflare.com']],
+  ['Truck-Dashboard.html', []],
 ];
 
 test('every render-blocking third-party script origin is preconnected', async () => {
@@ -1149,6 +1151,12 @@ test('standalone dashboard headers opt into the shared hub chrome', async () => 
   assert.match(theme, /\.page-grade\{--header-shell-max-width:1440px\}/);
   assert.match(theme, /\.page-plate\{--header-shell-max-width:1720px\}/);
   assert.match(theme, /\.page-sms-shell\{--header-shell-max-width:1600px\}/);
+  assert.match(theme, /body:is\([^)]*\.page-truck\) :is\([\s\S]*?\.block,/,
+    'Truck Dashboard blocks must receive the shared theme surface contract');
+  assert.match(theme, /html\[data-theme-style="classic"\] :is\([\s\S]*?\.page-rake \.glass-card\.header-enter,\s*\.block,/,
+    'Truck Dashboard blocks must receive the classic boxy treatment');
+  assert.match(theme, /html\[data-theme-style="neomorph"\] :is\([\s\S]*?\.sheet-sync-club, \.theme-preset-grid, \.modal, \.block,/,
+    'Truck Dashboard blocks must receive the neomorph surface treatment');
   assert.match(theme, /--header-main-radius:20px/);
   assert.match(theme, /background:linear-gradient\(145deg,color-mix\(in srgb,var\(--glass\) 94%,white 6%\),var\(--glass-card\)\)!important/);
   assert.match(theme, /border:0!important/);
@@ -1167,6 +1175,7 @@ test('standalone dashboard headers opt into the shared hub chrome', async () => 
     'Plate-Tracker.html',
     'Rake-Planner.html',
     'SMS-Heat-Planner.html',
+    'Truck-Dashboard.html',
     'VDO-Generator.html',
   ];
   for (const page of pages) {
