@@ -1,0 +1,49 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - img "Jindal Steel" [ref=e6]
+        - generic [ref=e7]:
+          - generic [ref=e8]: Jindal Steel
+          - generic [ref=e9]: Angul · Plate Mill
+      - generic [ref=e11]:
+        - generic [ref=e12]: AI Assistant
+        - heading "AI Chat" [level=1] [ref=e13]
+    - generic [ref=e14]:
+      - button "Home" [ref=e15] [cursor=pointer]
+      - button "Refresh" [ref=e20] [cursor=pointer]
+      - button "Toggle theme" [ref=e24] [cursor=pointer]
+      - button "Account" [ref=e27] [cursor=pointer]
+  - generic [ref=e31]:
+    - generic [ref=e33]:
+      - generic [ref=e38]: OmniRoute AI Assistant
+      - generic [ref=e39]: Ask me anything about code, text, images, or data. I can help you write, analyze, debug, and create.
+      - generic [ref=e40]:
+        - button "Code Review Explain this code and suggest improvements" [ref=e41] [cursor=pointer]:
+          - generic [ref=e42]: Code Review
+          - generic [ref=e43]: Explain this code and suggest improvements
+        - button "Writing Help me write a professional email" [ref=e44] [cursor=pointer]:
+          - generic [ref=e45]: Writing
+          - generic [ref=e46]: Help me write a professional email
+        - button "Image Analyze this image and describe what you see" [ref=e47] [cursor=pointer]:
+          - generic [ref=e48]: Image
+          - generic [ref=e49]: Analyze this image and describe what you see
+        - button "Debug Help me debug this error message" [ref=e50] [cursor=pointer]:
+          - generic [ref=e51]: Debug
+          - generic [ref=e52]: Help me debug this error message
+    - generic [ref=e53]:
+      - generic [ref=e54]:
+        - generic [ref=e55]: "Model:"
+        - button "Auto" [ref=e56] [cursor=pointer]
+        - button "Claude 4" [ref=e57] [cursor=pointer]
+        - button "Opus 5" [ref=e58] [cursor=pointer]
+        - button "GPT-4o" [ref=e59] [cursor=pointer]
+        - button "Gemini 2.0" [ref=e60] [cursor=pointer]
+        - button "Gemini 2.5" [ref=e61] [cursor=pointer]
+        - button "Nemotron" [ref=e62] [cursor=pointer]
+        - button "GLM 5.2" [ref=e63] [cursor=pointer]
+        - generic [ref=e64]: Disconnected
+      - generic [ref=e67]:
+        - button "Attach file" [ref=e68] [cursor=pointer]
+        - textbox "Ask me anything..." [ref=e71]
+        - button "Send" [ref=e72] [cursor=pointer]
