@@ -86,7 +86,12 @@
     state.pendingBuild = false; state.building = true; renderResults();
     setStatus('Building truck plan from ' + rows.length + ' rows …');
     await new Promise(r => setTimeout(r, 30)); // let the status paint before the heavy work
-    try { state.result = await E.allocate(rows, cityTable); }
+    const onProgress = (frac, n) => {
+      const bar = $('#planBar'), txt = $('#planPct');
+      if (bar) bar.style.width = Math.min(99, Math.round(frac * 100)) + '%';
+      if (txt) txt.textContent = Math.min(99, Math.round(frac * 100)) + '% · ' + n + ' trucks built';
+    };
+    try { state.result = await E.allocate(rows, cityTable, onProgress); }
     catch (err) { console.error(err); state.building = false; setStatus('Could not build plan: ' + err.message, true); render(); return; }
     state.building = false;
     setStatus(rows.length + ' rows parsed from sheet "' + state.sheetName + '".');
@@ -426,7 +431,7 @@ function renderDbStrip() {
   function renderResults() {
     const root=$('#results');
     if(!state.result&&(state.pendingBuild||state.building)&&!state.busy){
-      root.innerHTML='<div class="empty-state">'+(state.building?'Building truck plan from '+state.rawRows.length+' rows … the page may pause briefly.':'All files loaded ('+state.rawRows.length+' dispatch rows). Click Run to build the truck plan.<br><br><button type="button" class="btn primary" id="runPlan">▶ Run</button>')+'</div>';
+      root.innerHTML='<div class="empty-state">'+(state.building?'<style>@keyframes tdsp{to{transform:rotate(360deg)}}</style><div style="width:28px;height:28px;margin:0 auto 12px;border:3px solid rgba(141,205,255,.25);border-top-color:#8dcdff;border-radius:50%;animation:tdsp .8s linear infinite"></div>Building truck plan from '+state.rawRows.length+' rows …<div style="max-width:360px;height:8px;margin:14px auto 6px;border-radius:99px;background:rgba(141,205,255,.15);overflow:hidden"><div id="planBar" style="height:100%;width:2%;background:#8dcdff;transition:width .2s"></div></div><div class="muted" id="planPct">starting…</div>':'All files loaded ('+state.rawRows.length+' dispatch rows). Click Run to build the truck plan.<br><br><button type="button" class="btn primary" id="runPlan">▶ Run</button>')+'</div>';
       $('#runPlan')?.addEventListener('click',buildPlan);return;
     }
     if(!state.result){root.innerHTML=state.statusError?'<div class="status-line error">'+esc(state.status)+'</div>':'<div class="empty-state">Loading dispatch plan from Drive…</div>';return;}

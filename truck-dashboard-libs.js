@@ -503,7 +503,7 @@ function yieldToBrowser() {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-async function allocate(rawRows, cityTable) {
+async function allocate(rawRows, cityTable, onProgress) {
   const rows = buildRows(rawRows, cityTable);
   const docks = buildDocks(rows);
   const unresolved = docks.filter(d => !d.resolved && !d.isForeign);
@@ -515,6 +515,7 @@ async function allocate(rawRows, cityTable) {
 
   const trucks = [];
   let truckSeq = 1;
+  const totalMT0 = docks.reduce((s, d) => s + d.total, 0);
 
   function commitTruck(tier, participants, pickedByDock, mode) {
     const lines = [];
@@ -612,13 +613,17 @@ async function allocate(rawRows, cityTable) {
   }
 
   async function runTier(tier) {
-    let sinceYield = 0;
+    let lastYield = performance.now();
     for (;;) {
       const c = bestCandidate(tier);
       if (!c) break;
       const mode = c.docks.length > 1 ? c.res.mode + ' (clubbed, ' + round2(c.dist) + ' km)' : c.res.mode;
       commitTruck(tier, c.docks, c.docks.map((d, i) => [d, c.picks[i]]), mode);
-      if (++sinceYield >= 4) { sinceYield = 0; await yieldToBrowser(); }
+      // Yield on elapsed time (not truck count) so one slow truck can't freeze the tab.
+      if (performance.now() - lastYield > 30) {
+        if (onProgress) onProgress(1 - docks.reduce((s, d) => s + d.units.reduce((t, u) => t + u.weight, 0), 0) / (totalMT0 || 1), trucks.length);
+        await yieldToBrowser(); lastYield = performance.now();
+      }
     }
   }
 
