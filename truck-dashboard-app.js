@@ -87,17 +87,19 @@
     const inline = () => E.allocate(rows, cityTable, onProgress);
     if (!window.Worker) return inline();
     return new Promise((resolve, reject) => {
-      let w;
+      let w, timedOut=false;
       try { w = new Worker('truck-plan-worker.js'); } catch { resolve(inline()); return; }
-      const fallback = () => { w.terminate(); inline().then(resolve, reject); };
+      const fallback = () => { try{w.terminate();}catch{}; inline().then(resolve, reject); };
+      const timer = setTimeout(() => { timedOut=true; console.warn('Plan worker timed out, running inline'); fallback(); }, 30000);
       w.onmessage = (e) => {
         const m = e.data;
         if (m.type === 'progress') onProgress && onProgress(m.frac, m.n);
-        else if (m.type === 'done') { w.terminate(); resolve(m.res); }
-        else { console.warn('Plan worker failed, running inline:', m.message); fallback(); }
+        else if (m.type === 'done') { clearTimeout(timer); w.terminate(); resolve(m.res); }
+        else if (m.type === 'error') { clearTimeout(timer); console.warn('Plan worker error, running inline:', m.message); fallback(); }
+        else { clearTimeout(timer); console.warn('Plan worker unknown msg, running inline:', m); fallback(); }
       };
-      w.onerror = (ev) => { console.warn('Plan worker error, running inline', ev.message); fallback(); };
-      try { w.postMessage({ rows }); } catch { fallback(); }
+      w.onerror = (ev) => { clearTimeout(timer); console.warn('Plan worker error, running inline', ev.message); fallback(); };
+      try { w.postMessage({ rows }); } catch { clearTimeout(timer); fallback(); }
     });
   }
 
