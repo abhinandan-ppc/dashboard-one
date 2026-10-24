@@ -189,6 +189,8 @@ tfoot.total{font-weight:650}
 .db-table th,.db-table td{vertical-align:middle}
 .db-table td:nth-child(3){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .db-table .pill{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.db-table .pill.loading{background:var(--warning-container);color:var(--warning)}
+.db-table td:nth-child(5),.db-table th:nth-child(5){text-align:left}
 .db-table .spin{width:10px;height:10px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:dbspin .7s linear infinite}
 @keyframes dbspin{to{transform:rotate(360deg)}}
 

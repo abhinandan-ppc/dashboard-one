@@ -136,9 +136,9 @@
   async function parseSobFile(file) {
     state.sobStatus = 'Reading ' + file.name + ' …'; renderUploads();
     try {
-      state.pendingSob = F.parseSobWorkbook(await xlsxRead(file));
-      state.sobStatus = state.pendingSob.transporters.length + ' transporters across ' + Object.keys(state.pendingSob.states).length + ' states parsed. Choose how to use it.';
-      renderUploads();
+      state.sob = F.parseSobWorkbook(await xlsxRead(file)); state.pendingSob = null; state.sobMode = 'this session';
+      state.sobStatus = state.sob.transporters.length + ' transporters across ' + Object.keys(state.sob.states).length + ' states loaded from ' + file.name + '.';
+      render();
     } catch (err) { state.sobStatus = 'Could not parse SOB file: ' + err.message; state.pendingSob = null; renderUploads(); }
   }
 
@@ -243,7 +243,7 @@ function renderDbStrip() {
       sob: { id: 'sobUpload', hint: 'Per-state rows, transporter percentage columns', status: state.sobStatus + (state.sobMode ? ' · ' + state.sobMode : ''), name: state.sobMode ? state.sobStatus : '' },
     }[kind];
     if (!cfg) return '';
-    const extra = kind !== 'sob' ? '' : '<button class="btn primary" type="button" id="sobSave" ' + (!state.pendingSob ? 'disabled' : '') + '>Save locally</button><button class="btn" type="button" id="sobAdhoc" ' + (!state.pendingSob ? 'disabled' : '') + '>Use this session</button><button class="btn text" type="button" id="sobClear">Clear SOB</button>';
+    const extra = '';
     return '<div class="up-cell" id="' + cfg.id + '" title="' + attr(cfg.hint + (cfg.status ? ' — ' + cfg.status : '')) + '"><input type="file" accept=".xlsx,.xls" id="' + cfg.id + 'Input"><button class="btn secondary" type="button" data-pick="' + cfg.id + 'Input">Choose file</button>' + extra
       + (cfg.name ? '<span class="up-sub' + (cfg.bad ? ' err' : '') + '">' + esc(cfg.name) + '</span>' : '') + '</div>';
   }
