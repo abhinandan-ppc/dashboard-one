@@ -197,7 +197,7 @@ function renderDbStrip() {
       const info = state.db.index?.kinds?.[k.kind];
       return '<tr><td><b>' + esc(k.label) + '</b></td><td class="mono">' + esc(k.token) + '</td><td>'
         + (s.entry ? esc(s.entry.name) : '<span class="muted">No file with ' + esc(k.token) + '</span>') + '</td><td>'
-        + (s.entry?.modified ? new Date(s.entry.modified).toLocaleString('en-GB') : '') + '</td><td><span class="pill ' + (cls[s.state] || '') + '">' + (state.busy ? 'Loading…' : labels[s.state] || '—') + '</span>'
+        + (s.entry?.modified ? new Date(s.entry.modified).toLocaleString('en-GB') : '') + '</td><td><span class="pill ' + (cls[s.state] || '') + '">' + (s.state === 'loading' || (state.busy && !state.db.kinds[k.kind]) ? 'Loading…' : labels[s.state] || '—') + '</span>'
         + (s.message ? ' <span class="muted">' + esc(s.message) + '</span>' : '')
         + (info?.older?.length ? ' <span class="muted">· ' + info.older.length + ' older file(s) ignored</span>' : '') + '</td></tr>';
     }).join('');
