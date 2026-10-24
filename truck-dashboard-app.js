@@ -81,9 +81,30 @@
   }
 
   // Allocation is the heavy step, so it runs once, after every file is loaded.
+  // Allocation runs in a worker so the page never hangs; falls back to inline if
+  // the worker can't start or its result can't be transferred.
+  function runAllocate(rows, onProgress) {
+    const inline = () => E.allocate(rows, cityTable, onProgress);
+    if (!window.Worker) return inline();
+    return new Promise((resolve, reject) => {
+      let w;
+      try { w = new Worker('truck-plan-worker.js'); } catch { resolve(inline()); return; }
+      const fallback = () => { w.terminate(); inline().then(resolve, reject); };
+      w.onmessage = (e) => {
+        const m = e.data;
+        if (m.type === 'progress') onProgress && onProgress(m.frac, m.n);
+        else if (m.type === 'done') { w.terminate(); resolve(m.res); }
+        else { console.warn('Plan worker failed, running inline:', m.message); fallback(); }
+      };
+      w.onerror = (ev) => { console.warn('Plan worker error, running inline', ev.message); fallback(); };
+      try { w.postMessage({ rows }); } catch { fallback(); }
+    });
+  }
+
   async function buildPlan() {
+    if (state.building || !state.rawRows?.length) return;
     const rows = state.rawRows;
-    state.pendingBuild = false; state.building = true; renderResults();
+    state.pendingBuild = false; state.building = true; renderResults(); renderViewSwitch();
     setStatus('Building truck plan from ' + rows.length + ' rows …');
     await new Promise(r => setTimeout(r, 30)); // let the status paint before the heavy work
     const onProgress = (frac, n) => {
@@ -91,7 +112,7 @@
       if (bar) bar.style.width = Math.min(99, Math.round(frac * 100)) + '%';
       if (txt) txt.textContent = Math.min(99, Math.round(frac * 100)) + '% · ' + n + ' trucks built';
     };
-    try { state.result = await E.allocate(rows, cityTable, onProgress); }
+    try { state.result = await runAllocate(rows, onProgress); }
     catch (err) { console.error(err); state.building = false; setStatus('Could not build plan: ' + err.message, true); render(); return; }
     state.building = false;
     setStatus(rows.length + ' rows parsed from sheet "' + state.sheetName + '".');
@@ -243,7 +264,9 @@ function renderDbStrip() {
   }
 
   function renderViewSwitch() {
-    $('#viewSwitch').innerHTML = VIEWS.map(([id, label]) => '<button class="btn ' + (state.view === id ? 'primary' : '') + '" data-view="' + id + '">' + label + '</button>').join('');
+    const canRun = !!state.rawRows?.length && !state.building && !state.busy;
+    $('#viewSwitch').innerHTML = '<button class="btn primary" type="button" id="runPlan" ' + (canRun ? '' : 'disabled') + '>' + (state.building ? '<i class="spin"></i> Running…' : '▶ Run') + '</button>' + VIEWS.map(([id, label]) => '<button class="btn ' + (state.view === id ? 'primary' : '') + '" data-view="' + id + '">' + label + '</button>').join('');
+    $('#runPlan')?.addEventListener('click', buildPlan);
     $$('[data-view]').forEach(b => b.addEventListener('click', () => { state.view = b.dataset.view; render(); }));
   }
 
@@ -434,8 +457,8 @@ function renderDbStrip() {
   function renderResults() {
     const root=$('#results');
     if(!state.result&&(state.pendingBuild||state.building)&&!state.busy){
-      root.innerHTML='<div class="empty-state">'+(state.building?'<style>@keyframes tdsp{to{transform:rotate(360deg)}}</style><div style="width:28px;height:28px;margin:0 auto 12px;border:3px solid rgba(141,205,255,.25);border-top-color:#8dcdff;border-radius:50%;animation:tdsp .8s linear infinite"></div>Building truck plan from '+state.rawRows.length+' rows …<div style="max-width:360px;height:8px;margin:14px auto 6px;border-radius:99px;background:rgba(141,205,255,.15);overflow:hidden"><div id="planBar" style="height:100%;width:2%;background:#8dcdff;transition:width .2s"></div></div><div class="muted" id="planPct">starting…</div>':'All files loaded ('+state.rawRows.length+' dispatch rows). Click Run to build the truck plan.<br><br><button type="button" class="btn primary" id="runPlan">▶ Run</button>')+'</div>';
-      $('#runPlan')?.addEventListener('click',buildPlan);return;
+      root.innerHTML='<div class="empty-state">'+(state.building?'<style>@keyframes tdsp{to{transform:rotate(360deg)}}</style><div style="width:28px;height:28px;margin:0 auto 12px;border:3px solid rgba(141,205,255,.25);border-top-color:#8dcdff;border-radius:50%;animation:tdsp .8s linear infinite"></div>Building truck plan from '+state.rawRows.length+' rows …<div style="max-width:360px;height:8px;margin:14px auto 6px;border-radius:99px;background:rgba(141,205,255,.15);overflow:hidden"><div id="planBar" style="height:100%;width:2%;background:#8dcdff;transition:width .2s"></div></div><div class="muted" id="planPct">starting…</div>':'All files loaded ('+state.rawRows.length+' dispatch rows). Click <b>▶ Run</b> above to build the truck plan.')+'</div>';
+      return;
     }
     if(!state.result){root.innerHTML=state.statusError?'<div class="status-line error">'+esc(state.status)+'</div>':'<div class="empty-state">Loading dispatch plan from Drive…</div>';return;}
     root.innerHTML=renderKpis(state.result)+(state.view==='club'?renderPlanPills(state.result):'')+renderTabsAndContent();
@@ -464,7 +487,7 @@ function renderDbStrip() {
     if(!parsed){alert('Enter a recognized Indian city or coordinates (lat, lng).');return;}
     cityTable[E.normalizeCityKey(city)]=parsed.coords;
     window.TruckCityOverrides.saveCityOverride(E.normalizeCityKey(city),parsed.coords);
-    state.result=await E.allocate(state.rawRows,cityTable);render();
+    state.result=await runAllocate(state.rawRows);render();
   }
 
   async function recomputeRemaining(){
@@ -472,7 +495,7 @@ function renderDbStrip() {
     const locked=state.result.trucks.filter(t=>state.placed.has(t.id)), used=new Map();
     locked.forEach(t=>t.lines.forEach(l=>l.soBreakdown.forEach(([so,v])=>used.set(so,(used.get(so)||0)+v.mt))));
     const remaining=state.rawRows.map(r=>{const key=r['SO No.']+'/'+r['SOItm'];const qty=Math.max(0,(Number(r['Dispatch Plan'])||0)-(Number(r['Under Loading'])||0)-(used.get(key)||0));return qty>.005?{...r,'Dispatch Plan':qty,'Under Loading':0}:null;}).filter(Boolean);
-    const recomputed=await E.allocate(remaining,cityTable);recomputed.trucks.forEach(t=>t.id='R-'+t.id);
+    const recomputed=await runAllocate(remaining);recomputed.trucks.forEach(t=>t.id='R-'+t.id);
     state.result={...state.result,trucks:locked.concat(recomputed.trucks),ltl:recomputed.ltl,ltlClusters:recomputed.ltlClusters,ltlUnresolved:recomputed.ltlUnresolved};
     setStatus('Recomputed remaining plan; '+locked.length+' truck(s) locked.');render();
   }
