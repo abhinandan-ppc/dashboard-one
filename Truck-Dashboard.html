@@ -174,6 +174,17 @@ tfoot.total{font-weight:650}
 .status-line.error{color:var(--critical)}
 .upload-card input[type=file]{display:none}
 
+/* ── Single-line control row: views, Drive status chips, uploads ─────────── */
+.ctl-row{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;overflow-x:auto;padding:4px 0 10px;margin-bottom:6px}
+.ctl-row>*{flex:none}
+.ctl-row .view-switch{margin:0}
+.ctl-row .db-strip,.ctl-row #uploads{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;padding:0;margin:0;background:none;border:0;box-shadow:none}
+.ctl-row .upload-card{display:flex;flex-wrap:nowrap;gap:8px;padding:4px 6px 4px 10px;margin:0;white-space:nowrap}
+.ctl-row .upload-card strong{font-size:12px;font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.ctl-row .upload-card strong.err{color:var(--critical)}
+.ctl-row .btn,.ctl-row .pill{white-space:nowrap}
+.ctl-row .status-line{margin:0;white-space:nowrap}
+
 /* ── Database strip ─────────────────────────────────────────────────────── */
 .db-strip{padding:13px 15px}
 .db-table{font-size:12.5px}
@@ -232,11 +243,11 @@ tfoot.total{font-weight:650}
 </div>
 <div class="header-spacer"></div>
 <div class="wrap">
-  <section class="block db-strip" id="dbStrip"></section>
-
-  <div class="view-switch" id="viewSwitch"></div>
-
-  <div id="uploads"></div>
+  <div class="ctl-row">
+    <div class="view-switch" id="viewSwitch"></div>
+    <section class="db-strip" id="dbStrip"></section>
+    <div id="uploads"></div>
+  </div>
 
   <div id="results"></div>
 
