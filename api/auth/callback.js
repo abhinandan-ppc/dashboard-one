@@ -1,4 +1,4 @@
-import { createSession, readCookie, redirectWithCookies } from '../_session.js';
+import { createSession, verifySession, readCookie, redirectWithCookies } from '../_session.js';
 import { recordLogin } from '../_acl.js';
 import { waitUntil } from '@vercel/functions';
 
@@ -43,7 +43,12 @@ export default async function handler(req) {
   const state = url.searchParams.get('state');
   const expectedState = readCookie(req, 'oauth_state');
 
-  if (!code || !state || !expectedState || state !== expectedState) {
+  // The cookie can be lost or overwritten (second tab, double-started sign-in,
+  // blocked cookies), so a validly signed, unexpired state is accepted too.
+  const signed = state ? await verifySession(state) : null;
+  const stateOk = state && ((expectedState && state === expectedState) || signed?.t === 'oauth');
+
+  if (!code || !stateOk) {
     // This is the "Invalid or expired sign-in attempt" case. The common
     // causes are: the oauth_state cookie expired (user spent a long time on
     // Google's account-chooser/consent screen), cookies blocked for the site,
@@ -51,14 +56,11 @@ export default async function handler(req) {
     // and send the user back through login instead of leaving them on a
     // dead-end plain-text error.
     let retryNext = '/';
-    try {
-      const decoded = JSON.parse(atob(state || '')).next;
-      if (typeof decoded === 'string' && decoded.startsWith('/') && !decoded.startsWith('//')) retryNext = decoded;
-    } catch {
+    for (const s of [state, expectedState]) {
       try {
-        const decoded = JSON.parse(atob(expectedState || '')).next;
-        if (typeof decoded === 'string' && decoded.startsWith('/') && !decoded.startsWith('//')) retryNext = decoded;
-      } catch { /* fall back to '/' */ }
+        const decoded = (await verifySession(s))?.next;
+        if (typeof decoded === 'string' && decoded.startsWith('/') && !decoded.startsWith('//')) { retryNext = decoded; break; }
+      } catch { /* try next */ }
     }
     const retryUrl = new URL('/api/auth/login', url.origin).toString() + `?next=${encodeURIComponent(retryNext)}`;
     const html = `<!doctype html>
@@ -92,10 +94,8 @@ export default async function handler(req) {
     });
   }
   let next = '/';
-  try {
-    const decoded = JSON.parse(atob(state)).next;
-    if (typeof decoded === 'string' && decoded.startsWith('/') && !decoded.startsWith('//')) next = decoded;
-  } catch {}
+  const decoded = (signed || (await verifySession(state)))?.next;
+  if (typeof decoded === 'string' && decoded.startsWith('/') && !decoded.startsWith('//')) next = decoded;
 
   const redirectUri = `${url.origin}/api/auth/callback`;
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {

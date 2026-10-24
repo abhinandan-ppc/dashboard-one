@@ -1,14 +1,16 @@
-import { redirectWithCookies } from '../_session.js';
+import { createSession, redirectWithCookies } from '../_session.js';
 
 export const config = { runtime: 'edge' };
 
-export default function handler(req) {
+export default async function handler(req) {
   const url = new URL(req.url);
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const allowedDomains = (process.env.ALLOWED_DOMAIN || '').split(',').map(d => d.trim()).filter(Boolean);
   const redirectUri = `${url.origin}/api/auth/callback`;
   const next = url.searchParams.get('next') || '/';
-  const state = btoa(JSON.stringify({ next, n: crypto.randomUUID() }));
+  // Signed (HMAC) so the callback can still validate it when the oauth_state
+  // cookie is missing/overwritten (second tab, double click, blocked cookies).
+  const state = await createSession({ t: 'oauth', next, n: crypto.randomUUID(), exp: Date.now() + 1000 * 60 * 30 });
 
   const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   authUrl.searchParams.set('client_id', clientId);
