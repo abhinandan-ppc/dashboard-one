@@ -36,7 +36,7 @@
     view: 'planner', tab: { planner: 'zone', club: '40' }, planFilter: 'all', search: '',
     result: null, rawRows: null, fileName: '', sheetName: '', status: '', statusError: false,
     rateModel: null, rateName: '', rateStatus: 'No freight-rate file loaded',
-    sob: null, sobMode: null, pendingSob: null, sobStatus: 'No SOB data loaded',
+    sob: null, sobMode: 'this session', pendingSob: null, sobStatus: 'SOB active for this session.',
     placed: new Set(), manual: [], manualSeq: 1, fuzzy: [],
     db: { index: null, kinds: {}, at: null, error: '' }, busy: false,
     delayAuto: null, mapTruck: null, searchText: '',
@@ -255,7 +255,7 @@ function renderDbStrip() {
     $('#rateUploadInput')?.addEventListener('change', e => { if (e.target.files[0]) parseRateFile(e.target.files[0]); e.target.value = ''; });
     $('#sobUploadInput')?.addEventListener('change', e => { if (e.target.files[0]) parseSobFile(e.target.files[0]); e.target.value = ''; });
     $('#sobSave')?.addEventListener('click', () => { try { localStorage.setItem(F.SOB_STORAGE_KEY, JSON.stringify(state.pendingSob)); state.sob = state.pendingSob; state.sobMode = 'saved locally'; state.pendingSob = null; state.sobStatus = 'SOB saved in this browser.'; render(); } catch (err) { state.sobStatus = 'Could not save: ' + err.message; renderUploads(); } });
-    $('#sobAdhoc')?.addEventListener('click', () => { state.sob = state.pendingSob; state.sobMode = 'this session'; state.pendingSob = null; state.sobStatus = 'SOB active for this session.'; render(); });
+    
     $('#sobClear')?.addEventListener('click', () => { localStorage.removeItem(F.SOB_STORAGE_KEY); if (state.sobMode === 'saved locally') { state.sob = null; state.sobMode = null; } state.sobStatus = 'Saved SOB cleared.'; render(); });
     const drop = $('#planUpload');
     ['dragenter', 'dragover'].forEach(ev => drop?.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('dragover'); }));
