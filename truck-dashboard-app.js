@@ -56,7 +56,7 @@
     });
   }
 
-  async function parsePlanFile(file) {
+  async function parsePlanFile(file, defer = false) {
     setStatus('Reading ' + file.name + ' …');
     try {
       const wb = await xlsxRead(file);
@@ -72,17 +72,25 @@
       state.rawRows = rows;
       state.placed = new Set(); state.manual = []; state.manualSeq = 1;
       state.fileName = file.name; state.sheetName = sheetName;
-      setStatus('Building truck plan from ' + rows.length + ' rows …');
-      state.result = await E.allocate(rows, cityTable);
-      setStatus(rows.length + ' rows parsed from sheet "' + sheetName + '".');
-      render();
+      if (defer) { setStatus(rows.length + ' rows loaded from sheet "' + sheetName + '".'); return true; }
+      await buildPlan();
       return true;
     } catch (err) {
       console.error(err); setStatus('Could not parse dispatch plan: ' + err.message, true); return false;
     }
   }
 
-  async function parseRateFile(file) {
+  // Allocation is the heavy step, so it runs once, after every file is loaded.
+  async function buildPlan() {
+    const rows = state.rawRows;
+    setStatus('Building truck plan from ' + rows.length + ' rows …');
+    await new Promise(r => setTimeout(r, 30)); // let the status paint before the heavy work
+    state.result = await E.allocate(rows, cityTable);
+    setStatus(rows.length + ' rows parsed from sheet "' + state.sheetName + '".');
+    render();
+  }
+
+  async function parseRateFile(file, defer = false) {
     state.rateStatus = 'Reading ' + file.name + ' …'; renderUploads();
     try {
       const wb = await xlsxRead(file);
@@ -92,7 +100,7 @@
       state.rateModel = F.buildFreightRateModel(rows, wb); state.rateName = file.name;
       const bands = state.rateModel.odcBands.lengthBands.length + state.rateModel.odcBands.widthBands.length;
       state.rateStatus = state.rateModel.records.length + ' rate rows, ' + bands + ' ODC bands, and ' + (state.rateModel.rtoTable ? state.rateModel.rtoTable.states.size + ' RTO states' : 'no RTO table') + ' loaded.';
-      render(); return true;
+      defer ? renderUploads() : render(); return true;
     } catch (err) { state.rateStatus = 'Could not parse rate file: ' + err.message; renderUploads(); return false; }
   }
 
@@ -133,8 +141,8 @@
       state.db = { index, kinds: {}, at: null, error: '' };
       renderDbStrip();
 
-      // Step 2: load each kind sequentially; re-render after every file so the
-      // user sees progress pills update one-by-one (fr -> sob -> plan -> delay).
+      // Step 2: load each kind sequentially (fr -> sob -> plan -> delay), updating
+      // only the progress pills; the heavy plan build happens after the last file.
       for (const kind of ['fr', 'sob', 'plan', 'delay']) {
         const entry = index.kinds?.[kind]?.file;
         if (!entry) {
@@ -148,12 +156,12 @@
         try {
           const file = await downloadKind(kind, entry);
           let ok = true;
-          if (kind === 'fr') ok = await parseRateFile(file);
+          if (kind === 'fr') ok = await parseRateFile(file, true);
           else if (kind === 'sob') {
             state.sob = F.parseSobWorkbook(await xlsxRead(file));
             state.sobMode = 'drive';
             state.sobStatus = Object.keys(state.sob.states).length + ' states loaded from Drive.';
-          } else if (kind === 'plan') ok = await parsePlanFile(file);
+          } else if (kind === 'plan') ok = await parsePlanFile(file, true);
           if (ok === false) throw new Error('File could not be read as expected XLSX format.');
           state.db.kinds[kind] = { state: 'loaded', entry };
         } catch (err) {
@@ -161,9 +169,10 @@
           state.db.kinds[kind] = { state: 'error', entry, message: err.message };
         }
         state.db.at = new Date();
-        render(); // re-render after each file so results appear progressively
+        renderDbStrip(); renderUploads(); // progress only; the plan is built once all files are in
       }
       state.db.at = new Date();
+      if (state.rawRows?.length && state.db.kinds.plan?.state === 'loaded') await buildPlan();
     } catch (err) {
       // Friendly hint when running on localhost without the sheet server.
       let hint = err.message;
