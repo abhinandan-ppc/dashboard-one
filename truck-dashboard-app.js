@@ -118,7 +118,7 @@
     catch (err) { console.error(err); state.building = false; setStatus('Could not build plan: ' + err.message, true); render(); return; }
     state.building = false;
     setStatus(rows.length + ' rows parsed from sheet "' + state.sheetName + '".');
-    render();
+    setTimeout(() => { render(); }, 0);
   }
 
   async function parseRateFile(file, defer = false) {
