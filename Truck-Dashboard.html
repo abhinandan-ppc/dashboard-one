@@ -174,19 +174,12 @@ tfoot.total{font-weight:650}
 .status-line.error{color:var(--critical)}
 .upload-card input[type=file]{display:none}
 
-/* ── Manual upload buttons, beside Refresh in the Drive block header ───── */
-.db-uploads{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.db-uploads .ctl-card{display:flex;flex-direction:row;align-items:center;gap:8px;min-width:0;padding:4px 6px 4px 10px;max-width:260px;background:var(--s2);border:1px solid var(--bdr);border-radius:var(--radius-lg,12px)}
-.db-uploads .ctl-top{display:flex;align-items:center;gap:8px;min-width:0}
-.db-uploads .ctl-top strong{font-weight:600;white-space:nowrap}
-.db-uploads .ctl-sub{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.db-uploads .ctl-sub.err{color:var(--critical)}
-.db-uploads input[type=file]{display:none}
-.db-uploads .ctl-top{gap:8px}
-.db-uploads .ctl-top strong{font-size:12px}
-.db-uploads .ctl-sub{max-width:110px;font-size:11px}
-.db-uploads .btn{white-space:nowrap;padding:4px 9px;font-size:12px}
-.db-strip .rank-controls{flex-wrap:wrap;justify-content:flex-end}
+/* ── Manual upload cell, beside each Drive row's status ───────────────── */
+.up-cell{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.up-cell input[type=file]{display:none}
+.up-cell .btn{white-space:nowrap;padding:4px 9px;font-size:12px}
+.up-sub{font-size:11.5px;color:var(--dim);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.up-sub.err{color:var(--critical)}
 
 /* ── Database strip ─────────────────────────────────────────────────────── */
 .db-strip{padding:13px 15px}

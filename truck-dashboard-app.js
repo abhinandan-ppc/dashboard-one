@@ -204,29 +204,31 @@ function renderDbStrip() {
         + (s.entry ? esc(s.entry.name) : '<span class="muted">No file with ' + esc(k.token) + '</span>') + '</td><td>'
         + (s.entry?.modified ? new Date(s.entry.modified).toLocaleString('en-GB') : '') + '</td><td><span class="pill ' + (cls[s.state] || '') + '">' + (s.state === 'loading' || (state.busy && !state.db.kinds[k.kind]) ? 'Loading…' : labels[s.state] || '—') + '</span>'
         + (s.message ? ' <span class="muted">' + esc(s.message) + '</span>' : '')
-        + (info?.older?.length ? ' <span class="muted">· ' + info.older.length + ' older file(s) ignored</span>' : '') + '</td></tr>';
+        + (info?.older?.length ? ' <span class="muted">· ' + info.older.length + ' older file(s) ignored</span>' : '') + '</td><td>' + uploadCell(k.kind) + '</td></tr>';
     }).join('');
-    box.innerHTML = '<div class="block-head"><div class="table-head"><h3 class="chart-title">Google Drive folder <span class="muted">— newest tagged file used</span></h3><div class="rank-controls"><div class="db-uploads" id="uploads"></div>'
+    box.innerHTML = '<div class="block-head"><div class="table-head"><h3 class="chart-title">Google Drive folder <span class="muted">— newest tagged file used</span></h3><div class="rank-controls">'
       + (state.db.at ? '<span class="muted">Updated ' + state.db.at.toLocaleTimeString('en-GB') + '</span>' : '')
       + '<button type="button" class="btn primary" id="dbRefresh" ' + (state.busy ? 'disabled' : '') + '>' + (state.busy ? 'Refreshing…' : '↻ Refresh data') + '</button></div></div></div>'
       + (state.db.error ? '<div class="status-line error">' + esc(state.db.error) + '</div>' : '')
-      + '<div class="table-scroll"><table class="db-table"><thead><tr><th>Data</th><th>Tag</th><th>File used</th><th>Modified</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+      + '<div class="table-scroll"><table class="db-table"><thead><tr><th>Data</th><th>Tag</th><th>File used</th><th>Modified</th><th>Status</th><th>Manual upload</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
     $('#dbRefresh')?.addEventListener('click', refreshDatabase);    renderUploads();
   }
 
-  function uploadCard(id, title, hint, status, extra = '', sub = '') {
-    const bad = state.statusError && id === 'planUpload';
-    return '<div class="ctl-card" id="' + id + '" title="' + attr(hint + (status ? ' — ' + status : '')) + '"><div class="ctl-top"><strong>' + esc(title) + '</strong><input type="file" accept=".xlsx,.xls" id="' + id + 'Input">' + extra + '<button class="btn secondary" type="button" data-pick="' + id + 'Input">Choose file</button></div><span class="ctl-sub' + (bad ? ' err' : '') + '">' + esc(sub || 'No file') + '</span></div>';
+  // Manual-upload cell shown beside each Drive row's status (no cell for the delay file).
+  function uploadCell(kind) {
+    const cfg = {
+      plan: { id: 'planUpload', hint: 'Sheet with SO No., Ship To Party City, Thick/Width/Length, ODC Remarks, Dispatch Plan', status: state.status, name: state.fileName, bad: state.statusError },
+      fr: { id: 'rateUpload', hint: 'Destination/state, zone, transporter freight and marketing recovery', status: state.rateStatus, name: state.rateName },
+      sob: { id: 'sobUpload', hint: 'Per-state rows, transporter percentage columns', status: state.sobStatus + (state.sobMode ? ' · ' + state.sobMode : ''), name: state.sobMode ? state.sobStatus : '' },
+    }[kind];
+    if (!cfg) return '';
+    const extra = kind !== 'sob' ? '' : '<button class="btn primary" type="button" id="sobSave" ' + (!state.pendingSob ? 'disabled' : '') + '>Save locally</button><button class="btn" type="button" id="sobAdhoc" ' + (!state.pendingSob ? 'disabled' : '') + '>Use this session</button><button class="btn text" type="button" id="sobClear">Clear SOB</button>';
+    return '<div class="up-cell" id="' + cfg.id + '" title="' + attr(cfg.hint + (cfg.status ? ' — ' + cfg.status : '')) + '"><input type="file" accept=".xlsx,.xls" id="' + cfg.id + 'Input"><button class="btn secondary" type="button" data-pick="' + cfg.id + 'Input">Choose file</button>' + extra
+      + (cfg.name ? '<span class="up-sub' + (cfg.bad ? ' err' : '') + '">' + esc(cfg.name) + '</span>' : '') + '</div>';
   }
 
   function renderUploads() {
-    const root = $('#uploads'); if (!root) return;
-    if (state.view !== 'planner') { root.innerHTML = ''; return; }
-    const plan = uploadCard('planUpload', 'Dispatch plan', 'Sheet with SO No., Ship To Party City, Thick/Width/Length, ODC Remarks, Dispatch Plan', state.status, '', state.statusError ? state.status : state.fileName);
-    const rate = uploadCard('rateUpload', 'Freight rates', 'Destination/state, zone, transporter freight and marketing recovery', state.rateStatus, '', state.rateName);
-    const sobActions = '<button class="btn primary" type="button" id="sobSave" ' + (!state.pendingSob ? 'disabled' : '') + '>Save locally</button><button class="btn" type="button" id="sobAdhoc" ' + (!state.pendingSob ? 'disabled' : '') + '>Use this session</button><button class="btn text" type="button" id="sobClear">Clear SOB</button>';
-    const sob = uploadCard('sobUpload', 'Transporter SOB', 'Per-state rows, transporter percentage columns', state.sobStatus + (state.sobMode ? ' · ' + state.sobMode : ''), sobActions, state.sobMode ? state.sobStatus : '');
-    root.innerHTML = plan + rate + sob;
+    const root = $('#dbStrip'); if (!root) return;
     $$('[data-pick]', root).forEach(btn => btn.addEventListener('click', () => $('#' + btn.dataset.pick)?.click()));
     $('#planUploadInput')?.addEventListener('change', e => { if (e.target.files[0]) parsePlanFile(e.target.files[0]); e.target.value = ''; });
     $('#rateUploadInput')?.addEventListener('change', e => { if (e.target.files[0]) parseRateFile(e.target.files[0]); e.target.value = ''; });
