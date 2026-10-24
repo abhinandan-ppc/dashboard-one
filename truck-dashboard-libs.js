@@ -628,6 +628,7 @@ async function allocate(rawRows, cityTable, onProgress) {
   }
 
   for (const tier of TRUCK_TIERS) await runTier(tier);
+  if (onProgress) onProgress(1, trucks.length);
 
   // Whatever remains is LTL — manual clubbing worklist, grouped by proximity for convenience.
   const ltl = [];

@@ -111,8 +111,8 @@
     await new Promise(r => setTimeout(r, 30)); // let the status paint before the heavy work
     const onProgress = (frac, n) => {
       const bar = $('#planBar'), txt = $('#planPct');
-      if (bar) bar.style.width = Math.min(99, Math.round(frac * 100)) + '%';
-      if (txt) txt.textContent = Math.min(99, Math.round(frac * 100)) + '% · ' + n + ' trucks built';
+      if (bar) bar.style.width = Math.min(100, Math.round(frac * 100)) + '%';
+      if (txt) txt.textContent = Math.min(100, Math.round(frac * 100)) + '% · ' + n + ' trucks built';
     };
     try { state.result = await runAllocate(rows, onProgress); }
     catch (err) { console.error(err); state.building = false; setStatus('Could not build plan: ' + err.message, true); render(); return; }
