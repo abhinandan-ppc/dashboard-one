@@ -72,7 +72,7 @@
       state.rawRows = rows;
       state.placed = new Set(); state.manual = []; state.manualSeq = 1;
       state.fileName = file.name; state.sheetName = sheetName;
-      if (defer) { setStatus(rows.length + ' rows loaded from sheet "' + sheetName + '".'); return true; }
+      if (defer) { state.result = null; state.pendingBuild = true; setStatus(rows.length + ' rows loaded from sheet "' + sheetName + '".'); return true; }
       await buildPlan();
       return true;
     } catch (err) {
@@ -83,9 +83,12 @@
   // Allocation is the heavy step, so it runs once, after every file is loaded.
   async function buildPlan() {
     const rows = state.rawRows;
+    state.pendingBuild = false; state.building = true; renderResults();
     setStatus('Building truck plan from ' + rows.length + ' rows …');
     await new Promise(r => setTimeout(r, 30)); // let the status paint before the heavy work
-    state.result = await E.allocate(rows, cityTable);
+    try { state.result = await E.allocate(rows, cityTable); }
+    catch (err) { console.error(err); state.building = false; setStatus('Could not build plan: ' + err.message, true); render(); return; }
+    state.building = false;
     setStatus(rows.length + ' rows parsed from sheet "' + state.sheetName + '".');
     render();
   }
@@ -172,7 +175,7 @@
         renderDbStrip(); renderUploads(); // progress only; the plan is built once all files are in
       }
       state.db.at = new Date();
-      if (state.rawRows?.length && state.db.kinds.plan?.state === 'loaded') await buildPlan();
+      // Plan is built on demand (Run button) so the page never freezes right after loading.
     } catch (err) {
       // Friendly hint when running on localhost without the sheet server.
       let hint = err.message;
@@ -422,6 +425,10 @@ function renderDbStrip() {
 
   function renderResults() {
     const root=$('#results');
+    if(!state.result&&(state.pendingBuild||state.building)&&!state.busy){
+      root.innerHTML='<div class="empty-state">'+(state.building?'Building truck plan from '+state.rawRows.length+' rows … the page may pause briefly.':'All files loaded ('+state.rawRows.length+' dispatch rows). Click Run to build the truck plan.<br><br><button type="button" class="btn primary" id="runPlan">▶ Run</button>')+'</div>';
+      $('#runPlan')?.addEventListener('click',buildPlan);return;
+    }
     if(!state.result){root.innerHTML=state.statusError?'<div class="status-line error">'+esc(state.status)+'</div>':'<div class="empty-state">Loading dispatch plan from Drive…</div>';return;}
     root.innerHTML=renderKpis(state.result)+(state.view==='club'?renderPlanPills(state.result):'')+renderTabsAndContent();
     $$('[data-filter]').forEach(b=>b.addEventListener('click',()=>{state.planFilter=b.dataset.filter;render();}));
