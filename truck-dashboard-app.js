@@ -197,34 +197,31 @@ function renderDbStrip() {
     const box = $('#dbStrip'); if (!box) return;
     const labels = { loaded: 'Loaded', missing: 'Missing', error: 'Error' };
     const cls = { loaded: 'nonodc', missing: 'odc', error: 'unresolved' };
-    const rows = KINDS.map(k => {
+    const chips = KINDS.map(k => {
       const s = state.db.kinds[k.kind] || { state: 'missing' };
       const info = state.db.index?.kinds?.[k.kind];
-      return '<tr><td><b>' + esc(k.label) + '</b></td><td class="mono">' + esc(k.token) + '</td><td>'
-        + (s.entry ? esc(s.entry.name) : '<span class="muted">No file with ' + esc(k.token) + '</span>') + '</td><td>'
-        + (s.entry?.modified ? new Date(s.entry.modified).toLocaleString('en-GB') : '') + '</td><td><span class="pill ' + (cls[s.state] || '') + '">' + (s.state === 'loading' || (state.busy && !state.db.kinds[k.kind]) ? 'Loading…' : labels[s.state] || '—') + '</span>'
-        + (s.message ? ' <span class="muted">' + esc(s.message) + '</span>' : '')
-        + (info?.older?.length ? ' <span class="muted">· ' + info.older.length + ' older file(s) ignored</span>' : '') + '</td></tr>';
+      const loading = s.state === 'loading' || (state.busy && !state.db.kinds[k.kind]);
+      const tip = (s.entry ? s.entry.name + (s.entry.modified ? ' · ' + new Date(s.entry.modified).toLocaleString('en-GB') : '') : 'No file with ' + k.token)
+        + (s.message ? ' — ' + s.message : '') + (info?.older?.length ? ' · ' + info.older.length + ' older file(s) ignored' : '');
+      return '<span class="pill ' + (cls[s.state] || '') + '" title="' + attr(tip) + '">' + esc(k.label) + ': ' + (loading ? 'Loading…' : labels[s.state] || '—') + '</span>';
     }).join('');
-    box.innerHTML = '<div class="block-head"><div class="table-head"><h3 class="chart-title">Google Drive folder <span class="muted">— newest tagged file used</span></h3><div class="rank-controls">'
-      + (state.db.at ? '<span class="muted">Updated ' + state.db.at.toLocaleTimeString('en-GB') + '</span>' : '')
-      + '<button type="button" class="btn primary" id="dbRefresh" ' + (state.busy ? 'disabled' : '') + '>' + (state.busy ? 'Refreshing…' : '↻ Refresh data') + '</button></div></div></div>'
-      + (state.db.error ? '<div class="status-line error">' + esc(state.db.error) + '</div>' : '')
-      + '<div class="table-scroll"><table class="db-table"><thead><tr><th>Data</th><th>Tag</th><th>File used</th><th>Modified</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+    box.innerHTML = chips + (state.db.error ? '<span class="status-line error">' + esc(state.db.error) + '</span>' : '')
+      + '<button type="button" class="btn primary" id="dbRefresh" ' + (state.busy ? 'disabled' : '') + ' title="' + (state.db.at ? 'Updated ' + state.db.at.toLocaleTimeString('en-GB') : '') + '">' + (state.busy ? 'Refreshing…' : '↻ Refresh') + '</button>';
     $('#dbRefresh')?.addEventListener('click', refreshDatabase);
   }
 
   function uploadCard(id, title, hint, status, extra = '') {
-    return '<div class="upload-card" id="' + id + '"><div class="upload-left"><div class="upload-icon">↥</div><div class="upload-text"><strong>' + esc(title) + '</strong><span>' + esc(hint) + '</span><div class="status-line' + (state.statusError && id === 'planUpload' ? ' error' : '') + '">' + esc(status || '') + '</div></div></div><div><input type="file" accept=".xlsx,.xls" id="' + id + 'Input">' + extra + '<button class="btn secondary" type="button" data-pick="' + id + 'Input">Choose file</button></div></div>';
+    const bad = state.statusError && id === 'planUpload';
+    return '<div class="upload-card" id="' + id + '" title="' + attr(hint + (status ? ' — ' + status : '')) + '"><strong' + (bad ? ' class="err"' : '') + '>' + esc(title) + '</strong><input type="file" accept=".xlsx,.xls" id="' + id + 'Input">' + extra + '<button class="btn secondary" type="button" data-pick="' + id + 'Input">Choose file</button></div>';
   }
 
   function renderUploads() {
     const root = $('#uploads'); if (!root) return;
     if (state.view !== 'planner') { root.innerHTML = ''; return; }
-    const plan = uploadCard('planUpload', state.fileName || 'Upload dispatch plan (.xlsx)', 'Sheet with SO No., Ship To Party City, Thick/Width/Length, ODC Remarks, Dispatch Plan', state.status, state.result ? '<button class="btn" type="button" data-pick="planUploadInput">Re-run</button>' : '');
-    const rate = uploadCard('rateUpload', state.rateName || 'Upload freight rates (.xlsx)', 'Destination/state, zone, transporter freight and marketing recovery', state.rateStatus);
-    const sobActions = '<button class="btn primary" type="button" id="sobSave" ' + (!state.pendingSob ? 'disabled' : '') + '>Save locally</button><button class="btn" type="button" id="sobAdhoc" ' + (!state.pendingSob ? 'disabled' : '') + '>Use this session</button><button class="btn text" type="button" id="sobClear">Clear saved SOB</button>';
-    const sob = uploadCard('sobUpload', 'Upload Transporter SOB (.xlsx)', 'Per-state rows, transporter percentage columns', state.sobStatus + (state.sobMode ? ' · ' + state.sobMode : ''), sobActions);
+    const plan = uploadCard('planUpload', 'Plan: ' + (state.fileName || 'none'), 'Sheet with SO No., Ship To Party City, Thick/Width/Length, ODC Remarks, Dispatch Plan', state.status, state.result ? '<button class="btn" type="button" data-pick="planUploadInput">Re-run</button>' : '');
+    const rate = uploadCard('rateUpload', 'Rates: ' + (state.rateName || 'none'), 'Destination/state, zone, transporter freight and marketing recovery', state.rateStatus);
+    const sobActions = '<button class="btn primary" type="button" id="sobSave" ' + (!state.pendingSob ? 'disabled' : '') + '>Save locally</button><button class="btn" type="button" id="sobAdhoc" ' + (!state.pendingSob ? 'disabled' : '') + '>Use this session</button><button class="btn text" type="button" id="sobClear">Clear SOB</button>';
+    const sob = uploadCard('sobUpload', 'SOB: ' + (state.sobMode || 'none'), 'Per-state rows, transporter percentage columns', state.sobStatus + (state.sobMode ? ' · ' + state.sobMode : ''), sobActions);
     root.innerHTML = plan + rate + sob;
     $$('[data-pick]', root).forEach(btn => btn.addEventListener('click', () => $('#' + btn.dataset.pick)?.click()));
     $('#planUploadInput')?.addEventListener('change', e => { if (e.target.files[0]) parsePlanFile(e.target.files[0]); e.target.value = ''; });
