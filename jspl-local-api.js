@@ -6,14 +6,14 @@
   // Also treat file:// (empty hostname) as local so opening the HTML directly
   // still routes /api/*-proxy requests to the local-auth sheet server.
   var localHost = host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '';
-  if(!localHost || window.location.port === '4173') return;
+  if(!localHost || window.location.port === '3000') return;
 
   var nativeFetch = window.fetch.bind(window);
   var sheetRoutes = /^\/api\/(?:ebtp|zstk|autobtr|truckdb|balance-heat)-proxy(?:\?|$)/;
   window.fetch = function(input, init){
     var url = typeof input === 'string' ? input : (input && input.url);
     if(typeof url === 'string' && sheetRoutes.test(url)){
-      var destination = 'http://127.0.0.1:4173' + url;
+      var destination = 'http://127.0.0.1:3000' + url;
       if(typeof input === 'string' || input instanceof URL) input = destination;
       else input = new Request(destination, input);
       init = Object.assign({}, init || {}, { mode: 'cors', credentials: 'omit' });

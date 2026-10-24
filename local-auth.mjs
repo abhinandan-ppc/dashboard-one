@@ -7,7 +7,7 @@
 // service-account.json instead of an env var. This file bridges both gaps
 // with zero dependencies:
 //
-//   node local-auth.mjs          → http://127.0.0.1:4173  (default port;
+//   node local-auth.mjs          → http://127.0.0.1:3000  (default port;
 //       override with --port N or PORT=… — browse the dashboards through
 //       THIS url so the pages' relative fetch('/api/…') reaches this server)
 //     • loads service-account.json into SHEETS_SA_CLIENT_EMAIL /
@@ -210,7 +210,7 @@ const server = createServer(async (req, res) => {
 });
 
 const portFlag = argv.indexOf('--port');
-const port = (portFlag !== -1 && Number(argv[portFlag + 1])) || Number(process.env.PORT) || 4173;
+const port = (portFlag !== -1 && Number(argv[portFlag + 1])) || Number(process.env.PORT) || 3000;
 
 server.on('error', (err) => {
   if (err && err.code === 'EADDRINUSE') {

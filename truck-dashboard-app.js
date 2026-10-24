@@ -168,7 +168,7 @@
       // Friendly hint when running on localhost without the sheet server.
       let hint = err.message;
       if (err instanceof TypeError && /fetch/.test(err.message)) {
-        hint = 'Sheet data service not reachable. Run `node local-auth.mjs` (or `npm run dev`) and open http://127.0.0.1:4173/Truck-Dashboard.html';
+        hint = 'Sheet data service not reachable. Run `node local-auth.mjs` (or `npm run dev`) and open http://127.0.0.1:3000/Truck-Dashboard.html';
       }
       state.db = { index: null, kinds: {}, at: new Date(), error: hint };
     }
