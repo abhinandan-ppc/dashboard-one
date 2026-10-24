@@ -50,3 +50,11 @@ plate-tracker-*.png
 scripts/diag-plate-charts.mjs
 test-all-pages.mjs
 test-simple.mjs
+
+# Local agent/tool state and screenshots.
+.claude-flow/
+.freebuff/
+.kilo/
+.playwright-mcp/
+truck-header-*.png
+temp_gitignore.txt
