@@ -183,7 +183,12 @@ tfoot.total{font-weight:650}
 
 /* ── Database strip ─────────────────────────────────────────────────────── */
 .db-strip{padding:13px 15px}
-.db-table{font-size:12.5px}
+.db-table{font-size:12.5px;table-layout:fixed;width:100%}
+.db-table th,.db-table td{vertical-align:middle}
+.db-table td:nth-child(3){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.db-table .pill{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.db-table .spin{width:10px;height:10px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:dbspin .7s linear infinite}
+@keyframes dbspin{to{transform:rotate(360deg)}}
 
 /* ── Empty / legend / misc ──────────────────────────────────────────────── */
 .empty-state{padding:20px 16px;text-align:center;color:var(--dim);font-size:13px;
