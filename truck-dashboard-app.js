@@ -202,7 +202,7 @@ function renderDbStrip() {
       const info = state.db.index?.kinds?.[k.kind];
       return '<tr><td><b>' + esc(k.label) + '</b></td><td class="mono">' + esc(k.token) + '</td><td>'
         + (s.entry ? esc(s.entry.name) : '<span class="muted">No file with ' + esc(k.token) + '</span>') + '</td><td>'
-        + (s.entry?.modified ? new Date(s.entry.modified).toLocaleString('en-GB') : '') + '</td><td><span class="pill ' + (cls[s.state] || '') + '">' + (s.state === 'loading' || (state.busy && !state.db.kinds[k.kind]) ? 'Loading…' : labels[s.state] || '—') + '</span>'
+        + (s.entry?.modified ? new Date(s.entry.modified).toLocaleString('en-GB') : '') + '</td><td>' + ((s.state === 'loading' || (state.busy && !state.db.kinds[k.kind])) ? '<span class="pill loading"><i class="spin"></i>Loading…</span>' : '<span class="pill ' + (cls[s.state] || '') + '">' + (labels[s.state] || '—') + '</span>')
         + (s.message ? ' <span class="muted">' + esc(s.message) + '</span>' : '')
         + (info?.older?.length ? ' <span class="muted">· ' + info.older.length + ' older file(s) ignored</span>' : '') + '</td><td>' + uploadCell(k.kind) + '</td></tr>';
     }).join('');
@@ -210,7 +210,7 @@ function renderDbStrip() {
       + (state.db.at ? '<span class="muted">Updated ' + state.db.at.toLocaleTimeString('en-GB') + '</span>' : '')
       + '<button type="button" class="btn primary" id="dbRefresh" ' + (state.busy ? 'disabled' : '') + '>' + (state.busy ? 'Refreshing…' : '↻ Refresh data') + '</button></div></div></div>'
       + (state.db.error ? '<div class="status-line error">' + esc(state.db.error) + '</div>' : '')
-      + '<div class="table-scroll"><table class="db-table"><thead><tr><th>Data</th><th>Tag</th><th>File used</th><th>Modified</th><th>Status</th><th>Manual upload</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+      + '<div class="table-scroll"><table class="db-table"><colgroup><col style="width:14%"><col style="width:7%"><col style="width:27%"><col style="width:15%"><col style="width:11%"><col style="width:26%"></colgroup><thead><tr><th>Data</th><th>Tag</th><th>File used</th><th>Modified</th><th>Status</th><th>Manual upload</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
     $('#dbRefresh')?.addEventListener('click', refreshDatabase);    renderUploads();
   }
 
