@@ -73,11 +73,14 @@ body.col-resizing{cursor:col-resize;user-select:none}
 /* ── Buttons ────────────────────────────────────────────────────────────── */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:var(--radius-md,8px);
   border:1px solid var(--bdrHi);background:var(--s2);color:var(--text);font:inherit;font-size:13px;
-  cursor:pointer;transition:background .15s,border-color .15s}
+  cursor:pointer;transition:background .15s,border-color .15s;
+  text-shadow:0 1px 2px rgba(0,0,0,.1);}
 .btn:hover:not(:disabled){background:var(--s3)}
+.btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btn.primary{background:var(--primary);border-color:transparent;color:var(--on-primary,#fff)}
-.btn.primary:hover:not(:disabled){background:var(--primary-hover,var(--primary))}
+.btn.primary:hover:not(:disabled){background:var(--primary-hover,var(--primary));
+  box-shadow:0 0 15px rgba(var(--primary-rgb),0.4)}
 .btn.secondary{background:var(--secondary-bg);border-color:transparent;color:var(--secondary)}
 .btn.text{background:transparent;border-color:transparent;color:var(--dim)}
 .btn.text:hover:not(:disabled){background:var(--s2);color:var(--text)}
@@ -116,13 +119,13 @@ body.col-resizing{cursor:col-resize;user-select:none}
 
 /* ── Pills / badges ─────────────────────────────────────────────────────── */
 .pill{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
-.pill.odc{background:var(--warning-container);color:var(--warning)}
-.pill.nonodc{background:var(--good-container);color:var(--good)}
-.pill.mixed{background:var(--accent-container);color:var(--accent)}
-.pill.unresolved{background:var(--critical-container);color:var(--critical)}
-.pill.tier40{background:var(--good-container);color:var(--good)}
-.pill.tier32{background:var(--accent-container);color:var(--accent)}
-.pill.tier28{background:var(--warning-container);color:var(--warning)}
+.pill.odc{background:var(--warning-container);color:var(--warning);box-shadow:0 0 10px rgba(var(--warning-rgb),0.3)}
+.pill.nonodc{background:var(--good-container);color:var(--good);box-shadow:0 0 10px rgba(var(--good-rgb),0.3)}
+.pill.mixed{background:var(--accent-container);color:var(--accent);box-shadow:0 0 10px rgba(var(--accent-rgb),0.3)}
+.pill.unresolved{background:var(--critical-container);color:var(--critical);box-shadow:0 0 10px rgba(var(--critical-rgb),0.3)}
+.pill.tier40{background:var(--good-container);color:var(--good);box-shadow:0 0 10px rgba(var(--good-rgb),0.3)}
+.pill.tier32{background:var(--accent-container);color:var(--accent);box-shadow:0 0 10px rgba(var(--accent-rgb),0.3)}
+.pill.tier28{background:var(--warning-container);color:var(--warning);box-shadow:0 0 10px rgba(var(--warning-rgb),0.3)}
 .club-badge{display:inline-block;min-width:16px;padding:0 4px;border-radius:4px;font-size:10px;font-weight:700;
   color:var(--s0);background:var(--club-0);text-align:center}
 .club-1{color:var(--club-1)} .club-2{color:var(--club-2)}
@@ -263,14 +266,27 @@ tfoot.total{font-weight:650}
 </div>
 
 <div id="boot-status" style="position:fixed;top:0;left:0 right:0 bottom:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:12px">
-  <div id="boot-spinner" style="width:40px;height:40px;border:3px solid var(--s4);border-top-color:var(--primary);border-radius:50%;animation:bootsp .8s linear infinite"></div>
+  <div id="boot-spinner" style="width:40px;height:40px;border:3px solid var(--s4);border-top-color:var(--primary);border-radius:50%;animation:bootsp .8s linear infinite;box-shadow:0 0 20px var(--boot-glow,var(--primary));margin:0 auto"></div>
   <div id="boot-msg" style="color:var(--dim);font-size:14px">Loading…</div>
-  <style>@keyframes bootsp{to{transform:rotate(360deg)}}</style>
+  <style>
+    @keyframes bootsp{to{transform:rotate(360deg)}}
+    #boot-status::before{
+      content:'';position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;
+      border-radius:0 0 var(--radius-lg,12px) var(--radius-lg,12px);
+      background:radial-gradient(circle at 30% 20%,rgba(var(--primary-rgb),0.3) 0,transparent 50%),
+                      radial-gradient(circle at 70% 80%,rgba(var(--accent-rgb),0.2) 0,transparent 50%);
+      opacity:0;
+      transition:opacity .3s ease;
+    }
+    #boot-status.active::before{opacity:1}
+  </style>
 </div>
 
 <script>
 window.addEventListener('error',function(e){var b=document.getElementById('boot-msg');if(b)b.textContent='Script error: '+(e.message||'unknown')+' ('+(e.filename||'')+':'+(e.lineno||'')+')';console.error(e.message,e.filename,e.lineno);});
 window.addEventListener('unhandledrejection',function(e){var b=document.getElementById('boot-msg');if(b)b.textContent='Startup error: '+String(e.reason);console.error(e.reason);});
+// Theme glow integration
+document.documentElement.style.setProperty('--boot-glow','var(--primary)');
 </script>
 <script src="truck-dashboard-xlsx.js"></script>
 <script src="truck-dashboard-libs.js"></script>
