@@ -3086,6 +3086,7 @@ setStyle(readStoredStyle());
   <div class="fetch-status-head">
     <div class="fetch-status-spinner"></div>
     <div class="fetch-status-label" id="fetchStatusLabel">Fetching EBTP data…</div>
+    <button class="fetch-status-minimize" id="fetchStatusMinimize" type="button" aria-label="Minimize log" title="Minimize">−</button>
   </div>
   <div class="fetch-status-sources">
     <span class="fetch-status-src" data-src="EBTP"><i class="fetch-status-src-dot"></i><span>EBTP</span></span>
@@ -3096,6 +3097,21 @@ setStyle(readStoredStyle());
   <div class="loader-track"><div class="loader-bar" id="fetchStatusBar"></div></div>
   <div class="fetch-status-log" id="fetchStatusLog"></div>
 </div>
+<script>
+(function(){
+  var btn = document.getElementById('fetchStatusMinimize');
+  if(btn){
+    btn.addEventListener('click', function(){
+      var el = document.getElementById('fetchStatus');
+      if(!el) return;
+      var minimized = el.classList.toggle('minimized');
+      btn.setAttribute('aria-expanded', minimized ? 'false' : 'true');
+      btn.textContent = minimized ? '+' : '−';
+      btn.title = minimized ? 'Expand log' : 'Minimize log';
+    });
+  }
+})();
+</script>
 <script>
 /* ═══════════════════ CENTRAL EBTP FETCH + CACHE ═══════════════════
    Fetched once here in the hub and cached in localStorage (shared,
