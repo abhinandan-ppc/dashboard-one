@@ -173,16 +173,24 @@ tfoot.total{font-weight:650}
 .status-line.error{color:var(--critical)}
 .upload-card input[type=file]{display:none}
 
-/* ── Single-line control row: views, Drive status chips, uploads ─────────── */
-.ctl-row{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;overflow-x:auto;padding:4px 0 10px;margin-bottom:6px}
-.ctl-row>*{flex:none}
-.ctl-row .view-switch{margin:0}
-.ctl-row .db-strip,.ctl-row #uploads{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;padding:0;margin:0;background:none;border:0;box-shadow:none}
-.ctl-row .upload-card{display:flex;flex-wrap:nowrap;gap:8px;padding:4px 6px 4px 10px;margin:0;white-space:nowrap}
-.ctl-row .upload-card strong{font-size:12px;font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis}
-.ctl-row .upload-card strong.err{color:var(--critical)}
-.ctl-row .btn,.ctl-row .pill{white-space:nowrap}
-.ctl-row .status-line{margin:0;white-space:nowrap}
+/* ── Control row: Drive status + upload cards. One row on desktop, swipeable below 1200px ── */
+.ctl-row{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;margin:0 0 12px}
+.ctl-row .db-strip,.ctl-row #uploads{display:contents}
+.ctl-card{display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:0;padding:9px 11px;
+  background:var(--s2);border:1px solid var(--bdr);border-radius:var(--radius-lg,12px)}
+.ctl-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.ctl-top strong{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctl-sub{font-size:11.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctl-sub.err{color:var(--critical)}
+.ctl-card input[type=file]{display:none}
+.ctl-card .btn,.ctl-row>.db-strip>.btn{white-space:nowrap;padding:4px 9px;font-size:12px}
+.ctl-row .db-strip>.btn{align-self:stretch;border-radius:var(--radius-lg,12px)}
+.ctl-row .pill{white-space:nowrap}
+@media(max-width:1199px){
+  .ctl-row{display:flex;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;padding-bottom:6px}
+  .ctl-row .db-strip,.ctl-row #uploads{display:contents}
+  .ctl-row>*,.ctl-row .db-strip>*,.ctl-row #uploads>*{flex:0 0 220px;scroll-snap-align:start}
+}
 
 /* ── Database strip ─────────────────────────────────────────────────────── */
 .db-strip{padding:13px 15px}
@@ -242,8 +250,8 @@ tfoot.total{font-weight:650}
 </div>
 <div class="header-spacer"></div>
 <div class="wrap">
+  <div class="view-switch" id="viewSwitch"></div>
   <div class="ctl-row">
-    <div class="view-switch" id="viewSwitch"></div>
     <section class="db-strip" id="dbStrip"></section>
     <div id="uploads"></div>
   </div>
