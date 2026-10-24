@@ -503,8 +503,11 @@ a.card:hover {
   display:flex;flex-direction:column;gap:10px;
 }
 .fetch-status-head{display:flex;align-items:center;gap:10px}
-.fetch-status-minimize{background:transparent;border:none;color:var(--mute);cursor:pointer;font-size:14px;line-height:1;padding:2px 6px;border-radius:6px;margin-left:auto;transition:transform .3s ease;display:flex;align-items:center;justify-content:center;min-width:24px;min-height:24px}
-.fetch-status.minimized .fetch-status-minimize{transform:rotate(180deg)}
+.fetch-status-minimize{background:transparent;border:none;color:var(--mute);cursor:pointer;font-size:14px;line-height:1;padding:2px 6px;border-radius:6px;margin-left:auto;transition:transform .3s ease;display:flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;position:relative}
+.fs-min{position:absolute;transition:opacity .25s ease,transform .25s ease}
+.fs-min-plus{opacity:0;transform:rotate(-90deg) scale(.6)}
+.fetch-status.minimized .fs-min-minus{opacity:0;transform:rotate(90deg) scale(.6)}
+.fetch-status.minimized .fs-min-plus{opacity:1;transform:rotate(0) scale(1)}
 .fetch-status-minimize:hover{background:var(--s2);color:var(--text)}
 .fetch-status.minimized .fetch-status-log{max-height:0;opacity:0;overflow:hidden}
 .fetch-status.minimized{padding:8px 16px;gap:8px}
