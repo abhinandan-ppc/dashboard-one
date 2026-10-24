@@ -3086,7 +3086,10 @@ setStyle(readStoredStyle());
   <div class="fetch-status-head">
     <div class="fetch-status-spinner"></div>
     <div class="fetch-status-label" id="fetchStatusLabel">Fetching EBTP data…</div>
-    <button class="fetch-status-minimize" id="fetchStatusMinimize" type="button" aria-label="Minimize log" title="Minimize">−</button>
+    <button class="fetch-status-minimize" id="fetchStatusMinimize" type="button" aria-label="Minimize log" title="Minimize" aria-expanded="true">
+      <span class="fs-min fs-min-minus">−</span>
+      <span class="fs-min fs-min-plus">+</span>
+    </button>
   </div>
   <div class="fetch-status-sources">
     <span class="fetch-status-src" data-src="EBTP"><i class="fetch-status-src-dot"></i><span>EBTP</span></span>
@@ -3106,7 +3109,6 @@ setStyle(readStoredStyle());
       if(!el) return;
       var minimized = el.classList.toggle('minimized');
       btn.setAttribute('aria-expanded', minimized ? 'false' : 'true');
-      btn.textContent = minimized ? '+' : '−';
       btn.title = minimized ? 'Expand log' : 'Minimize log';
     });
   }
