@@ -48,3 +48,5 @@ plate-tracker-*.png
 .brud/
 .impeccable/
 scripts/diag-plate-charts.mjs
+test-all-pages.mjs
+test-simple.mjs

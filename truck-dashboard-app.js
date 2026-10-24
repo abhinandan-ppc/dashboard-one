@@ -1,4 +1,4 @@
-/* Vanilla DOM application for Truck-Dashboard.html.
+﻿/* Vanilla DOM application for Truck-Dashboard.html.
  * Scope: Dispatch Planner + Auto Club. Excel upload overrides remain available;
  * Drive refresh is read-only and fetches only when this page opens or is refreshed.
  */
@@ -119,35 +119,64 @@
 
   async function refreshDatabase() {
     if (state.busy) return;
-    state.busy = true; state.db.error = ''; renderDbStrip();
+    state.busy = true; state.db.error = '';
+    // Show the strip immediately so the user sees loading pills right away.
+    state.db = { index: null, kinds: {}, at: null, error: '' };
+    renderDbStrip();
     try {
+      // Step 1: fetch the Drive index, then show real file names while files download.
       const res = await fetch('/api/truckdb-proxy', { cache: 'no-store' });
       const type = res.headers.get('content-type') || '';
       if (!type.includes('json')) throw new Error('Truck data service unavailable.');
       const index = await res.json();
       if (!res.ok) throw new Error(index.error || 'Drive index request failed.');
-      const kinds = {};
-      for (const kind of ['fr', 'sob', 'plan']) {
+      state.db = { index, kinds: {}, at: null, error: '' };
+      renderDbStrip();
+
+      // Step 2: load each kind sequentially; re-render after every file so the
+      // user sees progress pills update one-by-one (fr -> sob -> plan -> delay).
+      for (const kind of ['fr', 'sob', 'plan', 'delay']) {
         const entry = index.kinds?.[kind]?.file;
-        if (!entry) { kinds[kind] = { state: 'missing' }; continue; }
+        if (!entry) {
+          state.db.kinds[kind] = { state: 'missing' };
+          renderDbStrip();
+          continue;
+        }
+        // Mark as 'loading' before the fetch so the strip shows a live pill.
+        state.db.kinds[kind] = { state: 'loading', entry };
+        renderDbStrip();
         try {
           const file = await downloadKind(kind, entry);
           let ok = true;
           if (kind === 'fr') ok = await parseRateFile(file);
           else if (kind === 'sob') {
             state.sob = F.parseSobWorkbook(await xlsxRead(file));
-            state.sobMode = 'drive'; state.sobStatus = Object.keys(state.sob.states).length + ' states loaded from Drive.';
+            state.sobMode = 'drive';
+            state.sobStatus = Object.keys(state.sob.states).length + ' states loaded from Drive.';
           } else if (kind === 'plan') ok = await parsePlanFile(file);
           if (ok === false) throw new Error('File could not be read as expected XLSX format.');
-          kinds[kind] = { state: 'loaded', entry };
-        } catch (err) { console.error(err); kinds[kind] = { state: 'error', entry, message: err.message }; }
+          state.db.kinds[kind] = { state: 'loaded', entry };
+        } catch (err) {
+          console.error(err);
+          state.db.kinds[kind] = { state: 'error', entry, message: err.message };
+        }
+        state.db.at = new Date();
+        render(); // re-render after each file so results appear progressively
       }
-      state.db = { index, kinds, at: new Date(), error: '' };
-    } catch (err) { state.db = { index: null, kinds: {}, at: new Date(), error: err.message }; }
+      state.db.at = new Date();
+    } catch (err) {
+      // Friendly hint when running on localhost without the sheet server.
+      let hint = err.message;
+      if (err instanceof TypeError && /fetch/.test(err.message)) {
+        hint = 'Sheet data service not reachable. Run `node local-auth.mjs` (or `npm run dev`) and open http://127.0.0.1:4173/Truck-Dashboard.html';
+      }
+      state.db = { index: null, kinds: {}, at: new Date(), error: hint };
+    }
     finally { state.busy = false; render(); }
   }
 
-  function renderDbStrip() {
+  
+function renderDbStrip() {
     const box = $('#dbStrip'); if (!box) return;
     const labels = { loaded: 'Loaded', missing: 'Missing', error: 'Error' };
     const cls = { loaded: 'nonodc', missing: 'odc', error: 'unresolved' };

@@ -3,8 +3,10 @@
 // keep serving the site on its current port while credentials stay server-side.
 (function(){
   var host = window.location.hostname;
-  var localHost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
-  if(!localHost || !window.location.port || window.location.port === '4173') return;
+  // Also treat file:// (empty hostname) as local so opening the HTML directly
+  // still routes /api/*-proxy requests to the local-auth sheet server.
+  var localHost = host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '';
+  if(!localHost || window.location.port === '4173') return;
 
   var nativeFetch = window.fetch.bind(window);
   var sheetRoutes = /^\/api\/(?:ebtp|zstk|autobtr|truckdb)-proxy(?:\?|$)/;
