@@ -197,17 +197,21 @@ function renderDbStrip() {
     const box = $('#dbStrip'); if (!box) return;
     const labels = { loaded: 'Loaded', missing: 'Missing', error: 'Error' };
     const cls = { loaded: 'nonodc', missing: 'odc', error: 'unresolved' };
-    const chips = KINDS.map(k => {
+    const rows = KINDS.map(k => {
       const s = state.db.kinds[k.kind] || { state: 'missing' };
       const info = state.db.index?.kinds?.[k.kind];
-      const loading = s.state === 'loading' || (state.busy && !state.db.kinds[k.kind]);
-      const tip = (s.entry ? s.entry.name + (s.entry.modified ? ' · ' + new Date(s.entry.modified).toLocaleString('en-GB') : '') : 'No file with ' + k.token)
-        + (s.message ? ' — ' + s.message : '') + (info?.older?.length ? ' · ' + info.older.length + ' older file(s) ignored' : '');
-      return '<div class="ctl-card" title="' + attr(tip) + '"><div class="ctl-top"><strong>' + esc(k.label) + '</strong><span class="pill ' + (cls[s.state] || '') + '">' + (loading ? 'Loading…' : labels[s.state] || '—') + '</span></div><span class="ctl-sub">' + esc(s.entry ? s.entry.name : 'No file with ' + k.token) + '</span></div>';
+      return '<tr><td><b>' + esc(k.label) + '</b></td><td class="mono">' + esc(k.token) + '</td><td>'
+        + (s.entry ? esc(s.entry.name) : '<span class="muted">No file with ' + esc(k.token) + '</span>') + '</td><td>'
+        + (s.entry?.modified ? new Date(s.entry.modified).toLocaleString('en-GB') : '') + '</td><td><span class="pill ' + (cls[s.state] || '') + '">' + (s.state === 'loading' || (state.busy && !state.db.kinds[k.kind]) ? 'Loading…' : labels[s.state] || '—') + '</span>'
+        + (s.message ? ' <span class="muted">' + esc(s.message) + '</span>' : '')
+        + (info?.older?.length ? ' <span class="muted">· ' + info.older.length + ' older file(s) ignored</span>' : '') + '</td></tr>';
     }).join('');
-    box.innerHTML = chips + (state.db.error ? '<div class="ctl-card"><span class="ctl-sub err">' + esc(state.db.error) + '</span></div>' : '')
-      + '<button type="button" class="btn primary" id="dbRefresh" ' + (state.busy ? 'disabled' : '') + ' title="' + (state.db.at ? 'Updated ' + state.db.at.toLocaleTimeString('en-GB') : '') + '">' + (state.busy ? 'Refreshing…' : '↻ Refresh') + '</button>';
-    $('#dbRefresh')?.addEventListener('click', refreshDatabase);
+    box.innerHTML = '<div class="block-head"><div class="table-head"><h3 class="chart-title">Google Drive folder <span class="muted">— newest tagged file used</span></h3><div class="rank-controls"><div class="db-uploads" id="uploads"></div>'
+      + (state.db.at ? '<span class="muted">Updated ' + state.db.at.toLocaleTimeString('en-GB') + '</span>' : '')
+      + '<button type="button" class="btn primary" id="dbRefresh" ' + (state.busy ? 'disabled' : '') + '>' + (state.busy ? 'Refreshing…' : '↻ Refresh data') + '</button></div></div></div>'
+      + (state.db.error ? '<div class="status-line error">' + esc(state.db.error) + '</div>' : '')
+      + '<div class="table-scroll"><table class="db-table"><thead><tr><th>Data</th><th>Tag</th><th>File used</th><th>Modified</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+    $('#dbRefresh')?.addEventListener('click', refreshDatabase);    renderUploads();
   }
 
   function uploadCard(id, title, hint, status, extra = '', sub = '') {

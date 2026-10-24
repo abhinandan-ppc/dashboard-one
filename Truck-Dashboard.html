@@ -174,24 +174,19 @@ tfoot.total{font-weight:650}
 .status-line.error{color:var(--critical)}
 .upload-card input[type=file]{display:none}
 
-/* ── Control row: Drive status + upload cards. One row on desktop, swipeable below 1200px ── */
-.ctl-row{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;margin:0 0 12px}
-.ctl-row .db-strip,.ctl-row #uploads{display:contents}
-.ctl-card{display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:0;padding:9px 11px;
-  background:var(--s2);border:1px solid var(--bdr);border-radius:var(--radius-lg,12px)}
-.ctl-top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
-.ctl-top strong{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ctl-sub{font-size:11.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ctl-sub.err{color:var(--critical)}
-.ctl-card input[type=file]{display:none}
-.ctl-card .btn,.ctl-row>.db-strip>.btn{white-space:nowrap;padding:4px 9px;font-size:12px}
-.ctl-row .db-strip>.btn{align-self:stretch;border-radius:var(--radius-lg,12px)}
-.ctl-row .pill{white-space:nowrap}
-@media(max-width:1199px){
-  .ctl-row{display:flex;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;padding-bottom:6px}
-  .ctl-row .db-strip,.ctl-row #uploads{display:contents}
-  .ctl-row>*,.ctl-row .db-strip>*,.ctl-row #uploads>*{flex:0 0 220px;scroll-snap-align:start}
-}
+/* ── Manual upload buttons, beside Refresh in the Drive block header ───── */
+.db-uploads{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.db-uploads .ctl-card{display:flex;flex-direction:row;align-items:center;gap:8px;min-width:0;padding:4px 6px 4px 10px;max-width:260px;background:var(--s2);border:1px solid var(--bdr);border-radius:var(--radius-lg,12px)}
+.db-uploads .ctl-top{display:flex;align-items:center;gap:8px;min-width:0}
+.db-uploads .ctl-top strong{font-weight:600;white-space:nowrap}
+.db-uploads .ctl-sub{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-uploads .ctl-sub.err{color:var(--critical)}
+.db-uploads input[type=file]{display:none}
+.db-uploads .ctl-top{gap:8px}
+.db-uploads .ctl-top strong{font-size:12px}
+.db-uploads .ctl-sub{max-width:110px;font-size:11px}
+.db-uploads .btn{white-space:nowrap;padding:4px 9px;font-size:12px}
+.db-strip .rank-controls{flex-wrap:wrap;justify-content:flex-end}
 
 /* ── Database strip ─────────────────────────────────────────────────────── */
 .db-strip{padding:13px 15px}
@@ -251,11 +246,9 @@ tfoot.total{font-weight:650}
 </div>
 <div class="header-spacer"></div>
 <div class="wrap">
+  <section class="block db-strip" id="dbStrip"></section>
+
   <div class="view-switch" id="viewSwitch"></div>
-  <div class="ctl-row">
-    <section class="db-strip" id="dbStrip"></section>
-    <div id="uploads"></div>
-  </div>
 
   <div id="results"></div>
 
