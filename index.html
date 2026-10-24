@@ -1341,7 +1341,6 @@ var DEFAULTS = [
   {id:"vdo-generator",     name:"VDO Generator",     path:"VDO-Generator.html",    icon:"clock"},
   {id:"grade-clubbing-matrix", name:"Grade Clubbing Matrix", path:"Grade-Clubbing-Matrix.html", icon:"layoutDashboard"},
   {id:"order-status-report", name:"Order Status Report", path:"Order-Status-Report.html", icon:"clipboardList"},
-  {id:"plate-tracker",     name:"Plate Tracker",     path:"Plate-Tracker.html",     icon:"gitBranch"},
   {id:"truck-dashboard",   name:"Truck Dashboard",   path:"Truck-Dashboard.html",   icon:"truck"}
 ];
 
@@ -1354,7 +1353,7 @@ function loadItems(){
     // AI Chat was retired — prune it from anyone's already-saved layout.
     // Retired/hidden pages: AI Chat was removed, and the SMS Heat Planner Daily/Monthly
     // tiles are folded into the single parent "SMS Heat Planner" card.
-    var RETIRED_IDS = { "ai-chat":1, "sms-heat-planner-daily":1, "sms-heat-planner-monthly":1 };
+    var RETIRED_IDS = { "ai-chat":1, "sms-heat-planner-daily":1, "sms-heat-planner-monthly":1, "plate-tracker":1 };
     var pruned = parsed.filter(function(it){ return !it || !RETIRED_IDS[it.id]; });
     var seen = new Set(pruned.map(function(it){ return it && it.id; }).filter(Boolean));
     var merged = pruned.slice();
