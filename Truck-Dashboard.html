@@ -35,6 +35,8 @@ html,body{min-height:100%}
 
 body{font-size:14px;line-height:1.5}
 body.col-resizing{cursor:col-resize;user-select:none}
+.app-header{transition:box-shadow .2s ease,border-color .2s ease}
+.app-header:hover{box-shadow:0 0 24px rgba(var(--primary-rgb),0.12)}
 
 /* ── Layout shell ───────────────────────────────────────────────────────── */
 .wrap{max-width:1600px;margin:0 auto;padding:0 var(--page-gutter);display:flex;flex-direction:column;gap:var(--truck-stack,18px)}
