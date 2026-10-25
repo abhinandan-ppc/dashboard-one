@@ -10,6 +10,30 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link rel="stylesheet" href="theme.css"/>
 <script src="jspl-local-api.js"></script>
+<script>
+(function(){
+  var params = new URLSearchParams(location.search);
+  if (!params.has('ld')) return;
+  var port = params.get('ld') || '3000';
+  if (!/^\d{2,5}$/.test(port)) return;
+  var originalFetch = window.fetch.bind(window);
+  var apiPattern = /^\/api\/(?:truckdb-proxy|database)(?:\/|\?|$)/;
+  window.fetch = function(input, init){
+    var value = typeof input === 'string' ? input : input && input.url;
+    if (typeof value === 'string') {
+      var parsed;
+      try { parsed = new URL(value, location.href); } catch (_) {}
+      if (parsed && apiPattern.test(parsed.pathname + parsed.search)) {
+        var target = 'http://127.0.0.1:' + port + parsed.pathname + parsed.search;
+        if (typeof input === 'string' || input instanceof URL) input = target;
+        else input = new Request(target, input);
+        init = Object.assign({}, init || {}, { mode: 'cors', credentials: 'omit' });
+      }
+    }
+    return originalFetch(input, init);
+  };
+})();
+</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{min-height:100%}
@@ -45,19 +69,21 @@ body.col-resizing{cursor:col-resize;user-select:none}
 .brand h1{font-size:22px;font-weight:650;letter-spacing:-.01em;margin:2px 0 4px}
 .brand .subtitle{color:var(--dim);font-size:13px;max-width:70ch}
 .mark{font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--mute);text-transform:uppercase}
-.page-truck{--truck-stack:18px}
+.page-truck{--truck-stack:18px;--truck-ink:var(--text);--truck-surface:var(--s1);--truck-surface-2:var(--s2);--truck-outline:var(--bdr);--truck-outline-strong:var(--bdrHi)}
 @media (min-width:769px){.page-truck .header-spacer{height:103px!important}}
 .page-truck .truck-brand{display:flex;align-items:center;gap:14px;flex:1 1 480px;min-width:0}
 .page-truck .truck-brand .jspl-logo{width:auto!important;height:30px!important;max-width:102px!important;object-fit:contain!important}
 .page-truck .truck-brand-copy{min-width:0}
 .page-truck .truck-brand-copy .eyebrow{margin:0 0 3px;color:var(--tm);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 .page-truck .truck-brand-copy h1{font-size:19px;line-height:1.2;font-weight:800;letter-spacing:-.01em;margin:0 0 2px;white-space:nowrap}
-.page-truck .truck-brand-copy .subtitle{color:var(--dim);font-size:11px;line-height:1.3;max-width:58ch}
+.page-truck .truck-brand-copy .subtitle{color:var(--dim);font-size:12px;line-height:1.4;max-width:58ch}
 .truck-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:16px;flex:0 1 620px;margin-left:auto;min-width:0}
-.rules{color:var(--dim);font-size:12px;display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;text-align:right}
+.rules{color:var(--dim);font-size:12px;display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;text-align:right;max-width:620px}
 
 .block{background:var(--glass-card,var(--s1));border:1px solid var(--bdr);border-radius:var(--radius-lg,12px);padding:14px;margin-bottom:0;transition:box-shadow .2s ease,border-color .2s ease}
 .block:hover{box-shadow:0 0 20px rgba(var(--primary-rgb),0.15);border-color:var(--bdrHi)}
+.page-truck .db-strip,.page-truck .block{min-width:0}
+.page-truck .table-scroll{overscroll-behavior:contain;scrollbar-gutter:stable;}
 .block-head{margin-bottom:10px}
 .block-head h2{font-size:15px;font-weight:650;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .block-desc{color:var(--dim);font-size:12px;margin-top:3px;max-width:100ch}
@@ -93,15 +119,16 @@ body.col-resizing{cursor:col-resize;user-select:none}
 
 /* ── View switch + tabs ─────────────────────────────────────────────────── */
 .view-switch{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0}
-.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--bdr);margin:12px 0;padding:6px;background:var(--s2);border-radius:var(--radius-md,10px)}
-.tab-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 13px;border:0;background:transparent;
-  color:var(--dim);font:inherit;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;border-radius:0}
-.tab-btn:hover{color:var(--text)}
-.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;border:1px solid var(--bdr);margin:12px 0;padding:6px;background:var(--s2);border-radius:var(--radius-md,10px)}
+.tab-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border:1px solid transparent;background:transparent;
+  color:var(--dim);font:inherit;font-size:13px;cursor:pointer;border-radius:var(--radius-sm,7px);transition:background .15s,border-color .15s,color .15s}
+.tab-btn:hover{color:var(--text);background:var(--s3)}
+.tab-btn.active{color:var(--on-primary);background:var(--primary);border-color:var(--primary);font-weight:650}
+.tab-btn.active .count-chip{color:var(--on-primary);background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.25)}
 
 /* ── KPI grid ───────────────────────────────────────────────────────────── */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:8px 0}
-.kpi{background:var(--s2);border:1px solid var(--bdr);border-radius:var(--radius-md,10px);padding:11px 13px;transition:box-shadow .2s ease,border-color .2s ease}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,165px),1fr));gap:10px;margin:8px 0}
+.kpi{background:var(--s2);border:1px solid var(--bdr);border-radius:var(--radius-md,10px);padding:13px 14px;transition:box-shadow .2s ease,border-color .2s ease}
 .kpi:hover{box-shadow:0 0 16px rgba(var(--primary-rgb),0.12);border-color:var(--bdrHi)}
 .kpi .label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
 .kpi .value{font-size:19px;font-weight:650;margin:3px 0 1px;font-variant-numeric:tabular-nums}
@@ -136,7 +163,7 @@ body.col-resizing{cursor:col-resize;user-select:none}
 .club-1{color:var(--club-1)} .club-2{color:var(--club-2)}
 
 /* ── Tables ─────────────────────────────────────────────────────────────── */
-.table-scroll{overflow:auto;border:1px solid var(--bdr);border-radius:var(--radius-md,10px);max-width:100%}
+.table-scroll{overflow:auto;border:1px solid var(--bdr);border-radius:var(--radius-md,10px);max-width:100%;background:var(--s0)}
 table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
 thead th{position:sticky;top:0;z-index:2;background:var(--s2);text-align:left;font-weight:600;font-size:11px;
   letter-spacing:.04em;text-transform:uppercase;color:var(--dim);padding:9px 10px;border-bottom:1px solid var(--bdrHi);white-space:nowrap}
@@ -145,6 +172,8 @@ tbody td{padding:7px 10px;border-bottom:1px solid var(--bdr);vertical-align:top}
 tbody tr:last-child td{border-bottom:0}
 tbody tr{transition:background .15s ease,box-shadow .2s ease}
 tbody tr:hover{background:var(--s2);box-shadow:inset 0 0 0 1px rgba(var(--primary-rgb),0.08)}
+.page-truck :is(button,input,select,textarea):focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.page-truck input[type=checkbox]{accent-color:var(--primary);width:16px;height:16px;vertical-align:middle}
 tfoot td{padding:9px 10px;border-top:1px solid var(--bdrHi);font-weight:650;background:var(--s2)}
 tfoot.total{font-weight:650}
 .state-row td{background:var(--s3);font-size:12px}
@@ -159,6 +188,10 @@ tfoot.total{font-weight:650}
 .mf-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 11px;margin-bottom:8px;
   background:var(--s2);border:1px solid var(--bdr);border-radius:var(--radius-md,10px);font-size:13px}
 .mf-bar .btn{margin-left:auto}
+.truck-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}
+.truck-toolbar .search-input{width:min(360px,100%)}
+.truck-toolbar .toolbar-note{color:var(--dim);font-size:12px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .mf-bar .btn+.btn{margin-left:0}
 .mf-error{color:var(--critical);font-weight:600}
 .mf-sel-total{background:var(--primary-bg)}
@@ -232,6 +265,21 @@ tfoot.total{font-weight:650}
   .block{padding:12px}
   .upload-card{flex-direction:row;align-items:stretch}
   .mf-bar .btn{margin-left:0}
+  .page-truck .db-table{min-width:720px}
+  .page-truck .truck-brand-copy .subtitle{font-size:11px}
+  .page-truck .view-switch{gap:6px}
+  .truck-toolbar{align-items:stretch}
+  .truck-toolbar .search-input,.truck-toolbar .btn{width:100%}
+}
+@media (max-width:480px){
+  .page-truck .wrap{padding-bottom:24px}
+  .page-truck .truck-brand{gap:10px}
+  .page-truck .truck-brand-copy h1{font-size:16px}
+  .page-truck .rules{font-size:11px;line-height:1.45}
+  .page-truck .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .page-truck .kpi{padding:10px}
+  .page-truck .kpi .value{font-size:17px}
+  .page-truck .tabs>.tab-btn{flex:1 1 calc(50% - 6px);justify-content:center;padding:8px 7px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -271,11 +319,12 @@ tfoot.total{font-weight:650}
   </footer>
 </div>
 
-<div id="boot-status" style="position:fixed;top:0;left:0 right:0 bottom:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:12px">
+<div id="boot-status" hidden style="position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
   <div id="boot-spinner" style="width:40px;height:40px;border:3px solid var(--s4);border-top-color:var(--primary);border-radius:50%;animation:bootsp .8s linear infinite;box-shadow:0 0 20px var(--boot-glow,var(--primary));margin:0 auto"></div>
-  <div id="boot-msg" style="color:var(--dim);font-size:14px">Loading…</div>
+  <div id="boot-msg" style="color:var(--dim);font-size:14px">Starting Truck Dashboard…</div>
   <style>
     @keyframes bootsp{to{transform:rotate(360deg)}}
+    #boot-status[hidden]{display:none!important}
     #boot-status::before{
       content:'';position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;
       border-radius:0 0 var(--radius-lg,12px) var(--radius-lg,12px);
