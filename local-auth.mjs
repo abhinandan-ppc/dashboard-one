@@ -10,10 +10,8 @@
 //   node local-auth.mjs          → http://127.0.0.1:3000  (default port;
 //       override with --port N or PORT=… — browse the dashboards through
 //       THIS url so the pages' relative fetch('/api/…') reaches this server)
-//     • loads service-account.json into SHEETS_SA_CLIENT_EMAIL /
-//       SHEETS_SA_PRIVATE_KEY — the exact vars api/_sheets-sa.js reads — then
-//       serves the REAL api/*.js handlers (same code path as production,
-//       not a re-implementation);
+//     • loads service-account.json for the other dashboard proxies and mounts
+//       the truck dashboard's Google Drive database routes on the same origin;
 //     • serves the static dashboards from the repo root on the SAME origin,
 //       so every page's relative fetch('/api/…') resolves without changes;
 //     • needs no login: index.html already detects localhost (isLocalDev)
@@ -23,19 +21,34 @@
 //     SHEETS_SA_* pair lifted from service-account.json, for anyone who
 //     prefers `vercel dev` over this server.
 //
-// The key file is read at runtime from service-account.json (repo root,
-// gitignored — see SVA.md "The service account"). Never commit it and never
-// inline its contents here; this script holds no secrets of its own.
+// Spreadsheet proxy credentials are loaded from root .env.local or the
+// truck-dashboard app's .env.local. The service-account key below is used only
+// for the other dashboards' sheet proxies.
 
 import { createServer } from 'node:http';
 import { readFile, writeFile, stat } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { parseEnvText } from './local-auth-env.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const SA_PATH = path.join(ROOT, 'service-account.json');
 const argv = process.argv.slice(2);
+
+async function loadEnvFile(file) {
+  try {
+    const values = parseEnvText(await readFile(file, 'utf8'), process.env);
+    Object.assign(process.env, values);
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+}
+
+await loadEnvFile(path.join(ROOT, '.env.local'));
+// The standalone truck dashboard keeps its Drive credentials in its own Vite
+// app folder. Load them as a fallback; root .env.local / shell vars take priority.
+await loadEnvFile(path.join(ROOT, 'truck-dashboard', '.env.local'));
 
 async function loadServiceAccount() {
   let raw;
@@ -86,6 +99,11 @@ if (argv.includes('--env')) {
 const sa = await loadServiceAccount();
 process.env.SHEETS_SA_CLIENT_EMAIL = sa.client_email;
 process.env.SHEETS_SA_PRIVATE_KEY = sa.private_key;
+if (process.env.DRIVE_SCRIPT_URL && process.env.DRIVE_SCRIPT_SECRET) {
+  console.log('local-auth: Google Drive database credentials loaded.');
+} else {
+  console.warn('local-auth: Google Drive data is not configured; set DRIVE_SCRIPT_URL and DRIVE_SCRIPT_SECRET in .env.local.');
+}
 
 // ── The same Edge handlers Vercel runs — imported, not re-implemented ──────
 const API_ROUTES = {
@@ -95,6 +113,12 @@ const API_ROUTES = {
   '/api/autobtr-proxy': new URL('./api/autobtr-proxy.js', import.meta.url),
   '/api/truckdb-proxy': new URL('./api/truckdb-proxy.js', import.meta.url),
 };
+
+// Truck dashboard's source tree is a separate Vite app. Mount its Drive database
+// API in the root local server too, so both the ported static page and the React
+// app can fetch the same Drive XLSX/native Google Sheets on localhost:3000.
+const TRUCK_DB_ROUTES = new Set(['/api/database', '/api/database/file']);
+const { handleDatabase } = await import('./truck-dashboard/tools/drive.mjs');
 
 const handlerCache = new Map();
 async function getHandler(pathname) {
@@ -182,7 +206,8 @@ async function serveStatic(pathname, res) {
 
 const server = createServer(async (req, res) => {
   try {
-    const { pathname } = new URL(req.url, 'http://localhost');
+    const url = new URL(req.url, 'http://localhost');
+    const { pathname } = url;
     if (req.method === 'OPTIONS') {
       return send(res, 204, {
         'Access-Control-Allow-Origin': '*',
@@ -190,7 +215,34 @@ const server = createServer(async (req, res) => {
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       });
     }
-    if (pathname in API_ROUTES) return await serveApi(new URL(req.url, 'http://localhost'), res);
+    // Check Vercel-style routes before static serving. On VS Code Live Preview
+    // these paths are shadowed by physical files under /api, so route API calls
+    // through this server while it runs on port 3000.
+    const databasePath = pathname.replace(/\/+$/, '');
+    if (databasePath === '/api/database' || databasePath === '/api/database/file') {
+      url.pathname = databasePath;
+      if (databasePath === '/api/database' && url.searchParams.has('name')) url.pathname = '/api/database/file';
+      if (url.pathname === '/api/database' && url.searchParams.has('file')) url.pathname = '/api/database/file';
+      if (url.pathname === '/api/database/file' && !url.searchParams.has('name') && url.searchParams.has('file')) {
+        url.searchParams.set('name', url.searchParams.get('file'));
+      }
+      if (url.pathname === '/api/database/file' && !url.searchParams.has('name') && url.searchParams.has('id')) {
+        url.searchParams.set('name', url.searchParams.get('id'));
+      }
+      if (url.searchParams.has('name') && url.searchParams.get('name').includes('/')) {
+        url.searchParams.set('name', url.searchParams.get('name').split('/').pop());
+      }
+      if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, { 'Content-Type': 'text/plain' }, 'Method not allowed');
+      const result = await handleDatabase(url, process.env);
+      if (!result) return send(res, 404, { 'Content-Type': 'application/json; charset=utf-8' }, JSON.stringify({ error: 'Not found', pathname }));
+      const headers = {};
+      result.headers.forEach((v, k) => { headers[k] = v; });
+      headers['Access-Control-Allow-Origin'] = '*';
+      const body = req.method === 'HEAD' ? null : Buffer.from(await result.arrayBuffer());
+      return send(res, result.status, headers, body);
+    }
+    if (pathname in API_ROUTES) return await serveApi(url, res);
+
     if (pathname.startsWith('/api/')) {
       return send(res, 404, {
         'Content-Type': 'application/json; charset=utf-8',
@@ -229,5 +281,6 @@ server.listen(port, '127.0.0.1', () => {
   console.log('local-auth: service account →', sa.client_email);
   console.log(`local-auth: dashboards      → http://127.0.0.1:${port}/`);
   console.log('local-auth: sheet proxies   → /api/ebtp-proxy  /api/balance-heat-proxy  /api/zstk-proxy  /api/autobtr-proxy');
+  console.log('local-auth: truck database  → /api/database  /api/database/file (configure DRIVE_SCRIPT_URL and DRIVE_SCRIPT_SECRET)');
   console.log('local-auth: Ctrl+C to stop');
 });
