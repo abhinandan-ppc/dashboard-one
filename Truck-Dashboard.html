@@ -24,7 +24,11 @@
       var parsed;
       try { parsed = new URL(value, location.href); } catch (_) {}
       if (parsed && apiPattern.test(parsed.pathname + parsed.search)) {
-        var target = 'http://127.0.0.1:' + port + parsed.pathname + parsed.search;
+        var path = parsed.pathname + parsed.search;
+        if (parsed.pathname === '/api/database' && parsed.searchParams.has('name')) {
+          path = '/api/database/file?name=' + encodeURIComponent(parsed.searchParams.get('name'));
+        }
+        var target = 'http://127.0.0.1:' + port + path;
         if (typeof input === 'string' || input instanceof URL) input = target;
         else input = new Request(target, input);
         init = Object.assign({}, init || {}, { mode: 'cors', credentials: 'omit' });
@@ -126,24 +130,32 @@ body.col-resizing{cursor:col-resize;user-select:none}
 .tab-btn.active{color:var(--on-primary);background:var(--primary);border-color:var(--primary);font-weight:650}
 .tab-btn.active .count-chip{color:var(--on-primary);background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.25)}
 
-/* ── KPI grid ───────────────────────────────────────────────────────────── */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,165px),1fr));gap:10px;margin:8px 0}
-.kpi{background:var(--s2);border:1px solid var(--bdr);border-radius:var(--radius-md,10px);padding:13px 14px;transition:box-shadow .2s ease,border-color .2s ease}
-.kpi:hover{box-shadow:0 0 16px rgba(var(--primary-rgb),0.12);border-color:var(--bdrHi)}
-.kpi .label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
-.kpi .value{font-size:19px;font-weight:650;margin:3px 0 1px;font-variant-numeric:tabular-nums}
-.kpi .sub{font-size:11px;color:var(--mute)}
-.kpi.accent{border-color:color-mix(in srgb,var(--accent) 40%,transparent);background:var(--accent-container)}
-.kpi.warn{border-color:color-mix(in srgb,var(--warning) 40%,transparent);background:var(--warning-container)}
-.kpi.critical{border-color:color-mix(in srgb,var(--critical) 40%,transparent);background:var(--critical-container)}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,165px),1fr));gap:10px;margin:10px 0;grid-auto-rows:1fr}
+   Hub design contract (Design_Context.md §4 · DESIGN_SAP_CLASSIC.md §13): every
+   tile shares one neutral card surface with a thin accent rail on top, the value
+   carries the only colour, and green/red are reserved for the two real signals —
+   tonnage actually placed on trucks, and unresolved destinations. */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px;margin:12px 0 4px;
+  grid-auto-rows:1fr}
+.kpi{position:relative;display:flex;flex-direction:column;gap:3px;min-width:0;overflow:hidden;
+  background:var(--s1);border:1px solid var(--bdr);border-radius:var(--radius-md,10px);padding:12px 14px 13px;
+  transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease}
+.kpi::before{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:var(--primary);opacity:.85}
+.kpi.good::before{background:var(--good)} .kpi.warn::before{background:var(--warning)} .kpi.bad::before{background:var(--critical)}
+.kpi:hover{border-color:var(--bdrHi);box-shadow:0 0 18px rgba(var(--primary-rgb),0.14)}
+.kpi .label{font-size:10.5px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .value{font-size:20px;line-height:1.15;font-weight:800;letter-spacing:-.01em;color:var(--text);
+  font-variant-numeric:tabular-nums}
+.kpi.good .value{color:var(--good)} .kpi.warn .value{color:var(--warning)} .kpi.bad .value{color:var(--critical)}
+.kpi .sub{font-size:11px;line-height:1.35;color:var(--mute)}
 
 /* ── Plan pills ─────────────────────────────────────────────────────────── */
 .plan-pills{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin:8px 0}
 .plan-pill{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 12px;cursor:pointer;font:inherit;
   background:var(--s2);border:1px solid var(--bdr);border-radius:var(--radius-md,10px);color:var(--text);transition:box-shadow .2s ease,border-color .2s ease}
 .plan-pill:hover{border-color:var(--bdrHi);box-shadow:0 0 16px rgba(var(--primary-rgb),0.12)}
-.plan-pill:hover{border-color:var(--bdrHi)}
-.plan-pill.on{border-color:var(--primary);background:var(--primary-bg)}
+.plan-pill.on{border-color:var(--primary);background:var(--primary-bg);box-shadow:inset 0 0 0 1px var(--primary)}
 .plan-pill.critical .pp-value{color:var(--critical)}
 .pp-label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
 .pp-value{font-size:16px;font-weight:650;font-variant-numeric:tabular-nums}
@@ -277,7 +289,7 @@ tfoot.total{font-weight:650}
   .page-truck .truck-brand-copy h1{font-size:16px}
   .page-truck .rules{font-size:11px;line-height:1.45}
   .page-truck .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  .page-truck .kpi{padding:10px}
+  .page-truck .kpi{padding:10px 11px 11px;gap:2px}
   .page-truck .kpi .value{font-size:17px}
   .page-truck .tabs>.tab-btn{flex:1 1 calc(50% - 6px);justify-content:center;padding:8px 7px}
 }
@@ -346,5 +358,17 @@ document.documentElement.style.setProperty('--boot-glow','var(--primary)');
 <script src="truck-dashboard-xlsx.js"></script>
 <script src="truck-dashboard-libs.js"></script>
 <script src="truck-dashboard-app.js"></script>
+<script>
+// Warm the plan engine's worker while the Drive files are still on the wire, so the
+// first Run/auto-build does not pay the engine-load cost. Purely a prefetch: the
+// page creates its own worker and falls back to inline if this one never starts.
+(function(){
+  var boot=document.getElementById('boot-status');
+  function idle(fn){ if('requestIdleCallback' in window) requestIdleCallback(fn,{timeout:3000}); else setTimeout(fn,1200); }
+  function go(){ try{ var w=new Worker('truck-plan-worker.js'); w.postMessage({warmup:true}); setTimeout(function(){ w.terminate(); },15000); }catch(e){} }
+  // The worker only serves to warm the HTTP cache here; it is terminated once loaded.
+  idle(go);
+})();
+</script>
 </body>
 </html>

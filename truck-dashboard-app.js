@@ -1,4 +1,4 @@
-﻿/* Vanilla DOM application for Truck-Dashboard.html.
+/* Vanilla DOM application for Truck-Dashboard.html.
  * Scope: Dispatch Planner + Auto Club. Excel upload overrides remain available;
  * Drive refresh is read-only and fetches only when this page opens or is refreshed.
  */
@@ -17,6 +17,7 @@
   const toCsv = window.TruckFormat.toCsv;
   const allDims = window.TruckFormat.allDimensionEntries;
   const cityTable = window.INDIA_CITY_TABLE;
+  const localDataApi = 'http://127.0.0.1:3000';
   const KINDS = [
     { kind: 'fr', label: 'Freight rate', token: '-FR' },
     { kind: 'sob', label: 'Transporter SOB', token: '-SOB' },
@@ -32,7 +33,10 @@
     club: [['40', '40 MT Trucks'], ['32', '32 MT Trucks'], ['28', '28/26 MT Trucks'], ['ltl', 'LTL — Manual'], ['club-place', 'Vehicle Placement']],
   };
 
-  const state = {
+  state.params = new URLSearchParams(location.search);
+  state.autoload = state.params.has('autoload');   // ?autoload=1 builds the plan as soon as Drive data is in
+  state.fileUploaded = false;                      // set when the plan came from a manual upload, not Drive
+  Object.assign(state, {
     view: 'planner', tab: { planner: 'zone', club: '40' }, planFilter: 'all', search: '',
     result: null, rawRows: null, fileName: '', sheetName: '', status: '', statusError: false,
     rateModel: null, rateName: '', rateStatus: 'No freight-rate file loaded',
@@ -40,10 +44,35 @@
     placed: new Set(), manual: [], manualSeq: 1, fuzzy: [],
     db: { index: null, kinds: {}, at: null, error: '' }, busy: false,
     delayAuto: null, mapTruck: null, searchText: '',
-  };
+  });
 
   function setStatus(message, error = false) { state.status = message; state.statusError = error; renderUploads(); }
   function titleForKind(kind) { return (state.db.index?.kinds?.[kind]?.file?.name) || ''; }
+
+  // ── Sheet parse cache ─────────────────────────────────────────────────────
+  // SheetJS parse (XLSX.read + sheet_to_json) is the heaviest part of opening a
+  // file. Cache the derived result per (kind, file name, lastModified) in
+  // sessionStorage so a refresh or re-visit skips the blocking parse when the
+  // sheet hasn't changed; fall back to a full re-parse on any mismatch.
+  const SHEET_CACHE_PREFIX = 'truck-dashboard-sheet:';
+  const MAX_CACHE_ENTRY_CHARS = 2 * 1024 * 1024;
+  function sheetCacheKey(kind, file) {
+    return SHEET_CACHE_PREFIX + kind + '|' + (file.name || '') + '|' + (file.lastModified || 0);
+  }
+  function sheetCacheGet(kind, file) {
+    try {
+      const raw = sessionStorage.getItem(sheetCacheKey(kind, file));
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch { return null; }
+  }
+  function sheetCacheSet(kind, file, value) {
+    try {
+      const raw = JSON.stringify(value);
+      if (raw.length > MAX_CACHE_ENTRY_CHARS) return;
+      sessionStorage.setItem(sheetCacheKey(kind, file), raw);
+    } catch { /* storage unavailable or quota exceeded: skip cache */ }
+  }
 
   function xlsxRead(file) {
     return new Promise((resolve, reject) => {
@@ -59,10 +88,18 @@
   async function parsePlanFile(file, defer = false) {
     setStatus('Reading ' + file.name + ' …');
     try {
-      const wb = await xlsxRead(file);
-      const sheetName = wb.SheetNames.find(n => /plate|ct|ltl/i.test(n)) || wb.SheetNames[0];
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
-      if (!rows.length) throw new Error('No data rows found in "' + sheetName + '".');
+      let rows, sheetName;
+      const cached = sheetCacheGet('plan', file);
+      if (cached && Array.isArray(cached.rows)) {
+        rows = cached.rows; sheetName = cached.sheetName;
+        setStatus(rows.length + ' rows loaded from sheet "' + sheetName + '" (cached).');
+      } else {
+        const wb = await xlsxRead(file);
+        sheetName = wb.SheetNames.find(n => /plate|ct|ltl/i.test(n)) || wb.SheetNames[0];
+        rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+        if (!rows.length) throw new Error('No data rows found in "' + sheetName + '".');
+        sheetCacheSet('plan', file, { rows, sheetName });
+      }
       const corrections = [];
       for (const city of [...new Set(rows.map(r => r['Ship To Party City']).filter(Boolean))]) {
         const resolved = E.resolveCity(city, cityTable);
@@ -71,7 +108,8 @@
       state.fuzzy = corrections;
       state.rawRows = rows;
       state.placed = new Set(); state.manual = []; state.manualSeq = 1;
-      state.fileName = file.name; state.sheetName = sheetName;
+      state.fileName = file.name; state.sheetName = sheetName; state.fileUploaded = true;
+      invalidateViewCache();
       if (defer) { state.result = null; state.pendingBuild = true; setStatus(rows.length + ' rows loaded from sheet "' + sheetName + '".'); return true; }
       await buildPlan();
       return true;
@@ -80,55 +118,98 @@
     }
   }
 
-  // Allocation is the heavy step, so it runs once, after every file is loaded.
-  // Allocation runs in a worker so the page never hangs; falls back to inline if
-  // the worker can't start or its result can't be transferred.
+  // Allocation is the heavy step, so it runs once per plan.
+  // A single worker is kept alive for the whole page (it re-loads the engine in
+  // ~150 ms instead of paying that cost on every build); inline fallback if the
+  // worker can't start or its result can't be transferred.
+  let planWorker = null, planWorkerBroken = false, planWorkerSeq = 0, planWorkerJobs = null;
+  function getPlanWorker() {
+    if (planWorker || planWorkerBroken || !window.Worker) return planWorker;
+    try { planWorker = new Worker('truck-plan-worker.js'); }
+    catch (err) { console.warn('Plan worker unavailable, running inline', err && err.message); planWorkerBroken = true; return null; }
+    planWorker.onmessage = (e) => {
+      const job = planWorkerJobs; if (!job || !e.data) return;
+      const m = e.data;
+      // Ignore results from a superseded (stale) build so an older plan can never
+      // overwrite a newer one when builds overlap.
+      if (m.seq !== undefined && m.seq !== job.seq) return;
+      if (m.type === 'progress') { if (job.onProgress) job.onProgress(m.frac, m.n); return; }
+      planWorkerJobs = null; clearTimeout(job.timer);
+      if (m.type === 'done') { job.resolve(m.res); return; }
+      if (m.type === 'error' && m.retryable) {
+        // Engine crashed inside the worker (e.g. a transient mismatch): retry inline once.
+        console.warn('Plan worker error, running inline:', m.message);
+        job.inline().then(job.resolve, job.reject); return;
+      }
+      if (m.type === 'error') { job.reject(new Error(m.message || 'Worker failed')); return; }
+      job.inline().then(job.resolve, job.reject);
+    };
+    planWorker.onerror = (ev) => {
+      console.warn('Plan worker error, running inline', ev && ev.message);
+      killPlanWorker();
+      const job = planWorkerJobs; if (!job) return;
+      planWorkerJobs = null; clearTimeout(job.timer);
+      job.inline().then(job.resolve, job.reject);
+    };
+    return planWorker;
+  }
+  function killPlanWorker() { try { planWorker && planWorker.terminate(); } catch {} planWorker = null; }
   function runAllocate(rows, onProgress) {
     const inline = () => E.allocate(rows, cityTable, onProgress);
-    if (!window.Worker) return inline();
+    const worker = getPlanWorker();
+    if (!worker) return inline();
     return new Promise((resolve, reject) => {
-      let w, timedOut=false;
-      try { w = new Worker('truck-plan-worker.js'); } catch { resolve(inline()); return; }
-      const fallback = () => { try{w.terminate();}catch{}; inline().then(resolve, reject); };
-      const timer = setTimeout(() => { timedOut=true; console.warn('Plan worker timed out, running inline'); fallback(); }, 30000);
-      w.onmessage = (e) => {
-        const m = e.data;
-        if (m.type === 'progress') onProgress && onProgress(m.frac, m.n);
-        else if (m.type === 'done') { clearTimeout(timer); w.terminate(); resolve(m.res); }
-        else if (m.type === 'error') { clearTimeout(timer); console.warn('Plan worker error, running inline:', m.message); fallback(); }
-        else { clearTimeout(timer); console.warn('Plan worker unknown msg, running inline:', m); fallback(); }
-      };
-      w.onerror = (ev) => { clearTimeout(timer); console.warn('Plan worker error, running inline', ev.message); fallback(); };
-      try { w.postMessage({ rows }); } catch { clearTimeout(timer); fallback(); }
+      const job = { seq: ++planWorkerSeq, resolve, reject, inline, onProgress, timer: null };
+      job.timer = setTimeout(() => {
+        if (planWorkerJobs !== job) return;
+        console.warn('Plan worker timed out, running inline');
+        planWorkerJobs = null; killPlanWorker(); inline().then(resolve, reject);
+      }, 30000);
+      planWorkerJobs = job;
+      try { worker.postMessage({ seq: job.seq, rows }); }
+      catch (err) { planWorkerJobs = null; clearTimeout(job.timer); inline().then(resolve, reject); }
     });
   }
 
-  async function buildPlan() {
-    if (state.building || !state.rawRows?.length) return;
+  function buildPlan() {
+    if (state.building || !state.rawRows?.length) return Promise.resolve();
     const rows = state.rawRows;
     state.pendingBuild = false; state.building = true; renderResults(); renderViewSwitch();
     setStatus('Building truck plan from ' + rows.length + ' rows …');
-    await new Promise(r => setTimeout(r, 30)); // let the status paint before the heavy work
     const onProgress = (frac, n) => {
       const bar = $('#planBar'), txt = $('#planPct');
       if (bar) bar.style.width = Math.min(100, Math.round(frac * 100)) + '%';
       if (txt) txt.textContent = Math.min(100, Math.round(frac * 100)) + '% · ' + n + ' trucks built';
     };
-    try { state.result = await runAllocate(rows, onProgress); }
-    catch (err) { console.error(err); state.building = false; setStatus('Could not build plan: ' + err.message, true); render(); return; }
-    state.building = false;
-    setStatus(rows.length + ' rows parsed from sheet "' + state.sheetName + '".');
-    setTimeout(() => { render(); }, 0);
+    return new Promise(r => setTimeout(r, 30)) // let the status paint before the heavy work
+      .then(() => runAllocate(rows, onProgress))
+      .then(result => { state.result = result; })
+      .catch(err => { console.error(err); setStatus('Could not build plan: ' + err.message, true); })
+      .then(() => {
+        state.building = false;
+        if (state.result) setStatus(rows.length + ' rows parsed from sheet "' + state.sheetName + '".');
+        render();
+      });
   }
 
   async function parseRateFile(file, defer = false) {
     state.rateStatus = 'Reading ' + file.name + ' …'; renderUploads();
     try {
-      const wb = await xlsxRead(file);
-      const sheetName = wb.SheetNames.find(n => /rate|freight|zone|state/i.test(n)) || wb.SheetNames[0];
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
-      if (!rows.length) throw new Error('No rate rows found in "' + sheetName + '".');
-      state.rateModel = F.buildFreightRateModel(rows, wb); state.rateName = file.name;
+      let rateModel;
+      const cached = sheetCacheGet('fr', file);
+      if (cached && cached.records && cached.odcBands) {
+        rateModel = cached;
+        state.rateStatus = rateModel.records.length + ' rate rows loaded from cache.';
+      } else {
+        const wb = await xlsxRead(file);
+        const sheetName = wb.SheetNames.find(n => /rate|freight|zone|state/i.test(n)) || wb.SheetNames[0];
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+        if (!rows.length) throw new Error('No rate rows found in "' + sheetName + '".');
+        rateModel = F.buildFreightRateModel(rows, wb);
+        sheetCacheSet('fr', file, rateModel);
+      }
+      state.rateModel = rateModel; state.rateName = file.name;
+      invalidateViewCache();
       const bands = state.rateModel.odcBands.lengthBands.length + state.rateModel.odcBands.widthBands.length;
       state.rateStatus = state.rateModel.records.length + ' rate rows, ' + bands + ' ODC bands, and ' + (state.rateModel.rtoTable ? state.rateModel.rtoTable.states.size + ' RTO states' : 'no RTO table') + ' loaded.';
       defer ? renderUploads() : render(); return true;
@@ -138,7 +219,16 @@
   async function parseSobFile(file) {
     state.sobStatus = 'Reading ' + file.name + ' …'; renderUploads();
     try {
-      state.sob = F.parseSobWorkbook(await xlsxRead(file)); state.pendingSob = null; state.sobMode = 'this session';
+      let sob;
+      const cached = sheetCacheGet('sob', file);
+      if (cached && cached.states && cached.transporters) {
+        sob = cached;
+        state.sobStatus = Object.keys(sob.states).length + ' states loaded from cache.';
+      } else {
+        sob = F.parseSobWorkbook(await xlsxRead(file));
+        sheetCacheSet('sob', file, sob);
+      }
+      state.sob = sob; state.pendingSob = null; state.sobMode = 'this session';
       state.sobStatus = state.sob.transporters.length + ' transporters across ' + Object.keys(state.sob.states).length + ' states loaded from ' + file.name + '.';
       render();
     } catch (err) { state.sobStatus = 'Could not parse SOB file: ' + err.message; state.pendingSob = null; renderUploads(); }
@@ -156,36 +246,75 @@
     return new File([blob], entry?.name || kind + '.xlsx', { lastModified: entry?.modified || Date.now() });
   }
 
-  async function refreshDatabase() {
+  async function downloadDatabaseFile(apiBase, entry) {
+    const url = apiBase + '?name=' + encodeURIComponent(entry.name);
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) throw new Error((await response.text()) || 'Could not download ' + entry.name);
+    const blob = await response.blob();
+    const head = new Uint8Array(await blob.slice(0, 2).arrayBuffer());
+    if (head[0] !== 0x50 || head[1] !== 0x4b) throw new Error('Incomplete or invalid XLSX download: ' + entry.name);
+    return new File([blob], entry.name, { lastModified: entry.modified || Date.now() });
+  }
+
+  async function refreshDatabase(quiet = false) {
     if (state.busy) return;
     state.busy = true; state.db.error = '';
+    const bootStatus = $('#boot-status'), bootMessage = $('#boot-msg');
+    if (bootStatus && !quiet) { bootStatus.hidden = false; bootStatus.classList.add('active'); }
+    if (bootMessage) bootMessage.textContent = 'Connecting to the truck data service…';
     // Show the strip immediately so the user sees loading pills right away.
     state.db = { index: null, kinds: {}, at: null, error: '' };
     renderDbStrip();
     try {
-      // Step 1: fetch the Drive index, then show real file names while files download.
-      const res = await fetch('/api/truckdb-proxy', { cache: 'no-store' });
-      const type = res.headers.get('content-type') || '';
-      if (!type.includes('json')) throw new Error('Truck data service unavailable.');
-      const index = await res.json();
-      if (!res.ok) throw new Error(index.error || 'Drive index request failed.');
-      state.db = { index, kinds: {}, at: null, error: '' };
+      // Prefer the matching proxy, then fall back to the localhost Drive API for
+      // previews/ports that do not mount the Vercel truckdb-proxy endpoint.
+      const endpoints = window.location.protocol === 'file:'
+        ? [
+            { base: localDataApi + '/api/database/file', indexUrl: localDataApi + '/api/database', mode: 'name' },
+            { base: '/api/truckdb-proxy', indexUrl: '/api/truckdb-proxy', mode: 'kind' },
+            { base: '/api/database/file', indexUrl: '/api/database', mode: 'name' },
+          ]
+        : [
+            { base: localDataApi + '/api/database/file', indexUrl: localDataApi + '/api/database', mode: 'name' },
+            { base: '/api/truckdb-proxy', indexUrl: '/api/truckdb-proxy', mode: 'kind' },
+            { base: '/api/database/file', indexUrl: '/api/database', mode: 'name' },
+          ];
+      let index, databaseApi, lastError;
+      for (const endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint.indexUrl, { cache: 'no-store' });
+          const type = res.headers.get('content-type') || '';
+          if (!type.includes('json')) throw new Error('Data service returned a non-JSON response.');
+          const body = await res.json();
+          if (!res.ok) throw new Error(body.error || 'Drive index request failed (' + res.status + ').');
+          index = body;
+          databaseApi = endpoint;
+          break;
+        } catch (err) { lastError = err; }
+      }
+      if (!index) throw lastError || new Error('Truck data service unavailable.');
+      state.db = { index, kinds: {}, at: null, error: '', apiBase: databaseApi.base, apiMode: databaseApi.mode };
       renderDbStrip();
 
-      // Step 2: load each kind sequentially (fr -> sob -> plan -> delay), updating
-      // only the progress pills; the heavy plan build happens after the last file.
-      for (const kind of ['fr', 'sob', 'plan', 'delay']) {
+      // Step 2: fetch and read all four files at once (fr, sob, plan, delay). Nothing here
+      // needs another file first, so doing it turn by turn only made start-up slower.
+      const LOAD_ORDER = ['fr', 'sob', 'plan', 'delay'];
+      LOAD_ORDER.forEach(kind => {
         const entry = index.kinds?.[kind]?.file;
-        if (!entry) {
-          state.db.kinds[kind] = { state: 'missing' };
-          renderDbStrip();
-          continue;
-        }
-        // Mark as 'loading' before the fetch so the strip shows a live pill.
-        state.db.kinds[kind] = { state: 'loading', entry };
-        renderDbStrip();
+        state.db.kinds[kind] = entry ? { state: 'loading', entry } : { state: 'missing' };
+      });
+      if (bootMessage) {
+        const files = LOAD_ORDER.map(k => index.kinds?.[k]?.file?.name).filter(Boolean);
+        bootMessage.textContent = files.length ? 'Loading ' + files.length + ' file(s): ' + files.join(', ') + '…' : 'No Drive files found.';
+      }
+      renderDbStrip();
+      await Promise.all(LOAD_ORDER.map(async kind => {
+        const entry = index.kinds?.[kind]?.file;
+        if (!entry) return renderDbStrip();
         try {
-          const file = await downloadKind(kind, entry);
+          const file = databaseApi.mode === 'kind'
+            ? await downloadKind(kind, entry)
+            : await downloadDatabaseFile(databaseApi.base, entry);
           let ok = true;
           if (kind === 'fr') ok = await parseRateFile(file, true);
           else if (kind === 'sob') {
@@ -201,8 +330,11 @@
         }
         state.db.at = new Date();
         renderDbStrip(); renderUploads(); // progress only; the plan is built once all files are in
-      }
+      }));
       state.db.at = new Date();
+      // ?autoload=1 (or auto-load set on this browser): the plan is built as soon as the
+      // Drive files are in, so tab switching later never waits on allocation.
+      if (!state.result && !state.fileUploaded && state.rawRows?.length && state.autoload) buildPlan();
       // Plan is built on demand (Run button) so the page never freezes right after loading.
     } catch (err) {
       // Friendly hint when running on localhost without the sheet server.
@@ -212,7 +344,11 @@
       }
       state.db = { index: null, kinds: {}, at: new Date(), error: hint };
     }
-    finally { state.busy = false; render(); }
+    finally {
+      state.busy = false;
+      if (bootStatus) { bootStatus.classList.remove('active'); bootStatus.hidden = true; }
+      render();
+    }
   }
 
   
@@ -267,21 +403,116 @@ function renderDbStrip() {
 
   function renderViewSwitch() {
     const canRun = !!state.rawRows?.length && !state.building && !state.busy;
-    $('#viewSwitch').innerHTML = '<button class="btn primary" type="button" id="runPlan" ' + (canRun ? '' : 'disabled') + '>' + (state.building ? '<i class="spin"></i> Running…' : '▶ Run') + '</button>' + VIEWS.map(([id, label]) => '<button class="btn ' + (state.view === id ? 'primary' : '') + '" data-view="' + id + '">' + label + '</button>').join('');
+    const html='<button class="btn primary" type="button" id="runPlan" ' + (canRun ? '' : 'disabled') + '>' + (state.building ? '<i class="spin"></i> Running…' : '▶ Run plan') + '</button>' + VIEWS.map(([id, label]) => '<button class="btn ' + (state.view === id ? 'primary' : '') + '" data-view="' + id + '" aria-pressed="' + (state.view === id) + '">' + label + '</button>').join('');
+    const box=$('#viewSwitch');
+    // Re-writing identical markup on every render is wasted layout work.
+    if(box.dataset.markup===html)return;
+    box.dataset.markup=html; box.innerHTML=html;
     $('#runPlan')?.addEventListener('click', buildPlan);
-    $$('[data-view]').forEach(b => b.addEventListener('click', () => { state.view = b.dataset.view; render(); }));
+    $$('[data-view]',box).forEach(b => b.addEventListener('click', () => { if (state.view === b.dataset.view) return; state.view = b.dataset.view; render(); }));
   }
 
   function stateOfCity(city) { return F.lookupFreight(state.rateModel, cityTable, city).state || ''; }
   function placeOfCity(city) { const x = F.lookupFreight(state.rateModel, cityTable, city); return { state: x.state || '', zone: x.zone || '' }; }
+
+  // ── View cache ───────────────────────────
+  // Every tab click used to rebuild its table from the plan (plus, for the truck
+  // tables, a full freight/cost pass over every truck). That work is done once
+  // per plan and reused until something it depends on changes, so switching tabs
+  // is just showing already-built markup. Anything that changes the plan (new
+  // file, recompute, resolve, rate/SOB upload) or a dependent piece of state
+  // (search, plan filter, placed trucks, manual FTLs) bumps `ver`, which makes
+  // the next render rebuild once and then cache again.
+  const viewCache = new Map();
+  const searchWords = new Map();
+  let viewVer = 0;
+  function invalidateViewCache() { viewVer++; viewCache.clear(); searchWords.clear(); }
+  function viewKey(name) {
+    return name + '|' + viewVer + '|' + state.planFilter + '|' + state.searchText + '|' + state.placed.size + '|' + state.manual.length;
+  }
+  function cachedView(name, build) {
+    const key = viewKey(name);
+    if (!viewCache.has(key)) viewCache.set(key, build());
+    return viewCache.get(key);
+  }
+
+  // Free-text search terms + the SO/item list they are matched against are
+  // built once per truck row instead of on every keystroke.
+  function searchTerms() {
+    let terms = searchWords.get(state.searchText);
+    if (!terms) {
+      terms = state.searchText.toLowerCase().split(/[\s,]+/).filter(Boolean);
+      searchWords.set(state.searchText, terms);
+      if (searchWords.size > 24) searchWords.delete(searchWords.keys().next().value);
+    }
+    return terms;
+  }
   function matchesSearch(entries, cities = []) {
-    const terms = state.searchText.toLowerCase().split(/[\s,]+/).filter(Boolean);
+    const terms = searchTerms();
     if (!terms.length) return true;
     const hay = entries.map(([so]) => String(so).toLowerCase()).concat(cities.map(c => String(c).toLowerCase()));
     return terms.some(t => hay.some(x => x.includes(t)));
   }
-  function soMeta() { return state.result ? L.buildSoMeta(state.result.rows) : new Map(); }
+  // Same match, but against a pre-joined lower-case haystack (see truckIndex).
+  function matchesHay(hay) {
+    const terms = searchTerms();
+    if (!terms.length) return true;
+    return terms.some(t => hay.indexOf(t) !== -1);
+  }
+  // With a search active, every intermediate view the user clicked through on the
+  // way to the current term would otherwise pile up in the cache. Keep only the
+  // current search value plus the one before it (cheap "select all, retype").
+  function trimSearchCache() {
+    const current = '|' + state.searchText;
+    let kept = 0;
+    for (const key of Array.from(viewCache.keys())) {
+      if (key.slice(key.lastIndexOf('|')) === current) continue;
+      if (kept < 1) { kept++; continue; }
+      viewCache.delete(key);
+    }
+  }
+  function soMeta() {
+    if (!state.result) return new Map();
+    const key = 'soMeta|' + viewVer;
+    if (!viewCache.has(key)) viewCache.set(key, L.buildSoMeta(state.result.rows));
+    return viewCache.get(key);
+  }
+  // planFilter -> 'does this SO/item pass?' lookups are tiny but asked once per
+  // line, so resolve each filter term once and cache the answer per SO key.
+  function planFilterFn(meta) {
+    const key = 'planFilter|' + viewVer + '|' + state.planFilter;
+    let memo = viewCache.get(key);
+    if (!memo) { memo = new Map(); viewCache.set(key, memo); }
+    const at = state.planFilter || 'all';
+    return (so) => {
+      let hit = memo.get(so);
+      if (hit === undefined) { hit = L.matchesPlanFilter(at, meta.get(so)); memo.set(so, hit); }
+      return hit;
+    };
+  }
+  // Per-truck facts that never change between tab switches: lower-case search
+  // haystack, destination state label, and whether the SO/item lines pass the
+  // current plan filter. Built once per plan, then just filtered/grouped.
+  function truckIndex() {
+    const key = 'truckIndex|' + viewVer + '|' + state.planFilter;
+    let index = viewCache.get(key);
+    if (index) return index;
+    const meta = soMeta(), pass = planFilterFn(meta), map = new Map();
+    (state.result?.trucks || []).forEach(t => {
+      const soKeys = [];
+      let hay = '';
+      t.lines.forEach(l => l.soBreakdown.forEach(([so]) => { soKeys.push(so); hay += '\n' + String(so).toLowerCase(); }));
+      t.lines.forEach(l => { if (l.city) hay += '\n' + String(l.city).toLowerCase(); });
+      const states = [...new Set(t.lines.map(l => stateOfCity(l.city)).filter(Boolean))];
+      map.set(t.id, { hay, stateLabel: states.join(' / ') || 'Unknown state', filterPass: soKeys.some(pass) });
+    });
+    viewCache.set(key, map);
+    return map;
+  }
 
+  // KPI tiles follow the hub design contract (Design_Context.md §4): one neutral
+  // surface for every tile, colour on the value only, and green/red reserved for
+  // the two real signals — trucks actually placed, and unresolved destinations.
   function renderKpis(result) {
     const byTier = { '40MT': 0, '32MT': 0, '28_26MT': 0 };
     result.trucks.forEach(t => byTier[t.tier]++);
@@ -289,17 +520,18 @@ function renderDbStrip() {
     const ltl = result.ltl.reduce((s, t) => s + t.pendingMT, 0);
     const odc = result.rows.reduce((s, r) => s + (r.isODC ? r.totalMT : 0), 0);
     const unresolved = result.rows.filter(r => !r.cityResolved).length;
+    const share = (mt) => Math.round(mt / (result.totalMT || 1) * 100);
     const data = [
-      ['Total dispatch', fmt(result.totalMT) + ' MT', result.rows.length + ' lines', ''],
-      ['40 MT trucks', byTier['40MT'], 'FTL · priority 1', ''],
-      ['32 MT trucks', byTier['32MT'], 'priority 2', 'accent'],
-      ['28/26 MT', byTier['28_26MT'], 'last resort', 'warn'],
-      ['Placed on trucks', fmt(placed) + ' MT', Math.round(placed / (result.totalMT || 1) * 100) + '% of plan', 'accent'],
-      ['LTL manual', fmt(ltl) + ' MT', result.ltl.length + ' pending lines', ltl > 0 ? 'warn' : ''],
-      ['ODC tonnage', fmt(odc) + ' MT', Math.round(odc / (result.totalMT || 1) * 100) + '% of plan', ''],
-      ['Unresolved cities', unresolved, 'excluded from clubbing', unresolved ? 'critical' : ''],
+      ['Total dispatch', fmt(result.totalMT) + ' MT', result.rows.length + ' lines', '', result.rows.length + ' dispatch line(s) in the loaded plan'],
+      ['40 MT trucks', byTier['40MT'], 'FTL · priority 1', '', 'Full-truck loads built on the 40 MT pass'],
+      ['32 MT trucks', byTier['32MT'], 'priority 2', '', 'Trucks built on the 32 MT pass'],
+      ['28/26 MT', byTier['28_26MT'], 'last resort', '', 'Suggested size, used only when 40/32 MT will not fit'],
+      ['Placed on trucks', fmt(placed) + ' MT', share(placed) + '% of plan · ' + result.trucks.length + ' trucks', 'good', 'Tonnage the automatically built truck plan carries out of the total dispatch'],
+      ['LTL manual', fmt(ltl) + ' MT', result.ltl.length + ' pending lines', 'warn', ltl > 0 ? 'Left over after truck packing — needs manual clubbing' : 'Everything left fits outside the FTL plan'],
+      ['ODC tonnage', fmt(odc) + ' MT', share(odc) + '% of plan', '', 'Over-dimensional cargo tonnage in the plan'],
+      ['Unresolved cities', unresolved, 'excluded from clubbing', unresolved ? 'bad' : 'good', unresolved ? 'Destinations that could not be matched to a city on the map' : 'Every destination resolved to a city'],
     ];
-    return '<div class="kpi-grid">' + data.map(x => '<div class="kpi ' + x[3] + '"><div class="label">' + x[0] + '</div><div class="value">' + x[1] + '</div><div class="sub">' + x[2] + '</div></div>').join('') + '</div>';
+    return '<div class="kpi-grid">' + data.map(x => '<div class="kpi ' + x[3] + '" title="' + attr(x[4]) + '"><div class="label">' + x[0] + '</div><div class="value">' + x[1] + '</div><div class="sub">' + x[2] + '</div></div>').join('') + '</div>';
   }
 
   function renderPlanPills(result) {
@@ -322,13 +554,12 @@ function renderDbStrip() {
   }
 
   function filteredTruckRows(tier) {
-    const meta = soMeta();
+    const index = truckIndex();
     const groups = { '40MT': [], '32MT': [], '28_26MT': [] };
     (state.result?.trucks || []).forEach(t => {
-      if (!groups[t.tier] || !matchesSearch(t.lines.flatMap(l => l.soBreakdown), t.lines.map(l => l.city))) return;
-      if (!t.lines.some(l => l.soBreakdown.some(([so]) => L.matchesPlanFilter(state.planFilter, meta.get(so))))) return;
-      const states = [...new Set(t.lines.map(l => stateOfCity(l.city)).filter(Boolean))];
-      groups[t.tier].push({ ...t, stateLabel: states.join(' / ') || 'Unknown state' });
+      const fx = index.get(t.id);
+      if (!groups[t.tier] || !fx || !fx.filterPass || !matchesHay(fx.hay)) return;
+      groups[t.tier].push({ ...t, stateLabel: fx.stateLabel });
     });
     Object.values(groups).forEach(list => list.sort((a, b) => a.stateLabel.localeCompare(b.stateLabel) || a.id.localeCompare(b.id)));
     return groups[tier] || [];
@@ -342,20 +573,37 @@ function renderDbStrip() {
   }
   function tierPill(t) { const cl = t.tier === '40MT' ? 'tier40' : t.tier === '32MT' ? 'tier32' : 'tier28'; return '<span class="pill ' + cl + '">' + esc(t.tierLabel) + '</span>'; }
 
+  // Truck -> total transporter cost. The freight/cost pass over every truck is
+  // the most expensive part of a truck table, so it is computed once per plan
+  // instead of once per tab click.
+  function truckCosts() {
+    const key = 'truckCosts|' + viewVer;
+    let cost = viewCache.get(key);
+    if (cost) return cost;
+    cost = new Map();
+    F.analysisRows(state.rateModel, cityTable, state.result).forEach(r => {
+      if (r.transporterCost == null) { if (!cost.has(r.truck)) cost.set(r.truck, null); }
+      else cost.set(r.truck, (cost.get(r.truck) || 0) + r.transporterCost);
+    });
+    viewCache.set(key, cost);
+    return cost;
+  }
+
   function renderTruckTable(tier) {
     const trucks = filteredTruckRows(tier), meta = soMeta();
-    const costRows = F.analysisRows(state.rateModel, cityTable, state.result);
-    const cost = new Map();
-    costRows.forEach(r => { if (r.transporterCost == null) { if (!cost.has(r.truck)) cost.set(r.truck, null); } else cost.set(r.truck, (cost.get(r.truck) || 0) + r.transporterCost); });
+    const cost = truckCosts();
+    const stateCounts = new Map();
+    trucks.forEach(t => stateCounts.set(t.stateLabel, (stateCounts.get(t.stateLabel) || 0) + 1));
     const rows = trucks.map((t, idx) => {
       const placed = state.placed.has(t.id), clubbed = new Set(t.lines.map(l => l.customerKey || l.customer)).size > 1;
       const entries = t.lines.flatMap((l, li) => l.soBreakdown.map(([so, val]) => ({ li, so, val, customer: l.customer })));
       const perSo = (render, cls = '') => '<div class="' + cls + '">' + entries.map(e => '<div class="so-line club-' + e.li + '">' + (clubbed ? '<b class="club-badge">' + String.fromCharCode(65 + e.li) + '</b> ' : '') + render(e) + '</div>').join('') + '</div>';
       let stateHead = '';
-      if (!idx || trucks[idx - 1].stateLabel !== t.stateLabel) stateHead = '<tr class="state-row"><td colspan="18"><b>' + esc(t.stateLabel) + '</b> <span class="muted">(' + trucks.filter(x => x.stateLabel === t.stateLabel).length + ' trucks)</span></td></tr>';
+      if (!idx || trucks[idx - 1].stateLabel !== t.stateLabel) stateHead = '<tr class="state-row"><td colspan="18"><b>' + esc(t.stateLabel) + '</b> <span class="muted">(' + stateCounts.get(t.stateLabel) + ' trucks)</span></td></tr>';
       const customers = clubbed ? t.lines.map((l, i) => '<div class="party club-' + i + '"><b class="club-badge">' + String.fromCharCode(65 + i) + '</b> ' + esc(l.customer) + '</div>').join('') : t.lines.map(l => esc(l.customer)).join(' + ');
       const cities = clubbed ? t.lines.map((l, i) => '<div class="party club-' + i + '"><b class="club-badge">' + String.fromCharCode(65 + i) + '</b> ' + esc(l.city) + '</div>').join('') : [...new Set(t.lines.map(l => l.city))].map(esc).join(' / ');
       const fill = Math.min(100, Math.round(t.totalMT / (t.tier === '40MT' ? 40 : t.tier === '32MT' ? 32 : 28) * 100));
+      // The checkbox keeps its focus on re-render (see the focus guard in renderResults).
       return stateHead + '<tr class="' + (placed ? 'row-placed' : '') + '"><td><label><input type="checkbox" data-place="' + attr(t.id) + '" ' + (placed ? 'checked' : '') + '> ' + (placed ? '<span class="pill nonodc">Placed</span>' : '') + '</label></td>'
         + '<td class="mono">' + esc(t.id) + '</td><td>' + tierPill(t) + (t.suggestion ? ' <span class="muted">suggestion</span>' : '') + '</td>'
         + '<td>' + customers + (clubbed ? '<small class="muted"> clubbed</small>' : '') + '</td><td>' + cities + '</td><td class="num">' + fmt(t.totalMT) + '</td>'
@@ -370,10 +618,11 @@ function renderDbStrip() {
     return '<section class="block"><div class="table-scroll"><table class="truck-table"><thead><tr><th>Placed</th><th>Truck</th><th>Priority</th><th>Customer(s)</th><th>Destination</th><th class="num">MT</th><th>Fill</th><th>ODC split</th><th>SO / item</th><th>Dimensions</th><th class="num">Picked MT</th><th class="num">Pc Wt</th><th class="num">Pcs</th><th>HTC</th><th>LC date</th><th class="num">Ageing</th><th class="num">Total cost</th><th>Map</th></tr></thead><tbody>' + (rows || '<tr><td colspan="18" class="empty-state">No trucks in this tier.</td></tr>') + '</tbody></table></div><button class="btn text csv-toggle" data-csv="truck-' + tier + '">Copy as CSV</button><textarea class="csv-box hidden" id="csv-truck-' + tier + '" readonly>' + esc(toCsv(csv)) + '</textarea></section>';
   }
 
-  function renderSummary() {
-    const result = state.result, meta = soMeta(), map = new Map();
+  function renderSummary() { return buildSummary(); }
+  function buildSummary() {
+    const pass = planFilterFn(meta);
     const add = (city, party, col, mt, so, val) => {
-      if (!(mt > 0) || !L.matchesPlanFilter(state.planFilter, meta.get(so))) return;
+      if (!(mt > 0) || !pass(so)) return;
       const { zone, state: st } = placeOfCity(city), key = [zone, st, city, party].join('|'), cell = city + '\u0001' + party;
       if (!map.has(key)) map.set(key, { key:cell, zone:zone||'Unknown', state:st||'Unknown', city, party, mt40:0, mt32:0, mt28:0, ltl:0, odc:0, htc:new Set(), dims:new Map(), lcTs:null, ageing:null });
       const r = map.get(key); r[col] += mt; r.odc += Math.min(mt, val.odcMt||0);
@@ -392,16 +641,29 @@ function renderDbStrip() {
   }
 
   function renderLtl() {
-    const meta = soMeta(), out=[]; let c=0;
+    const meta = soMeta(), pass = planFilterFn(meta), out=[]; let c=0;
     state.result.ltlClusters.forEach(group=>{c++;group.forEach(item=>out.push({item,cluster:'C'+c,unresolved:false}));});
     state.result.ltlUnresolved.forEach(item=>out.push({item,cluster:'Unresolved',unresolved:true}));
-    const list=out.filter(x=>matchesSearch(x.item.soBreakdown,[x.item.city])&&x.item.soBreakdown.some(([so])=>L.matchesPlanFilter(state.planFilter,meta.get(so))));
+    const list=out.filter(x=>matchesSearch(x.item.soBreakdown,[x.item.city])&&x.item.soBreakdown.some(([so])=>pass(so)));
     const csv=[['Cluster','Customer','Destination','Pending MT','ODC MT','Non-ODC MT','SO breakdown'],...list.map(x=>[x.cluster,x.item.customer,x.item.city,x.item.pendingMT,x.item.odcMT,x.item.nonOdcMT,x.item.soBreakdown.map(([so,v])=>so+':'+v.mt).join('; ')])];
     return '<section class="block"><div class="block-head"><h2>LTL — manual clubbing worklist</h2><div class="block-desc">Nearby destinations grouped within 100 km.</div></div><div class="table-scroll"><table><thead><tr><th>Cluster</th><th>Customer</th><th>Destination</th><th class="num">Pending MT</th><th>ODC split</th><th>SO / item</th><th>Dimensions</th><th class="num">Pieces</th></tr></thead><tbody>'+list.map(x=>'<tr><td>'+x.cluster+'</td><td>'+esc(x.item.customer)+'</td><td>'+esc(x.item.city)+'</td><td class="num">'+fmt(x.item.pendingMT)+'</td><td>'+odcPill(x.item)+'</td><td class="mono">'+x.item.soBreakdown.map(([so,v])=>'<div>'+esc(so)+' ('+fmt(v.mt)+')</div>').join('')+'</td><td class="muted">'+x.item.soBreakdown.map(([,v])=>allDims(v).map(d=>'<div class="'+(d.odc?'dim-odc':'')+'">'+esc(d.text)+'</div>').join('')).join('')+'</td><td class="num">'+x.item.soBreakdown.reduce((s,[,v])=>s+v.count,0)+'</td></tr>').join('')+'</tbody></table></div><button class="btn text csv-toggle" data-csv="ltl">Copy as CSV</button><textarea class="csv-box hidden" id="csv-ltl" readonly>'+esc(toCsv(csv))+'</textarea></section>';
   }
 
-  function renderPlacement(mode) {
-    const auto = mode === 'auto' ? state.result.trucks.filter(t=>state.placed.has(t.id)).map(t=>({id:t.id,kind:'Auto club',size:t.tierLabel,mt:t.totalMT,odc:t.odcMT<=.005?'Non-ODC':t.nonOdcMT<=.005?'ODC':'Mixed '+Math.round(t.odcMT/t.totalMT*100)+'% ODC',customers:[...new Set(t.lines.map(l=>l.customer))],cities:[...new Set(t.lines.map(l=>l.city))],items:t.lines.flatMap(l=>l.soBreakdown.map(([so,v])=>so+' ('+fmt(v.mt)+')'))})) : [];
+  function renderPlacement(mode) { return cachedView('placement-' + mode, () => buildPlacement(mode)); }
+  function buildPlacement(mode) {
+    const all = placementRows(mode), total = all.reduce((s,t)=>s+t.mt,0);
+    return '<section class="block"><div class="block-head"><h2>Vehicle Placement ('+all.length+')</h2><div class="block-desc">Manual planner FTLs and Auto Club trucks marked Placed.</div></div>'+(all.length?'<div class="table-scroll"><table><thead><tr><th>Truck</th><th>Source</th><th>Size</th><th class="num">MT</th><th>ODC</th><th>Customers</th><th>Destinations</th><th>SO / item</th><th></th></tr></thead><tbody>'+all.map(t=>'<tr><td class="mono">'+esc(t.id)+'</td><td>'+t.kind+'</td><td>'+esc(t.size)+'</td><td class="num">'+fmt(t.mt)+'</td><td>'+t.odc+'</td><td>'+t.customers.map(esc).join('<br>')+'</td><td>'+t.cities.map(esc).join(' / ')+'</td><td class="mono">'+t.items.map(esc).join('<br>')+'</td><td><button class="btn" data-unplace="'+attr(t.id)+'">'+(t.kind==='Manual'?'Undo':'Unplace')+'</button></td></tr>').join('')+'</tbody><tfoot><tr><td colspan="3">Total</td><td class="num">'+fmt(total)+'</td><td colspan="5"></td></tr></tfoot></table></div>':'<div class="empty-state">No vehicles placed yet. Tick trucks in Auto Club or create a manual FTL in Zone Plan.</div>')+'</section>';
+  }
+
+  // Rows shown by a Vehicle Placement tab: auto-club trucks ticked Placed, or the
+  // manual FTLs built from the Zone Plan in this session.
+  function placementRows(mode) {
+    const auto = mode === 'auto' ? state.result.trucks.filter(t=>state.placed.has(t.id)).map(t=>({
+      id:t.id, kind:'Auto club', size:t.tierLabel, mt:t.totalMT,
+      odc:t.odcMT<=.005?'Non-ODC':t.nonOdcMT<=.005?'ODC':'Mixed '+Math.round(t.odcMT/t.totalMT*100)+'% ODC',
+      customers:[...new Set(t.lines.map(l=>l.customer))], cities:[...new Set(t.lines.map(l=>l.city))],
+      items: t.lines.flatMap(l => l.soBreakdown.map(([so, v]) => so + ' (' + fmt(v.mt) + ')')),
+    })) : [];
     const manual = mode === 'manual' ? state.manual.map(t => {
       const byIdx = new Map(state.result.rows.map(r => [r.rowIndex, r]));
       const rows = window.TruckManual.truckRows(t, byIdx);
@@ -413,11 +675,11 @@ function renderDbStrip() {
         items: rows.map(r => r.so + '/' + r.soItm + ' (' + fmt(r.totalMT) + ')'),
       };
     }) : [];
-    const all=manual.concat(auto), total=all.reduce((s,t)=>s+t.mt,0);
-    return '<section class="block"><div class="block-head"><h2>Vehicle Placement ('+all.length+')</h2><div class="block-desc">Manual planner FTLs and Auto Club trucks marked Placed.</div></div>'+(all.length?'<div class="table-scroll"><table><thead><tr><th>Truck</th><th>Source</th><th>Size</th><th class="num">MT</th><th>ODC</th><th>Customers</th><th>Destinations</th><th>SO / item</th><th></th></tr></thead><tbody>'+all.map(t=>'<tr><td class="mono">'+esc(t.id)+'</td><td>'+t.kind+'</td><td>'+esc(t.size)+'</td><td class="num">'+fmt(t.mt)+'</td><td>'+t.odc+'</td><td>'+t.customers.map(esc).join('<br>')+'</td><td>'+t.cities.map(esc).join(' / ')+'</td><td class="mono">'+t.items.map(esc).join('<br>')+'</td><td><button class="btn" data-unplace="'+attr(t.id)+'">'+(t.kind==='Manual'?'Undo':'Unplace')+'</button></td></tr>').join('')+'</tbody><tfoot><tr><td colspan="3">Total</td><td class="num">'+fmt(total)+'</td><td colspan="5"></td></tr></tfoot></table></div>':'<div class="empty-state">No vehicles placed yet. Tick trucks in Auto Club or create a manual FTL in Zone Plan.</div>')+'</section>';
+    return manual.concat(auto);
   }
 
-  function renderUnresolved() {
+  function renderUnresolved() { return buildUnresolved(); }
+  function buildUnresolved() {
     const rows=state.result.rows.filter(r=>!r.cityResolved&&r.totalMT>0), map=new Map();
     rows.forEach(r=>{const key=r.shipTo+'||'+r.cityRaw;if(!map.has(key))map.set(key,{key,customer:r.shipTo,city:r.cityRaw,mt:0});map.get(key).mt+=r.totalMT;});
     const list=[...map.values()];
@@ -430,42 +692,80 @@ function renderDbStrip() {
   function renderZonePlan() {
     return renderSummary()+'<section class="block"><div class="block-head"><h2>Manual FTL builder</h2><div class="block-desc">Select dispatch lines below; total must be ≤40 MT. Available tonnage already excludes quantities on prior manual FTLs.</div></div>'+renderManualPicker()+'</section>';
   }
+  // SO/item -> id of the auto truck that already carries it ('' -> 'LTL').
+  function soTruckIndex() {
+    const key = 'soTruck|' + viewVer + '|' + state.placed.size + '|' + state.manual.length;
+    let map = viewCache.get(key);
+    if (map) return map;
+    map = new Map();
+    (state.result?.trucks || []).forEach(t => t.lines.forEach(l => l.soBreakdown.forEach(([so]) => { if (!map.has(so)) map.set(so, t.id); })));
+    viewCache.set(key, map);
+    return map;
+  }
   function renderManualPicker() {
     const used=new Map();state.manual.forEach(t=>t.rowIndexes.forEach(i=>used.set(i,(used.get(i)||0)+(t.qty?.[i]||0))));
-    const rows=state.result.rows.filter(r=>r.totalMT-(used.get(r.rowIndex)||0)>.005&&matchesSearch([[r.so+'/'+r.soItm]],[r.cityRaw])&&L.matchesPlanFilter(state.planFilter,{group:L.htcGroup(r.htc),lcSoon:L.isLcSoon(r.lcTs),ageing:r.ageing}));
+    // Which auto truck already carries each SO/item, resolved once for the whole plan.
+    const soTruck=soTruckIndex();
+    const manualPass=r=>L.matchesPlanFilter(state.planFilter,{group:L.htcGroup(r.htc),lcSoon:L.isLcSoon(r.lcTs),ageing:r.ageing});
+    const rows=state.result.rows.filter(r=>r.totalMT-(used.get(r.rowIndex)||0)>.005&&manualPass(r)&&matchesSearch([[r.so+'/'+r.soItm]],[r.cityRaw]));
     const selected=new Set();
-    const html='<div class="table-scroll"><table class="mf-table"><thead><tr><th>Select</th><th>State</th><th>Destination</th><th>Customer</th><th>SO/item</th><th class="num">Available MT</th><th>ODC</th><th>Dimensions</th><th>Auto truck</th></tr></thead><tbody>'+rows.map(r=>'<tr><td><input type="checkbox" data-manual-row="'+r.rowIndex+'"></td><td>'+esc(stateOfCity(r.cityRaw)||'Unknown')+'</td><td>'+esc(r.cityRaw)+'</td><td>'+esc(r.shipTo)+'</td><td class="mono">'+esc(r.so+'/'+r.soItm)+'</td><td class="num">'+fmt(r.totalMT-(used.get(r.rowIndex)||0))+'</td><td>'+(r.isODC?'<span class="pill odc">ODC</span>':'<span class="pill nonodc">NON ODC</span>')+'</td><td>'+fmt(r.widthMm/1000)+' × '+fmt(r.lengthM)+' m</td><td class="muted">'+esc((state.result.trucks.find(t=>t.lines.some(l=>l.soBreakdown.some(([so])=>so===r.so+'/'+r.soItm)))||{}).id||'LTL')+'</td></tr>').join('')+'</tbody></table></div><div class="mf-bar"><span id="manualSummary">0 lines selected</span><button class="btn primary" id="makeManual" disabled>Create manual FTL (≤40 MT)</button></div>';
+    const html='<div class="mf-bar"><span id="manualSummary" aria-live="polite">0 lines selected · 0.00 MT</span><button class="btn primary" id="makeManual" disabled>Create manual FTL (≤40 MT)</button></div><div class="table-scroll"><table class="mf-table"><thead><tr><th>Select</th><th>State</th><th>Destination</th><th>Customer</th><th>SO/item</th><th class="num">Available MT</th><th>ODC</th><th>Dimensions</th><th>Auto truck</th></tr></thead><tbody>'+rows.map(r=>'<tr><td><input type="checkbox" data-manual-row="'+r.rowIndex+'" aria-label="Select '+attr(r.so+'/'+r.soItm)+'"></td><td>'+esc(stateOfCity(r.cityRaw)||'Unknown')+'</td><td>'+esc(r.cityRaw)+'</td><td>'+esc(r.shipTo)+'</td><td class="mono">'+esc(r.so+'/'+r.soItm)+'</td><td class="num">'+fmt(r.totalMT-(used.get(r.rowIndex)||0))+'</td><td>'+(r.isODC?'<span class="pill odc">ODC</span>':'<span class="pill nonodc">NON ODC</span>')+'</td><td>'+fmt(r.widthMm/1000)+' × '+fmt(r.lengthM)+' m</td><td class="muted">'+esc(soTruck.get(r.so+'/'+r.soItm)||'LTL')+'</td></tr>').join('')+'</tbody></table></div>';
     setTimeout(()=>{
       const table=$('.mf-table'); if(!table)return;
-      table.addEventListener('change',e=>{if(e.target.matches('[data-manual-row]')){const i=Number(e.target.dataset.manualRow);e.target.checked?selected.add(i):selected.delete(i);$('#manualSummary').textContent=selected.size+' lines selected';$('#makeManual').disabled=!selected.size;}});
-      $('#makeManual')?.addEventListener('click',()=>{const selectedRows=rows.filter(r=>selected.has(r.rowIndex));const total=selectedRows.reduce((s,r)=>s+r.totalMT,0);if(total>40){alert('Selected '+fmt(total)+' MT, over the 40 MT limit.');return;}const odc=selectedRows.filter(r=>r.isODC).reduce((s,r)=>s+r.totalMT,0), customers=new Set(selectedRows.map(r=>r.shipToKey));const overrides=[];if(odc>0&&odc<total&&odc/total<.6)overrides.push({code:'odc'});if(customers.size>2)overrides.push({code:'customers'});buildManualTruck(selectedRows.map(r=>r.rowIndex),Object.fromEntries(selectedRows.map(r=>[r.rowIndex,r.totalMT])),overrides);});
+      table.addEventListener('change',e=>{if(e.target.matches('[data-manual-row]')){const i=Number(e.target.dataset.manualRow);e.target.checked?selected.add(i):selected.delete(i);const selectedRows=rows.filter(r=>selected.has(r.rowIndex));const selectedMt=selectedRows.reduce((s,r)=>s+r.totalMT-(used.get(r.rowIndex)||0),0);$('#manualSummary').textContent=selected.size+' line(s) selected · '+fmt(selectedMt)+' MT';$('#makeManual').disabled=!selected.size;}});
+      $('#makeManual')?.addEventListener('click',()=>{const selectedRows=rows.filter(r=>selected.has(r.rowIndex));const selectedQty=selectedRows.map(r=>({row:r,mt:r.totalMT-(used.get(r.rowIndex)||0)}));const total=selectedQty.reduce((s,x)=>s+x.mt,0);if(total>40){alert('Selected '+fmt(total)+' MT, over the 40 MT limit.');return;}const odc=selectedQty.filter(x=>x.row.isODC).reduce((s,x)=>s+x.mt,0), customers=new Set(selectedRows.map(r=>r.shipToKey));const overrides=[];if(odc>0&&odc<total&&odc/total<.6)overrides.push({code:'odc'});if(customers.size>2)overrides.push({code:'customers'});buildManualTruck(selectedRows.map(r=>r.rowIndex),Object.fromEntries(selectedQty.map(x=>[x.rowIndex,x.mt])),overrides);});
     },0);
     return html;
   }
 
+  // Content bodies (below the tabs) are cached per tab/view so a tab switch only
+  // writes markup that was already built. The toolbar and the Unresolved block sit
+  // outside the cache: the toolbar holds the search box (never rebuild it while the
+  // user is typing) and Unresolved holds inputs the user may be filling in.
+  // Manual trucks (M001…) are built from this session's checked lines, so the
+  // planner bodies are deliberately not cached — they stay cheap and live.
+  function renderTabContent(view, active) {
+    if (view === 'planner') return active === 'zone' ? renderZonePlan() : renderPlacement('manual');
+    if (active === 'ltl') return cachedView('tab-ltl', renderLtl);
+    if (active === 'club-place') return cachedView('tab-club-place', () => renderPlacement('auto'));
+    const tier = active === '32' ? '32MT' : active === '28' ? '28_26MT' : '40MT';
+    return cachedView('tab-' + active, () => renderTruckTable(tier));
+  }
+
   function renderTabsAndContent() {
-    const result=state.result, view=state.view, tabs=TABS[view], active=state.tab[view];
-    const buttons=tabs.map(([id,label])=>'<button class="tab-btn '+(active===id?'active':'')+'" data-tab="'+id+'">'+label+(id==='40'?'<span class="count-chip">'+filteredTruckRows('40MT').length+'</span>':id==='32'?'<span class="count-chip">'+filteredTruckRows('32MT').length+'</span>':id==='28'?'<span class="count-chip">'+filteredTruckRows('28_26MT').length+'</span>':'')+'</button>').join('');
-    let content='';
-    if(view==='planner') content=active==='zone'?renderZonePlan():renderPlacement('manual');
-    else if(active==='40') content=renderTruckTable('40MT');
-    else if(active==='32') content=renderTruckTable('32MT');
-    else if(active==='28') content=renderTruckTable('28_26MT');
-    else if(active==='ltl') content=renderLtl();
-    else content=renderPlacement('auto');
-    return '<div class="tabs">'+buttons+'</div>'+(view==='club'?'<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0"><input class="search-input" id="planSearch" placeholder="Search SO, item, city…" value="'+attr(state.searchText)+'"><button class="btn primary" id="recompute" '+(state.placed.size?'':'disabled')+'>Recompute remaining (unplaced only)</button></div>':'')+content+renderUnresolved();
+    const view=state.view, tabs=TABS[view], active=state.tab[view], tierCounts={};
+    const countFor=id=>{tierCounts[id]??=filteredTruckRows(id==='40'?'40MT':id==='32'?'32MT':'28_26MT').length;return tierCounts[id];};
+    // Only the Auto Club tabs carry a live truck count chip (nullish assignment:
+    // a tier can legitimately hold zero trucks, so don't assign on falsiness).
+    const buttons=tabs.map(([id,label])=>'<button class="tab-btn '+(active===id?'active':'')+'" data-tab="'+id+'"'+focusMark(id)+' role="tab" aria-selected="'+(active===id)+'">'+label+(view==='club'&&(id==='40'||id==='32'||id==='28')?'<span class="count-chip">'+countFor(id)+'</span>':'')+'</button>').join('');
+    const content=renderTabContent(view, active);
+    return '<div class="tabs" role="tablist">'+buttons+'</div>'+(view==='club'?renderTruckToolbar():'')+content+renderUnresolved();
+  }
+
+  function renderTruckToolbar() {
+    return '<div class="truck-toolbar"><label class="sr-only" for="planSearch">Search plan rows</label><input class="search-input" id="planSearch" type="search" placeholder="Search SO, item, or destination…" value="'+attr(state.searchText)+'"><button class="btn primary" id="recompute" '+(state.placed.size&&!state.recomputing?'':'disabled')+'>'+(state.recomputing?'<i class="spin"></i> Recomputing…':'Recompute remaining (unplaced only)')+'</button><span class="toolbar-note">'+(state.placed.size?state.placed.size+' truck(s) locked as placed.':'Mark a truck as placed before recomputing.')+'</span></div>';
   }
 
   function renderResults() {
     const root=$('#results');
+    trimSearchCache();
     if(!state.result&&(state.pendingBuild||state.building)&&!state.busy){
       root.innerHTML='<div class="empty-state">'+(state.building?'<style>@keyframes tdsp{to{transform:rotate(360deg)}}</style><div style="width:28px;height:28px;margin:0 auto 12px;border:3px solid rgba(141,205,255,.25);border-top-color:#8dcdff;border-radius:50%;animation:tdsp .8s linear infinite"></div>Building truck plan from '+state.rawRows.length+' rows …<div style="max-width:360px;height:8px;margin:14px auto 6px;border-radius:99px;background:rgba(141,205,255,.15);overflow:hidden"><div id="planBar" style="height:100%;width:2%;background:#8dcdff;transition:width .2s"></div></div><div class="muted" id="planPct">starting…</div>':'All files loaded ('+state.rawRows.length+' dispatch rows). Click <b>▶ Run</b> above to build the truck plan.')+'</div>';
       return;
     }
     if(!state.result){root.innerHTML=state.statusError?'<div class="status-line error">'+esc(state.status)+'</div>':'<div class="empty-state">Loading dispatch plan from Drive…</div>';return;}
-    root.innerHTML=renderKpis(state.result)+(state.view==='club'?renderPlanPills(state.result):'')+renderTabsAndContent();
+    // Bring back the control that had focus (and its caret) after the markup is
+    // rebuilt, so ticking a truck checkbox does not throw the user back to the top
+    // of the page. Writing HTML this way, not via innerHTML, avoids replacing the
+    // nodes the listeners are attached to a moment later.
+    const act=document.activeElement, focusSel=act&&root.contains(act)&&act.dataset?focusSelFor(act):null;
+    const caret=focusSel?{start:act.selectionStart,end:act.selectionEnd}:null;
+    const html=renderKpis(state.result)+(state.view==='club'?renderPlanPills(state.result):'')+renderTabsAndContent();
+    const doc=new DOMParser().parseFromString('<!doctype html><body>'+html+'</body>','text/html');
+    root.replaceChildren(...Array.from(doc.body.childNodes));
+    if(focusSel){const n=root.querySelector(focusSel);if(n){n.focus();try{caret&&n.setSelectionRange&&n.setSelectionRange(caret.start,caret.end);}catch{}}}
     $$('[data-filter]').forEach(b=>b.addEventListener('click',()=>{state.planFilter=b.dataset.filter;render();}));
-    $$('[data-tab]').forEach(b=>b.addEventListener('click',()=>{state.tab[state.view]=b.dataset.tab;render();}));
+    $$('[data-tab]').forEach(b=>b.addEventListener('click',()=>{if(state.tab[state.view]===b.dataset.tab)return;state.tab[state.view]=b.dataset.tab;render();}));
     $$('[data-place]').forEach(box=>box.addEventListener('change',()=>{box.checked?state.placed.add(box.dataset.place):state.placed.delete(box.dataset.place);render();}));
     $$('[data-route]').forEach(button=>button.addEventListener('click',()=>{
       const truck=state.result.trucks.find(t=>t.id===button.dataset.route); if(!truck)return;
@@ -478,37 +778,69 @@ function renderDbStrip() {
     $$('[data-csv]').forEach(b=>b.addEventListener('click',()=>$('#csv-'+b.dataset.csv)?.classList.toggle('hidden')));
     $$('[data-sum]').forEach(row=>row.addEventListener('click',()=>{row.classList.toggle('sum-selected');}));
     $$('[data-unplace]').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.unplace.startsWith('M'))state.manual=state.manual.filter(t=>t.id!==b.dataset.unplace);else state.placed.delete(b.dataset.unplace);render();}));
-    $('#planSearch')?.addEventListener('input',e=>{const p=e.target.selectionStart;state.searchText=e.target.value;const val=state.searchText;renderResults();const n=$('#planSearch');n?.focus();n?.setSelectionRange(p,p);});
+    $('#planSearch')?.addEventListener('input',e=>{state.searchText=e.target.value;renderResults();});
     $('#recompute')?.addEventListener('click',recomputeRemaining);
     $$('[data-resolve]').forEach(b=>b.addEventListener('click',()=>resolveUnresolved(b.dataset.resolve)));
+  }
+
+  // Stable selector for the control that had focus, so the same element can be
+  // found again after the results markup is rebuilt.
+  let focusSeq = 0, lastFocus = null;
+  function focusMark(value) {
+    const key = lastFocus && lastFocus.name === 'data-tab' && lastFocus.value === value ? lastFocus.key : null;
+    return key ? ' data-focus="' + key + '"' : '';
+  }
+  function focusSelFor(el) {
+    let name = '', value = '';
+    if (el.id) return '#' + CSS.escape(el.id);
+    if (el.dataset) {
+      for (const n of ['place', 'manualRow', 'resolveInput', 'tab', 'filter']) {
+        if (el.dataset[n] != null) { name = 'data-' + n.replace(/[A-Z]/g, c => '-' + c.toLowerCase()); value = el.dataset[n]; break; }
+      }
+    }
+    if (!name) return null;
+    if (!el.__focusKey) el.__focusKey = 'f' + (++focusSeq);
+    lastFocus = { name, value, key: el.__focusKey };
+    return '[' + name + '="' + CSS.escape(value) + '"][data-focus="' + el.__focusKey + '"]';
   }
 
   async function resolveUnresolved(key) {
     const item=key.split('||'), city=item[1], input=$('[data-resolve-input="'+CSS.escape(key)+'"]');
     const parsed=window.TruckCityOverrides.parseResolveInput(input?.value,E.resolveCity,cityTable);
     if(!parsed){alert('Enter a recognized Indian city or coordinates (lat, lng).');return;}
+    if((state.placed.size||state.manual.length)&&!window.confirm('Resolving this destination rebuilds the plan and clears vehicle placement and manual trucks. Continue?'))return;
     cityTable[E.normalizeCityKey(city)]=parsed.coords;
     window.TruckCityOverrides.saveCityOverride(E.normalizeCityKey(city),parsed.coords);
-    state.result=await runAllocate(state.rawRows);render();
+    state.placed.clear();state.manual=[];state.manualSeq=1;
+    state.result=await runAllocate(state.rawRows);invalidateViewCache();render();
   }
 
   async function recomputeRemaining(){
-    if(!state.result||!state.placed.size)return;
+    if(!state.result||!state.placed.size||state.recomputing)return;
     const locked=state.result.trucks.filter(t=>state.placed.has(t.id)), used=new Map();
     locked.forEach(t=>t.lines.forEach(l=>l.soBreakdown.forEach(([so,v])=>used.set(so,(used.get(so)||0)+v.mt))));
     const remaining=state.rawRows.map(r=>{const key=r['SO No.']+'/'+r['SOItm'];const qty=Math.max(0,(Number(r['Dispatch Plan'])||0)-(Number(r['Under Loading'])||0)-(used.get(key)||0));return qty>.005?{...r,'Dispatch Plan':qty,'Under Loading':0}:null;}).filter(Boolean);
-    const recomputed=await runAllocate(remaining);recomputed.trucks.forEach(t=>t.id='R-'+t.id);
-    state.result={...state.result,trucks:locked.concat(recomputed.trucks),ltl:recomputed.ltl,ltlClusters:recomputed.ltlClusters,ltlUnresolved:recomputed.ltlUnresolved};
-    setStatus('Recomputed remaining plan; '+locked.length+' truck(s) locked.');render();
+    state.recomputing=true;render();
+    await new Promise(resolve=>setTimeout(resolve,30));
+    try{
+      const recomputed=await runAllocate(remaining);recomputed.trucks.forEach(t=>t.id='R-'+t.id);
+      state.result={...state.result,trucks:locked.concat(recomputed.trucks),ltl:recomputed.ltl,ltlClusters:recomputed.ltlClusters,ltlUnresolved:recomputed.ltlUnresolved};
+      state.placed=new Set(locked.map(t=>t.id));
+      invalidateViewCache();
+      setStatus('Recomputed remaining plan; '+locked.length+' truck(s) locked.');
+    }catch(err){console.error(err);setStatus('Could not recompute remaining plan: '+err.message,true);}
+    finally{state.recomputing=false;render();}
   }
 
   function render() {
+    if(!state.result)invalidateViewCache();   // no plan -> nothing to keep hot
     renderDbStrip();renderViewSwitch();renderUploads();renderResults();
     $('#legend').style.display=state.result?'flex':'none';
   }
 
   function resetAll(){
     state.view='planner';state.result=null;state.rawRows=null;state.placed.clear();state.manual=[];state.searchText='';
+    state.fileUploaded=false;invalidateViewCache();
     render();refreshDatabase();
   }
   window.__hub_handle_reset=resetAll;
@@ -526,7 +858,7 @@ function renderDbStrip() {
     window.TruckManual=window.TruckManual;
     window.TruckCityOverrides=window.TruckCityOverrides;
     render();
-    refreshDatabase();
+    refreshDatabase(true);   // quiet: no full-screen boot spinner on top of the shell
     window.TruckColumnResize?.installColumnResize?.();
     $('#boot-status').style.display='none';
   }
