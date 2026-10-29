@@ -7,7 +7,7 @@
   <title>Grade Clubbing Matrix</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="theme.css"><link rel="stylesheet" href="lenis.css"/>
   <style>
     /* Page-local roles only. Surfaces, text and the accent are owned by
        theme.css and re-aliased in the shared block at the end of this
@@ -2250,6 +2250,28 @@
     updateRangeVisual();
     render();
   </script>
+<script src="lenis.min.js"></script><script src="lenis-overscroll.js"></script>
+<script>
+// Smooth scroll via Lenis (https://github.com/darkroomengineering/lenis)
+(function(){
+  try {
+    var lenis = new Lenis({
+      duration: 1.2,
+      easing: function(t){ return Math.min(1, 1.001 - Math.pow(2, -10 * t)); },
+      direction: 'vertical',
+      gestureDirection: 'vertical',
+      smooth: true,
+      mouseMultiplier: 1,
+      smoothTouch: true,
+      touchMultiplier: 2,
+      infinite: false,
+    });
+    function raf(time){ lenis.raf(time); requestAnimationFrame(raf); }
+    requestAnimationFrame(raf);
+    document.documentElement.classList.add('lenis');
+  } catch(e) { console.warn('Lenis smooth scroll unavailable:', e); }
+})();
+</script>
 <script src="glow.js"></script>
 </body>
 </html>
