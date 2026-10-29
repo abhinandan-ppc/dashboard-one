@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" href="favicon.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="theme.css"/>
+<link rel="stylesheet" href="theme.css"/><link rel="stylesheet" href="lenis.css"/>
 <style>
 /* The --glass-border-rule shorthand token comes from theme.css, next to the
    --glass-border color it derives from. */
@@ -310,6 +310,28 @@ monthlyFrame.addEventListener('load', broadcastFrameTop);
       document.documentElement.classList.add('in-hub');
     }catch(e){}
   }
+})();
+</script>
+<script src="lenis.min.js"></script>
+<script>
+// Smooth scroll via Lenis (https://github.com/darkroomengineering/lenis)
+(function(){
+  try {
+    var lenis = new Lenis({
+      duration: 1.2,
+      easing: function(t){ return Math.min(1, 1.001 - Math.pow(2, -10 * t)); },
+      direction: 'vertical',
+      gestureDirection: 'vertical',
+      smooth: true,
+      mouseMultiplier: 1,
+      smoothTouch: true,
+      touchMultiplier: 2,
+      infinite: false,
+    });
+    function raf(time){ lenis.raf(time); requestAnimationFrame(raf); }
+    requestAnimationFrame(raf);
+    document.documentElement.classList.add('lenis');
+  } catch(e) { console.warn('Lenis smooth scroll unavailable:', e); }
 })();
 </script>
 <script src="glow.js"></script>
