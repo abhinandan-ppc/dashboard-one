@@ -3086,7 +3086,11 @@ setStyle(readStoredStyle());
     <div class="fetch-status-spinner"></div>
     <div class="fetch-status-label" id="fetchStatusLabel">Fetching EBTP data…</div>
     <button class="fetch-status-minimize" id="fetchStatusMinimize" type="button" aria-label="Expand log" title="Expand log" aria-expanded="false">
-      <span class="fs-arrow">↓</span>
+      <span class="fs-toggle-icon" aria-hidden="true">
+        <i class="fs-toggle-top"></i><i class="fs-toggle-bottom"></i>
+        <i class="fs-toggle-left"></i><i class="fs-toggle-right"></i>
+        <i class="fs-toggle-center"></i>
+      </span>
     </button>
   </div>
   <div class="fetch-status-sources">
