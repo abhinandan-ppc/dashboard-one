@@ -82,9 +82,23 @@
     }
   }
   function release(){
+    clearTimeout(wheelIdleTimer);
     if (!amtTop && !amtBottom) return;
     amtTop = 0; amtBottom = 0;
     schedulePaint(false);
+  }
+
+  // There is no native "wheel end" event. release() otherwise only fires on
+  // a later event (an opposing wheel tick, a real scroll, touchend) — if the
+  // user's trackpad/wheel gesture simply stops right at the overscrolled
+  // position, nothing ever happens again and the stretch was left stuck.
+  // WHEEL_IDLE_MS re-arms on every wheel tick; once no more arrive, this is
+  // what actually springs it back.
+  var WHEEL_IDLE_MS = 160;
+  var wheelIdleTimer = null;
+  function armWheelIdleRelease(){
+    clearTimeout(wheelIdleTimer);
+    wheelIdleTimer = setTimeout(release, WHEEL_IDLE_MS);
   }
 
   window.addEventListener('wheel', function(e){
@@ -92,9 +106,11 @@
     if (atTop() && e.deltaY < 0) {
       amtTop = Math.max(0, amtTop - e.deltaY * 0.5);
       schedulePaint(true);
+      armWheelIdleRelease();
     } else if (atBottom() && e.deltaY > 0) {
       amtBottom = Math.max(0, amtBottom + e.deltaY * 0.5);
       schedulePaint(true);
+      armWheelIdleRelease();
     } else if (amtTop || amtBottom) {
       release();
     }
