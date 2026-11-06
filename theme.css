@@ -331,7 +331,7 @@ body:has(> .app-page-footer){
 }
 /* Give centered flex children a full-width base so their auto margins do not
    shrink page wrappers to their max-content width before max-width applies. */
-body:has(> .app-page-footer) > :not(.app-page-footer){
+body:has(> .app-page-footer) > :not(.app-page-footer):not(.fetch-status){
   width:100%;
   min-width:0;
 }
