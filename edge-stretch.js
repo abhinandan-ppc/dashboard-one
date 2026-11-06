@@ -4,7 +4,7 @@
 // (like Android 12+'s edge-effect, or iOS's rubber-band), then springs back
 // on release. A plain `transform` on <body> would do this in one line, but
 // `transform` on an element creates a new containing block for every
-// position:fixed/absolute DESCENDANT of it — every fixed header, modal and
+// position:fixed/sticky DESCENDANT of it — every fixed header, modal and
 // overlay on the page would stop being fixed to the viewport and start being
 // fixed to the transformed box instead. That is exactly what broke dashboards
 // site-wide the last time an overscroll-stretch effect was tried here (see
@@ -12,14 +12,24 @@
 // non-fixed/sticky child of <body> into one wrapper div and stretches only
 // that — fixed/sticky elements (headers, modals, the sync/boot overlays) are
 // left as direct children of <body>, completely untouched.
+//
+// Perf: every wheel/touchmove tick only updates two numbers and schedules a
+// single rAF-batched paint — never more than one style write per frame, no
+// matter how many input events land in that frame. The wrapper gets
+// `will-change:transform` only while a pull is actually live, so idle pages
+// pay nothing and the browser isn't asked to keep a promoted layer around
+// for content that reaches up to its full (often very tall) scroll height.
+// The stretch itself follows a real rubber-band curve (diminishing return as
+// you pull further, never a hard linear cap), which is what reads as
+// "elastic" instead of "stuck" once MAX_PULL is hit.
 (function(){'use strict';
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  var MAX_PULL = 100;      // px of raw wheel/touch delta that maxes the effect out
-  var MAX_STRETCH = 0.14;  // peak extra length at full pull (14% taller)
-  var SPRING_MS = 420;
+  var MAX_STRETCH = 0.12;   // peak extra length, approached but never reached
+  var RESISTANCE = 140;     // px of raw delta to reach ~half of MAX_STRETCH — higher = stiffer
+  var SPRING_MS = 380;
   var root = document.scrollingElement || document.documentElement;
-  var wrap = null, amtTop = 0, amtBottom = 0;
+  var wrap = null, amtTop = 0, amtBottom = 0, pending = false, pullingNow = false;
 
   function isExempt(el){
     var p = getComputedStyle(el).position;
@@ -44,15 +54,29 @@
   function atTop(){ return root.scrollTop <= 0; }
   function atBottom(){ return Math.ceil(root.scrollTop + root.clientHeight) >= root.scrollHeight; }
 
-  function paint(instant){
+  // Real rubber-band response: a soft curve that approaches MAX_STRETCH but
+  // never reaches it, so the pull always feels springy instead of hitting a
+  // hard wall. Equivalent in shape to UIScrollView's bounce resistance.
+  function rubberBand(raw){
+    return MAX_STRETCH * (raw / (raw + RESISTANCE));
+  }
+
+  function schedulePaint(instant){
+    pullingNow = instant;
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(paint);
+  }
+  function paint(){
+    pending = false;
     ensureWrap();
-    wrap.classList.toggle('is-pulling', !!instant);
+    wrap.classList.toggle('is-pulling', pullingNow);
     if (amtTop > 0) {
       wrap.style.transformOrigin = 'top';
-      wrap.style.transform = 'scaleY(' + (1 + Math.min(1, amtTop / MAX_PULL) * MAX_STRETCH) + ')';
+      wrap.style.transform = 'scaleY(' + (1 + rubberBand(amtTop)) + ')';
     } else if (amtBottom > 0) {
       wrap.style.transformOrigin = 'bottom';
-      wrap.style.transform = 'scaleY(' + (1 + Math.min(1, amtBottom / MAX_PULL) * MAX_STRETCH) + ')';
+      wrap.style.transform = 'scaleY(' + (1 + rubberBand(amtBottom)) + ')';
     } else {
       wrap.style.transform = '';
     }
@@ -60,17 +84,17 @@
   function release(){
     if (!amtTop && !amtBottom) return;
     amtTop = 0; amtBottom = 0;
-    paint(false);
+    schedulePaint(false);
   }
 
   window.addEventListener('wheel', function(e){
     if (!scrollable()) return;
     if (atTop() && e.deltaY < 0) {
-      amtTop = Math.min(MAX_PULL, amtTop - e.deltaY * 0.5);
-      paint(true);
+      amtTop = Math.max(0, amtTop - e.deltaY * 0.5);
+      schedulePaint(true);
     } else if (atBottom() && e.deltaY > 0) {
-      amtBottom = Math.min(MAX_PULL, amtBottom + e.deltaY * 0.5);
-      paint(true);
+      amtBottom = Math.max(0, amtBottom + e.deltaY * 0.5);
+      schedulePaint(true);
     } else if (amtTop || amtBottom) {
       release();
     }
@@ -85,11 +109,11 @@
     var y = e.touches[0].clientY, dy = y - touchY;
     touchY = y;
     if (atTop() && dy > 0) {
-      amtTop = Math.min(MAX_PULL, amtTop + dy);
-      paint(true);
+      amtTop = Math.max(0, amtTop + dy);
+      schedulePaint(true);
     } else if (atBottom() && dy < 0) {
-      amtBottom = Math.min(MAX_PULL, amtBottom - dy);
-      paint(true);
+      amtBottom = Math.max(0, amtBottom - dy);
+      schedulePaint(true);
     } else if (amtTop || amtBottom) {
       release();
     }

@@ -2998,7 +2998,8 @@ html[data-theme-style="neomorph"] .theme-range:active::-moz-range-thumb {
    makes sure the wrapper never changes layout on its own. */
 #edge-stretch-wrap{
   transform-origin:top;
-  transition:transform var(--edge-stretch-spring-ms,420ms) cubic-bezier(.34,1.56,.64,1);
+  will-change:transform;
+  transition:transform var(--edge-stretch-spring-ms,380ms) cubic-bezier(.22,1,.36,1);
 }
 #edge-stretch-wrap.is-pulling{transition:none}
 @media (prefers-reduced-motion:reduce){#edge-stretch-wrap{transition:none!important;transform:none!important}}
