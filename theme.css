@@ -504,17 +504,23 @@ a.card:hover {
 }
 .fetch-status-head{display:flex;align-items:center;gap:10px}
 .fetch-status-minimize{background:transparent;border:none;color:var(--mute);cursor:pointer;font-size:16px;line-height:1;padding:2px 6px;border-radius:6px;margin-left:auto;display:flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;position:relative}
-/* Rest state (collapsed, the panel's default) points the arrow down — "pull
-   this open". Expanded flips it to point up — "push this closed". That was
-   backwards before (minimized rotated to the chevron that means "expand"),
-   which read as broken since the arrow pointed the opposite way to what
-   clicking it actually did. */
-.fs-arrow{display:flex;align-items:center;justify-content:center;width:100%;height:100%;transition:transform .25s cubic-bezier(.4,0,.2,1)}
-.fetch-status:not(.minimized) .fs-arrow{transform:rotate(180deg)}
+.fs-toggle-icon{position:relative;width:14px;height:14px;display:block;flex:0 0 14px;margin:auto}
+.fs-toggle-icon i{position:absolute;display:block;background:currentColor;border-radius:1px;
+  box-shadow:0 1px 3px rgba(0,0,0,.35);transition:all .28s cubic-bezier(.4,0,.2,1)}
+.fs-toggle-top,.fs-toggle-bottom{left:1px;width:12px;height:2px;top:1px;opacity:1}
+.fs-toggle-bottom{top:11px}
+.fs-toggle-left,.fs-toggle-right{top:1px;width:2px;height:12px;left:1px;opacity:1}
+.fs-toggle-right{left:11px}
+.fs-toggle-center{left:1px;top:6px;width:12px;height:2px;opacity:0}
+.fetch-status:not(.minimized) .fs-toggle-top,.fetch-status:not(.minimized) .fs-toggle-bottom{top:6px;opacity:0}
+.fetch-status:not(.minimized) .fs-toggle-left,.fetch-status:not(.minimized) .fs-toggle-right{left:6px;opacity:0}
+.fetch-status:not(.minimized) .fs-toggle-center{opacity:1}
 .fetch-status-minimize:hover{background:var(--s2);color:var(--text)}
+.fetch-status-minimize:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
 .fetch-status.minimized .fetch-status-log{max-height:0;opacity:0;overflow:hidden}
 .fetch-status.minimized{padding:8px 16px;gap:8px}
 .fetch-status.minimized .fetch-status-head{gap:10px}
+@media(prefers-reduced-motion:reduce){.fs-toggle-icon i{transition:none}}
 .fetch-status-spinner{width:16px;height:16px;flex-shrink:0;border-radius:50%;
   border:2px solid var(--bdr);border-top-color:var(--sky);animation:spin .7s linear infinite}
 .fetch-status-label{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text)}
