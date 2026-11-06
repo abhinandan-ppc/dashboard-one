@@ -231,23 +231,73 @@ function levenshtein(a, b) {
   return prev[bl];
 }
 
+// Same DP as levenshtein() above, but writes into caller-supplied scratch arrays
+// instead of allocating a fresh pair every call. fuzzyMatchCity calls this once per
+// candidate in the ~6,700-city table, and the per-call `new Array` pair in the plain
+// levenshtein() was almost entirely GC churn, not comparison work — reusing one pair
+// of buffers across the whole table scan (and across calls, via fuzzyMatchCityBuffers
+// below) is the same algorithm and the same numeric result, just without allocating
+// ~13,500 short-lived arrays per lookup.
+function levenshteinInto(a, b, prev, curr) {
+  if (a === b) return 0;
+  const al = a.length, bl = b.length;
+  if (al === 0) return bl;
+  if (bl === 0) return al;
+  for (let j = 0; j <= bl; j++) prev[j] = j;
+  for (let i = 1; i <= al; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= bl; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    [prev, curr] = [curr, prev];
+  }
+  return prev[bl];
+}
+const fuzzyMatchCityBuffers = new WeakMap();
 // Last-resort fuzzy match against the city table: only used after exact/suffix/last-token
 // matching has failed. Threshold scales with name length but stays tight (max 2) so we
 // don't conflate genuinely different cities.
 function fuzzyMatchCity(key, table) {
   if (!key || key.length < 4) return null;
   const maxDist = key.length <= 5 ? 1 : 2;
+  // Buffers must cover the longer of key/candidate; candidates are only ever
+  // compared when within maxDist (<=2) of key.length, so key.length + 4 is safe headroom.
+  const needed = key.length + 4;
+  let bufs = fuzzyMatchCityBuffers.get(table);
+  if (!bufs || bufs.len < needed) {
+    const len = Math.max(needed, 32);
+    bufs = { len, prev: new Int32Array(len + 1), curr: new Int32Array(len + 1) };
+    fuzzyMatchCityBuffers.set(table, bufs);
+  }
   let best = null, bestDist = Infinity;
   for (const candidate in table) {
     if (Math.abs(candidate.length - key.length) > maxDist) continue;
-    const d = levenshtein(key, candidate);
+    const d = levenshteinInto(key, candidate, bufs.prev, bufs.curr);
     if (d < bestDist) { bestDist = d; best = candidate; }
   }
   if (best && bestDist <= maxDist) return { matchedAs: best, dist: bestDist };
   return null;
 }
 
+// resolveCity's last resort (fuzzyMatchCity) walks the whole ~6,700-city table doing a
+// Levenshtein compare against every candidate. That's fine for a one-off lookup, but
+// nearestRateInterpolation calls resolveCity once per freight-rate record (hundreds) on
+// every unmatched destination it is asked about, and the same raw strings repeat across
+// a plan's hundreds of dispatch lines. Memoized per city table (cityTable is a fixed,
+// never-mutated object for the session), this turns a ~500M-operation-per-call fallback
+// into a one-time cost — without this a 449-row plan's freight-cost pass took 100+
+// seconds and froze the tab; cached, the same pass is near-instant after its first call.
+const resolveCityCache = new WeakMap();
 function resolveCity(raw, table) {
+  let cache = resolveCityCache.get(table);
+  if (!cache) { cache = new Map(); resolveCityCache.set(table, cache); }
+  if (cache.has(raw)) return cache.get(raw);
+  const result = resolveCityUncached(raw, table);
+  cache.set(raw, result);
+  return result;
+}
+function resolveCityUncached(raw, table) {
   const key = normalizeCityKey(raw);
   if (!key) return { key, coords: null, matchedAs: null };
   if (table[key]) return { key, coords: table[key], matchedAs: key };
