@@ -90,6 +90,14 @@ const INDIA_CITY_TABLE = (function(){
   return table;
 })();
 
+// The table is declared `const` in this file's scope, which is the top-level
+// lexical scope of a classic script — NOT automatically a window property. Every
+// consumer (truck-dashboard-app.js, truck-plan-worker.js) reads the globals, and
+// so does the `const INDIA_CITY_FOREIGN_KEYS = window.…` line right below; without
+// this assignment that line throws ReferenceError: INDIA_CITY_FOREIGN_KEYS is not
+// defined, which killed the whole bundle and left TruckEngine/TruckFreight/etc.
+// undefined — the dashboard rendered its shell and never built a plan.
+window.INDIA_CITY_TABLE = INDIA_CITY_TABLE;
 const INDIA_CITY_FOREIGN_KEYS = window.INDIA_CITY_FOREIGN_KEYS;
 
 /* ── lc.js (ported from truck-dashboard/src/lib/lc.js) ─────────────────────────── */

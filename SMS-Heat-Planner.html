@@ -14,6 +14,12 @@
    --glass-border color it derives from. */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
+/* lenis.css's `html.lenis, html.lenis body { height: auto }` outranks the rule
+   above (one extra class beats none), so once Lenis tags <html> the body
+   collapses to 0 and every absolutely-positioned full-bleed child (frame
+   stage, iframes) collapses with it. Match its selector to win on source
+   order instead. */
+html.lenis, html.lenis body { height: 100%; }
 body {
   font-family: 'Poppins', system-ui, sans-serif;
   color: var(--tx);
@@ -240,11 +246,18 @@ window.addEventListener('message', function(e){
 
 // ─── Floating header height: pushed into both iframes so their own content
 // starts clear of the transparent overlay instead of rendering underneath it ───
+// Measured on the padding box of `.top-wrapper`, not the visible `.top-bar`: the
+// wrapper's own top padding positions the bar and stays transparent over the
+// iframe, so the child has to clear down to the wrapper's bottom edge.
 var topBarEl = document.querySelector('.top-bar');
+var topWrapperEl = document.querySelector('.top-wrapper');
 function sendFrameTop(frame){
   if(!frame || !frame.contentWindow || !topBarEl) return;
-  var rect = topBarEl.getBoundingClientRect();
-  var height = Math.ceil(rect.bottom);
+  var probe = topWrapperEl || topBarEl;
+  var style = getComputedStyle(probe);
+  var rect = probe.getBoundingClientRect();
+  var height = Math.max(Math.ceil(rect.bottom + (parseFloat(style.paddingBottom) || 0)),
+    Math.ceil(topBarEl.getBoundingClientRect().bottom));
   frame.contentWindow.postMessage({type: 'frame-top', height: height}, '*');
 }
 function broadcastFrameTop(){

@@ -27,7 +27,6 @@
 
 import { createServer } from 'node:http';
 import { readFile, writeFile, stat } from 'node:fs/promises';
-import { createReadStream } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { parseEnvText } from './local-auth-env.mjs';
@@ -117,8 +116,21 @@ const API_ROUTES = {
 // Truck dashboard's source tree is a separate Vite app. Mount its Drive database
 // API in the root local server too, so both the ported static page and the React
 // app can fetch the same Drive XLSX/native Google Sheets on localhost:3000.
+// The React app's drive.mjs is optional: this checkout may not include the
+// separate Vite tree, and its absence must not stop the other dashboards from
+// being served. When it is missing, /api/database falls through to the
+// truckdb-proxy route below.
 const TRUCK_DB_ROUTES = new Set(['/api/database', '/api/database/file']);
-const { handleDatabase } = await import('./truck-dashboard/tools/drive.mjs');
+let handleDatabase = null;
+try {
+  ({ handleDatabase } = await import('./truck-dashboard/tools/drive.mjs'));
+} catch (err) {
+  if (err && err.code === 'ERR_MODULE_NOT_FOUND') {
+    console.warn('local-auth: truck-dashboard/tools/drive.mjs not found; /api/database is served by /api/truckdb-proxy.');
+  } else {
+    throw err;
+  }
+}
 
 const handlerCache = new Map();
 async function getHandler(pathname) {
@@ -191,14 +203,20 @@ async function serveStatic(pathname, res) {
     const info = await stat(file);
     if (!info.isFile()) return send(res, 404, { 'Content-Type': 'text/plain' }, 'Not found');
     const type = MIME[path.extname(file).toLowerCase()] || 'application/octet-stream';
+    // Always declare the byte length, so a response can never end mid-byte:
+    // readFile hands the socket one Buffer, which also keeps this to a single
+    // write per file. The earlier streaming version advertised the file's
+    // byte length but wrote text — any non-ASCII character (the vendored
+    // SheetJS bundle is full of them) shortened the body, the connection
+    // closed short of Content-Length, and the browser reported the script as
+    // "Unexpected end of input" while the rest of the page silently died.
+    const body = await readFile(file);
     res.writeHead(200, {
       'Content-Type': type,
       'Cache-Control': 'no-cache', // always re-read edits while developing
-      'Content-Length': info.size,
+      'Content-Length': body.length,
     });
-    const stream = createReadStream(file);
-    stream.on('error', () => res.destroy());
-    stream.pipe(res);
+    res.end(body);
   } catch {
     send(res, 404, { 'Content-Type': 'text/plain' }, 'Not found');
   }
@@ -219,7 +237,7 @@ const server = createServer(async (req, res) => {
     // these paths are shadowed by physical files under /api, so route API calls
     // through this server while it runs on port 3000.
     const databasePath = pathname.replace(/\/+$/, '');
-    if (databasePath === '/api/database' || databasePath === '/api/database/file') {
+    if (handleDatabase && (databasePath === '/api/database' || databasePath === '/api/database/file')) {
       url.pathname = databasePath;
       if (databasePath === '/api/database' && url.searchParams.has('name')) url.pathname = '/api/database/file';
       if (url.pathname === '/api/database' && url.searchParams.has('file')) url.pathname = '/api/database/file';
@@ -240,6 +258,13 @@ const server = createServer(async (req, res) => {
       headers['Access-Control-Allow-Origin'] = '*';
       const body = req.method === 'HEAD' ? null : Buffer.from(await result.arrayBuffer());
       return send(res, result.status, headers, body);
+    }
+    // Without the React app's drive.mjs, the Drive index (no ?name) is still
+    // answerable by the production proxy. A named file download needs the
+    // Drive folder listing that only drive.mjs has, so that one 404s below
+    // rather than silently returning the index JSON.
+    if (!handleDatabase && databasePath === '/api/database' && !url.searchParams.has('name')) {
+      return await serveApi(new URL('/api/truckdb-proxy' + url.search, url), res);
     }
     if (pathname in API_ROUTES) return await serveApi(url, res);
 
