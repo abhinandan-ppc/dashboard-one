@@ -536,7 +536,7 @@ function renderDbStrip() {
       ['32 MT trucks', byTier['32MT'], 'priority 2', '', 'Trucks built on the 32 MT pass'],
       ['28/26 MT', byTier['28_26MT'], 'last resort', '', 'Suggested size, used only when 40/32 MT will not fit'],
       ['Placed on trucks', fmt(placed) + ' MT', share(placed) + '% of plan · ' + result.trucks.length + ' trucks', 'good', 'Tonnage the automatically built truck plan carries out of the total dispatch'],
-      ['LTL manual', fmt(ltl) + ' MT', result.ltl.length + ' pending lines', 'warn', ltl > 0 ? 'Left over after truck packing — needs manual clubbing' : 'Everything left fits outside the FTL plan'],
+      ['LTL manual', fmt(ltl) + ' MT', result.ltl.length + ' pending lines', '', ltl > 0 ? 'Left over after truck packing — needs manual clubbing' : 'Everything left fits outside the FTL plan'],
       ['ODC tonnage', fmt(odc) + ' MT', share(odc) + '% of plan', '', 'Over-dimensional cargo tonnage in the plan'],
       ['Unresolved cities', unresolved, 'excluded from clubbing', unresolved ? 'bad' : 'good', unresolved ? 'Destinations that could not be matched to a city on the map' : 'Every destination resolved to a city'],
     ];
@@ -559,7 +559,12 @@ function renderDbStrip() {
       ['lc', 'LC expiry < 15 days', fmt(sum(isLc)), count(isLc) + ' lines · includes expired', 'critical'],
       ['ageing', 'Ageing > 15 days', fmt(sum(isOld)), count(isOld) + ' lines', 'critical'],
     ];
-    return '<div class="plan-pills">' + pills.map(p => '<button class="plan-pill ' + p[4] + (state.planFilter === p[0] ? ' on' : '') + '" data-filter="' + p[0] + '" aria-pressed="' + (state.planFilter === p[0]) + '"><span class="pp-label">' + p[1] + '</span><span class="pp-value">' + p[2] + ' MT</span><span class="pp-sub">' + p[3] + '</span></button>').join('') + '</div>';
+    // A plain div, not a <button>: the hub-wide button rule in theme.css forces
+    // border-radius:var(--radius-pill) (and a solid fill for .on) on every real
+    // <button> in this page, which turned this row into capsule-shaped chips
+    // that clashed with the rectangular .kpi cards above. role=button + tabindex
+    // keep it keyboard-operable without picking up that rule.
+    return '<div class="plan-pills">' + pills.map(p => '<div class="plan-pill ' + p[4] + (state.planFilter === p[0] ? ' on' : '') + '" data-filter="' + p[0] + '" role="button" tabindex="0" aria-pressed="' + (state.planFilter === p[0]) + '"><span class="pp-label">' + p[1] + '</span><span class="pp-value">' + p[2] + ' MT</span><span class="pp-sub">' + p[3] + '</span></div>').join('') + '</div>';
   }
 
   function filteredTruckRows(tier) {
@@ -773,7 +778,11 @@ function renderDbStrip() {
     const doc=new DOMParser().parseFromString('<!doctype html><body>'+html+'</body>','text/html');
     root.replaceChildren(...Array.from(doc.body.childNodes));
     if(focusSel){const n=root.querySelector(focusSel);if(n){n.focus();try{caret&&n.setSelectionRange&&n.setSelectionRange(caret.start,caret.end);}catch{}}}
-    $$('[data-filter]').forEach(b=>b.addEventListener('click',()=>{state.planFilter=b.dataset.filter;render();}));
+    $$('[data-filter]').forEach(b=>{
+      b.addEventListener('click',()=>{state.planFilter=b.dataset.filter;render();});
+      // role="button" div, not a real <button>: Enter/Space activation isn't free.
+      b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();b.click();}});
+    });
     $$('[data-tab]').forEach(b=>b.addEventListener('click',()=>{if(state.tab[state.view]===b.dataset.tab)return;state.tab[state.view]=b.dataset.tab;render();}));
     $$('[data-place]').forEach(box=>box.addEventListener('change',()=>{box.checked?state.placed.add(box.dataset.place):state.placed.delete(box.dataset.place);render();}));
     $$('[data-route]').forEach(button=>button.addEventListener('click',()=>{
