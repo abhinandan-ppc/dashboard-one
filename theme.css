@@ -504,8 +504,13 @@ a.card:hover {
 }
 .fetch-status-head{display:flex;align-items:center;gap:10px}
 .fetch-status-minimize{background:transparent;border:none;color:var(--mute);cursor:pointer;font-size:16px;line-height:1;padding:2px 6px;border-radius:6px;margin-left:auto;display:flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;position:relative}
-.fs-arrow{display:flex;align-items:center;justify-content:center;width:100%;height:100%;transition:transform .3s ease}
-.fetch-status.minimized .fs-arrow{transform:rotate(180deg)}
+/* Rest state (collapsed, the panel's default) points the arrow down — "pull
+   this open". Expanded flips it to point up — "push this closed". That was
+   backwards before (minimized rotated to the chevron that means "expand"),
+   which read as broken since the arrow pointed the opposite way to what
+   clicking it actually did. */
+.fs-arrow{display:flex;align-items:center;justify-content:center;width:100%;height:100%;transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.fetch-status:not(.minimized) .fs-arrow{transform:rotate(180deg)}
 .fetch-status-minimize:hover{background:var(--s2);color:var(--text)}
 .fetch-status.minimized .fetch-status-log{max-height:0;opacity:0;overflow:hidden}
 .fetch-status.minimized{padding:8px 16px;gap:8px}

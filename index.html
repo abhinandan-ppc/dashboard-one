@@ -3081,11 +3081,11 @@ setStyle(readStoredStyle());
 })();
 </script>
 
-<div class="fetch-status" id="fetchStatus" style="display:none">
+<div class="fetch-status minimized" id="fetchStatus" style="display:none">
   <div class="fetch-status-head">
     <div class="fetch-status-spinner"></div>
     <div class="fetch-status-label" id="fetchStatusLabel">Fetching EBTP data…</div>
-    <button class="fetch-status-minimize" id="fetchStatusMinimize" type="button" aria-label="Minimize log" title="Minimize" aria-expanded="true">
+    <button class="fetch-status-minimize" id="fetchStatusMinimize" type="button" aria-label="Expand log" title="Expand log" aria-expanded="false">
       <span class="fs-arrow">↓</span>
     </button>
   </div>
@@ -3107,7 +3107,7 @@ setStyle(readStoredStyle());
       if(!el) return;
       var minimized = el.classList.toggle('minimized');
       btn.setAttribute('aria-expanded', minimized ? 'false' : 'true');
-      btn.title = minimized ? 'Expand log' : 'Minimize log';
+      btn.title = btn.ariaLabel = minimized ? 'Expand log' : 'Minimize log';
     });
   }
 })();
