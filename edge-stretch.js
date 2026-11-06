@@ -11,7 +11,9 @@
 // commit b70e94d). So instead of transforming <body>, this moves every
 // non-fixed/sticky child of <body> into one wrapper div and stretches only
 // that — fixed/sticky elements (headers, modals, the sync/boot overlays) are
-// left as direct children of <body>, completely untouched.
+// left as direct children of <body>, completely untouched. Shared page
+// footers also stay outside the wrapper so a flex-anchored footer remains at
+// the bottom without changing the order of sticky headers.
 //
 // Perf: every wheel/touchmove tick only updates two numbers and schedules a
 // single rAF-batched paint — never more than one style write per frame, no
@@ -33,7 +35,8 @@
 
   function isExempt(el){
     var p = getComputedStyle(el).position;
-    return p === 'fixed' || p === 'sticky';
+    return p === 'fixed' || p === 'sticky' ||
+      (el.classList && el.classList.contains('app-page-footer'));
   }
   // Lazy: only touches the DOM the first time a pull actually happens, and
   // only on pages that really scroll (see the scrollable() guard below) —
@@ -43,11 +46,16 @@
     var body = document.body;
     wrap = document.createElement('div');
     wrap.id = 'edge-stretch-wrap';
+    var insertionRef = null, startedMoving = false;
     Array.prototype.slice.call(body.children).forEach(function(el){
-      if (isExempt(el)) return;
+      if (isExempt(el)) {
+        if (startedMoving && !insertionRef) insertionRef = el;
+        return;
+      }
+      startedMoving = true;
       wrap.appendChild(el);
     });
-    body.insertBefore(wrap, body.firstChild);
+    body.insertBefore(wrap, insertionRef);
     return wrap;
   }
   function scrollable(){ return root.scrollHeight > root.clientHeight + 1; }

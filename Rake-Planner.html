@@ -5976,12 +5976,10 @@ function App(){
     )}
 
     {/* ── Footer ── */}
-    {!drill&&<div style={{textAlign:'center',padding:'12px 20px 16px',fontSize:11,
-      color:'var(--mute)',borderTop:'1px solid var(--bdr)',flexShrink:0,
-      fontFamily:F.b,letterSpacing:'.04em',background:'var(--s0)'}}>
+    {!drill&&<footer className="app-page-footer">
       JINDAL STEEL LIMITED · Angul PlateMill · Rake Planning Tool ·
-      <span style={{color:'var(--bdrHi)',marginLeft:6}}>All data confidential</span>
-    </div>}
+      <span className="app-page-footer-confidential">All data confidential</span>
+    </footer>}
   </div>;
 }
 
