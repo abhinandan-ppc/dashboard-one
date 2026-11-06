@@ -140,8 +140,10 @@ body.col-resizing{cursor:col-resize;user-select:none}
 .kpi{position:relative;display:flex;flex-direction:column;gap:3px;min-width:0;overflow:hidden;
   background:var(--s1);border:1px solid var(--bdr);border-radius:var(--radius-md,10px);padding:12px 14px 13px;
   transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease}
-.kpi::before{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:var(--primary);opacity:.85}
-.kpi.good::before{background:var(--good)} .kpi.warn::before{background:var(--warning)} .kpi.bad::before{background:var(--critical)}
+/* Rail is neutral by default — colour is reserved for the two real signals
+   (good/bad), never used just to decorate a plain count. */
+.kpi::before{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:var(--mute);opacity:.5}
+.kpi.good::before{background:var(--good);opacity:.85} .kpi.warn::before{background:var(--warning);opacity:.85} .kpi.bad::before{background:var(--critical);opacity:.85}
 .kpi:hover{border-color:var(--bdrHi);box-shadow:0 0 18px rgba(var(--primary-rgb),0.14)}
 .kpi .label{font-size:10.5px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -160,8 +162,8 @@ body.col-resizing{cursor:col-resize;user-select:none}
 .plan-pill{position:relative;display:flex;flex-direction:column;gap:3px;min-width:0;overflow:hidden;text-align:left;font:inherit;cursor:pointer;
   background:var(--s1);border:1px solid var(--bdr);border-radius:var(--radius-md,10px);padding:12px 14px 13px;color:var(--text);
   transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease}
-.plan-pill::before{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:var(--primary);opacity:.85}
-.plan-pill.critical::before{background:var(--critical)}
+.plan-pill::before{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:var(--mute);opacity:.5}
+.plan-pill.critical::before{background:var(--critical);opacity:.85}
 .plan-pill:hover{border-color:var(--bdrHi);box-shadow:0 0 18px rgba(var(--primary-rgb),0.14)}
 .plan-pill.on{border-color:var(--primary);box-shadow:inset 0 0 0 1px var(--primary)}
 .plan-pill.critical .pp-value{color:var(--critical)}
