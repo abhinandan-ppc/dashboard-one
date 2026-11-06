@@ -33,6 +33,8 @@
     club: [['40', '40 MT Trucks'], ['32', '32 MT Trucks'], ['28', '28/26 MT Trucks'], ['ltl', 'LTL — Manual'], ['club-place', 'Vehicle Placement']],
   };
 
+  // Every function below reads this single mutable page state.
+  const state = {};
   state.params = new URLSearchParams(location.search);
   state.autoload = state.params.has('autoload');   // ?autoload=1 builds the plan as soon as Drive data is in
   state.fileUploaded = false;                      // set when the plan came from a manual upload, not Drive
@@ -266,19 +268,17 @@
     state.db = { index: null, kinds: {}, at: null, error: '' };
     renderDbStrip();
     try {
-      // Prefer the matching proxy, then fall back to the localhost Drive API for
-      // previews/ports that do not mount the Vercel truckdb-proxy endpoint.
-      const endpoints = window.location.protocol === 'file:'
-        ? [
-            { base: localDataApi + '/api/database/file', indexUrl: localDataApi + '/api/database', mode: 'name' },
-            { base: '/api/truckdb-proxy', indexUrl: '/api/truckdb-proxy', mode: 'kind' },
-            { base: '/api/database/file', indexUrl: '/api/database', mode: 'name' },
-          ]
-        : [
-            { base: localDataApi + '/api/database/file', indexUrl: localDataApi + '/api/database', mode: 'name' },
-            { base: '/api/truckdb-proxy', indexUrl: '/api/truckdb-proxy', mode: 'kind' },
-            { base: '/api/database/file', indexUrl: '/api/database', mode: 'name' },
-          ];
+      // The proxy is asked first because it answers both the index and the file
+      // bytes. Only a data service that carries both halves is usable — the
+      // session's own origin does not mount /api/database at all, and a
+      // standalone /api/database (the Vite app's drive.mjs) exists only when its
+      // separate source tree is checked out.
+      const fileApi = localDataApi + '/api/database/file';
+      const endpoints = [
+        { base: '/api/truckdb-proxy', indexUrl: '/api/truckdb-proxy', mode: 'kind' },
+        { base: fileApi, indexUrl: localDataApi + '/api/database', mode: 'name' },
+        ...(window.location.origin === localDataApi ? [] : [{ base: '/api/database/file', indexUrl: '/api/database', mode: 'name' }]),
+      ];
       let index, databaseApi, lastError;
       for (const endpoint of endpoints) {
         try {

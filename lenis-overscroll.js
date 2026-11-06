@@ -18,5 +18,7 @@ document.addEventListener('touchmove', function(e) {
   // Allow Lenis to handle touch scroll natively
   // passive: true allows the browser to scroll naturally
 }, { passive: true });
-// Prevent the stretch effect from interfering with dashboard functionality
-document.body.style.overscrollBehavior = 'contain';
+// Prevent the stretch effect from interfering with dashboard functionality.
+// Guarded: this file runs from <head> on some pages, before <body> exists.
+if (document.body) document.body.style.overscrollBehavior = 'contain';
+})();
