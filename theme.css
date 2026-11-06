@@ -323,50 +323,6 @@ body{
   transition:background .3s,color .3s;
 }
 
-body:has(> .app-page-footer){
-  display:flex;
-  flex-direction:column;
-  height:auto;
-  min-height:100dvh;
-}
-/* Give centered flex children a full-width base so their auto margins do not
-   shrink page wrappers to their max-content width before max-width applies. */
-body:has(> .app-page-footer) > :not(.app-page-footer):not(.fetch-status){
-  width:100%;
-  min-width:0;
-}
-body:has(> .app-page-footer) > #edge-stretch-wrap{
-  display:flex;
-  flex:1 0 auto;
-  flex-direction:column;
-  min-width:0;
-}
-body:has(> .app-page-footer) > #edge-stretch-wrap > *{
-  width:100%;
-  min-width:0;
-}
-
-.app-page-footer{
-  text-align:center;
-  padding:12px 20px 16px;
-  font-size:11px;
-  color:var(--mute);
-  border-top:1px solid var(--bdr);
-  flex-shrink:0;
-  margin-top:auto;
-  position:relative;
-  z-index:1;
-  font-family:var(--font-body);
-  letter-spacing:.04em;
-  background:var(--s0);
-}
-.app-page-footer-confidential{color:var(--bdrHi);margin-left:6px}
-
-body.page-sms-shell .frame-stage{bottom:60px}
-@media (max-width:768px){
-  body.page-sms-shell .frame-stage{bottom:72px}
-}
-
 h1,h2,h3{font-family:'Poppins',sans-serif;font-weight:700;color:var(--text-hi);line-height:1.2}
 /* Brand wordmark also follows the type stack (overrides per-page Poppins). */
 .jspl-brand-l1{font-family:var(--font-product)!important}
