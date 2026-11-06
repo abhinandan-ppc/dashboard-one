@@ -561,7 +561,7 @@ function yieldToBrowser() {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-async function allocate(rawRows, cityTable) {
+async function allocate(rawRows, cityTable, onProgress) {
   const rows = buildRows(rawRows, cityTable);
   const docks = buildDocks(rows);
   const unresolved = docks.filter(d => !d.resolved && !d.isForeign);
@@ -570,6 +570,17 @@ async function allocate(rawRows, cityTable) {
   // Unresolved and foreign docks are excluded from cross-customer clubbing but still get
   // single-customer FTL/partial attempts on their own.
   const soloOnly = unresolved.concat(foreignDocks);
+  const allDocks = clubbable.concat(soloOnly);
+  // Progress reads as "how much of the plan has been processed", not "how much tonnage
+  // landed on a truck" (LTL leftovers are expected and shouldn't cap the bar below 100%):
+  // it tracks pending MT drained from the docks, then is forced to 1 once every tier is
+  // done, regardless of how much of that MT actually made it onto a truck vs LTL.
+  const initialPendingMT = allDocks.reduce((s, d) => s + dockPending(d), 0) || 1;
+  function reportProgress(trucksBuilt) {
+    if (!onProgress) return;
+    const remaining = allDocks.reduce((s, d) => s + dockPending(d), 0);
+    onProgress(Math.min(0.98, (initialPendingMT - remaining) / initialPendingMT), trucksBuilt);
+  }
 
   const trucks = [];
   let truckSeq = 1;
@@ -676,11 +687,12 @@ async function allocate(rawRows, cityTable) {
       if (!c) break;
       const mode = c.docks.length > 1 ? c.res.mode + ' (clubbed, ' + round2(c.dist) + ' km)' : c.res.mode;
       commitTruck(tier, c.docks, c.docks.map((d, i) => [d, c.picks[i]]), mode);
-      if (++sinceYield >= 4) { sinceYield = 0; await yieldToBrowser(); }
+      if (++sinceYield >= 4) { sinceYield = 0; reportProgress(trucks.length); await yieldToBrowser(); }
     }
   }
 
   for (const tier of TRUCK_TIERS) await runTier(tier);
+  if (onProgress) onProgress(1, trucks.length);
 
   // Whatever remains is LTL — manual clubbing worklist, grouped by proximity for convenience.
   const ltl = [];
