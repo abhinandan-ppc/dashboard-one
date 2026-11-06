@@ -329,9 +329,11 @@ body:has(> .app-page-footer){
   height:auto;
   min-height:100dvh;
 }
+/* Give centered flex children a full-width base so their auto margins do not
+   shrink page wrappers to their max-content width before max-width applies. */
 body:has(> .app-page-footer) > :not(.app-page-footer){
+  width:100%;
   min-width:0;
-  max-width:100%;
 }
 body:has(> .app-page-footer) > #edge-stretch-wrap{
   display:flex;
@@ -340,8 +342,8 @@ body:has(> .app-page-footer) > #edge-stretch-wrap{
   min-width:0;
 }
 body:has(> .app-page-footer) > #edge-stretch-wrap > *{
+  width:100%;
   min-width:0;
-  max-width:100%;
 }
 
 .app-page-footer{
