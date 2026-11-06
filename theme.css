@@ -2989,18 +2989,16 @@ html[data-theme-style="neomorph"] .theme-range:active::-moz-range-thumb {
   box-shadow: inset 2px 2px 5px var(--neo-shadow-dark), inset -2px -2px 5px var(--neo-shadow-light) !important;
 }
 
-/* ── Edge-stretch overscroll cue (edge-stretch.js) ──────────────────────────
-   Two fixed glow bars at the very top/bottom of the viewport that grow and
-   fade in while a page is pulled past its scroll limit, then spring back on
-   release. Deliberately never transforms html/body/page content — see the
-   comment at the top of edge-stretch.js for why a transform-based stretch
-   broke fixed headers site-wide before. */
-.edge-stretch{
-  position:fixed;left:0;right:0;height:0;opacity:0;
-  pointer-events:none;z-index:9999;
-  transition:height .32s cubic-bezier(.34,1.56,.64,1),opacity .32s cubic-bezier(.34,1.56,.64,1);
+/* ── Edge-stretch overscroll effect (edge-stretch.js) ───────────────────────
+   edge-stretch.js moves every non-fixed/sticky child of <body> into this
+   wrapper and scales it (never <body>/<html> itself — see the comment at the
+   top of that file for why a transform on body broke every fixed header on
+   the site before). transform-origin and the live scaleY are set inline per
+   pull by the script; this just supplies the spring-back transition and
+   makes sure the wrapper never changes layout on its own. */
+#edge-stretch-wrap{
+  transform-origin:top;
+  transition:transform var(--edge-stretch-spring-ms,420ms) cubic-bezier(.34,1.56,.64,1);
 }
-.edge-stretch.is-pulling{transition:none}
-.edge-stretch-top{top:0;background:linear-gradient(to bottom,rgba(var(--primary-rgb),.4),transparent)}
-.edge-stretch-bottom{bottom:0;background:linear-gradient(to top,rgba(var(--primary-rgb),.4),transparent)}
-@media (prefers-reduced-motion:reduce){.edge-stretch{display:none}}
+#edge-stretch-wrap.is-pulling{transition:none}
+@media (prefers-reduced-motion:reduce){#edge-stretch-wrap{transition:none!important;transform:none!important}}

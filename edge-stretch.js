@@ -1,63 +1,76 @@
-// edge-stretch.js — a rubber-band "edge stretch" cue when the page is pulled
-// past its top or bottom scroll limit.
+// edge-stretch.js — iOS/Android-style content stretch on overscroll.
 //
-// This replaces the earlier Lenis-based smooth-scroll + overscroll-stretch
-// setup (removed site-wide). That setup had two problems: Lenis took over
-// native scrolling, and a previous overscroll-stretch attempt applied a CSS
-// transform to html/body to visually "stretch" the page. A transform on
-// html/body creates a new containing block for every position:fixed element
-// on the page (headers, modals, boot overlays) — they stop being fixed to
-// the viewport and start being fixed to the transformed box instead, which
-// is what broke dashboards across the site before and is why it was reverted.
-//
-// This version never transforms real page content. It only grows/fades two
-// thin fixed overlay bars at the very top/bottom of the viewport while the
-// user keeps pulling past the edge, then springs them back on release — a
-// purely additive visual cue with no layout or containing-block side effects.
+// Pulling past the top/bottom of the page stretches the page content itself
+// (like Android 12+'s edge-effect, or iOS's rubber-band), then springs back
+// on release. A plain `transform` on <body> would do this in one line, but
+// `transform` on an element creates a new containing block for every
+// position:fixed/absolute DESCENDANT of it — every fixed header, modal and
+// overlay on the page would stop being fixed to the viewport and start being
+// fixed to the transformed box instead. That is exactly what broke dashboards
+// site-wide the last time an overscroll-stretch effect was tried here (see
+// commit b70e94d). So instead of transforming <body>, this moves every
+// non-fixed/sticky child of <body> into one wrapper div and stretches only
+// that — fixed/sticky elements (headers, modals, the sync/boot overlays) are
+// left as direct children of <body>, completely untouched.
 (function(){'use strict';
-  var MAX_PULL = 70; // px of raw wheel/touch delta that maxes the effect out
-  var MAX_HEIGHT = 26; // px, how tall the glow bar gets at full pull
-  var root = document.scrollingElement || document.documentElement;
-  var topEl, bottomEl, amtTop = 0, amtBottom = 0;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  function ensureEls(){
-    if (topEl) return;
-    topEl = document.createElement('div'); topEl.className = 'edge-stretch edge-stretch-top'; topEl.setAttribute('aria-hidden', 'true');
-    bottomEl = document.createElement('div'); bottomEl.className = 'edge-stretch edge-stretch-bottom'; bottomEl.setAttribute('aria-hidden', 'true');
-    (document.body || document.documentElement).appendChild(topEl);
-    (document.body || document.documentElement).appendChild(bottomEl);
+  var MAX_PULL = 100;      // px of raw wheel/touch delta that maxes the effect out
+  var MAX_STRETCH = 0.14;  // peak extra length at full pull (14% taller)
+  var SPRING_MS = 420;
+  var root = document.scrollingElement || document.documentElement;
+  var wrap = null, amtTop = 0, amtBottom = 0;
+
+  function isExempt(el){
+    var p = getComputedStyle(el).position;
+    return p === 'fixed' || p === 'sticky';
   }
+  // Lazy: only touches the DOM the first time a pull actually happens, and
+  // only on pages that really scroll (see the scrollable() guard below) —
+  // a page like PM-Yard's full-viewport fixed body never calls this.
+  function ensureWrap(){
+    if (wrap) return wrap;
+    var body = document.body;
+    wrap = document.createElement('div');
+    wrap.id = 'edge-stretch-wrap';
+    Array.prototype.slice.call(body.children).forEach(function(el){
+      if (isExempt(el)) return;
+      wrap.appendChild(el);
+    });
+    body.insertBefore(wrap, body.firstChild);
+    return wrap;
+  }
+  function scrollable(){ return root.scrollHeight > root.clientHeight + 1; }
   function atTop(){ return root.scrollTop <= 0; }
   function atBottom(){ return Math.ceil(root.scrollTop + root.clientHeight) >= root.scrollHeight; }
-  function paint(){
-    ensureEls();
-    var tp = Math.min(1, amtTop / MAX_PULL), bp = Math.min(1, amtBottom / MAX_PULL);
-    topEl.style.height = Math.round(tp * MAX_HEIGHT) + 'px';
-    topEl.style.opacity = tp;
-    bottomEl.style.height = Math.round(bp * MAX_HEIGHT) + 'px';
-    bottomEl.style.opacity = bp;
-  }
-  function pulling(on){
-    if (!topEl) return;
-    topEl.classList.toggle('is-pulling', on);
-    bottomEl.classList.toggle('is-pulling', on);
+
+  function paint(instant){
+    ensureWrap();
+    wrap.classList.toggle('is-pulling', !!instant);
+    if (amtTop > 0) {
+      wrap.style.transformOrigin = 'top';
+      wrap.style.transform = 'scaleY(' + (1 + Math.min(1, amtTop / MAX_PULL) * MAX_STRETCH) + ')';
+    } else if (amtBottom > 0) {
+      wrap.style.transformOrigin = 'bottom';
+      wrap.style.transform = 'scaleY(' + (1 + Math.min(1, amtBottom / MAX_PULL) * MAX_STRETCH) + ')';
+    } else {
+      wrap.style.transform = '';
+    }
   }
   function release(){
     if (!amtTop && !amtBottom) return;
     amtTop = 0; amtBottom = 0;
-    pulling(false);
-    paint();
+    paint(false);
   }
 
   window.addEventListener('wheel', function(e){
+    if (!scrollable()) return;
     if (atTop() && e.deltaY < 0) {
-      ensureEls(); pulling(true);
       amtTop = Math.min(MAX_PULL, amtTop - e.deltaY * 0.5);
-      paint();
+      paint(true);
     } else if (atBottom() && e.deltaY > 0) {
-      ensureEls(); pulling(true);
       amtBottom = Math.min(MAX_PULL, amtBottom + e.deltaY * 0.5);
-      paint();
+      paint(true);
     } else if (amtTop || amtBottom) {
       release();
     }
@@ -68,17 +81,15 @@
     touchY = e.touches[0].clientY; touching = true;
   }, { passive: true });
   window.addEventListener('touchmove', function(e){
-    if (!touching) return;
+    if (!touching || !scrollable()) return;
     var y = e.touches[0].clientY, dy = y - touchY;
     touchY = y;
     if (atTop() && dy > 0) {
-      ensureEls(); pulling(true);
       amtTop = Math.min(MAX_PULL, amtTop + dy);
-      paint();
+      paint(true);
     } else if (atBottom() && dy < 0) {
-      ensureEls(); pulling(true);
       amtBottom = Math.min(MAX_PULL, amtBottom - dy);
-      paint();
+      paint(true);
     } else if (amtTop || amtBottom) {
       release();
     }
@@ -87,8 +98,10 @@
   window.addEventListener('touchcancel', release, { passive: true });
   // A real scroll happening (momentum, keyboard, anchor jump) means the pull
   // resolved into an actual scroll rather than an edge pull — snap back instead
-  // of leaving a stale glow showing.
+  // of leaving the content stretched.
   window.addEventListener('scroll', function(){
     if (amtTop || amtBottom) release();
   }, { passive: true, capture: true });
+
+  document.documentElement.style.setProperty('--edge-stretch-spring-ms', SPRING_MS + 'ms');
 })();
