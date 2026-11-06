@@ -56,21 +56,30 @@
   // file. Cache the derived result per (kind, file name, lastModified) in
   // sessionStorage so a refresh or re-visit skips the blocking parse when the
   // sheet hasn't changed; fall back to a full re-parse on any mismatch.
-  const SHEET_CACHE_PREFIX = 'truck-dashboard-sheet:';
+  // v2: bumped because v1 entries were saved with JSON.stringify dropping every
+  // Map field to '{}' — those stale entries still pass the cache-hit check
+  // below and must not be read back.
+  const SHEET_CACHE_PREFIX = 'truck-dashboard-sheet:v2:';
   const MAX_CACHE_ENTRY_CHARS = 2 * 1024 * 1024;
   function sheetCacheKey(kind, file) {
     return SHEET_CACHE_PREFIX + kind + '|' + (file.name || '') + '|' + (file.lastModified || 0);
   }
+  // rateModel (byDestination/byState/byZone) and the SOB model (states) carry
+  // Map fields. Plain JSON.stringify drops them to '{}' with no error, so a
+  // page reload that hit this cache got a rateModel/sob whose lookups silently
+  // stopped matching anything — rebuilt here by tagging/reviving Maps explicitly.
+  function sheetCacheReplacer(key, value) { return value instanceof Map ? { __map: [...value.entries()] } : value; }
+  function sheetCacheReviver(key, value) { return value && Array.isArray(value.__map) ? new Map(value.__map) : value; }
   function sheetCacheGet(kind, file) {
     try {
       const raw = sessionStorage.getItem(sheetCacheKey(kind, file));
       if (!raw) return null;
-      return JSON.parse(raw);
+      return JSON.parse(raw, sheetCacheReviver);
     } catch { return null; }
   }
   function sheetCacheSet(kind, file, value) {
     try {
-      const raw = JSON.stringify(value);
+      const raw = JSON.stringify(value, sheetCacheReplacer);
       if (raw.length > MAX_CACHE_ENTRY_CHARS) return;
       sessionStorage.setItem(sheetCacheKey(kind, file), raw);
     } catch { /* storage unavailable or quota exceeded: skip cache */ }
@@ -620,7 +629,7 @@ function renderDbStrip() {
 
   function renderSummary() { return buildSummary(); }
   function buildSummary() {
-    const pass = planFilterFn(meta);
+    const meta = soMeta(), pass = planFilterFn(meta), map = new Map(), result = state.result;
     const add = (city, party, col, mt, so, val) => {
       if (!(mt > 0) || !pass(so)) return;
       const { zone, state: st } = placeOfCity(city), key = [zone, st, city, party].join('|'), cell = city + '\u0001' + party;
