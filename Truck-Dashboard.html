@@ -233,9 +233,10 @@ tbody tr:nth-child(even):not(.state-row):not(:hover){background:rgba(var(--prima
    spaces and was wrapping to 2 lines while every other column's entry (SO
    codes, numbers, dates — none of which contain a breakable space) stayed on
    1, which pushed every entry below that point out of alignment with its own
-   SO/item row. One line each, no exceptions — the table already scrolls
-   horizontally for anything that doesn't fit. */
-.so-line{white-space:nowrap;line-height:1.6}
+  SO/item row. SO/item is smaller monospace text, so its line-height must not
+  shrink with its font size. One shared 20.8px row rhythm keeps each entry in
+  every column aligned; the table already scrolls horizontally for long text. */
+.so-line{white-space:nowrap;line-height:20.8px}
 .so-line+.so-line{margin-top:1px}
 .so-line .club-badge{margin-right:2px}
 /* Column-width guidance: table-layout stays auto (so-line nowrap above is what
