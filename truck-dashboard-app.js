@@ -613,7 +613,7 @@ function renderDbStrip() {
       const entries = t.lines.flatMap((l, li) => l.soBreakdown.map(([so, val]) => ({ li, so, val, customer: l.customer })));
       const perSo = (render, cls = '') => '<div class="' + cls + '">' + entries.map(e => '<div class="so-line club-' + e.li + '">' + (clubbed ? '<b class="club-badge">' + String.fromCharCode(65 + e.li) + '</b> ' : '') + render(e) + '</div>').join('') + '</div>';
       let stateHead = '';
-      if (!idx || trucks[idx - 1].stateLabel !== t.stateLabel) stateHead = '<tr class="state-row"><td colspan="18"><b>' + esc(t.stateLabel) + '</b> <span class="muted">(' + stateCounts.get(t.stateLabel) + ' trucks)</span></td></tr>';
+      if (!idx || trucks[idx - 1].stateLabel !== t.stateLabel) { const n = stateCounts.get(t.stateLabel); stateHead = '<tr class="state-row"><td colspan="18"><b>' + esc(t.stateLabel) + '</b> <span class="muted">(' + n + ' truck' + (n === 1 ? '' : 's') + ')</span></td></tr>'; }
       const customers = clubbed ? t.lines.map((l, i) => '<div class="party club-' + i + '"><b class="club-badge">' + String.fromCharCode(65 + i) + '</b> ' + esc(l.customer) + '</div>').join('') : t.lines.map(l => esc(l.customer)).join(' + ');
       const cities = clubbed ? t.lines.map((l, i) => '<div class="party club-' + i + '"><b class="club-badge">' + String.fromCharCode(65 + i) + '</b> ' + esc(l.city) + '</div>').join('') : [...new Set(t.lines.map(l => l.city))].map(esc).join(' / ');
       const fill = Math.min(100, Math.round(t.totalMT / (t.tier === '40MT' ? 40 : t.tier === '32MT' ? 32 : 28) * 100));
