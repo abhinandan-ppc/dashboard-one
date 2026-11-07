@@ -74,7 +74,7 @@ body.col-resizing{cursor:col-resize;user-select:none}
 .brand .subtitle{color:var(--dim);font-size:13px;max-width:70ch}
 .mark{font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--mute);text-transform:uppercase}
 .page-truck{--truck-stack:18px;--truck-ink:var(--text);--truck-surface:var(--s1);--truck-surface-2:var(--s2);--truck-outline:var(--bdr);--truck-outline-strong:var(--bdrHi)}
-@media (min-width:769px){.page-truck .header-spacer{height:103px!important}}
+@media (min-width:769px){.page-truck .header-spacer{height:112px!important}}
 .page-truck .truck-brand{display:flex;align-items:center;gap:14px;flex:1 1 480px;min-width:0}
 .page-truck .truck-brand .jspl-logo{width:auto!important;height:30px!important;max-width:102px!important;object-fit:contain!important}
 .page-truck .truck-brand-copy{min-width:0}
@@ -173,13 +173,13 @@ body.col-resizing{cursor:col-resize;user-select:none}
 
 /* ── Pills / badges ─────────────────────────────────────────────────────── */
 .pill{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
-.pill.odc{background:var(--warning-container);color:var(--warning);box-shadow:0 0 10px rgba(var(--warning-rgb),0.3)}
-.pill.nonodc{background:var(--good-container);color:var(--good);box-shadow:0 0 10px rgba(var(--good-rgb),0.3)}
-.pill.mixed{background:var(--accent-container);color:var(--accent);box-shadow:0 0 10px rgba(var(--accent-rgb),0.3)}
-.pill.unresolved{background:var(--critical-container);color:var(--critical);box-shadow:0 0 10px rgba(var(--critical-rgb),0.3)}
-.pill.tier40{background:var(--good-container);color:var(--good);box-shadow:0 0 10px rgba(var(--good-rgb),0.3)}
-.pill.tier32{background:var(--accent-container);color:var(--accent);box-shadow:0 0 10px rgba(var(--accent-rgb),0.3)}
-.pill.tier28{background:var(--warning-container);color:var(--warning);box-shadow:0 0 10px rgba(var(--warning-rgb),0.3)}
+.pill.odc{background:var(--warning-container);color:var(--warning);box-shadow:0 0 10px color-mix(in srgb,var(--warning) 30%,transparent)}
+.pill.nonodc{background:var(--good-container);color:var(--good);box-shadow:0 0 10px color-mix(in srgb,var(--good) 30%,transparent)}
+.pill.mixed{background:var(--accent-container);color:var(--accent);box-shadow:0 0 10px color-mix(in srgb,var(--accent) 30%,transparent)}
+.pill.unresolved{background:var(--critical-container);color:var(--critical);box-shadow:0 0 10px color-mix(in srgb,var(--critical) 30%,transparent)}
+.pill.tier40{background:var(--good-container);color:var(--good);box-shadow:0 0 10px color-mix(in srgb,var(--good) 30%,transparent)}
+.pill.tier32{background:var(--accent-container);color:var(--accent);box-shadow:0 0 10px color-mix(in srgb,var(--accent) 30%,transparent)}
+.pill.tier28{background:var(--warning-container);color:var(--warning);box-shadow:0 0 10px color-mix(in srgb,var(--warning) 30%,transparent)}
 .club-badge{display:inline-block;min-width:16px;padding:0 4px;border-radius:4px;font-size:10px;font-weight:700;
   color:var(--s0);background:var(--club-0);text-align:center}
 .club-1{color:var(--club-1)} .club-2{color:var(--club-2)}
@@ -394,7 +394,7 @@ tbody tr:nth-child(even):not(.state-row):not(:hover){background:rgba(var(--prima
       content:'';position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;
       border-radius:0 0 var(--radius-lg,12px) var(--radius-lg,12px);
       background:radial-gradient(circle at 30% 20%,rgba(var(--primary-rgb),0.3) 0,transparent 50%),
-                      radial-gradient(circle at 70% 80%,rgba(var(--accent-rgb),0.2) 0,transparent 50%);
+              radial-gradient(circle at 70% 80%,color-mix(in srgb,var(--accent) 20%,transparent) 0,transparent 50%);
       opacity:0;
       transition:opacity .3s ease;
     }
