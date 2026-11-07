@@ -1148,6 +1148,11 @@ test('Truck Dashboard loads the shared overscroll and pointer effects', async ()
   assert.match(truck, /<script src="glow\.js"><\/script>/);
 });
 
+test('Truck Dashboard SO/item entries share a fixed row rhythm across columns', async () => {
+  const truck = await read('Truck-Dashboard.html');
+  assert.match(truck, /\.so-line\{white-space:nowrap;line-height:20\.8px\}/);
+});
+
 test('standalone dashboard headers opt into the shared hub chrome', async () => {
   const theme = await read('theme.css');
   assert.match(theme, /\.app-header-shell\s*\{[\s\S]*?position:fixed!important/);
