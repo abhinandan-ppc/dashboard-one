@@ -185,10 +185,24 @@ body.col-resizing{cursor:col-resize;user-select:none}
 .club-1{color:var(--club-1)} .club-2{color:var(--club-2)}
 
 /* ── Tables ─────────────────────────────────────────────────────────────── */
-.table-scroll{overflow:auto;border:1px solid var(--bdr);border-radius:var(--radius-md,10px);max-width:100%;background:var(--s0)}
+/* `.table-scroll` had overflow:auto but no height limit, so it only ever grew
+   to fit every row instead of actually scrolling — which meant the *page*
+   scrolled instead, and thead's position:sticky (which sticks relative to the
+   nearest ancestor that actually establishes a scroll container, i.e. this
+   box) had nothing to stick to and just scrolled away with everything else.
+   (A pure-CSS "scroll X only, let Y escape to the page" doesn't exist either:
+   per the overflow spec, if one axis is auto and the other visible, the
+   visible one computes to auto too — there's no way to keep the sticky
+   context off this box while still getting horizontal scroll from it.) Giving
+   it a real max-height makes it a genuine scroll panel, so the sticky header
+   now has something real to stick to: the top of this panel, as you scroll
+   the body beneath it — the standard frozen-header-plus-scrollable-body
+   pattern, not a page-sticky one. */
+.table-scroll{overflow:auto;max-height:min(70vh,640px);border:1px solid var(--bdr);border-radius:var(--radius-md,10px);max-width:100%;background:var(--s0)}
 table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
 thead th{position:sticky;top:0;z-index:2;background:var(--s2);text-align:left;font-weight:600;font-size:11px;
-  letter-spacing:.04em;text-transform:uppercase;color:var(--dim);padding:9px 10px;border-bottom:1px solid var(--bdrHi);white-space:nowrap}
+  letter-spacing:.04em;text-transform:uppercase;color:var(--dim);padding:9px 10px;border-bottom:1px solid var(--bdrHi);white-space:nowrap;
+  box-shadow:0 1px 0 var(--bdrHi)}
 thead th.num{text-align:right}
 tbody td{padding:7px 10px;border-bottom:1px solid var(--bdr);vertical-align:top}
 tbody tr:last-child td{border-bottom:0}
@@ -198,7 +212,12 @@ tbody tr:hover{background:var(--s2);box-shadow:inset 0 0 0 1px rgba(var(--primar
 .page-truck input[type=checkbox]{accent-color:var(--primary);width:16px;height:16px;vertical-align:middle}
 tfoot td{padding:9px 10px;border-top:1px solid var(--bdrHi);font-weight:650;background:var(--s2)}
 tfoot.total{font-weight:650}
-.state-row td{background:var(--s3);font-size:12px}
+/* Docks right under the (also sticky) thead — stacked sticky elements just
+   need the second one's top offset to clear the first one's height — so the
+   state you're looking at stays labelled while scrolling through a long
+   tier instead of only showing once at the very top of the panel. */
+.state-row td{background:var(--s3);font-size:12px;position:sticky;top:35px;z-index:1}
+tbody tr:nth-child(even):not(.state-row):not(:hover){background:rgba(var(--primary-rgb),.025)}
 .row-placed{background:var(--good-container)}
 .sum-row{cursor:pointer}
 .sum-selected{background:var(--primary-bg)!important}
