@@ -1142,6 +1142,12 @@ test('Order Status loading skeleton stays inside a horizontal scroller', async (
   assert.match(orderStatus, /<div className="data-table-wrap">\s*<table className="skeleton-table">/);
 });
 
+test('Truck Dashboard loads the shared overscroll and pointer effects', async () => {
+  const truck = await read('Truck-Dashboard.html');
+  assert.match(truck, /<script src="edge-stretch\.js"><\/script>/);
+  assert.match(truck, /<script src="glow\.js"><\/script>/);
+});
+
 test('standalone dashboard headers opt into the shared hub chrome', async () => {
   const theme = await read('theme.css');
   assert.match(theme, /\.app-header-shell\s*\{[\s\S]*?position:fixed!important/);

@@ -391,6 +391,9 @@ a.card {
 a.card:hover {
   transform: perspective(var(--tilt-perspective, 800px)) translateY(-2px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg)) !important;
 }
+@media (prefers-reduced-motion:reduce){
+  .kpi-card:hover,.stat-card:hover,.kcard:hover,.kpi:hover,.stat:hover,.card-lift:hover,a.card:hover{transform:none!important}
+}
 
 /* ── Header entrance — a small, tasteful one-time lift when a page's
    header first mounts. Applied via .header-enter so no markup changes
@@ -3004,8 +3007,7 @@ html[data-theme-style="neomorph"] .theme-range:active::-moz-range-thumb {
    makes sure the wrapper never changes layout on its own. */
 #edge-stretch-wrap{
   transform-origin:top;
-  will-change:transform;
   transition:transform var(--edge-stretch-spring-ms,380ms) cubic-bezier(.22,1,.36,1);
 }
-#edge-stretch-wrap.is-pulling{transition:none}
+#edge-stretch-wrap.is-pulling{transition:none;will-change:transform}
 @media (prefers-reduced-motion:reduce){#edge-stretch-wrap{transition:none!important;transform:none!important}}

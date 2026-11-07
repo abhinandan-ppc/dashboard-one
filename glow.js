@@ -57,6 +57,8 @@
   }
 
   var activeElements = [];
+  var motionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  function prefersReducedMotion() { return !!(motionQuery && motionQuery.matches); }
 
   /* ── Tilt state ── */
   var tiltElements = [];
@@ -64,6 +66,38 @@
   var tiltMouseX = 0;
   var tiltMouseY = 0;
   var TILT_MAX = 6; // degrees
+
+  function clearPointerEffects() {
+    activeElements.forEach(function(el) {
+      el.style.setProperty('--glow-edge-opacity', '0');
+      el.style.setProperty('--glow-sheen-opacity', '0');
+    });
+    tiltElements.forEach(function(el) {
+      el.style.setProperty('--tilt-x', '0deg');
+      el.style.setProperty('--tilt-y', '0deg');
+    });
+  }
+
+  function clearMotionEffects() {
+    clearPointerEffects();
+    Array.prototype.slice.call(document.querySelectorAll('.glow-ripple')).forEach(function(el) {
+      el.remove();
+    });
+  }
+
+  if (motionQuery) {
+    var onMotionPreferenceChange = function(e) {
+      if (e.matches) clearMotionEffects();
+    };
+    if (motionQuery.addEventListener) motionQuery.addEventListener('change', onMotionPreferenceChange);
+    else if (motionQuery.addListener) motionQuery.addListener(onMotionPreferenceChange);
+  }
+  window.addEventListener('pointerup', function(e) {
+    if (e.pointerType === 'touch') clearPointerEffects();
+  }, { passive: true });
+  window.addEventListener('pointercancel', function(e) {
+    if (e.pointerType === 'touch') clearPointerEffects();
+  }, { passive: true });
 
   function updateActiveList() {
     activeElements = Array.prototype.slice.call(document.querySelectorAll('.has-glow-fx'));
@@ -103,6 +137,7 @@
 
     // Ripple click interaction
     el.addEventListener('pointerdown', function(e) {
+      if (prefersReducedMotion()) return;
       // Don't intercept clicks on inputs, toggles or select boxes
       var targetTag = e.target.tagName ? e.target.tagName.toLowerCase() : '';
       if (targetTag === 'input' || targetTag === 'select' || targetTag === 'textarea') return;
@@ -177,6 +212,7 @@
   // Global mouse tracker with edge detection and proximity falloff
   var ticking = false;
   window.addEventListener('pointermove', function(e) {
+    if (prefersReducedMotion() || e.pointerType === 'touch') return;
     if (ticking) return;
     ticking = true;
 
@@ -235,6 +271,7 @@
 
   // Separate pointermove listener for tilt (shares the same event, lighter weight)
   window.addEventListener('pointermove', function(e) {
+    if (prefersReducedMotion() || e.pointerType === 'touch') return;
     tiltMouseX = e.clientX;
     tiltMouseY = e.clientY;
     updateTilt();
