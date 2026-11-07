@@ -200,7 +200,11 @@ body.col-resizing{cursor:col-resize;user-select:none}
    pattern, not a page-sticky one. */
 .table-scroll{overflow:auto;max-height:min(70vh,640px);border:1px solid var(--bdr);border-radius:var(--radius-md,10px);max-width:100%;background:var(--s0)}
 table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
-thead th{position:sticky;top:0;z-index:2;background:var(--s2);text-align:left;font-weight:600;font-size:11px;
+/* var(--s2)/var(--s3) are glass tokens — deliberately translucent, meant to
+   always be paired with a backdrop-filter blur (see .app-header-shell). Used
+   bare on a sticky element, rows scrolling underneath show through readably
+   instead of blurred, which is what looked "odd" here. */
+thead th{position:sticky;top:0;z-index:2;background:var(--s2);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);text-align:left;font-weight:600;font-size:11px;
   letter-spacing:.04em;text-transform:uppercase;color:var(--dim);padding:9px 10px;border-bottom:1px solid var(--bdrHi);white-space:nowrap;
   box-shadow:0 1px 0 var(--bdrHi)}
 thead th.num{text-align:right}
@@ -216,7 +220,7 @@ tfoot.total{font-weight:650}
    need the second one's top offset to clear the first one's height — so the
    state you're looking at stays labelled while scrolling through a long
    tier instead of only showing once at the very top of the panel. */
-.state-row td{background:var(--s3);font-size:12px;position:sticky;top:35px;z-index:1}
+.state-row td{background:var(--s3);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);font-size:12px;position:sticky;top:35px;z-index:1}
 tbody tr:nth-child(even):not(.state-row):not(:hover){background:rgba(var(--primary-rgb),.025)}
 .row-placed{background:var(--good-container)}
 .sum-row{cursor:pointer}
