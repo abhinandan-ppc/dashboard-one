@@ -147,4 +147,6 @@ This project has no build step or npm dependencies — it's static HTML plus Ver
 
 ### ☁️ Deployment
 
-Push to the connected branch — Vercel builds and deploys automatically (no CI/CD workflow files needed; the previous GitHub Pages workflow has been removed).
+Push to a connected branch — Vercel handles deployment automatically (`dev` for previews and `main` for production). GitHub Actions runs the `CI / Quality checks` workflow on pull requests and pushes to those branches; it runs tests, HTML/JavaScript checks, and the Vercel deployment-readiness check without deploying or requiring Vercel secrets.
+
+To block merges until CI passes, add `CI / Quality checks` as a required status check in the GitHub branch protection rules for `dev` and `main`.
