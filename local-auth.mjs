@@ -7,7 +7,7 @@
 // service-account.json instead of an env var. This file bridges both gaps
 // with zero dependencies:
 //
-//   node local-auth.mjs          → http://127.0.0.1:3000  (default port;
+//   node local-auth.mjs          → http://127.0.0.1:3100  (default port;
 //       override with --port N or PORT=… — browse the dashboards through
 //       THIS url so the pages' relative fetch('/api/…') reaches this server)
 //     • loads service-account.json for the other dashboard proxies and mounts
@@ -98,11 +98,8 @@ if (argv.includes('--env')) {
 const sa = await loadServiceAccount();
 process.env.SHEETS_SA_CLIENT_EMAIL = sa.client_email;
 process.env.SHEETS_SA_PRIVATE_KEY = sa.private_key;
-if (process.env.DRIVE_SCRIPT_URL && process.env.DRIVE_SCRIPT_SECRET) {
-  console.log('local-auth: Google Drive database credentials loaded.');
-} else {
-  console.warn('local-auth: Google Drive data is not configured; set DRIVE_SCRIPT_URL and DRIVE_SCRIPT_SECRET in .env.local.');
-}
+// The Drive proxies use the service account above. The optional legacy
+// Apps Script credentials are only used by a separate Vite checkout.
 
 // ── The same Edge handlers Vercel runs — imported, not re-implemented ──────
 const API_ROUTES = {
@@ -115,7 +112,7 @@ const API_ROUTES = {
 
 // Truck dashboard's source tree is a separate Vite app. Mount its Drive database
 // API in the root local server too, so both the ported static page and the React
-// app can fetch the same Drive XLSX/native Google Sheets on localhost:3000.
+// app can fetch the same Drive XLSX/native Google Sheets on localhost:3100.
 // The React app's drive.mjs is optional: this checkout may not include the
 // separate Vite tree, and its absence must not stop the other dashboards from
 // being served. When it is missing, /api/database falls through to the
@@ -194,6 +191,10 @@ async function serveStatic(pathname, res) {
     return send(res, 400, { 'Content-Type': 'text/plain' }, 'Bad request');
   }
   if (rel === '/') rel = '/index.html';
+  // The credential must never be served to a browser, even on localhost.
+  if (/service-account.*\.json$/i.test(rel) || /(^|\/)\.env(?:\.|$)/i.test(rel)) {
+    return send(res, 403, { 'Content-Type': 'text/plain' }, 'Forbidden');
+  }
   const file = path.normalize(path.join(ROOT, rel));
   // Traversal guard: never serve anything above the repo root.
   if (!file.startsWith(ROOT + path.sep)) {
@@ -235,7 +236,7 @@ const server = createServer(async (req, res) => {
     }
     // Check Vercel-style routes before static serving. On VS Code Live Preview
     // these paths are shadowed by physical files under /api, so route API calls
-    // through this server while it runs on port 3000.
+    // through this server while it runs on port 3100.
     const databasePath = pathname.replace(/\/+$/, '');
     if (handleDatabase && (databasePath === '/api/database' || databasePath === '/api/database/file')) {
       url.pathname = databasePath;
@@ -263,8 +264,12 @@ const server = createServer(async (req, res) => {
     // answerable by the production proxy. A named file download needs the
     // Drive folder listing that only drive.mjs has, so that one 404s below
     // rather than silently returning the index JSON.
-    if (!handleDatabase && databasePath === '/api/database' && !url.searchParams.has('name')) {
-      return await serveApi(new URL('/api/truckdb-proxy' + url.search, url), res);
+    if (!handleDatabase && (databasePath === '/api/database' || databasePath === '/api/database/file')) {
+      const kind = url.searchParams.get('kind');
+      if (!kind && (url.searchParams.has('name') || url.searchParams.has('file') || url.searchParams.has('id'))) {
+        return send(res, 400, { 'Content-Type': 'application/json; charset=utf-8' }, JSON.stringify({ error: 'Use ?kind=plan|fr|sob|delay for local Drive files.' }));
+      }
+      return await serveApi(new URL('/api/truckdb-proxy' + (kind ? '?kind=' + encodeURIComponent(kind) : ''), url), res);
     }
     if (pathname in API_ROUTES) return await serveApi(url, res);
 
@@ -287,16 +292,15 @@ const server = createServer(async (req, res) => {
 });
 
 const portFlag = argv.indexOf('--port');
-const port = (portFlag !== -1 && Number(argv[portFlag + 1])) || Number(process.env.PORT) || 3000;
+const port = (portFlag !== -1 && Number(argv[portFlag + 1])) || Number(process.env.PORT) || 3100;
 
 server.on('error', (err) => {
   if (err && err.code === 'EADDRINUSE') {
     console.error(`local-auth: port ${port} is already in use.`);
     console.error('  Stop whatever is listening there, or pick another port:');
     console.error(`    node local-auth.mjs --port ${port + 1}`);
-    console.error('  Then browse the dashboards through THAT url — the pages call');
-    console.error("  fetch('/api/…') on their own origin, so the server hosting them");
-    console.error('  must also be this one.');
+    console.error('  VS Code Live Preview calls the service-account server on port 3100.');
+    console.error('  Stop the existing listener before restarting npm run dev.');
     process.exit(1);
   }
   throw err;
@@ -306,6 +310,6 @@ server.listen(port, '127.0.0.1', () => {
   console.log('local-auth: service account →', sa.client_email);
   console.log(`local-auth: dashboards      → http://127.0.0.1:${port}/`);
   console.log('local-auth: sheet proxies   → /api/ebtp-proxy  /api/balance-heat-proxy  /api/zstk-proxy  /api/autobtr-proxy');
-  console.log('local-auth: truck database  → /api/database  /api/database/file (configure DRIVE_SCRIPT_URL and DRIVE_SCRIPT_SECRET)');
+  console.log('local-auth: truck database  → /api/truckdb-proxy  /api/database');
   console.log('local-auth: Ctrl+C to stop');
 });

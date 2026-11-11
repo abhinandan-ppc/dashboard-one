@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="dashboard-api-url.js"></script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <script src="theme-boot.js"></script>
@@ -5043,7 +5044,7 @@ readHubSegmentCache().then(cached=>{ if(cached&&cached.csvText)loadSegmentCsvInt
    The old XHR / iframe / public CORS-proxy fallback chain was removed — the
    sheet is private, so only the service account can read it. ── */
 function tryApiProxy(){
-  return fetch('/api/ebtp-proxy',{cache:'no-store',credentials:'same-origin'})
+  return fetch(dashboardApiUrl('/api/ebtp-proxy'),{cache:'no-store',credentials:'same-origin'})
     .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
 }
 async function fetchEbtpDirectly(onStep){

@@ -17,7 +17,7 @@
   const toCsv = window.TruckFormat.toCsv;
   const allDims = window.TruckFormat.allDimensionEntries;
   const cityTable = window.INDIA_CITY_TABLE;
-  const localDataApi = 'http://127.0.0.1:3000';
+  const localDataApi = 'http://127.0.0.1:3100';
   const KINDS = [
     { kind: 'fr', label: 'Freight rate', token: '-FR' },
     { kind: 'sob', label: 'Transporter SOB', token: '-SOB' },
@@ -349,7 +349,7 @@
       // Friendly hint when running on localhost without the sheet server.
       let hint = err.message;
       if (err instanceof TypeError && /fetch/.test(err.message)) {
-        hint = 'Sheet data service not reachable. Run `node local-auth.mjs` (or `npm run dev`) and open http://127.0.0.1:3000/Truck-Dashboard.html';
+        hint = 'Sheet data service not reachable. Run `npm run dev` alongside VS Code Live Preview, or open http://127.0.0.1:3100/Truck-Dashboard.html';
       }
       state.db = { index: null, kinds: {}, at: new Date(), error: hint };
     }

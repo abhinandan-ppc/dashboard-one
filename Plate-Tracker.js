@@ -280,7 +280,7 @@ async function readLiveEbtpCsv() {
   if (location.protocol === 'file:') {
     throw new Error('Live sheets require opening Plate Tracker through the authenticated dashboard server.');
   }
-  const response = await fetch('/api/ebtp-proxy', { cache: 'no-store', credentials: 'same-origin' });
+  const response = await fetch(dashboardApiUrl('/api/ebtp-proxy'), { cache: 'no-store', credentials: 'same-origin' });
   if (!response.ok) {
     throw new Error(`EBTP request failed (HTTP ${response.status}). Check the live EBTP proxy and service-account access.`);
   }
@@ -298,7 +298,7 @@ async function loadLiveServiceSheets() {
   try {
     const [ebtpCsv, balanceHeatResponse] = await Promise.all([
       readLiveEbtpCsv(),
-      fetch('/api/balance-heat-proxy', { cache: 'no-store', credentials: 'same-origin' }),
+      fetch(dashboardApiUrl('/api/balance-heat-proxy'), { cache: 'no-store', credentials: 'same-origin' }),
     ]);
     if (!balanceHeatResponse.ok) {
       throw new Error(`Balance Heat request failed (HTTP ${balanceHeatResponse.status}). Check the live Balance Heat proxy and service-account access.`);

@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en" data-theme="dark">
 <head>
+<script src="dashboard-api-url.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Jindal Steel Angul &middot; Dashboard One</title>
@@ -1337,6 +1338,7 @@ var DEFAULTS = [
   {id:"sms-heat-planner", name:"SMS Heat Planner", path:"SMS-Heat-Planner.html", icon:"flame"},
   {id:"rake-planner",     name:"Rake Planner",      path:"Rake-Planner.html",     icon:"train"},
   {id:"pm-yard",          name:"PM Yard",           path:"PM-Yard.html",         icon:"warehouse"},
+  {id:"plate-tracker",    name:"Plate Tracker",     path:"Plate-Tracker.html",   icon:"layers"},
   {id:"plate-tagging-tool", name:"Plate Tagging Tool", path:"Plate-Tagging-Tool.html", icon:"tag"},
   {id:"vdo-generator",     name:"VDO Generator",     path:"VDO-Generator.html",    icon:"clock"},
   {id:"grade-clubbing-matrix", name:"Grade Clubbing Matrix", path:"Grade-Clubbing-Matrix.html", icon:"layoutDashboard"},
@@ -1353,14 +1355,14 @@ function loadItems(){
     // AI Chat was retired — prune it from anyone's already-saved layout.
     // Retired/hidden pages: AI Chat was removed, and the SMS Heat Planner Daily/Monthly
     // tiles are folded into the single parent "SMS Heat Planner" card.
-    var RETIRED_IDS = { "ai-chat":1, "sms-heat-planner-daily":1, "sms-heat-planner-monthly":1, "plate-tracker":1 };
+    var RETIRED_IDS = { "ai-chat":1, "sms-heat-planner-daily":1, "sms-heat-planner-monthly":1 };
     var pruned = parsed.filter(function(it){ return !it || !RETIRED_IDS[it.id]; });
     var seen = new Set(pruned.map(function(it){ return it && it.id; }).filter(Boolean));
     var merged = pruned.slice();
     DEFAULTS.forEach(function(def){
       if(!seen.has(def.id)) merged.push(def);
     });
-    if(merged.length !== parsed.length) saveItems(merged);
+    if(merged.length !== parsed.length || pruned.length !== parsed.length) saveItems(merged);
     return merged;
   }catch(e){
     saveItems(DEFAULTS);
@@ -2186,7 +2188,7 @@ window.addEventListener('message', function(e){
     // fetchAndCacheEBTP() is idempotent: a no-op if already cached (unless
     // force), and shares one in-flight promise if already fetching.
     if(e.data && e.data.type === 'request-ebtp-fetch'){
-      try{ fetchAndCacheEBTP(!!e.data.force); }catch(err){}
+      try{ if(window.__hubSyncSheet) window.__hubSyncSheet('ebtp', !!e.data.force); }catch(err){}
       try{ fetchAndCacheSegment(!!e.data.force); }catch(err){}
     }
     if(e.source === pageFrame.contentWindow && e.data && e.data.type === 'request-live-plate-tracker-refresh'){
@@ -2944,9 +2946,7 @@ setStyle(readStoredStyle());
     if(stageEl) stageEl.style.display = '';
     if(loginWrap) loginWrap.style.display = 'none';
     if(userMenu) userMenu.style.display = 'none';
-    // fetchAndCacheEBTP() is defined in a <script> further down the page —
-    // defer to the next tick so that script has finished executing first.
-    setTimeout(function(){ try{ fetchAndCacheEBTP(); }catch(e){} try{ fetchAndCacheSegment(); }catch(e){} }, 0);
+    setTimeout(function(){ try{ fetchAndCacheSegment(); }catch(e){} }, 0);
     return;
   }
 
@@ -2979,7 +2979,6 @@ setStyle(readStoredStyle());
       saveItems(items);
       render();
     }
-    try{ fetchAndCacheEBTP(); }catch(e){}
     try{ fetchAndCacheSegment(); }catch(e){}
   }).catch(function(){
     if(stageEl) stageEl.style.display = 'none';
@@ -3174,7 +3173,7 @@ function tryProxyFetch(proxyUrl, json){
   });
 }
 function tryApiProxy(){
-  return fetch('/api/ebtp-proxy', { cache: 'no-store', credentials: 'same-origin' }).then(function(r){
+  return fetch(dashboardApiUrl('/api/ebtp-proxy'), { cache: 'no-store', credentials: 'same-origin' }).then(function(r){
     if(!r.ok) throw new Error('HTTP ' + r.status);
     return r.text();
   });
@@ -3882,7 +3881,7 @@ function fetchAndCacheSegment(force){
     if(src === 'ebtp'){
       if(typeof fetchAndCacheEBTP !== 'function') return Promise.reject(new Error('EBTP fetcher not loaded'));
       // fetchAndCacheEBTP already drives the shared #fetchStatus popup itself.
-      return fetchAndCacheEBTP(!!force).then(function(res){
+      return fetchAndCacheEBTP(true).then(function(res){
         if(res && res.error) throw new Error(res.error);
         return { rows: res && res.rowCount };
       });
@@ -3894,7 +3893,7 @@ function fetchAndCacheSegment(force){
       : '/api/autobtr-proxy';
     fetchStatusShow('fetching', label);
     fetchStatusLog('→ Requesting ' + label + '…', label);
-    return fetch(endpoint, { cache: 'no-store' }).then(function(r){
+    return fetch(dashboardApiUrl(endpoint), { cache: 'no-store' }).then(function(r){
       if(src === 'zstk'){
         return r.text().then(function(t){
           var data;
