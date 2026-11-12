@@ -51,6 +51,21 @@ scripts/diag-plate-charts.mjs
 test-all-pages.mjs
 test-simple.mjs
 
+# One-off local repair, screenshot, simulation, and smoke diagnostics.
+check_load.py
+fix_pill.py
+fix_sync_pill.py
+fix_sync_pill2.py
+scripts/list-truck-folder.mjs
+scripts/measure-header.mjs
+scripts/shoot-page.mjs
+scripts/shoot-theme-panel.mjs
+scripts/sim-plate-tagging-zstk.mjs
+scripts/sim-plate-tagging-zstk-negctl.mjs
+scripts/smoke-plate-tracker.mjs
+scripts/smoke-plate-tracker-stock.mjs
+scripts/syntax-check-page.mjs
+
 # Local agent/tool state and screenshots.
 .claude-flow/
 .freebuff/
