@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,500;6..12,600;6..12,700;6..12,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 /* ─── Type system ───────────────────────────────────────────────────────────
    Product Sans is Google's proprietary brand font and cannot be legally
@@ -3212,4 +3212,109 @@ html[data-theme-style="neomorph"] :is(button,a,input,select,textarea,[tabindex])
   outline:2px solid var(--primary) !important;
   outline-offset:3px;
   box-shadow:var(--shadow-inset) !important;
+}
+
+/* ── Theme motion languages ────────────────────────────────────────────────
+   Classic is a calibrated production instrument: surfaces arrive on a short,
+   directional rail. Neomorphism is tactile: surfaces settle into the canvas
+   with a soft, spring-like scale response. Both avoid layout properties. */
+@keyframes classic-system-reveal{
+  from{opacity:0;transform:translateX(-8px)}
+  to{opacity:1;transform:translateX(0)}
+}
+@keyframes neo-surface-settle{
+  0%{opacity:0;transform:translateY(5px) scale(.982)}
+  62%{opacity:1;transform:translateY(-1px) scale(1.006)}
+  100%{opacity:1;transform:translateY(0) scale(1)}
+}
+
+@media (prefers-reduced-motion:no-preference){
+  html[data-theme-style="classic"] :is(.app-header,.top-bar,.panel,.card,.glass-card,.kcard,.kpi-card,.data-table-wrap){
+    animation:classic-system-reveal 220ms cubic-bezier(.2,.8,.2,1) both;
+  }
+  html[data-theme-style="classic"] :is(.panel,.card,.glass-card,.kcard,.kpi-card,.data-table-wrap):nth-child(2){
+    animation-delay:35ms;
+  }
+  html[data-theme-style="classic"] :is(.panel,.card,.glass-card,.kcard,.kpi-card,.data-table-wrap):nth-child(3){
+    animation-delay:70ms;
+  }
+  html[data-theme-style="classic"] :is(button,.btn,.m3-button,.action-btn){
+    transition:color 140ms ease,background-color 140ms ease,border-color 140ms ease,transform 140ms ease !important;
+  }
+  html[data-theme-style="classic"] :is(button,.btn,.m3-button,.action-btn):active:not(:disabled){
+    transform:translateX(1px) !important;
+  }
+
+  html[data-theme-style="neomorph"] :is(.app-header,.top-bar,.panel,.card,.glass-card,.kcard,.kpi-card,.data-table-wrap){
+    animation:neo-surface-settle 360ms cubic-bezier(.22,1.35,.36,1) both;
+  }
+  html[data-theme-style="neomorph"] :is(.panel,.card,.glass-card,.kcard,.kpi-card,.data-table-wrap):nth-child(2){
+    animation-delay:45ms;
+  }
+  html[data-theme-style="neomorph"] :is(.panel,.card,.glass-card,.kcard,.kpi-card,.data-table-wrap):nth-child(3){
+    animation-delay:90ms;
+  }
+  html[data-theme-style="neomorph"] :is(button,.btn,.m3-button,.action-btn){
+    transition:box-shadow 180ms cubic-bezier(.22,1.2,.36,1),color 160ms ease,transform 180ms cubic-bezier(.22,1.2,.36,1) !important;
+  }
+  html[data-theme-style="neomorph"] :is(button,.btn,.m3-button,.action-btn):active:not(:disabled){
+    transform:translateY(1px) scale(.975) !important;
+  }
+}
+
+/* ── Theme typography identities ───────────────────────────────────────────
+   Classic speaks like a precise control room: narrow, efficient Plex forms,
+   compact labels and technical figures. Neomorphism is deliberately warmer:
+   rounded, open Nunito forms and relaxed headline rhythm. Modern retains the
+   product sans voice defined at the top of this file. */
+html[data-theme-style="classic"]{
+  --font-body:'IBM Plex Sans','Segoe UI',sans-serif;
+  --font-display:'IBM Plex Sans','Segoe UI',sans-serif;
+  --font-data:'IBM Plex Mono','Cascadia Mono',monospace;
+}
+html[data-theme-style="classic"] :is(body,button,input,select,textarea,.btn,.m3-button,.action-btn){
+  font-family:var(--font-body) !important;
+}
+html[data-theme-style="classic"] :is(h1,h2,h3,h4,.app-header-title,.brand-name,.jspl-brand-l1){
+  font-family:var(--font-display) !important;
+  font-weight:700 !important;
+  letter-spacing:-.015em;
+}
+html[data-theme-style="classic"] :is(.eyebrow,.label,.lbl,.caption,thead th,.table-head,.jspl-brand-l2){
+  font-family:var(--font-body) !important;
+  font-size:.92em;
+  font-weight:600 !important;
+  letter-spacing:.065em !important;
+  text-transform:uppercase;
+}
+html[data-theme-style="classic"] :is(.num,.value,.val,.metric-value,.kpi-value,.sheet-sync-code,table .numeric,table [data-numeric]){
+  font-family:var(--font-data) !important;
+  font-variant-numeric:tabular-nums slashed-zero;
+  letter-spacing:-.025em;
+}
+
+html[data-theme-style="neomorph"]{
+  --font-body:'Nunito Sans','Segoe UI',sans-serif;
+  --font-display:'Nunito Sans','Segoe UI',sans-serif;
+  --font-data:'JetBrains Mono','Cascadia Mono',monospace;
+}
+html[data-theme-style="neomorph"] :is(body,button,input,select,textarea,.btn,.m3-button,.action-btn){
+  font-family:var(--font-body) !important;
+}
+html[data-theme-style="neomorph"] :is(h1,h2,h3,h4,.app-header-title,.brand-name,.jspl-brand-l1){
+  font-family:var(--font-display) !important;
+  font-weight:800 !important;
+  letter-spacing:-.035em;
+  line-height:1.12;
+}
+html[data-theme-style="neomorph"] :is(.eyebrow,.label,.lbl,.caption,thead th,.table-head,.jspl-brand-l2){
+  font-family:var(--font-body) !important;
+  font-weight:700 !important;
+  letter-spacing:.015em !important;
+  text-transform:none;
+}
+html[data-theme-style="neomorph"] :is(.num,.value,.val,.metric-value,.kpi-value,.sheet-sync-code,table .numeric,table [data-numeric]){
+  font-family:var(--font-data) !important;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:-.04em;
 }
