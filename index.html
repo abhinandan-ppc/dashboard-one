@@ -582,7 +582,7 @@ html[data-theme-style="neomorph"] .user-btn:hover {
   position: absolute; top: 10px; right: 10px; display: flex; gap: 4px;
   opacity: 0; transition: opacity 0.15s ease;
 }
-.card:hover .card-actions { opacity: 1; }
+.card:hover .card-actions, .card:focus-within .card-actions { opacity: 1; }
 .card .card-actions button {
   width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
   background: var(--glass-hi, rgba(0,0,0,0.35)); color: #fff; backdrop-filter: blur(8px);
@@ -974,6 +974,268 @@ html[data-theme-style="neomorph"] .user-btn:hover {
 @keyframes kPart  { from { transform: translateY(0) } to { transform: translateY(-101%) } }
 @keyframes kPartB { from { transform: translateY(0) } to { transform: translateY(101%) } }
 
+/* ── Theme-specific startup sequences ─────────────────────────────────────
+   The theme boot script resolves data-theme-style before this template mounts.
+   The runtime adds one of these classes to the cloned overlay, so each preset
+   has its own startup grammar—not merely a recoloured version of Modern. */
+
+/* Classic: a precise diagnostic handoff. The two solid system panes shear
+   apart, while operational type and the five status segments lock in. */
+.intro.intro--classic { font-family:'IBM Plex Sans','Segoe UI',sans-serif; }
+.intro--classic .intro-shutter { background:var(--glass-hi); }
+.intro--classic .intro-shutter-t { background:var(--glass-hi); }
+.intro--classic .intro-shutter-b { background:var(--glass-hi); }
+.intro--classic .intro-bloom { display:none; }
+.intro--classic .intro-core { align-items:flex-start; text-align:left; padding-left:clamp(28px,9vw,148px); }
+.intro--classic .intro-lockup { align-items:flex-start; }
+.intro--classic .intro-rail { left:clamp(28px,9vw,148px); width:min(640px,78vw); margin-left:0; background:var(--bdr); }
+.intro--classic .intro-crest { padding:8px 12px; border-radius:0; background:var(--s0); border:1px solid var(--bdrHi); box-shadow:none; }
+.intro--classic .intro-logo-box { width:clamp(52px,9vw,82px); }
+.intro--classic .intro-eyebrow,.intro--classic .intro-sub { font-family:'IBM Plex Mono','Cascadia Mono',monospace; letter-spacing:.16em; text-indent:0; }
+.intro--classic .intro-hero { font-family:'IBM Plex Sans','Segoe UI',sans-serif; font-size:clamp(34px,8vw,76px); font-weight:700; letter-spacing:-.035em; text-indent:0; }
+.intro--classic .intro-hero-2 { margin-top:0; color:var(--tx); }
+.intro--classic .intro-rule { width:min(390px,65vw); height:1px; margin:18px 0; border-radius:0; background:var(--primary); box-shadow:none; }
+.intro--classic .intro-meter { width:min(390px,65vw); gap:3px; }
+.intro--classic .intro-meter > i,.intro--classic .intro-meter > i::before { border-radius:0; }
+.intro--classic .intro-seam { height:1px; background:var(--primary); filter:none; }
+.intro--classic .intro-skip { border-radius:0; background:var(--glass-hi); font-family:'IBM Plex Mono','Cascadia Mono',monospace; letter-spacing:.1em; }
+.intro--classic.is-active .intro-ch { animation-name:classicChar; }
+.intro--classic.is-active .intro-rail-t { animation:classicRail .34s linear both; }
+.intro--classic.is-active .intro-rail-b { animation:classicRail .34s linear .05s both; }
+.intro--classic.is-active .intro-crest { animation:classicStamp .28s steps(2,end) .04s both; }
+.intro--classic.is-active .intro-hero-1,.intro--classic.is-active .intro-hero-2 { animation:classicTrack .32s cubic-bezier(.2,.8,.2,1) both; }
+.intro--classic.is-active .intro-hero-1 { animation-delay:.24s; }
+.intro--classic.is-active .intro-hero-2 { animation-delay:.40s; }
+.intro--classic.is-active .intro-rule { animation:classicRail .3s linear .66s both; }
+.intro--classic.is-active .intro-core { animation:classicOut .22s linear 1.38s both; }
+.intro--classic.is-active .intro-seam { animation:classicSeam .32s linear 1.64s both; }
+.intro--classic.is-active .intro-shutter-t { animation:classicPartT .46s cubic-bezier(.76,0,.24,1) 1.64s both; }
+.intro--classic.is-active .intro-shutter-b { animation:classicPartB .46s cubic-bezier(.76,0,.24,1) 1.64s both; }
+@keyframes classicChar { from{opacity:0;transform:translateX(-.35em)} to{opacity:1;transform:none} }
+@keyframes classicRail { from{transform:scaleX(0)} to{transform:scaleX(1)} }
+@keyframes classicStamp { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
+@keyframes classicTrack { from{opacity:0;letter-spacing:.05em;transform:translateX(-10px)} to{opacity:1;letter-spacing:-.035em;transform:none} }
+@keyframes classicOut { to{opacity:0;transform:translateX(8px)} }
+@keyframes classicSeam { 0%{opacity:0;transform:scaleX(.1)} 35%{opacity:1;transform:scaleX(1)} 100%{opacity:0;transform:scaleX(1.25)} }
+@keyframes classicPartT { to{transform:translateX(-101%)} }
+@keyframes classicPartB { to{transform:translateX(101%)} }
+
+/* Neomorphism: a tactile material wake-up. A single soft canvas presents a
+   pressed-in frame; the lockup rises, settles once, then gently dissolves. */
+.intro.intro--neomorph { font-family:'Nunito Sans','Segoe UI',sans-serif; background:var(--neo-bg); }
+.intro--neomorph .intro-shutter { background:var(--neo-bg); }
+.intro--neomorph .intro-shutter-t,.intro--neomorph .intro-shutter-b { background:var(--neo-bg); }
+.intro--neomorph .intro-bloom,.intro--neomorph .intro-rail,.intro--neomorph .intro-seam { display:none; }
+.intro--neomorph .intro-core { padding:24px; }
+.intro--neomorph .intro-lockup { min-width:min(430px,88vw); padding:clamp(30px,6vw,62px) clamp(26px,7vw,74px); border-radius:30px; background:var(--neo-bg); box-shadow:8px 8px 18px var(--neo-shadow-dark),-8px -8px 18px var(--neo-shadow-light); }
+.intro--neomorph .intro-crest { margin-bottom:20px; padding:10px 16px; border:0; border-radius:18px; background:var(--neo-bg); box-shadow:5px 5px 11px var(--neo-shadow-dark),-5px -5px 11px var(--neo-shadow-light); }
+.intro--neomorph .intro-logo-box { width:clamp(58px,11vw,92px); }
+.intro--neomorph .intro-eyebrow { font-weight:700; letter-spacing:.12em; text-indent:.12em; text-transform:none; }
+.intro--neomorph .intro-hero { font-family:'Nunito Sans','Segoe UI',sans-serif; font-weight:800; letter-spacing:-.055em; text-indent:0; text-transform:none; }
+.intro--neomorph .intro-hero-2 { margin-top:-.02em; }
+.intro--neomorph .intro-rule { width:92px; height:8px; margin:20px 0 18px; border-radius:999px; background:var(--neo-bg); box-shadow:inset 2px 2px 5px var(--neo-shadow-dark),inset -2px -2px 5px var(--neo-shadow-light); }
+.intro--neomorph .intro-sub { letter-spacing:.1em; text-indent:.1em; text-transform:none; }
+.intro--neomorph .intro-meter { width:132px; justify-content:center; gap:10px; }
+.intro--neomorph .intro-meter > i { flex:0 0 8px; height:8px; border-radius:50%; background:var(--neo-bg); box-shadow:inset 2px 2px 4px var(--neo-shadow-dark),inset -2px -2px 4px var(--neo-shadow-light); }
+.intro--neomorph .intro-meter > i::before { border-radius:50%; background:var(--primary); }
+.intro--neomorph .intro-skip { border:0; border-radius:14px; background:var(--neo-bg); box-shadow:3px 3px 7px var(--neo-shadow-dark),-3px -3px 7px var(--neo-shadow-light); font-family:'Nunito Sans','Segoe UI',sans-serif; letter-spacing:.05em; text-transform:none; }
+.intro--neomorph.is-active .intro-ch { animation-name:neoChar; }
+.intro--neomorph.is-active .intro-crest { animation:neoInsetRelease .55s cubic-bezier(.22,1.3,.36,1) .04s both; }
+.intro--neomorph.is-active .intro-hero-1 { animation:neoWord .56s cubic-bezier(.22,1.3,.36,1) .24s both; }
+.intro--neomorph.is-active .intro-hero-2 { animation:neoWord .56s cubic-bezier(.22,1.3,.36,1) .42s both; }
+.intro--neomorph.is-active .intro-rule { animation:neoRule .42s cubic-bezier(.22,1.2,.36,1) .70s both; }
+.intro--neomorph.is-active .intro-core { animation:neoOut .34s ease 1.72s both; }
+.intro--neomorph.is-active .intro-shutter-t { animation:neoPartT .48s ease 2.04s both; }
+.intro--neomorph.is-active .intro-shutter-b { animation:neoPartB .48s ease 2.04s both; }
+@keyframes neoChar { 0%{opacity:0;transform:translateY(10px) scale(.88)} 70%{opacity:1;transform:translateY(-1px) scale(1.02)} 100%{opacity:1;transform:none} }
+@keyframes neoInsetRelease { from{opacity:0;transform:scale(.86)} to{opacity:1;transform:none} }
+@keyframes neoWord { from{opacity:0;transform:translateY(12px) scale(.95)} to{opacity:1;transform:none} }
+@keyframes neoRule { from{opacity:0;transform:scaleX(.25)} to{opacity:1;transform:scaleX(1)} }
+@keyframes neoOut { to{opacity:0;transform:translateY(-5px) scale(1.02)} }
+@keyframes neoPartT { to{opacity:0;transform:translateY(-6px)} }
+@keyframes neoPartB { to{opacity:0;transform:translateY(6px)} }
+
+/* Startup spacing & final choreography pass. Each sequence has more negative
+   space around its lockup and a clearer pause between the identity and the
+   progress cue, so it reads as a deliberate opening rather than a stack of
+   animated labels. */
+.intro :is(.intro-rail,.intro-rule,.intro-seam){ display:none !important; }
+.intro{
+  background:color-mix(in srgb,var(--bg) 36%,transparent);
+  backdrop-filter:blur(18px) saturate(112%);
+  -webkit-backdrop-filter:blur(18px) saturate(112%);
+}
+.intro-shutter{
+  /* The full-screen .intro owns the blur. Giving each half its own blur
+     creates a visible join at 50%, especially over moving dashboard chrome. */
+  height:50.1%;
+  background:var(--bg) !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+.intro-core { padding:clamp(28px,5vw,72px); }
+.intro-crest { margin-bottom:clamp(22px,3.6vw,38px); }
+.intro-eyebrow { margin-bottom:clamp(16px,2.7vw,28px); }
+.intro-hero { line-height:1.04; }
+.intro-hero-2 { margin-top:.035em; }
+.intro-rule { margin:clamp(22px,3.8vw,38px) 0 clamp(18px,3vw,28px); }
+.intro-meter { margin-top:clamp(26px,4.4vw,42px); }
+
+/* Modern: an expansive aperture reveal with a calmer, wider wordmark. */
+.intro--modern .intro-lockup { gap:2px; }
+.intro--modern .intro-hero { letter-spacing:.055em; }
+.intro--modern .intro-hero-2 { margin-top:.06em; }
+.intro--modern .intro-bloom { width:min(820px,136vw); height:min(580px,100vh); }
+.intro--modern .intro-meter { gap:7px; width:min(280px,68vw); }
+.intro--modern .intro-meter > i { height:3px; }
+.intro--modern.is-active .intro-crest { animation-duration:.78s; }
+.intro--modern.is-active .intro-core { animation-delay:1.92s; }
+.intro--modern.is-active .intro-seam,
+.intro--modern.is-active .intro-shutter-t,
+.intro--modern.is-active .intro-shutter-b { animation-delay:2.16s; }
+
+/* Classic: preserve the broad operational grid; wordmarks have breathing room
+   and the status rail becomes a deliberate final confirmation. */
+.intro--classic .intro-core { padding-left:clamp(32px,10vw,168px); }
+.intro--classic .intro-rail { left:clamp(32px,10vw,168px); width:min(700px,76vw); }
+.intro--classic .intro-crest { margin-bottom:clamp(26px,4vw,42px); }
+.intro--classic .intro-eyebrow { margin-bottom:clamp(18px,3vw,30px); }
+.intro--classic .intro-hero { line-height:1.12; }
+.intro--classic .intro-hero-2 { margin-top:.09em; }
+.intro--classic .intro-rule { margin:clamp(26px,4vw,40px) 0 clamp(22px,3.2vw,30px); }
+.intro--classic .intro-meter { margin-top:clamp(30px,4.8vw,48px); width:min(430px,68vw); gap:5px; }
+.intro--classic .intro-shutter{ background:var(--glass-hi) !important; }
+.intro--classic.is-active .intro-meter > i::before { animation-duration:.34s; }
+.intro--classic.is-active .intro-skip { animation-delay:.68s; }
+
+/* Neo: make the soft card feel like a quiet object in a generous canvas.
+   The larger insets, separated display lines, and delayed dot rhythm remove
+   the crowded centre-stack while retaining the tactile sequence. */
+.intro--neomorph .intro-core { padding:clamp(30px,6vw,82px); }
+.intro--neomorph .intro-lockup { min-width:min(470px,90vw); padding:clamp(38px,7vw,78px) clamp(32px,8vw,88px); }
+.intro--neomorph .intro-shutter{ background:var(--neo-bg) !important; }
+.intro--neomorph .intro-crest { margin-bottom:clamp(28px,4.4vw,44px); }
+.intro--neomorph .intro-eyebrow { margin-bottom:clamp(20px,3.4vw,32px); }
+.intro--neomorph .intro-hero { line-height:1.22; }
+.intro--neomorph .intro-hero-2 { margin-top:.12em; }
+.intro--neomorph .intro-rule { margin:clamp(28px,4.6vw,44px) 0 clamp(24px,3.8vw,34px); }
+.intro--neomorph .intro-meter { margin-top:clamp(32px,5vw,50px); gap:13px; }
+.intro--neomorph .intro-meter > i { flex-basis:9px; height:9px; }
+.intro--neomorph.is-active .intro-meter > i::before { animation-duration:.38s; }
+
+@media (max-width:560px){
+  .intro--classic .intro-core { padding-left:28px; }
+  .intro--classic .intro-rail { left:28px; width:calc(100vw - 56px); }
+  .intro--neomorph .intro-lockup { min-width:0; width:min(100%,390px); padding:32px 24px; border-radius:24px; }
+  .intro--neomorph .intro-meter { margin-top:28px; }
+}
+html[data-reduce-transparency="1"] .intro,
+html[data-reduce-transparency="1"] .intro-shutter{
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  background:var(--bg) !important;
+}
+html[data-reduce-transparency="1"] .intro--neomorph,
+html[data-reduce-transparency="1"] .intro--neomorph .intro-shutter{
+  background:var(--neo-bg) !important;
+}
+
+/* A final, theme-owned choreography layer. The shared template keeps the
+   implementation small; these sequences deliberately give each material its
+   own cadence and physical logic. */
+@media (prefers-reduced-motion:no-preference){
+  /* Modern — the brand forms at the centre of a cinematic aperture, then the
+     page opens around it. The mark is a physical object, the wordmark is light. */
+  .intro--modern.is-active .intro-lockup { animation:modernLockup .92s cubic-bezier(.16,1,.3,1) .03s both; }
+  .intro--modern.is-active .intro-crest { animation:modernCrest .74s cubic-bezier(.16,1,.3,1) .08s both; }
+  .intro--modern.is-active .intro-meter > i::before { animation-name:modernFill; animation-duration:.42s; }
+  .intro--modern.is-active { animation:modernBackdropOut .55s ease 2.16s both; }
+  .intro--modern.is-active .intro-shutter-t { animation:modernPartT .55s cubic-bezier(.76,0,.24,1) 2.16s both; }
+  .intro--modern.is-active .intro-shutter-b { animation:modernPartB .55s cubic-bezier(.76,0,.24,1) 2.16s both; }
+  .intro--modern .intro-crest::after { content:""; position:absolute; inset:-10px; border:1px solid color-mix(in srgb,var(--primary) 48%,transparent); border-radius:inherit; opacity:0; pointer-events:none; }
+  .intro--modern.is-active .intro-crest::after { animation:modernEcho .62s cubic-bezier(.16,1,.3,1) .14s both; }
+  @keyframes modernLockup {
+    0%{opacity:0;transform:translateY(22px) scale(.91);filter:blur(9px)}
+    58%{opacity:1;transform:translateY(-2px) scale(1.012);filter:blur(0)}
+    100%{opacity:1;transform:none;filter:none}
+  }
+  @keyframes modernCrest {
+    0%{opacity:0;transform:translateY(-18px) rotateX(34deg) scale(.72);filter:blur(8px)}
+    64%{opacity:1;transform:translateY(2px) rotateX(-4deg) scale(1.035);filter:blur(0)}
+    100%{opacity:1;transform:none;filter:none}
+  }
+  @keyframes modernFill {
+    0%{transform:scaleX(0);opacity:0}
+    45%{opacity:1}
+    78%{transform:scaleX(1.08)}
+    100%{transform:scaleX(1)}
+  }
+  @keyframes modernEcho { from{opacity:.7;transform:scale(.76)} to{opacity:0;transform:scale(1.34)} }
+  @keyframes modernBackdropOut { from{opacity:1;backdrop-filter:blur(18px) saturate(112%);-webkit-backdrop-filter:blur(18px) saturate(112%)} to{opacity:0;backdrop-filter:blur(0) saturate(100%);-webkit-backdrop-filter:blur(0) saturate(100%)} }
+  @keyframes modernPartT { from{transform:translateY(0);opacity:1;backdrop-filter:blur(22px) saturate(118%);-webkit-backdrop-filter:blur(22px) saturate(118%)} to{transform:translateY(-101%);opacity:0;backdrop-filter:blur(0) saturate(100%);-webkit-backdrop-filter:blur(0) saturate(100%)} }
+  @keyframes modernPartB { from{transform:translateY(0);opacity:1;backdrop-filter:blur(22px) saturate(118%);-webkit-backdrop-filter:blur(22px) saturate(118%)} to{transform:translateY(101%);opacity:0;backdrop-filter:blur(0) saturate(100%);-webkit-backdrop-filter:blur(0) saturate(100%)} }
+
+  /* Classic — a measured system handoff. Copy resolves on a strict horizontal
+     baseline, then the crest stamps once and the health rail confirms ready. */
+  .intro--classic.is-active .intro-lockup { animation:classicLockup .60s cubic-bezier(.2,.8,.2,1) .06s both; }
+  .intro--classic.is-active .intro-crest { animation:classicCrest .34s steps(3,end) .12s both; }
+  .intro--classic.is-active .intro-meter > i::before { animation-name:classicFill; animation-duration:.32s; }
+  .intro--classic.is-active { animation:classicBackdropOut .46s linear 1.64s both; }
+  .intro--classic.is-active .intro-shutter-t { animation:classicPartT .46s cubic-bezier(.76,0,.24,1) 1.64s both; }
+  .intro--classic.is-active .intro-shutter-b { animation:classicPartB .46s cubic-bezier(.76,0,.24,1) 1.64s both; }
+  .intro--classic .intro-eyebrow::before { content:""; display:inline-block; width:7px; height:7px; margin-right:10px; background:var(--primary); vertical-align:1px; opacity:0; }
+  .intro--classic.is-active .intro-eyebrow::before { animation:classicReady .22s steps(2,end) .74s both; }
+  @keyframes classicLockup {
+    from{opacity:0;transform:translateX(-26px);clip-path:inset(0 100% 0 0);filter:blur(4px)}
+    to{opacity:1;transform:none;clip-path:inset(0 0 0 0);filter:none}
+  }
+  @keyframes classicCrest {
+    0%{opacity:0;transform:translateX(-12px) scaleX(.7)}
+    66%{opacity:1;transform:translateX(2px) scaleX(1.04)}
+    100%{opacity:1;transform:none}
+  }
+  @keyframes classicFill {
+    0%{transform:scaleX(0)}
+    84%{transform:scaleX(1.04)}
+    100%{transform:scaleX(1)}
+  }
+  @keyframes classicReady { from{opacity:0;transform:scale(.2)} to{opacity:1;transform:scale(1)} }
+  @keyframes classicBackdropOut { from{opacity:1;backdrop-filter:blur(18px) saturate(112%);-webkit-backdrop-filter:blur(18px) saturate(112%)} to{opacity:0;backdrop-filter:blur(0) saturate(100%);-webkit-backdrop-filter:blur(0) saturate(100%)} }
+  @keyframes classicPartT { from{transform:translateX(0);opacity:1;backdrop-filter:blur(7px) saturate(104%);-webkit-backdrop-filter:blur(7px) saturate(104%)} to{transform:translateX(-101%);opacity:0;backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0)} }
+  @keyframes classicPartB { from{transform:translateX(0);opacity:1;backdrop-filter:blur(7px) saturate(104%);-webkit-backdrop-filter:blur(7px) saturate(104%)} to{transform:translateX(101%);opacity:0;backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0)} }
+
+  /* Neo — a genuine soft-object animation: the card rises from the canvas,
+     the logo badge catches up as a lighter object, and each status dot settles
+     into the surface rather than merely appearing. */
+  .intro--neomorph.is-active .intro-lockup { animation:neoCardLift .78s cubic-bezier(.22,1.28,.36,1) .05s both; }
+  .intro--neomorph.is-active .intro-crest { animation:neoBadgeLift .68s cubic-bezier(.22,1.35,.36,1) .18s both; }
+  .intro--neomorph.is-active .intro-meter > i::before { animation-name:neoDot; animation-duration:.44s; }
+  .intro--neomorph.is-active { animation:neoBackdropOut .48s ease 2.04s both; }
+  .intro--neomorph.is-active .intro-shutter-t { animation:neoPartT .48s ease 2.04s both; }
+  .intro--neomorph.is-active .intro-shutter-b { animation:neoPartB .48s ease 2.04s both; }
+  .intro--neomorph .intro-crest::after { content:""; position:absolute; inset:5px; border-radius:14px; box-shadow:inset 0 1px 0 rgb(255 255 255 / .36); opacity:0; pointer-events:none; }
+  .intro--neomorph.is-active .intro-crest::after { animation:neoSpecular .56s ease .28s both; }
+  @keyframes neoCardLift {
+    0%{opacity:0;transform:translateY(22px) scale(.88);filter:blur(6px);box-shadow:inset 5px 5px 12px var(--neo-shadow-dark),inset -5px -5px 12px var(--neo-shadow-light)}
+    70%{opacity:1;transform:translateY(-3px) scale(1.015);filter:blur(0);box-shadow:10px 10px 22px var(--neo-shadow-dark),-10px -10px 22px var(--neo-shadow-light)}
+    100%{opacity:1;transform:none;filter:none;box-shadow:8px 8px 18px var(--neo-shadow-dark),-8px -8px 18px var(--neo-shadow-light)}
+  }
+  @keyframes neoBadgeLift {
+    0%{opacity:0;transform:translateY(14px) scale(.68);box-shadow:inset 4px 4px 9px var(--neo-shadow-dark),inset -4px -4px 9px var(--neo-shadow-light)}
+    62%{opacity:1;transform:translateY(-3px) scale(1.08);box-shadow:7px 7px 15px var(--neo-shadow-dark),-7px -7px 15px var(--neo-shadow-light)}
+    100%{opacity:1;transform:none;box-shadow:5px 5px 11px var(--neo-shadow-dark),-5px -5px 11px var(--neo-shadow-light)}
+  }
+  @keyframes neoDot {
+    0%{opacity:0;transform:scale(.15)}
+    68%{opacity:1;transform:scale(1.28)}
+    100%{opacity:1;transform:scale(1)}
+  }
+  @keyframes neoSpecular { 0%{opacity:0;transform:translateY(4px)} 45%{opacity:1;transform:translateY(0)} 100%{opacity:.32;transform:none} }
+  @keyframes neoBackdropOut { from{opacity:1;backdrop-filter:blur(18px) saturate(112%);-webkit-backdrop-filter:blur(18px) saturate(112%)} to{opacity:0;backdrop-filter:blur(0) saturate(100%);-webkit-backdrop-filter:blur(0) saturate(100%)} }
+  @keyframes neoPartT { from{opacity:1;transform:translateY(0);backdrop-filter:blur(16px) saturate(106%);-webkit-backdrop-filter:blur(16px) saturate(106%)} to{opacity:0;transform:translateY(-6px);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0)} }
+  @keyframes neoPartB { from{opacity:1;transform:translateY(0);backdrop-filter:blur(16px) saturate(106%);-webkit-backdrop-filter:blur(16px) saturate(106%)} to{opacity:0;transform:translateY(6px);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0)} }
+}
+
 /* Hub cards settle in behind the header once the shutters clear. Transform-only
    for the same backdrop-filter reason as the header entrance above.
    The fill is `backwards`, NOT `both`, and that matters: `both` would keep the
@@ -1032,7 +1294,7 @@ html[data-theme-style="neomorph"] .user-btn:hover {
       </div>
       <div class="intro-meter"><i></i><i></i><i></i><i></i><i></i></div>
     </div>
-    <button class="intro-skip" type="button">Skip</button>
+    <button class="intro-skip" type="button" aria-label="Skip startup animation">Skip</button>
   </div>
 </template>
 <a class="skip-link" href="#stage">Skip to content</a>
@@ -1327,7 +1589,7 @@ var ICON_ORDER = ["train","factory","warehouse","flame","calendarDays","calendar
 
 function iconSvg(name, extraAttrs){
   var body = ICONS[name] || ICONS.folder;
-  return "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' "+(extraAttrs||"")+">"+body+"</svg>";
+  return "<svg aria-hidden='true' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' "+(extraAttrs||"")+">"+body+"</svg>";
 }
 
 /* ─── Data store (localStorage) ─── */
@@ -1389,8 +1651,8 @@ function render(){
   grid.innerHTML = items.map(function(it){
     return "<a class='card' href='"+escapeHtml(it.path)+"' data-id='"+escapeHtml(it.id)+"'>"+
       "<div class='card-actions'>"+
-        "<button type='button' class='editBtn' title='Edit'>&#9998;</button>"+
-        "<button type='button' class='delBtn' title='Delete'>&#10005;</button>"+
+        "<button type='button' class='editBtn' title='Edit' aria-label='Edit "+escapeHtml(it.name)+"'>&#9998;</button>"+
+        "<button type='button' class='delBtn' title='Delete' aria-label='Delete "+escapeHtml(it.name)+"'>&#10005;</button>"+
       "</div>"+
       "<div class='icon-wrap'>"+iconSvg(it.icon)+"</div>"+
       "<div class='card-name'>"+escapeHtml(it.name)+"</div>"+
@@ -3489,7 +3751,7 @@ function fetchAndCacheSegment(force){
   var SESSION_KEY = "jspl-intro-seen";
   // Must match the last keyframe's end in the CSS (2.05s delay + .55s run),
   // plus a beat of slack so the overlay is never torn off mid-frame.
-  var TOTAL_MS = 2700;
+  var TOTAL_MS = 2800;
   // The hub's own chrome starts settling as the shutters part, NOT after they
   // finish. Sequencing it afterwards would leave a ~0.8s tail where a card's
   // introCardIn animation is still running, and a running animation outranks
@@ -3499,6 +3761,12 @@ function fetchAndCacheSegment(force){
   var CHROME_AT_MS = 2050;
   var CARD_STAGGER_MS = 34;
   var CARD_DUR_MS = 380;
+
+  function startupTiming(style) {
+    if (style === "classic") return { total: 2250, chrome: 1640 };
+    if (style === "neomorph") return { total: 2600, chrome: 2040 };
+    return { total: TOTAL_MS, chrome: CHROME_AT_MS };
+  }
 
   /* Kinetic cascade, as [selector, base delay, per-glyph step, duration] in ms.
      This is the single source of truth for the choreography - the CSS only
@@ -3620,7 +3888,10 @@ function fetchAndCacheSegment(force){
     running = true;
     chromeDone = false;
 
+    var style = document.documentElement.getAttribute("data-theme-style") || "modern";
+    var timing = startupTiming(style);
     node = tpl.content.firstElementChild.cloneNode(true);
+    node.classList.add("intro--" + style);
     node.classList.add("is-active");
     var img = node.querySelector(".intro-logo");
     if (img) img.src = logoSrc;
@@ -3631,8 +3902,8 @@ function fetchAndCacheSegment(force){
 
     // Failsafe: the teardown is timer-driven rather than animationend-driven so
     // the hub can never be left sitting behind a dead overlay.
-    timers.push(setTimeout(settle, TOTAL_MS));
-    if (!reduce) timers.push(setTimeout(function () { settleChrome(true); }, CHROME_AT_MS));
+    timers.push(setTimeout(settle, timing.total));
+    if (!reduce) timers.push(setTimeout(function () { settleChrome(true); }, timing.chrome));
 
     // Any interaction skips. The overlay stops the click from reaching the page
     // underneath, so stopping propagation here is what keeps a skip-click from
