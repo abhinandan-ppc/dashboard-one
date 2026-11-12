@@ -24,7 +24,8 @@
     "audit:responsive:browser": "node scripts/responsive-browser-audit.mjs"
   },
   "dependencies": {
-    "@vercel/functions": "^3.9.9"
+    "@vercel/functions": "^3.9.9",
+    "turbo": "^2.11.10"
   },
   "devDependencies": {
     "playwright": "^1.64.1"
