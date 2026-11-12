@@ -24,9 +24,7 @@ jspl-local-api.js
 # needs them on the server, and shipping them would bloat a Vercel deployment
 # for nothing.
 #
-# sheets-schema/ IS committed — small fixtures covering the same columns and the
-# same awkward row shapes, so the tests and the integrity checks run anywhere.
-# Regenerate with: npm run fixtures:make
+# Schema fixtures are also local-only; pages use their live/browser data path.
 sheets/
 
 # Scratch output from the verification scripts.
@@ -65,6 +63,20 @@ scripts/sim-plate-tagging-zstk-negctl.mjs
 scripts/smoke-plate-tracker.mjs
 scripts/smoke-plate-tracker-stock.mjs
 scripts/syntax-check-page.mjs
+
+# Local project documentation, verification, fixtures, and development tools.
+# The deployable repository contains only the page runtime and serverless API.
+.github/
+.env.example
+*.md
+check-html.mjs
+check-js.mjs
+local-auth.mjs
+local-auth-env.mjs
+scripts/
+sheets-schema/
+test/
+tools/
 
 # Local agent/tool state and screenshots.
 .claude-flow/
