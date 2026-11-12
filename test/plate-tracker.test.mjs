@@ -55,8 +55,8 @@ test('live sheets use the dashboard cache and authenticated same-origin proxies'
   const localAuth = readFileSync(new URL('../local-auth.mjs', import.meta.url), 'utf8');
   assert.match(controller, /indexedDB\.open\('jspl-ebtp-shared-db', 1\)/);
   assert.match(controller, /if \(window\.parent !== window\) return readHubEbtpCache\(\)/);
-  assert.match(controller, /fetch\('\/api\/balance-heat-proxy'/);
-  assert.match(controller, /fetch\('\/api\/ebtp-proxy'/);
+  assert.match(controller, /fetch\(dashboardApiUrl\('\/api\/balance-heat-proxy'\)/);
+  assert.match(controller, /fetch\(dashboardApiUrl\('\/api\/ebtp-proxy'\)/);
   assert.match(hub, /requestLiveDataRefresh\(\)/);
   assert.match(hub, /type: 'refresh-plate-tracker-sheets'/);
   assert.match(worker, /requiredSources\.some\(\(sourceId\)/);
@@ -70,7 +70,7 @@ test('Plate Tracker requests fresh live sheets after restoring its cache on star
   assert.match(controller, /function requestLiveDataOnStartup\(\)/);
   assert.match(controller, /window\.parent\.postMessage\(\{ type: 'request-live-plate-tracker-refresh' \}/);
   assert.match(controller, /restoreCache\(\)\.then\(\(restored\) => \{[\s\S]*requestLiveDataOnStartup\(\);/);
-  assert.match(controller, /fetch\('\/api\/ebtp-proxy'/);
+  assert.match(controller, /fetch\(dashboardApiUrl\('\/api\/ebtp-proxy'\)/);
   assert.match(hub, /e\.source === pageFrame\.contentWindow && e\.data && e\.data\.type === 'request-live-plate-tracker-refresh'/);
 });
 

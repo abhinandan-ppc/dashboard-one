@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
+<script src="dashboard-api-url.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script src="theme-boot.js"></script>
@@ -4396,7 +4397,7 @@ function syncZSTKLive(force, openMenu = true) {
   const ok = () => { if (btn) btn.disabled = false; };
 
   function directFetch() {
-    fetch('/api/zstk-proxy', { cache: 'no-store' })
+    fetch(dashboardApiUrl('/api/zstk-proxy'), { cache: 'no-store' })
       .then(r => r.text().then(t => {
         let data;
         try { data = JSON.parse(t); }
@@ -4450,7 +4451,7 @@ function syncAutoBTRLive(force, openMenu = true) {
   const ok = () => { if (btn) btn.disabled = false; };
 
   function directFetch() {
-    fetch('/api/autobtr-proxy', { cache: 'no-store' })
+    fetch(dashboardApiUrl('/api/autobtr-proxy'), { cache: 'no-store' })
       .then(r => { if (!r.ok) return r.text().then(t => { throw new Error(t || ('HTTP ' + r.status)); }); return r.arrayBuffer(); })
       .then(buf => { ingestAutoBtrCacheRecord({ csvText: buf }, openMenu); ok(); })
       .catch(e => fail(e.message));

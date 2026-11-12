@@ -2389,7 +2389,7 @@ html[data-theme-style="classic"] .segmented-control button {
   text-transform: uppercase !important;
   letter-spacing: 0.05em !important;
   padding: 8px 16px !important;
-  transition: all 0.15s ease !important;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease !important;
 }
 html[data-theme-style="classic"] .tab-bar button:hover:not(.on):not(.active),
 html[data-theme-style="classic"] .tabs button:hover:not(.on):not(.active),
@@ -2538,8 +2538,10 @@ html[data-theme-style="neomorph"] {
      element off the canvas without the harsh directional "edge glow" of the
      opposed shadow pair. No 1px rim — pure diffused bloom only. Blends into
      --neo-bg on both light and dark. */
-  --neo-glow-hover: 0 12px 36px color-mix(in srgb, var(--neo-shadow-dark) 30%, transparent);
-  --neo-glow-hover-btn: 0 8px 24px color-mix(in srgb, var(--neo-shadow-dark) 24%, transparent);
+  /* Hover remains a directional elevation change. A radial/omnidirectional
+     bloom reads as a ghost shadow on a single-canvas Neomorph surface. */
+  --neo-glow-hover: 6px 6px 12px var(--neo-shadow-dark), -6px -6px 12px var(--neo-shadow-light);
+  --neo-glow-hover-btn: 4px 4px 8px var(--neo-shadow-dark), -4px -4px 8px var(--neo-shadow-light);
   --primary: color-mix(in srgb,
     hsl(var(--ah) var(--as) calc(var(--al) * 0.85)),
     hsl(var(--ah) var(--as) calc(var(--al) * 1.12)) var(--td));
@@ -3011,3 +3013,203 @@ html[data-theme-style="neomorph"] .theme-range:active::-moz-range-thumb {
 }
 #edge-stretch-wrap.is-pulling{transition:none;will-change:transform}
 @media (prefers-reduced-motion:reduce){#edge-stretch-wrap{transition:none!important;transform:none!important}}
+
+/* Keep keyboard focus visible across theme presets and high contrast modes. */
+table { font-variant-numeric: tabular-nums; }
+h1, h2, h3 { text-wrap: balance; }
+html[data-theme-style] :is(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--primary, #f59e0b) !important;
+  outline-offset: 3px;
+}
+@media (forced-colors: active) {
+  html[data-theme-style] :is(button, a, input, select, textarea, [tabindex]):focus-visible {
+    outline-color: Highlight !important;
+  }
+}
+
+/* ── Cross-dashboard finish pass ───────────────────────────────────────────
+   Every tool has a substantial amount of local CSS because its work surface is
+   specialised.  These intentionally small rules sit last so the shared
+   interaction language remains coherent without changing any page geometry or
+   data workflow. */
+:root{
+  --interaction-fast:160ms;
+  --interaction-standard:220ms;
+  --focus-ring:0 0 0 3px color-mix(in srgb,var(--primary) 34%,transparent);
+}
+
+html{
+  scroll-behavior:smooth;
+  scroll-padding-top:calc(var(--header-clearance, 88px) + 16px);
+  -webkit-tap-highlight-color:color-mix(in srgb,var(--primary) 22%,transparent);
+}
+
+/* A header should read as the navigation plane even on pages that supply their
+   own markup. Focus-within is particularly useful when a filter, search field,
+   or account control is active inside a dense dashboard header. */
+.app-header{
+  isolation:isolate;
+  transition:box-shadow var(--interaction-standard) ease,
+             border-color var(--interaction-standard) ease,
+             background-color var(--interaction-standard) ease;
+}
+.app-header:focus-within{
+  border-color:var(--border-accent-hi, var(--primary));
+  box-shadow:var(--shadow-md),var(--focus-ring);
+}
+
+/* Common surfaces get a restrained lift rather than a second, competing card
+   treatment. This catches the shared panel vocabulary used by the standalone
+   planners as well as the hub. */
+:is(.glass-card,.panel,.card,.kcard,.metric-card,.kpi-card,.data-table-wrap){
+  transition:transform var(--interaction-standard) cubic-bezier(.22,1,.36,1),
+             box-shadow var(--interaction-standard) ease,
+             border-color var(--interaction-standard) ease,
+             background-color var(--interaction-standard) ease;
+}
+@media (hover:hover){
+  :is(.glass-card,.panel,.card,.kcard,.metric-card,.kpi-card):not(.app-header):hover{
+    border-color:var(--border-accent, var(--glass-border));
+    box-shadow:var(--shadow-lg),var(--shadow-inset);
+  }
+}
+
+/* Preserve text contrast and affordance in the controls that each dashboard
+   styles locally.  :focus-visible remains keyboard-only, so pointer users do
+   not receive a distracting permanent ring. */
+:is(button,[role="button"],input,select,textarea){
+  -webkit-tap-highlight-color:transparent;
+}
+:is(button,[role="button"]):not([disabled]):active{
+  transform:translateY(1px) scale(.985);
+}
+:is(input,select,textarea):focus-visible{
+  border-color:var(--border-accent-hi, var(--primary)) !important;
+  box-shadow:var(--focus-ring) !important;
+}
+
+/* Tables are the primary work surface in most tools. Keep numeric scanning
+   stable and make a horizontally scrollable frame clear to touch users. */
+:is(.data-table-wrap,.table-wrap,.table-responsive,.tw){
+  scrollbar-color:color-mix(in srgb,var(--primary) 52%,var(--bdr)) transparent;
+  scrollbar-width:thin;
+}
+:is(.data-table-wrap,.table-wrap,.table-responsive,.tw) :is(th,td){
+  vertical-align:middle;
+}
+
+/* Let long production labels wrap instead of forcing a page-wide overflow,
+   while keeping identifiers and tabular values stable where a page opts in. */
+:is(.panel,.card,.glass-card,.kcard,.metric-card,.kpi-card) :is(h1,h2,h3,p,span,small,label){
+  overflow-wrap:anywhere;
+}
+
+@media (max-width:640px){
+  .app-header{
+    border-radius:var(--radius-md);
+  }
+  :is(.glass-card,.panel,.card,.kcard,.metric-card,.kpi-card){
+    border-radius:min(var(--radius-lg),18px);
+  }
+}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  :is(.app-header,.glass-card,.panel,.card,.kcard,.metric-card,.kpi-card,.data-table-wrap,
+      button,[role="button"],input,select,textarea){
+    transition-duration:1ms !important;
+    animation-duration:1ms !important;
+    animation-iteration-count:1 !important;
+  }
+}
+
+/* ── Production material correction: no ghost shadow / glow ────────────────
+   Theme presets must not inherit visual effects from one another. Classic is
+   an opaque, exact enterprise surface; Neomorphism is a single canvas whose
+   depth comes only from one consistent opposing shadow pair. */
+
+/* MODERN — retain translucent material, but never cursor-following perimeter
+   effects. The surface and its hierarchy provide enough feedback on their
+   own, and removing the extra layer prevents phantom light at card edges. */
+html:not([data-theme-style]) :is(.glow-edge,.glow-sheen,.glow-ripple),
+html[data-theme-style="modern"] :is(.glow-edge,.glow-sheen,.glow-ripple){
+  display:none !important;
+}
+
+/* CLASSIC — no glass, ambient washes, bloom, or floating depth. */
+html[data-theme-style="classic"]{
+  --glass-blur:none;
+  --glass-shadow:none;
+  --shadow-xs:none;
+  --shadow-sm:none;
+  --shadow-md:none;
+  --shadow-lg:none;
+  --shadow-xl:none;
+  --shadow-inset:none;
+  --shadow-glow-amber:none;
+  --component-shadow:none;
+}
+html[data-theme-style="classic"] body{
+  background-image:none !important;
+  background-attachment:scroll !important;
+}
+html[data-theme-style="classic"] :is(.glow-edge,.glow-sheen,.glow-ripple){
+  display:none !important;
+}
+html[data-theme-style="classic"] :is(.app-header,.top-bar,.glass-card,.card,.panel,.kcard,.kpi-card,
+  .metric-card,.data-table-wrap,.table-wrap,.table-responsive,.tw,.modal,.dropdown-panel,.theme-panel,
+  .user-panel,.sheet-sync-panel,.app-side-panel,.app-side-drawer,.flow-wrapper,.flow-toolbar,.flow-controls){
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  box-shadow:none !important;
+}
+html[data-theme-style="classic"] :is(.app-header,.top-bar){
+  background:var(--glass-hi) !important;
+  text-shadow:none !important;
+}
+html[data-theme-style="classic"] .app-header:focus-within{
+  box-shadow:none !important;
+  outline:2px solid var(--primary) !important;
+  outline-offset:2px;
+}
+
+/* NEOMORPH — the canvas is matte; no blur, halo, gradient, or cursor glow.
+   Hover only deepens the same lower-right / upper-left shadow pair. */
+html[data-theme-style="neomorph"]{
+  --glass-blur:none;
+}
+html[data-theme-style="neomorph"] body{
+  background-image:none !important;
+}
+html[data-theme-style="neomorph"] :is(.glow-edge,.glow-sheen,.glow-ripple){
+  display:none !important;
+}
+html[data-theme-style="neomorph"] :is(.app-header,.top-bar,.glass-card,.card,.panel,.kcard,.kpi-card,
+  .metric-card,.data-table-wrap,.table-wrap,.table-responsive,.tw,.modal,.dropdown-panel,.theme-panel,
+  .user-panel,.sheet-sync-panel,.app-side-panel,.app-side-drawer,.flow-wrapper,.flow-toolbar,.flow-controls){
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+@media (hover:hover){
+  html[data-theme-style="neomorph"] :is(.kpi,.kcard,.kpi-card,.stat-card,.card,.panel,.glass-card):hover{
+    transform:translateY(-1px) !important;
+    box-shadow:var(--neo-glow-hover) !important;
+  }
+  html[data-theme-style="neomorph"] :is(button:not([type=range]),.btn,.m3-button,.button,.action-btn):hover:not(:disabled){
+    box-shadow:var(--neo-glow-hover-btn) !important;
+  }
+}
+html[data-theme-style="neomorph"] :is(.btn-primary,.primary,.m3-button-primary,#runBtn,.add-btn:not(.home-btn),.upload-btn),
+html[data-theme-style="neomorph"] :is(.sap-progress,.progress-bar,.progress) :is(.fill,.bar,.value,[role=progressbar]){
+  background:var(--primary) !important;
+}
+html[data-theme-style="neomorph"] .app-header:focus-within{
+  box-shadow:var(--shadow-lg) !important;
+  outline:2px solid var(--primary) !important;
+  outline-offset:3px;
+}
+html[data-theme-style="neomorph"] :is(button,a,input,select,textarea,[tabindex]):focus-visible{
+  outline:2px solid var(--primary) !important;
+  outline-offset:3px;
+  box-shadow:var(--shadow-inset) !important;
+}
