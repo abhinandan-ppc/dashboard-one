@@ -101,12 +101,14 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
   .view-tabs button {
     padding: 0; width: 34px; height: 34px; font-size: 0; display: inline-flex; align-items: center; justify-content: center;
   }
-  .view-tabs button[data-view="daily"]::before { content: "📋"; font-size: 15px; }
-  .view-tabs button[data-view="monthly"]::before { content: "🗓️"; font-size: 15px; }
+  .view-tabs button[data-view="daily"]::before { content: "Daily"; font-size: 11px; }
+  .view-tabs button[data-view="monthly"]::before { content: "Monthly"; font-size: 11px; }
+  .view-tabs button { min-width: 54px; }
   .reset-btn {
     width: 34px; padding: 0; font-size: 0; gap: 0; justify-content: center;
   }
-  .reset-btn::before { content: "🔄"; font-size: 15px; }
+  .reset-btn::before { content: "Reset"; font-size: 11px; }
+  .reset-btn { min-width:44px; }
 }
 @media (max-width: 480px) {
   .top-bar { padding: 10px; gap: 8px; }
@@ -137,11 +139,11 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
       </div>
     </div>
     <nav class="view-tabs" id="viewTabs">
-      <button data-view="daily" class="on" type="button">📋 Daily Planner</button>
-      <button data-view="monthly" type="button">🗓️ Monthly Planner</button>
+      <button data-view="daily" class="on" type="button"> Daily Planner</button>
+      <button data-view="monthly" type="button"> Monthly Planner</button>
     </nav>
     <div class="hdr-r">
-      <button class="reset-btn" id="resetAllBtn" type="button">🔄 Reset</button>
+      <button class="reset-btn" id="resetAllBtn" type="button"> Reset</button>
     </div>
     <div id="hubFrameHeaderSlot"></div>
   </div>
@@ -207,7 +209,7 @@ function broadcastTheme(){
   // theme anywhere along the ramp reaches them intact rather than snapping to
   // whichever of two names was nearest.
   var d = currentDarkness();
-  if(themeBtn) themeBtn.textContent = window.jsplTheme.derived(d) === 'light' ? '🌙' : '☀️';
+  if(themeBtn) themeBtn.textContent = window.jsplTheme.derived(d) === 'light' ? 'Dark' : 'Light';
   sendTheme(dailyFrame, d);
   sendTheme(monthlyFrame, d);
 }
@@ -320,6 +322,5 @@ monthlyFrame.addEventListener('load', broadcastFrameTop);
 })();
 </script>
 <script src="edge-stretch.js"></script>
-<script src="glow.js"></script>
 </body>
 </html>

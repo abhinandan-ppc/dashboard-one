@@ -525,10 +525,10 @@ div.google-visualization-tooltip {
 
     <div class="tabs-container">
       <nav class="tab-bar" id="tabBar">
-        <button data-tab="flow" class="on" type="button">🔀 Interactive Flowchart</button>
-        <button data-tab="sankey" type="button">📊 Material Sankey</button>
-        <button data-tab="details" type="button">📋 Detailed Allocations</button>
-        <button data-tab="others" type="button">⚙️ Others</button>
+        <button data-tab="flow" class="on" type="button"> Interactive Flowchart</button>
+        <button data-tab="sankey" type="button"> Material Sankey</button>
+        <button data-tab="details" type="button"> Detailed Allocations</button>
+        <button data-tab="others" type="button"> Others</button>
       </nav>
       
       <div class="tab-cnt">
@@ -1020,16 +1020,16 @@ function renderOutputs(R){
       if (t.dropped > 0) {
           alertBox.classList.add("alert-error");
           let bText = Array.from(R.bottlenecks).join(", ");
-          alertBox.innerHTML = `🚨 <b>Constraint Warning:</b> Planned allocations dropped by ${t.dropped} heats. Bottlenecks: ${bText}`;
+          alertBox.innerHTML = ` <b>Constraint Warning:</b> Planned allocations dropped by ${t.dropped} heats. Bottlenecks: ${bText}`;
       } else if (t.excessHM > 0) {
           alertBox.classList.add("alert-warn");
-          alertBox.innerHTML = `⚠️ <b>Resource Warning:</b> Plan met, but excess Hot Metal (${n0(t.excessHM)}t) diverted to Granshot.`;
+          alertBox.innerHTML = ` <b>Resource Warning:</b> Plan met, but excess Hot Metal (${n0(t.excessHM)}t) diverted to Granshot.`;
       } else if (t.bonus > 0) {
           alertBox.classList.add("alert-success");
-          alertBox.innerHTML = `✅ <b>Surplus Utilized:</b> Plan met, plus ${t.bonus} bonus heats successfully routed natively.`;
+          alertBox.innerHTML = ` <b>Surplus Utilized:</b> Plan met, plus ${t.bonus} additional heats allocated.`;
       } else {
           alertBox.classList.add("alert-success");
-          alertBox.innerHTML = `✅ <b>All Systems Nominal:</b> Plan perfectly met with no bottlenecks.`;
+          alertBox.innerHTML = ` <b>Plan met:</b> No bottlenecks detected.`;
       }
   }
 
@@ -1043,9 +1043,9 @@ function renderOutputs(R){
 
   var insHtml = "";
   if (t.dropped > 0) {
-      insHtml += `<div style="margin-bottom:12px; font-size: 14px; font-weight: 500;"><span style="color:var(--error); font-weight:800;">⚠️ Plan Shortfall (${t.dropped} Heats):</span> The system is constrained. Below is the stage-by-stage analysis:</div>`;
+      insHtml += `<div style="margin-bottom:12px; font-size: 14px; font-weight: 500;"><span style="color:var(--error); font-weight:800;"> Plan Shortfall (${t.dropped} Heats):</span> Stage analysis:</div>`;
   } else {
-      insHtml += `<div style="margin-bottom:12px; font-size: 14px; font-weight: 500;"><span style="color:var(--success); font-weight:800;">✅ Plan Fully Met:</span> The system handled all requested targets successfully. Below is the stage-by-stage analysis:</div>`;
+      insHtml += `<div style="margin-bottom:12px; font-size: 14px; font-weight: 500;"><span style="color:var(--success); font-weight:800;"> Plan met:</span> All targets met. Stage analysis:</div>`;
   }
 
   if (t.excessHM > 0) {
@@ -1086,7 +1086,7 @@ function renderOutputs(R){
   }
 
   if (t.bonus > 0) {
-      insHtml += makeInsight("Bonus Output Auto-filled", `<span style="color:var(--primary); font-weight:800;">📈 Bonus Output:</span> Routing auto-filled an extra ${t.bonus} heats yielding ${money(t.bonusEbitda)} in additional EBITDA.`, "ok");
+      insHtml += makeInsight("Bonus Output Auto-filled", `<span style="color:var(--primary); font-weight:800;"> Bonus Output:</span> Routing auto-filled an extra ${t.bonus} heats yielding ${money(t.bonusEbitda)} in additional EBITDA.`, "ok");
   }
   
   if(el("insightsBody")) el("insightsBody").innerHTML = insHtml;
@@ -1766,6 +1766,5 @@ window.addEventListener('resize', () => {
 
 </script>
 <script src="edge-stretch.js"></script>
-<script src="glow.js"></script>
 </body>
 </html>

@@ -2198,7 +2198,7 @@ function renderFlowchartChart(roots) {
       <span class="flowchart-node-date">${CAL_ICON}${esc(node.dateText)}</span>
       ${node.meta ? `<span class="flowchart-node-meta">${esc(node.meta)}</span>` : ''}
       <div class="flowchart-node-status-row">
-        ${isBypassed ? `<span class="flowchart-node-badge bypassed">⚡ Direct dispatch</span>` : ''}
+        ${isBypassed ? `<span class="flowchart-node-badge bypassed"> Direct dispatch</span>` : ''}
         ${node.stockText ? `<span class="flowchart-node-badge stock">● ${esc(node.stockText)}</span>` : ''}
         ${isDispatched ? `<span class="flowchart-node-badge dispatched">▲ Dispatched</span>` : ''}
       </div>

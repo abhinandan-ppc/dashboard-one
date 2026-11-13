@@ -36,10 +36,12 @@ Commit day-to-day work to `dev`. Review the development deployment before promot
 - Rake Predictor separates regions into their own sections, with adaptive siding-card columns and larger rake names.
 - Plan, AI, Map and Excel share one segmented pill with dividers.
 - Order details uses an integrated card footer with a matching separator and visible keyboard focus.
-- Classic uses IBM Plex typography and corrected card surfaces. Neomorph uses Space Mono with JetBrains Mono data, a consistent canvas and quieter shadows. Modern retains its product-sans styling.
+- Classic and Neomorph use IBM Plex Sans with monospaced technical figures, quiet surfaces and consistent controls. Modern retains its product-sans styling.
+- Dashboard labels use text instead of decorative emojis. Cursor glow, card tilt and the hub startup animation have been removed.
 - PM Yard inventory readouts remain flat instead of receiving generic card glow/tilt. Classic and Neomorph menus use opaque surfaces and theme-specific controls.
+- PM Yard's Modern (Glassmorphism) menus retain translucent backgrounds and backdrop blur; opaque overrides are scoped to Classic and Neomorph.
 
-Theme styling is shared through `theme.css` and initialized by `theme-boot.js`. Shared interaction effects live in `edge-stretch.js` and `glow.js`.
+Theme styling is shared through `theme.css` and initialized by `theme-boot.js`. Edge overscroll lives in `edge-stretch.js`. See `DESIGN-CONTEXT.md` and the theme-specific design documents before changing presentation.
 
 ## Architecture
 
@@ -92,4 +94,4 @@ Before release, check all three themes in light and dark modes at mobile and des
 
 Local diagnostics and fixtures are intentionally ignored and are not shipped with this repository. The current checkout has no tracked CI workflow or npm test script; do not assume an automated deployment gate exists. The latest local Rake Predictor run passed 12 theme/viewport combinations. The broader responsive suite passed 65 of 66 checks, with an unresolved PM Yard KPI styling assertion.
 
-The repository tracks application runtime, API code, this README and the skills lockfile. Keep `.env*`, service-account keys, production workbooks, local tools and screenshot artifacts out of commits. `skills-lock.json` records agent-skill sources; the installed `.agents/` directory remains local.
+The repository tracks application runtime, API code, this README, the design-context documents and the skills lockfile. Keep `.env*`, service-account keys, production workbooks, local tools and screenshot artifacts out of commits. `skills-lock.json` records agent-skill sources; the installed `.agents/` directory remains local.

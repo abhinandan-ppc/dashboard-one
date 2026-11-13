@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 /* ─── Type system ───────────────────────────────────────────────────────────
    Product Sans is Google's proprietary brand font and cannot be legally
@@ -3236,8 +3236,8 @@ html[data-theme-style="neomorph"] :is(button,a,input,select,textarea,[tabindex])
 
 /* ── Theme typography identities ───────────────────────────────────────────
    Classic speaks like a precise control room: narrow, efficient Plex forms,
-   compact labels and technical figures. Neomorphism uses Space Mono with
-   open tracking and a consistent tactile canvas. Modern retains the
+   compact labels and technical figures. Neomorphism uses readable Plex forms
+   with a consistent tactile canvas. Modern retains the
    product sans voice defined at the top of this file. */
 html[data-theme-style="classic"]{
   --font-body:'IBM Plex Sans','Segoe UI',sans-serif;
@@ -3265,8 +3265,8 @@ html[data-theme-style="classic"] :is(.num,.value,.val,.metric-value,.kpi-value,.
 }
 
 html[data-theme-style="neomorph"]{
-  --font-body:'Space Mono','Cascadia Mono',monospace;
-  --font-display:'Space Mono','Cascadia Mono',monospace;
+  --font-body:'IBM Plex Sans','Segoe UI',sans-serif;
+  --font-display:'IBM Plex Sans','Segoe UI',sans-serif;
   --font-data:'JetBrains Mono','Cascadia Mono',monospace;
 }
 html[data-theme-style="neomorph"] :is(body,button,input,select,textarea,.btn,.m3-button,.action-btn){
@@ -3355,3 +3355,18 @@ html[data-theme-style="neomorph"] :is(table,.data-table-wrap table,.table-wrap t
   color: var(--text-hi) !important;
   box-shadow: inset 3px 0 0 var(--primary), inset 0 1px 2px var(--neo-shadow-dark) !important;
 }
+
+/* Operational UI: retain theme geometry and useful state feedback, without
+   decorative backdrops, cursor effects or attention-seeking card motion. */
+html body,html[data-theme-style][data-theme] body{background-image:none!important}
+html body::before,html body::after,html[data-theme-style][data-theme] body::before,html[data-theme-style][data-theme] body::after{background-image:none!important}
+html body :is(.glow-edge,.glow-sheen,.glow-ripple){display:none!important}
+html body :is(.header-enter,.card-enter,.intro-card-in){animation:none!important}
+html body :is(.card,.glass-card,.kpi-card,.stat-card,.kcard):not(.dragging):not([style*="transform"]):hover{transform:none!important}
+html body :is(.fc-node.bottleneck,.fc-path-fg,.tree-edge){animation:none!important}
+html body :is(.card,.glass-card,.kpi-card,.stat-card,.kcard,.btn,.action-btn,.m3-button){text-shadow:none!important}
+html body :is(.hero,.hero::before,.hero::after){background-image:none!important}
+html body #boot-spinner{box-shadow:none!important}
+html body #boot-status::before{display:none!important}
+html body :is(.upload-opt-icon,.pi):empty{display:none!important}
+html body :is(button,a,input,select,textarea):focus-visible{outline:2px solid var(--primary)!important;outline-offset:3px}
