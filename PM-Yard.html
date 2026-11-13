@@ -199,6 +199,11 @@ html[data-theme-style="neomorph"] .dropdown-panel {
   to { opacity: 1; margin-top: 0; } 
 }
 .dropdown-panel.show { display: flex; }
+html[data-reduce-transparency="1"]:not([data-theme-style="classic"]):not([data-theme-style="neomorph"]) .dropdown-panel {
+  background:var(--bg)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
 .dd-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--br); }
 .dd-head span { font-size: 13px; font-weight: 800; color: var(--md-sys-color-secondary);}
 .dd-head button { background: none; border: none; color: var(--tm); cursor: pointer; font-size: 18px; transition: 0.2s; display:flex; align-items:center; justify-content:center;}
@@ -691,21 +696,18 @@ html[data-theme-style="neomorph"] .kpi-dashboard :is(.kpi-pill, .kpi-group) {
 .btn:hover { background: var(--input-hover); transform: translateY(-1px); }
 .btn:active { transform: scale(0.96); box-shadow: none; } /* Shrinks slightly on click for a tactile feel */
 
-  /* Icon-only header action buttons on mobile: the label is a direct text
-     node after the leading emoji (no wrapping span in the markup), so the
-     text is hidden via font-size:0 and the icon is redrawn via ::before
-     content (more reliable across browsers than ::first-letter, which has
-     inconsistent emoji-grapheme boundary behavior). */
+  /* Compact mobile text labels; the full accessible button names remain
+     in the markup. Keep the same four actions without emoji-only controls. */
   #btn-analysis, #btn-export, #btn-upload-dd, #btn-ctrl {
-    font-size: 0; padding: 0; width: 40px; height: 40px; justify-content: center; align-items: center; gap: 0; position: relative;
+    font-size: 0; padding: 0; width: 66px; height: 40px; justify-content: center; align-items: center; gap: 0; position: relative;
   }
   #btn-analysis::before, #btn-export::before, #btn-upload-dd::before, #btn-ctrl::before {
-    font-size: 16px; line-height: 1;
+    font-size: 11px; line-height: 1;
   }
-  #btn-analysis::before { content: "\1F916"; }
-  #btn-export::before { content: "\2B07\FE0F"; }
-  #btn-upload-dd::before { content: "\1F4E4"; }
-  #btn-ctrl::before { content: "\2699\FE0F"; }
+  #btn-analysis::before { content: "Analysis"; }
+  #btn-export::before { content: "Export"; }
+  #btn-upload-dd::before { content: "Upload"; }
+  #btn-ctrl::before { content: "Settings"; }
 
   /* Row 3: KPIs */
   .kpi-dashboard {
@@ -835,9 +837,9 @@ html[data-theme-style="neomorph"][data-theme="light"] .dropdown-panel {
   background: #e8eaed !important;
 }
 
-/* Menu IDs are the final paint authority. This guards the interactive menus
-   from any generic panel override added by a theme or future page component. */
-body.page-pm :is(#analysis-dropdown, #upload-dropdown, #ctrl-dropdown) {
+/* Opaque menu overrides belong only to Classic and Neomorph. Modern uses
+   the translucent --glass-bg and backdrop blur from .dropdown-panel. */
+html[data-theme-style="classic"] body.page-pm :is(#analysis-dropdown, #upload-dropdown, #ctrl-dropdown) {
   background: #172a3e !important;
 }
 html[data-theme-style="classic"][data-theme="light"] body.page-pm :is(#analysis-dropdown, #upload-dropdown, #ctrl-dropdown) {
@@ -975,17 +977,17 @@ html[data-theme-style="neomorph"][data-theme="light"] body.page-pm :is(#analysis
   <!-- ANALYSIS POPDOWN -->
   <div class="dropdown-wrapper" id="analysis-dd-wrapper">
     <button class="btn" id="btn-analysis" onclick="toggleAnalysisDropdown(event)" style="background: rgba(167, 139, 250, 0.15); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.4);">
-  🤖 Analysis ▾
+   Analysis ▾
 </button>
 
     <div class="dropdown-panel" id="analysis-dropdown" style="right: 0; width: 750px; max-width: calc(100vw - 20px);">
       <div class="dd-head">
-        <span>🤖 Yard Intelligence & Dispatch Planner</span>
+        <span> Yard analysis</span>
         <button onclick="toggleAnalysisDropdown(event)">✕</button>
       </div>
       <div class="ctrl-tabs">
-        <button class="ctab on" id="tab-dispatch" onclick="switchAnalysisTab('dispatch')">🚚 Truck Dispatch Plan</button>
-        <button class="ctab" id="tab-restack" onclick="switchAnalysisTab('restack')">🏗️ Restacking Targets</button>
+        <button class="ctab on" id="tab-dispatch" onclick="switchAnalysisTab('dispatch')"> Truck Dispatch Plan</button>
+        <button class="ctab" id="tab-restack" onclick="switchAnalysisTab('restack')"> Restacking Targets</button>
       </div>
       <div class="ctab-body" id="analysis-content" style="display: block; max-height: 60dvh; overflow-y: auto; padding: 16px;">
         <!-- Rendered via JS -->
@@ -995,42 +997,42 @@ html[data-theme-style="neomorph"][data-theme="light"] body.page-pm :is(#analysis
   
   <!-- EXPORT BUTTON -->
   <button class="btn" id="btn-export" onclick="downloadFilteredData()" style="background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.4);">
-  ⬇️ Export
+   Export
 </button>
   
   <!-- UPLOAD DROPDOWN (replaces separate ZSTK + BTR buttons) -->
   <div class="dropdown-wrapper" id="upload-dd-wrapper">
     <button class="btn" id="btn-upload-dd" onclick="toggleDropdown('upload-dropdown', event)" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">
-  📤 Upload ▾
+   Upload ▾
 </button>
 
     <div class="dropdown-panel" id="upload-dropdown" style="right: 0; width: 310px;">
       <div class="dd-head">
-        <span>📁 Data Upload</span>
+        <span> Data Upload</span>
         <button onclick="toggleDropdown('upload-dropdown',event)">✕</button>
       </div>
       <div style="padding:14px; display:flex; flex-direction:column; gap:10px;">
 
         <!-- ZSTK Card -->
         <div class="upload-opt" id="zstk-opt" onclick="document.getElementById('file-input').click()">
-          <span class="upload-opt-icon">📊</span>
+
           <div class="upload-opt-info">
             <div class="upload-opt-title">Load ZSTK Yard Data</div>
             <div class="upload-opt-desc">Plate inventory &amp; bin positions</div>
             <span class="upload-opt-status empty" id="zstk-upload-status">No file loaded</span>
           </div>
-          <button type="button" class="upload-opt-sync-btn" id="zstk-sync-btn" title="Sync live from Google Sheet" onclick="event.stopPropagation(); syncZSTKLive(true);">🔄 Sync Live</button>
+          <button type="button" class="upload-opt-sync-btn" id="zstk-sync-btn" title="Sync live from Google Sheet" onclick="event.stopPropagation(); syncZSTKLive(true);"> Sync Live</button>
         </div>
 
         <!-- BTR Card -->
         <div class="upload-opt" id="btr-opt" onclick="document.getElementById('btr-file-input').click()">
-          <span class="upload-opt-icon">📋</span>
+
           <div class="upload-opt-info">
             <div class="upload-opt-title">Load Auto BTR</div>
             <div class="upload-opt-desc">Remarks · Dispatch Mode · Finance Status</div>
             <span class="upload-opt-status empty" id="btr-upload-status">No file loaded</span>
           </div>
-          <button type="button" class="upload-opt-sync-btn" id="btr-sync-btn" title="Sync live from Drive" onclick="event.stopPropagation(); syncAutoBTRLive(true);">🔄 Sync Live</button>
+          <button type="button" class="upload-opt-sync-btn" id="btr-sync-btn" title="Sync live from Drive" onclick="event.stopPropagation(); syncAutoBTRLive(true);"> Sync Live</button>
         </div>
 
         <div style="font-size:10px;color:var(--tm);text-align:center;padding-top:2px;">Click a card above to browse for a file</div>
@@ -1047,29 +1049,29 @@ html[data-theme-style="neomorph"][data-theme="light"] body.page-pm :is(#analysis
   <!-- Settings Dropdown -->
   <div class="dropdown-wrapper">
     <button class="btn" id="btn-ctrl" onclick="toggleDropdown('ctrl-dropdown', event)" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.4);">
-  ⚙️ Settings ▾
+   Settings ▾
 </button>
     <div class="dropdown-panel" id="ctrl-dropdown" style="right: 0;">
       <div class="dd-head">
-        <span>⚙ Controls &amp; Settings</span>
+        <span> Controls &amp; Settings</span>
         <button onclick="toggleDropdown('ctrl-dropdown', event)">✕</button>
       </div>
       <div class="ctrl-tabs">
-        <button class="ctab on" id="tab-disp" onclick="showCtrlTab('disp')">🎨 Display</button>
-        <button class="ctab" id="tab-gfx" onclick="showCtrlTab('gfx')">🖥️ Graphics</button>
-        <button class="ctab" id="tab-info" onclick="showCtrlTab('info')">ℹ️ Info</button>
-        <button class="ctab" id="tab-nav" onclick="showCtrlTab('nav')">🎮 Nav</button>
+        <button class="ctab on" id="tab-disp" onclick="showCtrlTab('disp')"> Display</button>
+        <button class="ctab" id="tab-gfx" onclick="showCtrlTab('gfx')"> Graphics</button>
+        <button class="ctab" id="tab-info" onclick="showCtrlTab('info')"> Info</button>
+        <button class="ctab" id="tab-nav" onclick="showCtrlTab('nav')"> Nav</button>
       </div>
       <div class="ctab-body" id="body-disp">
         <div class="ctrl-divider">Environment Themes</div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 12px;">
-            <div class="theme-opt" onclick="setEnvironment('auto')">🕐 Auto</div>
-            <div class="theme-opt" onclick="setEnvironment('midnight')">🌌 Dark</div>
-            <div class="theme-opt" onclick="setEnvironment('sunrise')">🌅 Sunrise</div>
-            <div class="theme-opt" onclick="setEnvironment('noon')">☀️ Light</div>
-            <div class="theme-opt" onclick="setEnvironment('sunset')">🌇 Sunset</div>
-            <div class="theme-opt" onclick="setEnvironment('neon')">🟣 Neon</div>
-            <div class="theme-opt" style="grid-column: span 2; text-align: center;" onclick="setEnvironment('blueprint')">🟦 Blueprint</div>
+            <div class="theme-opt" onclick="setEnvironment('auto')"> Auto</div>
+            <div class="theme-opt" onclick="setEnvironment('midnight')"> Dark</div>
+            <div class="theme-opt" onclick="setEnvironment('sunrise')"> Sunrise</div>
+            <div class="theme-opt" onclick="setEnvironment('noon')"> Light</div>
+            <div class="theme-opt" onclick="setEnvironment('sunset')"> Sunset</div>
+            <div class="theme-opt" onclick="setEnvironment('neon')"> Neon</div>
+            <div class="theme-opt" style="grid-column: span 2; text-align: center;" onclick="setEnvironment('blueprint')"> Blueprint</div>
         </div>
         <div class="ctrl-divider">Scene & Bins</div>
         <div class="ctrl-row">
@@ -1168,8 +1170,8 @@ html[data-theme-style="neomorph"][data-theme="light"] body.page-pm :is(#analysis
 
 <!-- Camera Toolbar -->
 <div class="toolbar">
-  <button class="tbtn" id="view-persp" onclick="setView('persp')">⬛ 3D Isometric</button>
-  <button class="tbtn on" id="view-top" onclick="setView('top')">⬇️ Top View</button>
+  <button class="tbtn" id="view-persp" onclick="setView('persp')"> 3D Isometric</button>
+  <button class="tbtn on" id="view-top" onclick="setView('top')"> Top View</button>
   <button class="tbtn" id="view-fg" onclick="setView('fg')">FG Bays</button>
   <button class="tbtn" id="view-aa" onclick="setView('aa')">AA' Bay</button>
   <button class="tbtn" id="view-ab" onclick="setView('ab')">AB/BC Bay</button>
@@ -1597,7 +1599,7 @@ function hideHeaderTooltip() {
 // ─── Category Specific Excel Export ───
 function downloadCategoryData(type) {
   if (Object.keys(stockData).length === 0) {
-    showToast("⚠ No data loaded to export!");
+    showToast(" No data loaded to export!");
     return;
   }
 
@@ -1691,11 +1693,11 @@ function downloadCategoryData(type) {
   }
 
   if (exportRows.length === 0) {
-    showToast(`⚠ No plates found for category: ${type}`);
+    showToast(` No plates found for category: ${type}`);
     return;
   }
 
-  showToast(`⏳ Preparing export of ${exportRows.length} ${type} plates...`);
+  showToast(` Preparing export of ${exportRows.length} ${type} plates...`);
 
   // Utilize the pre-loaded SheetJS library to generate Excel
   const ws = XLSX.utils.json_to_sheet(exportRows);
@@ -3365,7 +3367,7 @@ function openInspector(obj) {
     // 1-based indexing for Position from Top (Top plate = 1)
     const posFromTop = totalInStack - i;
     const isDispatchMatch = window.activeTruckUids && window.activeTruckUids.has(p.uid);
-    const truckIcon = isDispatchMatch ? `<span style="font-size:11px; margin-right:4px;" title="Selected for Truck">🚚</span>` : '';
+    const truckIcon = isDispatchMatch ? `<span style="font-size:11px; margin-right:4px;" title="Selected for Truck">Truck</span>` : '';
     const plateColor = getPlateColorHex(p);
     
     // FORMAT THE CUSTOMER NAME (dimmed slightly so the Batch ID pops)
@@ -3444,7 +3446,7 @@ function openInspector(obj) {
         ${btrInfo.dispatchMode ? `<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(59,130,246,0.15);color:#93c5fd;border:1px solid rgba(59,130,246,0.3);">${escapeHtml(btrInfo.dispatchMode)}</span>` : ''}
         ${btrInfo.financeStatus? `<span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3);">${escapeHtml(btrInfo.financeStatus)}</span>` : ''}
       </div>` :
-      `<div style="margin-top:4px;"><span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);">⚠ RSS — Not in BTR</span></div>`)
+      `<div style="margin-top:4px;"><span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);"> RSS — Not in BTR</span></div>`)
     : '';
     row.innerHTML = `
       <div class="pr1">
@@ -3911,7 +3913,7 @@ function doRayHover(e) {
 
 function downloadFilteredData() {
   if (totalPlates === 0) {
-    showToast("⚠ No data loaded to export!");
+    showToast(" No data loaded to export!");
     return;
   }
 
@@ -3988,11 +3990,11 @@ function downloadFilteredData() {
   });
 
   if (exportRows.length === 0) {
-    showToast("⚠ No plates match the current filters.");
+    showToast(" No plates match the current filters.");
     return;
   }
 
-  showToast(`⏳ Preparing export of ${exportRows.length} plates...`);
+  showToast(` Preparing export of ${exportRows.length} plates...`);
 
   // Utilize the pre-loaded SheetJS library to generate Excel
   const ws = XLSX.utils.json_to_sheet(exportRows);
@@ -4352,7 +4354,7 @@ function loadBTRFile(file, openMenu = true) {
       if (progWrap) progWrap.style.display = 'none';
       if (prog) prog.style.width = '0%';
       console.error('BTR worker error:', err.message || err);
-      showToast('⚠ Failed to parse BTR file: ' + (err.message || 'worker error'));
+      showToast(' Failed to parse BTR file: ' + (err.message || 'worker error'));
       if (btrStatus) { btrStatus.textContent = 'No file loaded'; btrStatus.className = 'upload-opt-status empty'; }
       if (btrOpt) btrOpt.classList.remove('is-loading');
       worker.terminate();
@@ -4380,7 +4382,7 @@ function loadBTRFile(file, openMenu = true) {
 
         if (e.data.error) {
           console.error('BTR load error:', e.data.error);
-          showToast('⚠ Failed to parse BTR file: ' + e.data.error);
+          showToast(' Failed to parse BTR file: ' + e.data.error);
           if (btrStatus) { btrStatus.textContent = 'No file loaded'; btrStatus.className = 'upload-opt-status empty'; }
           if (btrOpt) btrOpt.classList.remove('is-loading');
         } else if (e.data.success) {
@@ -4388,7 +4390,7 @@ function loadBTRFile(file, openMenu = true) {
           btrLoaded = true;
           const matchCount = Object.keys(btrData).length;
 
-          if (btrStatus) { btrStatus.textContent = `✅ ${matchCount.toLocaleString()} rows loaded`; btrStatus.className = 'upload-opt-status loaded'; }
+          if (btrStatus) { btrStatus.textContent = ` ${matchCount.toLocaleString()} rows loaded`; btrStatus.className = 'upload-opt-status loaded'; }
           if (btrOpt) { btrOpt.classList.remove('is-loading'); btrOpt.classList.add('has-data'); }
 
           buildBtrSlicers();
@@ -4408,7 +4410,7 @@ function loadBTRFile(file, openMenu = true) {
     if (progWrap) progWrap.style.display = 'none';
     if (prog) prog.style.width = '0%';
     
-    showToast('⚠ Failed to read file.');
+    showToast(' Failed to read file.');
     if (btrStatus) { btrStatus.textContent = 'No file loaded'; btrStatus.className = 'upload-opt-status empty'; }
     if (btrOpt) btrOpt.classList.remove('is-loading');
   };
@@ -4482,7 +4484,7 @@ function ingestZstkCacheRecord(rec, viaHub) {
   showToast(`✓ Synced ${cnt.toLocaleString()} plates from ZSTK_LIVE_TEMP${viaHub ? ' (hub cache)' : ''}`);
   const zstkStatus = document.getElementById('zstk-upload-status');
   const zstkOpt = document.getElementById('zstk-opt');
-  if (zstkStatus) { zstkStatus.textContent = `✅ ${cnt.toLocaleString()} plates`; zstkStatus.className = 'upload-opt-status loaded'; }
+  if (zstkStatus) { zstkStatus.textContent = ` ${cnt.toLocaleString()} plates`; zstkStatus.className = 'upload-opt-status loaded'; }
   if (zstkOpt) { zstkOpt.classList.remove('is-loading'); zstkOpt.classList.add('has-data'); }
   return true;
 }
@@ -4506,8 +4508,8 @@ function syncZSTKLive(force, openMenu = true) {
 
   const fail = (msg) => {
     console.error('ZSTK sync error:', msg);
-    showToast('⚠ ZSTK sync failed: ' + msg);
-    if (zstkStatus) { zstkStatus.textContent = '⚠ Sync failed'; zstkStatus.className = 'upload-opt-status empty'; }
+    showToast(' ZSTK sync failed: ' + msg);
+    if (zstkStatus) { zstkStatus.textContent = ' Sync failed'; zstkStatus.className = 'upload-opt-status empty'; }
     if (zstkOpt) zstkOpt.classList.remove('is-loading');
     if (btn) btn.disabled = false;
   };
@@ -4558,10 +4560,10 @@ function syncAutoBTRLive(force, openMenu = true) {
 
   const fail = (msg) => {
     console.error('AutoBTR sync error:', msg);
-    showToast('⚠ AutoBTR sync failed: ' + msg);
+    showToast(' AutoBTR sync failed: ' + msg);
     const btrStatus = document.getElementById('btr-upload-status');
     const btrOpt = document.getElementById('btr-opt');
-    if (btrStatus) { btrStatus.textContent = '⚠ Sync failed'; btrStatus.className = 'upload-opt-status empty'; }
+    if (btrStatus) { btrStatus.textContent = ' Sync failed'; btrStatus.className = 'upload-opt-status empty'; }
     if (btrOpt) btrOpt.classList.remove('is-loading');
     if (btn) btn.disabled = false;
   };
@@ -4707,7 +4709,7 @@ function toggleBtrSelect(optionsId, event) {
 
 // ─── Segmented BTR View Mode Toggle ───────────────────────────────────────────
 function setBtrViewMode(mode) {
-  if (!btrLoaded) { showToast('⚠ Load BTR data first'); return; }
+  if (!btrLoaded) { showToast(' Load BTR data first'); return; }
   btrViewMode = mode;
   
   document.getElementById('btr-seg-all').classList.toggle('on', mode === 'all');
@@ -4733,7 +4735,7 @@ function setBtrViewMode(mode) {
 
 // ─── Segmented Dispatch Metrics Toggle ────────────────────────────────────────
 function setBtrMetricMode(mode) {
-  if (!btrLoaded) { showToast('⚠ Load BTR data first'); return; }
+  if (!btrLoaded) { showToast(' Load BTR data first'); return; }
   btrMetricMode = mode;
   
   document.getElementById('btr-metric-all').classList.toggle('on', mode === 'all');
@@ -4917,7 +4919,7 @@ function processFile(file) {
                 // Update the upload dropdown ZSTK status card (inline, no overlay)
                 const zstkStatus = document.getElementById('zstk-upload-status');
                 const zstkOpt    = document.getElementById('zstk-opt');
-                if (zstkStatus) { zstkStatus.textContent = `✅ ${cnt.toLocaleString()} plates`; zstkStatus.className = 'upload-opt-status loaded'; }
+                if (zstkStatus) { zstkStatus.textContent = ` ${cnt.toLocaleString()} plates`; zstkStatus.className = 'upload-opt-status loaded'; }
                 if (zstkOpt)    { zstkOpt.classList.remove('is-loading'); zstkOpt.classList.add('has-data'); }
                 
                 const fi = document.getElementById('file-input');
@@ -4926,13 +4928,13 @@ function processFile(file) {
             
           } catch(e) {
             console.error("Upload Error:", e);
-            showToast('⚠ Error reading file: ' + e.message);
+            showToast(' Error reading file: ' + e.message);
             if (progWrap) progWrap.style.display = 'none';
             if (prog) prog.style.width = '0%';
             // Reset card on error
             const zstkErr = document.getElementById('zstk-upload-status');
             const zstkOptE = document.getElementById('zstk-opt');
-            if (zstkErr) { zstkErr.textContent = '⚠ Load failed'; zstkErr.className = 'upload-opt-status empty'; }
+            if (zstkErr) { zstkErr.textContent = ' Load failed'; zstkErr.className = 'upload-opt-status empty'; }
             if (zstkOptE) zstkOptE.classList.remove('is-loading');
             const fi = document.getElementById('file-input');
             if (fi) fi.value = ''; 
@@ -4942,11 +4944,11 @@ function processFile(file) {
   };
   
   reader.onerror = () => {
-     showToast('⚠ Error reading file.');
+     showToast(' Error reading file.');
      if (progWrap) progWrap.style.display = 'none';
      const zstkErr = document.getElementById('zstk-upload-status');
      const zstkOptE = document.getElementById('zstk-opt');
-     if (zstkErr) { zstkErr.textContent = '⚠ Load failed'; zstkErr.className = 'upload-opt-status empty'; }
+     if (zstkErr) { zstkErr.textContent = ' Load failed'; zstkErr.className = 'upload-opt-status empty'; }
      if (zstkOptE) zstkOptE.classList.remove('is-loading');
      const fi = document.getElementById('file-input');
      if (fi) fi.value = ''; 
@@ -5079,7 +5081,7 @@ function getCoords(city) {
 function toggleAnalysisDropdown(event) {
     if (event) event.stopPropagation();
     if (!btrLoaded) {
-        showToast("⚠ Please load AutoBTR data first to calculate aging and priorities.");
+        showToast(" Please load AutoBTR data first to calculate aging and priorities.");
         return;
     }
     
@@ -5146,10 +5148,10 @@ function generateRestackPlan() {
     window.lastRestackTargets = [];
     let html = `<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; gap:16px;">
                   <div>
-                      <p style="font-size:14px; color:var(--tx); margin:0 0 4px 0; font-weight:800;">🏗️ Crane Action Plan</p>
+                      <p style="font-size:14px; color:var(--tx); margin:0 0 4px 0; font-weight:800;"> Crane Action Plan</p>
                       <p style="font-size:11px; color:var(--tm); margin:0; line-height:1.5;">This AI scans the yard for <b>Priority 1 & 2</b> plates (Dispatch-Ready) that are physically trapped under non-priority stock. Target bins with high dead-weight to prevent crane bottlenecks during truck loading.</p>
                   </div>
-                  <button onclick="exportRestackPlan()" class="btn btn-primary" style="height:32px; font-size:11px; flex-shrink:0;">⬇ Export List</button>
+                  <button onclick="exportRestackPlan()" class="btn btn-primary" style="height:32px; font-size:11px; flex-shrink:0;"> Export List</button>
                 </div>
                 <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">`;
 
@@ -5197,8 +5199,7 @@ function generateRestackPlan() {
 
     if (binsToRestack.length === 0) {
         html += `<div style="padding:32px 20px; text-align:center; background:var(--input-bg); border-radius:8px; border:1px dashed var(--br); grid-column: 1 / -1;">
-                    <span style="font-size:24px;">✅</span>
-                    <p style="color:var(--tx); font-weight:700; margin:8px 0 4px 0;">Yard is Optimized</p>
+                    <p style="color:var(--tx); font-weight:700; margin:8px 0 4px 0;">No restacking required</p>
                     <p style="color:var(--tm); font-size:11px; margin:0;">No dispatch-ready plates are currently trapped under dead weight.</p>
                  </div>`;
     } else {
@@ -5218,12 +5219,11 @@ function generateRestackPlan() {
                         <div style="font-size:10px; color:var(--tm); margin-top:4px; font-weight:700; text-transform:uppercase;">Trapped: <span style="color:var(--md-sys-color-secondary)">${t.plate.batch}</span></div>
                     </div>
                     <span style="background:rgba(248, 113, 113, 0.15); color:#f87171; padding:4px 8px; border-radius:4px; font-size:10px; font-weight:900; border:1px solid rgba(248, 113, 113, 0.3); text-align:right;">
-                        ⚠ TRAPPED
+                         TRAPPED
                     </span>
                 </div>
 
                 <div style="background:var(--input-bg); border:1px dashed var(--bdr); border-radius:6px; padding:10px; display:flex; align-items:center; gap:12px;">
-                    <div style="font-size:24px;">🏗️</div>
                     <div style="flex:1;">
                         <div style="font-size:12px; color:var(--tx); line-height:1.4;">
                             Move <b style="color:#f87171;">${t.blockingCount} plates</b> weighing <b style="color:#f87171;">${t.deadWeightToMove.toFixed(1)} MT</b> to access the target.
@@ -5233,7 +5233,7 @@ function generateRestackPlan() {
 
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div style="font-size:12px; color:var(--tm);">Target Priority: ${pLabel}</div>
-                    <button onclick="selectBinFromAnalysis('${t.binId}')" class="btn" style="height:28px; padding:0 12px; font-size:11px; margin:0; background:rgba(56, 189, 248, 0.15); color:#38bdf8; border:1px solid #38bdf8;">👁 Inspect Bin</button>
+                    <button onclick="selectBinFromAnalysis('${t.binId}')" class="btn" style="height:28px; padding:0 12px; font-size:11px; margin:0; background:rgba(56, 189, 248, 0.15); color:#38bdf8; border:1px solid #38bdf8;"> Inspect Bin</button>
                 </div>
             </div>`;
         });
@@ -5356,7 +5356,7 @@ function generateDispatchPlan() {
             <div style="font-size:12px; color:var(--tm); margin-bottom:4px;"><b>Dest:</b> <span style="color:var(--tx)">${t.primaryCity}</span> (+${t.customers.size} Cust)</div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                 <div style="font-size:12px; color:var(--tm);"><b>Priority:</b> ${pLabel}</div>
-                <button onclick="highlightTruckIn3D(${idx})" class="btn" style="height:24px; padding:0 8px; font-size:10px; margin:0; background:rgba(56, 189, 248, 0.15); color:#38bdf8; border:1px solid #38bdf8;">👁 View in 3D</button>
+                <button onclick="highlightTruckIn3D(${idx})" class="btn" style="height:24px; padding:0 8px; font-size:10px; margin:0; background:rgba(56, 189, 248, 0.15); color:#38bdf8; border:1px solid #38bdf8;"> View in 3D</button>
             </div>
             <div style="background:var(--input-bg); border-radius:6px; padding:8px; max-height:160px; overflow-y:auto; border:1px solid var(--br);">
                 ${pList}
@@ -5386,12 +5386,12 @@ function highlightTruckIn3D(truckIdx) {
     
     // Close the dropdown so the user can clearly see the 3D scene
     document.getElementById('analysis-dropdown').classList.remove('show');
-    showToast(`👁 Highlighting Truck ${truck.id} in 3D. Click "Clear All" in filters to reset.`);
+    showToast(` Highlighting Truck ${truck.id} in 3D. Click "Clear All" in filters to reset.`);
 }
 
 function exportRestackPlan() {
     if (!window.lastRestackTargets || window.lastRestackTargets.length === 0) {
-        showToast("⚠ No restacking targets to export.");
+        showToast(" No restacking targets to export.");
         return;
     }
     const exportRows = window.lastRestackTargets.map(t => ({
@@ -5403,7 +5403,7 @@ function exportRestackPlan() {
         "Customer": t.plate.cust || ""
     }));
     
-    showToast(`⏳ Exporting ${exportRows.length} restacking targets...`);
+    showToast(` Exporting ${exportRows.length} restacking targets...`);
     const ws = XLSX.utils.json_to_sheet(exportRows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Restack_Plan");
@@ -5412,7 +5412,7 @@ function exportRestackPlan() {
 
 function exportDispatchPlan() {
     if (!window.lastGeneratedTrucks || window.lastGeneratedTrucks.length === 0) {
-        showToast("⚠ No dispatch loads to export.");
+        showToast(" No dispatch loads to export.");
         return;
     }
     const exportRows = [];
@@ -5433,7 +5433,7 @@ function exportDispatchPlan() {
         });
     });
     
-    showToast(`⏳ Exporting ${window.lastGeneratedTrucks.length} Optimized Trucks...`);
+    showToast(` Exporting ${window.lastGeneratedTrucks.length} planned trucks...`);
     const ws = XLSX.utils.json_to_sheet(exportRows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Dispatch_Plan");
@@ -5737,7 +5737,6 @@ try { autoSyncLiveDataOnLoad(); } catch (e) {}
   sendReady();
 })();
 </script>
-<script src="glow.js"></script>
 <script src="edge-stretch.js"></script>
 </body>
 </html>

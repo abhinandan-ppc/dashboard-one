@@ -469,7 +469,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
     <div class="controls-sidebar">
       
       <div class="panel" id="panel-plan">
-        <div class="ph"><div class="pi pi-b">📅</div><h2>Plan & Export</h2></div>
+        <div class="ph"><h2>Plan & Export</h2></div>
         <div class="pb" style="padding: 16px;">
           <div class="f3" style="margin-bottom:16px; gap: 8px;">
             <div class="fg">
@@ -492,15 +492,15 @@ select option { background-color: var(--bg-color); color: var(--tx); }
               <input type="number" id="planDays" value="31" readonly style="background:var(--input-hover); cursor:not-allowed; border-bottom-color:transparent;" title="Days automatically calculated">
             </div>
           </div>
-          <button class="btn btn-primary" onclick="window.exportXLSX()">📊 Generate Monthly Plan XLSX</button>
+          <button class="btn btn-primary" onclick="window.exportXLSX()"> Generate Monthly Plan XLSX</button>
         </div>
       </div>
 
       <div class="panel" id="panel-sms">
-        <div class="ph"><div class="pi pi-a">⚙️</div><h2>SMS Allocation</h2></div>
+        <div class="ph"><h2>SMS Allocation</h2></div>
         <div class="pb" style="padding: 16px;"> 
           <div class="sms-blk" style="background:var(--ic); border:1px solid rgba(14,165,233,0.3);">
-            <div class="sms-blk-title" style="color:var(--md-sys-color-primary);">🔵 SMS 1 — EAF + BOF1</div>
+            <div class="sms-blk-title" style="color:var(--md-sys-color-primary);"> SMS 1 — EAF + BOF1</div>
             <label>SMS1 Total Steel (tonnes)</label>
             <input type="number" class="sms-in" id="sms1" value="421200" onchange="window.maximizeAllocations()" onkeydown="if(event.key==='Enter') this.blur();">
             <div class="plan-cmp">July Plan: 421,200t &nbsp;|&nbsp; <span id="sms1Dlt" class="vp ov">0 (0%)</span></div>
@@ -511,7 +511,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
                   <div style="color:var(--sg);font-size:10px;font-weight:800;text-transform:uppercase;margin-bottom:2px">⇄ SMS1 → TC1 (Direct)</div>
                   <div id="s1tc1_suggest" style="font-weight:800;color:var(--sg);font-size:10px;">Suggested: — t/d</div>
                 </div>
-                <button class="btn btn-sm btn-green" onclick="window.applyAutoTransfer()">⚡ Apply Optimal</button>
+                <button class="btn btn-sm btn-green" onclick="window.applyAutoTransfer()"> Apply Optimal</button>
               </div>
               <div style="display:flex;align-items:center;justify-content:space-between">
                 <div style="display:flex;align-items:center;gap:6px">
@@ -524,7 +524,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
           </div>
           
           <div class="sms-blk" style="background:var(--ml); border:1px solid rgba(234,88,12,0.3);">
-            <div class="sms-blk-title" style="color:var(--mo);">🟠 SMS 2 — BOF2 + BOF3</div>
+            <div class="sms-blk-title" style="color:var(--mo);"> SMS 2 — BOF2 + BOF3</div>
             <label>SMS2 Total Steel (tonnes)</label>
             <input type="number" class="sms-in" id="sms2" value="327840" onchange="window.maximizeAllocations()" onkeydown="if(event.key==='Enter') this.blur();">
             <div class="plan-cmp">July Plan: 327,840t &nbsp;|&nbsp; <span id="sms2Dlt" class="vp ov">0 (0%)</span></div>
@@ -535,7 +535,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
                   <div style="color:var(--mo);font-size:10px;font-weight:800;text-transform:uppercase;margin-bottom:2px">⇄ SMS2 → SMS1 Overflow</div>
                   <div id="sms2_of_suggest" style="font-weight:800;color:var(--mo);font-size:10px;">Suggested: — t/d</div>
                 </div>
-                <button class="btn btn-sm btn-orange" onclick="window.applyAutoTransferSMS2()">⚡ Apply Optimal</button>
+                <button class="btn btn-sm btn-orange" onclick="window.applyAutoTransferSMS2()"> Apply Optimal</button>
               </div>
               <div style="display:flex;align-items:center;justify-content:space-between">
                 <div style="display:flex;align-items:center;gap:6px">
@@ -553,7 +553,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
       <div id="panel-bottom-controls">
           <div class="coll-panel">
             <div class="coll-h" onclick="window.tog('castAdv')">
-              <span>⚙ Caster Allocation Ratios</span><span class="chev" id="castAdvChev">▼</span>
+              <span> Caster Allocation Ratios</span><span class="chev" id="castAdvChev">▼</span>
             </div>
             <div class="coll-b" id="castAdv">
               <p style="font-size:9px;font-weight:800;color:var(--tm);text-transform:uppercase;margin-bottom:8px">SMS2 → TC1</p>
@@ -593,7 +593,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
     
           <div class="coll-panel">
             <div class="coll-h" onclick="window.tog('capSet')">
-              <span>⚡ Capacity & Yield</span><span class="chev" id="capSetChev">▼</span>
+              <span> Capacity & Yield</span><span class="chev" id="capSetChev">▼</span>
             </div>
             <div class="coll-b" id="capSet" style="padding: 16px 12px;">
                <div class="cap-micro-grid-wrap">
@@ -641,7 +641,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
           </div>
 
           <button class="btn btn-pu" onclick="window.maximizeAllocations()" style="margin-bottom:0; width:100%; box-sizing:border-box;">
-            ⚡ Auto-Maximize Ratios
+             Auto-Maximize Ratios
           </button>
       </div>
 
@@ -650,10 +650,10 @@ select option { background-color: var(--bg-color); color: var(--tx); }
     <div class="content-area" id="main-content">
       <div class="panel">
         <div class="tabs-hdr">
-          <button class="tab-btn act" onclick="window.stab(this,'t-ov')">📊 Overview</button>
-          <button class="tab-btn" onclick="window.stab(this,'t-fl')">🔀 Allocation Flow</button>
+          <button class="tab-btn act" onclick="window.stab(this,'t-ov')"> Overview</button>
+          <button class="tab-btn" onclick="window.stab(this,'t-fl')"> Allocation Flow</button>
           <button class="tab-btn" onclick="window.stab(this,'t-eb')">₹ EBITDA Rank</button>
-          <button class="tab-btn" onclick="window.stab(this,'t-pm')">📦 Product Mix Optimizer</button>
+          <button class="tab-btn" onclick="window.stab(this,'t-pm')"> Product Mix Optimizer</button>
         </div>
 
         <div id="t-ov" class="tc act">
@@ -678,9 +678,9 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 
         <div id="t-fl" class="tc">
           <div class="flow-toolbar">
-            <button class="flow-view-btn act" onclick="window.setFlowView('flow',this)">🔀 Flow View</button>
-            <button class="flow-view-btn" onclick="window.setFlowView('table',this)">📋 Table View</button>
-            <button class="flow-view-btn" onclick="window.setFlowView('sankey',this)">📊 Sankey View</button>
+            <button class="flow-view-btn act" onclick="window.setFlowView('flow',this)"> Flow View</button>
+            <button class="flow-view-btn" onclick="window.setFlowView('table',this)"> Table View</button>
+            <button class="flow-view-btn" onclick="window.setFlowView('sankey',this)"> Sankey View</button>
             <div class="flow-legend">
               <div class="leg-item"><div class="leg-dot" style="background:var(--md-sys-color-primary)"></div>Furnace</div>
               <div class="leg-item"><div class="leg-dot" style="background:var(--md-sys-color-primary-container)"></div>Caster</div>
@@ -716,7 +716,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
               <br><span style="color:var(--tm); display:inline-block; margin-top:6px;"><b>Auto-Maximize</b> optimizes the mix by mathematically shifting % to higher-margin grades (dynamically capped at 200% of base plan to preserve operational realism).</span>
             </p>
             <button class="btn btn-gold" onclick="window.maximizeProductMixEbitda()" style="white-space:nowrap;">
-              💰 Auto-Maximize EBITDA
+               Auto-Maximize EBITDA
             </button>
           </div>
           <div id="prodMixContent" class="pm-grid"></div>
@@ -791,7 +791,7 @@ const MONTHS=['','January','February','March','April','May','June','July','Augus
 
 const PROD_MIX = {
   pm: {
-    name: '🏭 Plate Mill', plan: 113840, groups: [
+    name: ' Plate Mill', plan: 113840, groups: [
       {
         name: 'Domestic', clr: '#006493', prods: [
           { l: 'Q Grade', v: 7000, e: 31034, clr: '#16a34a' },
@@ -804,7 +804,7 @@ const PROD_MIX = {
     ]
   },
   bar: {
-    name: '🔩 Bar Mill', plan: 122416, groups: [
+    name: ' Bar Mill', plan: 122416, groups: [
       {
         name: 'TMT Domestic', clr: '#16a34a', prods: [
           { l: 'TMT 8mm', v: 35000, e: 9461, clr: '#15803d' },
@@ -815,7 +815,7 @@ const PROD_MIX = {
     ]
   },
   hsm: {
-    name: '🌀 HSM', plan: 393366, groups: [
+    name: ' HSM', plan: 393366, groups: [
       {
         name: 'VAG Domestic', clr: '#0ea5e9', prods: [
           { l: '<1.4mm VAG', v: 1000, e: 16370, clr: '#0284c7' },
@@ -833,7 +833,7 @@ const PROD_MIX = {
     ]
   },
   crm: {
-    name: '🪟 CRM', plan: 85837, groups: [
+    name: ' CRM', plan: 85837, groups: [
       {
         name: 'Products', clr: '#ca8a04', prods: [
           { l: 'Deck Sheet', v: 300, e: 8322, clr: '#7c3aed' },
@@ -849,7 +849,7 @@ const PROD_MIX = {
     ]
   },
   wrm: {
-    name: '⭕ WRM Patratu', plan: 30920, groups: [
+    name: ' WRM Patratu', plan: 30920, groups: [
       {
         name: 'Products', clr: '#7c3aed', prods: [
           { l: 'Wire Rod VAG', v: 15344, e: 14566, clr: '#7c3aed' },
@@ -859,7 +859,7 @@ const PROD_MIX = {
     ]
   },
   bmp: {
-    name: '🔨 BM Patratu', plan: 65000, groups: [
+    name: ' BM Patratu', plan: 65000, groups: [
       {
         name: 'TMT Products', clr: '#ca8a04', prods: [
           { l: 'TMT 8mm', v: 15000, e: 3726, clr: '#ef4444' },
@@ -1345,18 +1345,18 @@ window.recalc = function(){
   if(sugEl2){sugEl2.textContent = optTpd2 > 0 ? `Suggested: ${fmt(optTpd2)} t/d` : 'No transfer needed'; sugEl2.style.color = optTpd2 > 0 ? 'var(--mo)' : 'var(--tm)';}
 
   let yLoss = (sms1_raw + sms2_raw) - (ma.pPM + ma.pHS + ma.pBM + ma.pWR + ma.pBP);
-  $('alertBox').innerHTML=`<div class="alert">✅ Outputs balanced correctly. Total Yield / Unallocated Loss: ${fmt(Math.round(yLoss))} MT</div>`;
+  $('alertBox').innerHTML=`<div class="alert"> Outputs balanced correctly. Total Yield / Unallocated Loss: ${fmt(Math.round(yLoss))} MT</div>`;
 
   // Render Overview Tables
   const semisMills=[
-    {l:'🏭 Plate Mill',p:plan.pm,v:ma.pPM, k:'pm'},
-    {l:'🌀 HSM (Total Hot Rolled)',p:plan.hsm,v:ma.pHS, k:'hsm'}, 
-    {l:'🔩 Bar Mill',p:plan.bm,v:ma.pBM, k:'bar'},
-    {l:'⭕ WRM Patratu',p:plan.wrm,v:ma.pWR, k:'wrm'},
-    {l:'🔨 BM Patratu',p:plan.bmp,v:ma.pBP, k:'bmp'},
+    {l:' Plate Mill',p:plan.pm,v:ma.pPM, k:'pm'},
+    {l:'HSM (Total Hot Rolled)',p:plan.hsm,v:ma.pHS, k:'hsm'},
+    {l:' Bar Mill',p:plan.bm,v:ma.pBM, k:'bar'},
+    {l:' WRM Patratu',p:plan.wrm,v:ma.pWR, k:'wrm'},
+    {l:' BM Patratu',p:plan.bmp,v:ma.pBP, k:'bmp'},
   ];
   const dsMills=[
-    {l:'🪟 CRM (CRC)',p:plan.crm,v:ma.pCR, k:'crm'}
+    {l:' CRM (CRC)',p:plan.crm,v:ma.pCR, k:'crm'}
   ];
 
   let oh=''; 
@@ -1396,9 +1396,9 @@ window.recalc = function(){
   const yield_loss = total_allocated - st_v_semis;
 
   oh+=`<tr class="recon-h"><td colspan="4" style="background:transparent; color:inherit;">Material Reconciliation</td></tr>`;
-  oh+=`<tr class="even-row"><td style="text-align:left; padding-left:16px;">📥 Total Liquid Steel Input (SMS1 + SMS2)</td><td>-</td><td style="font-weight:800">${fmt(Math.round(total_sms))}</td><td>-</td></tr>`;
-  oh+=`<tr><td style="text-align:left; padding-left:16px; color:var(--rd)">🧱 [-] Unallocated (Bottlenecked at Mills)</td><td>-</td><td style="color:var(--rd);font-weight:800">-${fmt(Math.round(unallocated))}</td><td>-</td></tr>`;
-  oh+=`<tr class="even-row"><td style="text-align:left; padding-left:16px; color:var(--mo)">🔥 [-] Metallurgical Yield Loss (Rolling)</td><td>-</td><td style="color:var(--mo);font-weight:800">-${fmt(Math.round(yield_loss))}</td><td>-</td></tr>`;
+  oh+=`<tr class="even-row"><td style="text-align:left; padding-left:16px;"> Total Liquid Steel Input (SMS1 + SMS2)</td><td>-</td><td style="font-weight:800">${fmt(Math.round(total_sms))}</td><td>-</td></tr>`;
+  oh+=`<tr><td style="text-align:left; padding-left:16px; color:var(--rd)"> [-] Unallocated (Bottlenecked at Mills)</td><td>-</td><td style="color:var(--rd);font-weight:800">-${fmt(Math.round(unallocated))}</td><td>-</td></tr>`;
+  oh+=`<tr class="even-row"><td style="text-align:left; padding-left:16px; color:var(--mo)"> [-] Metallurgical Yield Loss (Rolling)</td><td>-</td><td style="color:var(--mo);font-weight:800">-${fmt(Math.round(yield_loss))}</td><td>-</td></tr>`;
   oh+=`<tr style="background:var(--input-hover);font-weight:900;color:var(--tx); border-bottom: 1px solid var(--br);"><td style="text-align:left; padding-left:16px;">FINAL SEMIS FORECAST (=)</td><td>-</td><td style="color:var(--md-sys-color-primary)">${fmt(Math.round(st_v_semis))}</td><td>-</td></tr>`;
 
   oh+=`<tr class="sec-h"><td colspan="4" style="margin-top: 24px;">Downstream Processing</td></tr>`;
@@ -1439,7 +1439,7 @@ window.recalc = function(){
   const s2_sum = eff_sms2 > 0 ? eff_sms2 : 1;
   const s2raw_sum = sms2_raw > 0 ? sms2_raw : 1;
   $('casterVisualBox').innerHTML = `
-    <p class="sec-lbl" style="margin-top:0; margin-bottom:12px;">📊 Allocation Share Tracking (% wise Visualization)</p>
+    <p class="sec-lbl" style="margin-top:0; margin-bottom:12px;"> Allocation Share Tracking (% wise Visualization)</p>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
       <div>
         <label style="color:var(--md-sys-color-primary); font-size:11px; font-weight:800">SMS 1 Allocation Ratios</label>
@@ -1470,7 +1470,7 @@ window.recalc = function(){
   
   let cch=''; ci.forEach(c2=>{
     const pct=Math.min(100,c2.mat/c2.cap*100).toFixed(0);
-    const ty=c2.lim?'🧱 Material-ltd':'🏭 Capacity-ltd',col=c2.lim?'var(--sg)':'var(--md-sys-color-primary)';
+    const ty=c2.lim?' Material-ltd':' Capacity-ltd',col=c2.lim?'var(--sg)':'var(--md-sys-color-primary)';
     
     cch+=`<div style="background:var(--input-bg);border-radius:var(--radius-m);border: 1px solid var(--glass-border);padding:14px 18px;margin-bottom:12px;box-shadow:var(--glass-shadow)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -1566,7 +1566,7 @@ window.renderProdMix = function(ap) {
     html += '<span style="font-size:12px;color:var(--tm);font-weight:700">t/d</span>';
     html += '<span class="pm-blended">blended ₹' + fmt(Math.round(blnd)) + '/t</span>';
     html += '<span style="font-size:12px;font-weight:800;padding:4px 10px;border-radius:var(--radius-pill);background:' + (pctOk?'rgba(22, 163, 74, 0.1)':'rgba(220, 38, 38, 0.1)') + ';color:' + (pctOk?'var(--sg)':'var(--rd)') + '">';
-    html += 'Σ=' + totalPct.toFixed(0) + '%' + (pctOk?' ✓':' ⚠') + '</span>';
+    html += 'Σ=' + totalPct.toFixed(0) + '%' + (pctOk?' ✓':' ') + '</span>';
     html += '</div></div>';
     html += bar;
 
@@ -1714,16 +1714,16 @@ window.showDrawer = function(id) {
         case 'nd-bc1': t='BC1 Billet Caster'; v=calcState.bc1; desc=`Casts billets routed to Bar Mill and BM Patratu.`; break;
         case 'nd-cc1': t='CC1 Combi Caster'; v=calcState.cc1; desc=`Casts billets routed to WRM Patratu and BM Patratu.`; break;
         case 'nd-tc1': t='TC1 Twin Caster'; v=calcState.tc1 + calcState.s1tc1_t; desc=`Twin casting feeding exclusively into Hot Strip Mill (HSM). Receives SMS2 feed and optional SMS1 bypass.`; break;
-        case 'nd-pm': t='🏭 Plate Mill'; v=ma.pPM; planV=plan.pm; maxCap=ma.caps.pm; y=ypm; ebtRate=ma.pPM>0?ma.epm/ma.pPM:0; ebtTotal=ma.epm; lim=ma.matLimPM; desc='Final Rolled Plates Production. Feeds from SC1 Slabs.'; break;
-        case 'nd-hsm': t='🌀 HSM Mill'; v=ma.pHS; planV=plan.hsm; maxCap=ma.caps.hs; y=yhsm; ebtRate=ma.pHS>0?ma.ehs/ma.pHS:0; ebtTotal=ma.ehs; lim=ma.matLimHS; desc=`Total Hot Rolled Production.<br>• Downstream feed to CRM: <b style="color:var(--tx)">${fmt(Math.round(ma.crmIn))} t</b>`; break;
-        case 'nd-bm': t='🔩 Bar Mill'; v=ma.pBM; planV=plan.bm; maxCap=ma.caps.bm; y=ybm; ebtRate=ma.pBM>0?ma.ebm/ma.pBM:0; ebtTotal=ma.ebm; lim=ma.matLimBM; desc='Final TMT Bar Production. Feeds from BC1 Billets.'; break;
-        case 'nd-crm': t='🪟 CRM Mill'; v=ma.pCR; planV=plan.crm; maxCap=ma.caps.cr; y=ycrm; ebtRate=getMixBlended('crm'); ebtTotal=ma.ecr; lim=ma.matLimCR; desc='Downstream Cold Rolled operations. Fed exclusively from HSM internal production pool.'; break;
-        case 'nd-wrm': t='⭕ WRM Patratu'; v=ma.pWR; planV=plan.wrm; maxCap=ma.caps.wr; y=ywrm; ebtRate=ma.pWR>0?ma.ewr/ma.pWR:0; ebtTotal=ma.ewr; lim=ma.matLimWR; desc='Final Wire Rod Production. Feeds from CC1 Billets.'; break;
-        case 'nd-bmp': t='🔨 BM Patratu'; v=ma.pBP; planV=plan.bmp; maxCap=ma.caps.bp; y=ybmp; ebtRate=ma.pBP>0?ma.ebp/ma.pBP:0; ebtTotal=ma.ebp; lim=ma.matLimBP; desc='Final Patratu TMT Bar Production. Feeds from BC1 and CC1 Billets.'; break;
+        case 'nd-pm': t=' Plate Mill'; v=ma.pPM; planV=plan.pm; maxCap=ma.caps.pm; y=ypm; ebtRate=ma.pPM>0?ma.epm/ma.pPM:0; ebtTotal=ma.epm; lim=ma.matLimPM; desc='Final Rolled Plates Production. Feeds from SC1 Slabs.'; break;
+        case 'nd-hsm': t=' HSM Mill'; v=ma.pHS; planV=plan.hsm; maxCap=ma.caps.hs; y=yhsm; ebtRate=ma.pHS>0?ma.ehs/ma.pHS:0; ebtTotal=ma.ehs; lim=ma.matLimHS; desc=`Total Hot Rolled Production.<br>• Downstream feed to CRM: <b style="color:var(--tx)">${fmt(Math.round(ma.crmIn))} t</b>`; break;
+        case 'nd-bm': t=' Bar Mill'; v=ma.pBM; planV=plan.bm; maxCap=ma.caps.bm; y=ybm; ebtRate=ma.pBM>0?ma.ebm/ma.pBM:0; ebtTotal=ma.ebm; lim=ma.matLimBM; desc='Final TMT Bar Production. Feeds from BC1 Billets.'; break;
+        case 'nd-crm': t=' CRM Mill'; v=ma.pCR; planV=plan.crm; maxCap=ma.caps.cr; y=ycrm; ebtRate=getMixBlended('crm'); ebtTotal=ma.ecr; lim=ma.matLimCR; desc='Downstream Cold Rolled operations. Fed exclusively from HSM internal production pool.'; break;
+        case 'nd-wrm': t=' WRM Patratu'; v=ma.pWR; planV=plan.wrm; maxCap=ma.caps.wr; y=ywrm; ebtRate=ma.pWR>0?ma.ewr/ma.pWR:0; ebtTotal=ma.ewr; lim=ma.matLimWR; desc='Final Wire Rod Production. Feeds from CC1 Billets.'; break;
+        case 'nd-bmp': t=' BM Patratu'; v=ma.pBP; planV=plan.bmp; maxCap=ma.caps.bp; y=ybmp; ebtRate=ma.pBP>0?ma.ebp/ma.pBP:0; ebtTotal=ma.ebp; lim=ma.matLimBP; desc='Final Patratu TMT Bar Production. Feeds from BC1 and CC1 Billets.'; break;
       }
     
       if(id === 'nd-hsm') {
-         title.textContent = '🌀 Hot Strip Mill (HSM)';
+         title.textContent = ' Hot Strip Mill (HSM)';
          let pmDetail = getMillMixM3('hsm', ma.pHS);
          body.innerHTML = `<div style="padding:20px; font-size:14px; color:var(--tx); max-height: 65vh; overflow-y: auto;">
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px">
@@ -1745,7 +1745,7 @@ window.showDrawer = function(id) {
                 </div>
               </div>
               <div style="margin-top:16px; font-size:13px; font-weight:500; color:var(--md-sys-color-primary); background:var(--md-sys-color-primary-container); padding:16px; border-radius:var(--radius-m); border:1px solid rgba(0,0,0,0.05); line-height: 1.6;">
-                  <b style="font-weight:800">ℹ️ Note:</b> Output is dynamically optimized based on financial yield comparison against value-added cold rolling conversion.
+                  <b style="font-weight:800"> Note:</b> Output is dynamically optimized based on financial yield comparison against value-added cold rolling conversion.
               </div>
               ${pmDetail}
          </div>`;
@@ -1802,7 +1802,7 @@ window.showDrawer = function(id) {
          if (ebtTotal !== null && ebtTotal !== undefined) addMetric('Total EBT (Cr)', `₹${fmtCr(ebtTotal)} Cr`, 'var(--gd)');
     
          if (lim !== null && lim !== undefined) {
-             addMetric('Bottleneck Status', lim ? '🧱 Material Limited' : '🏭 Capacity Limited', lim ? 'var(--sg)' : 'var(--rd)');
+             addMetric('Bottleneck Status', lim ? ' Material Limited' : ' Capacity Limited', lim ? 'var(--sg)' : 'var(--rd)');
          }
     
          metricsGrid += `</div>`;
@@ -1818,7 +1818,7 @@ window.showDrawer = function(id) {
                 ${utilHtml}
                 ${pmDetailHtml}
                 <div style="margin-top:20px; font-size:13px; font-weight:500; color:var(--md-sys-color-primary); background:var(--md-sys-color-primary-container); padding:16px; border-radius:var(--radius-m); border:1px solid rgba(0,0,0,0.05); line-height: 1.6;">
-                    <b style="font-weight:800">ℹ️ Info:</b> ${desc}
+                    <b style="font-weight:800"> Info:</b> ${desc}
                 </div>
               </div>`;
       } else {
@@ -2164,6 +2164,5 @@ try{var _ma=calcState&&calcState.sc?calcState.sc.me:null;if(_ma)window.renderPro
 </div>
 
 <script src="edge-stretch.js"></script>
-<script src="glow.js"></script>
 </body>
 </html>

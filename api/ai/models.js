@@ -15,7 +15,7 @@ const OMNIROUTE_ENDPOINTS = {
 const CATEGORIES = {
   auto: {
     label: 'Auto',
-    icon: '🤖',
+    icon: '',
     description: 'Smart routing — picks the best model for your prompt',
     models: [
       { id: 'auto/best-coding', name: 'Best Coding', desc: 'Optimized for code tasks' },
@@ -29,7 +29,7 @@ const CATEGORIES = {
   },
   chat: {
     label: 'Chat',
-    icon: '💬',
+    icon: '',
     description: 'Flagship general-purpose models',
     models: [
       { id: 'oc/claude-opus-5', name: 'Claude Opus 5', desc: 'Anthropic flagship' },
@@ -46,7 +46,7 @@ const CATEGORIES = {
   },
   coding: {
     label: 'Code',
-    icon: '💻',
+    icon: '',
     description: 'Specialized for coding & development',
     models: [
       { id: 'auto/best-coding', name: 'Auto Coding', desc: 'Smart code routing' },
@@ -63,7 +63,7 @@ const CATEGORIES = {
   },
   image: {
     label: 'Image',
-    icon: '🎨',
+    icon: '',
     description: 'Image generation & understanding',
     models: [
       { id: 'openai/chatgpt-image-latest', name: 'ChatGPT Image', desc: 'OpenAI image gen' },
@@ -78,7 +78,7 @@ const CATEGORIES = {
   },
   video: {
     label: 'Video',
-    icon: '🎬',
+    icon: '',
     description: 'Video generation & animation',
     models: [
       { id: 'vag/google/veo-3.1-generate-001', name: 'Veo 3.1', desc: 'Google video gen' },
@@ -92,7 +92,7 @@ const CATEGORIES = {
   },
   free: {
     label: 'Free',
-    icon: '🆓',
+    icon: '',
     description: 'No-cost models — great for testing',
     models: [
       { id: 'openrouter/z-ai/glm-5.2:free', name: 'GLM 5.2', desc: 'Zhipu AI free' },

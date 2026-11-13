@@ -65,11 +65,14 @@ scripts/smoke-plate-tracker-stock.mjs
 scripts/syntax-check-page.mjs
 
 # Local project documentation, verification, fixtures, and development tools.
-# The deployable repository contains only the page runtime and serverless API.
+# Keep local tooling out; retain the selected project/design documentation.
 .github/
 .env.example
 *.md
 !README.md
+!DESIGN-CONTEXT.md
+!DESIGN_SAP_CLASSIC.md
+!DESIGN_NEOMORPH.md
 check-html.mjs
 check-js.mjs
 local-auth.mjs

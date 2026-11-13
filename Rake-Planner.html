@@ -74,7 +74,14 @@ input:focus{outline:none;border-color:var(--amber) !important;box-shadow:var(--s
 .rake-name{font-size:22px;font-weight:750;letter-spacing:-.025em;line-height:1.2;color:var(--text)}
 .rake-order-count{font-size:12px;color:var(--dim);line-height:1.6}
 .rake-threshold-note{padding:0 18px 10px;color:var(--dim);font-size:12px}
-.rake-status-row{display:flex;gap:8px;flex-wrap:wrap;padding:4px 18px 16px;align-items:center;border-bottom:1px solid var(--bdr)}
+.rake-status-row{display:grid;gap:10px;padding:4px 18px 16px;border-bottom:1px solid var(--bdr)}
+.rake-tier-markers,.rake-state-markers{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0}
+.rake-marker{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:4px 8px;box-sizing:border-box;border:1px solid var(--bdr);border-radius:6px;background:var(--s2);color:var(--text);font-family:var(--font-body);font-size:11px;font-weight:500;line-height:18px;white-space:nowrap;box-shadow:none}
+.rake-marker::before{content:'';width:5px;height:5px;flex-shrink:0;border-radius:50%;background:var(--marker-color)}
+.rake-marker strong{padding-left:6px;border-left:1px solid var(--bdrHi);font-family:var(--font-data);font-size:11px;font-weight:600;line-height:16px;font-variant-numeric:tabular-nums;color:var(--text)}
+.rake-state-markers .rake-marker{font-weight:600;background:color-mix(in srgb,var(--marker-color) 8%,var(--s2));border-color:color-mix(in srgb,var(--marker-color) 28%,var(--bdr))}
+html[data-theme-style="classic"] .rake-marker{border-radius:0}
+html[data-theme-style="neomorph"] .rake-tier-markers .rake-marker{background:var(--neo-bg)}
 .rake-capacity{padding:18px 18px 14px}
 .rake-capacity-line{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .rake-detail-label{display:block;color:var(--dim);font-size:12px;font-weight:500;line-height:1.5;margin-bottom:6px}
@@ -100,7 +107,6 @@ html body.page-rake .rake-predictor .rake-entry>.rake-details-button,
 html body.page-rake .rake-predictor .rake-entry>.rake-details-button:is(:hover,:focus-visible,:active){border:0!important;border-top:1px solid var(--bdr)!important;border-radius:0!important;box-shadow:none!important;transform:none!important}
 html body.page-rake .rake-predictor .rake-entry>.rake-details-button:focus-visible{outline:2px solid var(--primary)!important;outline-offset:-4px}
 html body.page-rake .rake-predictor .rake-entry>.rake-details-button[aria-expanded="true"]{color:var(--primary)!important;background:var(--primary-bg)!important}
-.rake-status-row>span{color:var(--text)!important}
 .rake-entry[data-selected="true"]{outline:2px solid var(--primary);outline-offset:2px}
 html[data-theme-style="classic"] .rake-siding-card{box-shadow:var(--shadow-xs);border:1px solid var(--bdr)}
 html[data-theme-style="neomorph"] .rake-siding-card{background:var(--neo-bg);border:none;box-shadow:var(--shadow-md)}
@@ -2022,7 +2028,7 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding}){
 
   if(!data.length)return(
     <div style={{...card,padding:'48px 24px',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12}}>
-      <div style={{fontSize:44,opacity:.4}}>🚉</div>
+
       <div style={{fontFamily:F.h,fontSize:17,color:'var(--dim)',letterSpacing:'.03em',textTransform:'uppercase'}}>No actual plan found (Column C "Mode" is blank for all orders)</div>
     </div>
   );
@@ -2066,7 +2072,7 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding}){
             <th style={{...th0,textAlign:'right'}}>BTC</th>
             <th style={{...th0,textAlign:'right'}}>Issued</th>
             <th style={{...th0,textAlign:'right'}}>BTP</th>
-            <th style={{...th0,textAlign:'center'}}>🗺️</th>
+            <th style={{...th0,textAlign:'center'}}>Map</th>
           </tr>
         </thead>
         <tbody>
@@ -2103,7 +2109,7 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding}){
                   background:rc.bg,border:'1px solid '+rc.bdr,
                   borderRadius:'var(--radius-xs)',color:rc.txt,transition:'all .15s'}}
                   onMouseEnter={e=>r.items.length&&(e.currentTarget.style.background=rc.bgMd)}
-                  onMouseLeave={e=>e.currentTarget.style.background=rc.bg}>🗺️</button>
+                  onMouseLeave={e=>e.currentTarget.style.background=rc.bg}>Map</button>
               </td>
             </tr>;
           })}
@@ -2143,7 +2149,7 @@ function PivotTable({data,onDrill,onRegionExport,activeCell,remarksLbl}){
 
   if(!data.length)return(
     <div style={{...card,padding:'48px 24px',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12}}>
-      <div style={{fontSize:44,opacity:.4}}>📭</div>
+
       <div style={{fontFamily:F.h,fontSize:17,color:'var(--dim)',letterSpacing:'.03em',textTransform:'uppercase'}}>No data matches filters</div>
     </div>
   );
@@ -2637,7 +2643,7 @@ function OverviewMapModal({rows,onClose}){
         <div style={{padding:'8px 18px',borderBottom:'1px solid var(--bdr)',flexShrink:0,
           background:'var(--s2)',display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
           <span style={{fontSize:11,color:'var(--mute)',fontFamily:F.h,letterSpacing:'.08em',textTransform:'uppercase',flexShrink:0}}>
-            📍 Search Place
+             Search Place
           </span>
           <input type="text" placeholder="City / place name…" value={searchQ}
             onChange={e=>{setSearchQ(e.target.value);if(searchErr)setSearchErr('');}}
@@ -3054,7 +3060,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
       <div style={{padding:'12px 18px',borderBottom:'1px solid var(--bdr)',flexShrink:0,
         background:`linear-gradient(135deg,${C.s2},${C.s1})`,
         display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',rowGap:6}}>
-        <span style={{fontSize:18}}>🗺️</span>
+        <span style={{fontSize:18}}>Map</span>
         <div>
           <div style={{fontFamily:F.h,fontSize:15,fontWeight:800,color:'var(--text)',letterSpacing:'.05em',textTransform:'uppercase'}}>{title}</div>
           <div style={{fontSize:11,color:'var(--dim)',marginTop:2}}>
@@ -3071,7 +3077,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
           borderRadius:6,color:lightMap?C.amber:'var(--dim)',
           padding:'7px 10px',cursor:'pointer',fontSize:14,
           transition:'all .15s',flexShrink:0}}>
-          {lightMap?'🌤':'🌑'}
+          {lightMap?'Light':'Dark'}
         </button>
         <button onClick={onClose} style={{background:'transparent',border:'1px solid var(--bdr)',
           borderRadius:6,color:'var(--dim)',padding:'7px 12px',cursor:'pointer',fontSize:13,
@@ -3087,7 +3093,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
       <div style={{padding:'8px 18px',borderBottom:'1px solid var(--bdr)',flexShrink:0,
         background:'var(--s2)',display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
         <span style={{fontSize:11,color:'var(--mute)',fontFamily:F.h,letterSpacing:'.08em',textTransform:'uppercase',flexShrink:0}}>
-          📍 Search Place
+           Search Place
         </span>
         <input type="text" placeholder="City / place name…" value={searchQ}
           onChange={e=>{setSearchQ(e.target.value);if(searchErr)setSearchErr('');}}
@@ -3147,10 +3153,10 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
           </span>}
         </div>
         <div style={{display:'flex',gap:10,marginLeft:'auto',flexShrink:0,fontSize:10,color:'var(--mute)',fontFamily:F.b}}>
-          <span style={{color:C.green}}>🟢 FG Ready</span>
-          <span style={{color:C.rose}}>🔴 FG Short</span>
-          <span style={{color:C.amber}}>🟡 Reverse</span>
-          <span style={{color:'#64748b'}}>⚫ Excluded</span>
+          <span style={{color:C.green}}> FG Ready</span>
+          <span style={{color:C.rose}}> FG Short</span>
+          <span style={{color:C.amber}}> Reverse</span>
+          <span style={{color:'#64748b'}}> Excluded</span>
         </div>
       </div>
 
@@ -3197,7 +3203,7 @@ function generateAnalysis(sidingData){
   const fullIdxs =rakes.map((rk,i)=>isFullRake(rk)?i:-1).filter(i=>i>=0);
   const dispatchIdxs=readyIdxs.filter(i=>isFullRake(rakes[i]));
 
-  lines.push(`📋  ${siding} (${region}) — ${rakes.length} rake${rakes.length!==1?'s':''}, ${totalOrders} orders total`);
+  lines.push(`  ${siding} (${region}) — ${rakes.length} rake${rakes.length!==1?'s':''}, ${totalOrders} orders total`);
   lines.push('');
 
   // ── Per-rake breakdown ──
@@ -3213,47 +3219,47 @@ function generateAnalysis(sidingData){
     const payIssueCnt=rk.items.filter(({ord})=>[2,3].includes(rkPriority(ord))).length;
     const fgShort=Math.max(0,rk.totalBal-rk.totalFG);
 
-    let icon=fgOk&&isFull?'✅':fgOk?'🟡':'🔴';
+    let icon=fgOk&&isFull?'Ready:':fgOk?'Partial:':'Hold:';
     let status=fgOk&&isFull?'READY FOR DISPATCH'
               :fgOk?`FG ready — partial load (${Math.round((rk.totalBal/RAKE_CAP)*100)}%)`
               :`FG SHORT by ${fmt(Math.round(fgShort))} MT`;
 
     lines.push(`${icon}  Rake ${ri}  •  ${fmt(Math.round(rk.totalBal))} MT  •  ${rk.items.length} orders`);
     lines.push(`     Status: ${status}`);
-    if(relCnt>0)     lines.push(`     📦 ${relCnt} order${relCnt!==1?'s':''} — FG/WIP ready + payment cleared`);
-    if(payIssueCnt>0)lines.push(`     💳 ${payIssueCnt} order${payIssueCnt!==1?'s':''} — stock ready but payment pending`);
-    if(waitCnt>0)    lines.push(`     ⏳ ${waitCnt} order${waitCnt!==1?'s':''} — no/partial plate stock yet`);
-    if(noPay>0)   lines.push(`     ⚠️ ${noPay} order${noPay!==1?'s':''} with NO payment — hold until finance clearance`);
-    if(partPay>0) lines.push(`     💛 ${partPay} order${partPay!==1?'s':''} with partial payment — verify before dispatch`);
-    if(!fgOk)     lines.push(`     🏭 Build up ${fmt(Math.round(fgShort))} MT FG stock before loading Rake ${ri}`);
+    if(relCnt>0)     lines.push(`      ${relCnt} order${relCnt!==1?'s':''} — FG/WIP ready + payment cleared`);
+    if(payIssueCnt>0)lines.push(`      ${payIssueCnt} order${payIssueCnt!==1?'s':''} — stock ready but payment pending`);
+    if(waitCnt>0)    lines.push(`      ${waitCnt} order${waitCnt!==1?'s':''} — no/partial plate stock yet`);
+    if(noPay>0)   lines.push(`      ${noPay} order${noPay!==1?'s':''} with NO payment — hold until finance clearance`);
+    if(partPay>0) lines.push(`      ${partPay} order${partPay!==1?'s':''} with partial payment — verify before dispatch`);
+    if(!fgOk)     lines.push(`      Build up ${fmt(Math.round(fgShort))} MT FG stock before loading Rake ${ri}`);
     lines.push('');
   });
 
   // ── Recommendations ──
   lines.push('─'.repeat(38));
-  lines.push('💡  RECOMMENDATIONS');
+  lines.push('  RECOMMENDATIONS');
   lines.push('');
 
   if(dispatchIdxs.length>0){
-    lines.push(`✅  Rake${dispatchIdxs.length>1?'s':''} ${dispatchIdxs.map(i=>i+1).join(', ')} ${dispatchIdxs.length>1?'are':'is'} ready for immediate dispatch — FG stock confirmed, load is full.`);
+    lines.push(`  Rake${dispatchIdxs.length>1?'s':''} ${dispatchIdxs.map(i=>i+1).join(', ')} ${dispatchIdxs.length>1?'are':'is'} ready for immediate dispatch — FG stock confirmed, load is full.`);
   }else if(readyIdxs.length>0){
-    lines.push(`🟡  Rake${readyIdxs.length>1?'s':''} ${readyIdxs.map(i=>i+1).join(', ')} ${readyIdxs.length>1?'have':'has'} sufficient FG but load is partial. Consider waiting for more orders or dispatch as partial.`);
+    lines.push(`  Rake${readyIdxs.length>1?'s':''} ${readyIdxs.map(i=>i+1).join(', ')} ${readyIdxs.length>1?'have':'has'} sufficient FG but load is partial. Consider waiting for more orders or dispatch as partial.`);
   }else{
-    lines.push(`🔴  No rakes are currently FG-ready. Coordinate with production to accelerate FG stock build-up.`);
+    lines.push(`  No rakes are currently FG-ready. Coordinate with production to accelerate FG stock build-up.`);
   }
 
   const notReadyIdxs=rakes.map((_,i)=>i).filter(i=>!readyIdxs.includes(i));
   if(notReadyIdxs.length>0){
-    lines.push(`⏸️  Rake${notReadyIdxs.length>1?'s':''} ${notReadyIdxs.map(i=>i+1).join(', ')} on hold — await FG production before scheduling.`);
+    lines.push(`  Rake${notReadyIdxs.length>1?'s':''} ${notReadyIdxs.map(i=>i+1).join(', ')} on hold — await FG production before scheduling.`);
   }
 
   const allNoPayOrds=rakes.reduce((s,rk)=>s+rk.items.filter(({ord})=>payStatus(ord)==='none').length,0);
   const allNoStockOrds=rakes.reduce((s,rk)=>s+rk.items.filter(({ord})=>rkPriority(ord)>=4).length,0);
-  if(allNoPayOrds>0) lines.push(`⚠️  ${allNoPayOrds} order${allNoPayOrds!==1?'s':''} across all rakes lack payment. Engage Finance for clearance.`);
-  if(allNoStockOrds>0)lines.push(`📋  ${allNoStockOrds} order${allNoStockOrds!==1?'s':''} have no/partial plate stock. Follow up with Production.`);
+  if(allNoPayOrds>0) lines.push(`  ${allNoPayOrds} order${allNoPayOrds!==1?'s':''} across all rakes lack payment. Engage Finance for clearance.`);
+  if(allNoStockOrds>0)lines.push(`  ${allNoStockOrds} order${allNoStockOrds!==1?'s':''} have no/partial plate stock. Follow up with Production.`);
 
   lines.push('');
-  lines.push(`📅  Generated: ${new Date().toLocaleString()}`);
+  lines.push(`  Generated: ${new Date().toLocaleString()}`);
   return lines.join('\n');
 }
 
@@ -3272,7 +3278,7 @@ function RakeAIAnalysis({sidingData,onClose}){
       <div style={{padding:'12px 18px',borderBottom:'1px solid var(--bdr)',
         background:`linear-gradient(135deg,${C.s2},${C.s1})`,
         display:'flex',alignItems:'center',gap:10}}>
-        <span style={{fontSize:18}}>🤖</span>
+
         <div>
           <div style={{fontFamily:F.h,fontSize:15,fontWeight:800,color:'var(--text)',letterSpacing:'.05em',textTransform:'uppercase'}}>
             Rake Plan Analysis
@@ -3402,7 +3408,7 @@ function TransportPlan({sidingData,onClose}){
       <div style={{padding:'14px 20px',borderBottom:'1px solid var(--bdr)',
         background:`linear-gradient(135deg,var(--s2),var(--s1))`,
         display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',flexShrink:0}}>
-        <span style={{fontSize:20}}>🚛</span>
+
         <div>
           <div style={{fontFamily:F.h,fontSize:16,fontWeight:800,color:'var(--text)',
             letterSpacing:'.06em',textTransform:'uppercase'}}>Transportation & Delivery Plan</div>
@@ -3583,7 +3589,7 @@ function exportRakeXLSX(rakePlan){
     const pays=rk.items.map(({ord})=>payStatus(ord));
     const hasNone=pays.some(p=>p==='none'),hasPart=pays.some(p=>p==='partial');
     const status=fgOk&&isFull?'READY FOR DISPATCH':fgOk?'FG READY (PARTIAL)':'FG SHORT';
-    const payLbl=hasNone?'⚠ NO PAY ORDERS':hasPart?'~ PARTIAL PAY':'✓ PAYMENT OK';
+    const payLbl=hasNone?' NO PAY ORDERS':hasPart?'~ PARTIAL PAY':'✓ PAYMENT OK';
     const wipTot=rk.items.reduce((s,{ord})=>s+Math.max(0,(parseFloat(ord['Plate Stock'])||0)-(parseFloat(ord['FG UR Stock'])||0)),0);
 
     const info=[
@@ -3703,7 +3709,7 @@ function CombineRakesModal({rakeA,rakeB,sidA,sidB,onClose}){
       <div style={{padding:'14px 20px',borderBottom:'1px solid var(--bdr)',flexShrink:0,
         background:`linear-gradient(135deg,${C.s2},${C.s1})`,
         display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',rowGap:6}}>
-        <span style={{fontSize:20}}>🔀</span>
+
         <div>
           <div style={{fontFamily:F.h,fontSize:16,fontWeight:800,color:'var(--text)',letterSpacing:'.05em',textTransform:'uppercase'}}>
             Combine Rakes
@@ -3723,7 +3729,7 @@ function CombineRakesModal({rakeA,rakeB,sidA,sidB,onClose}){
 
       {wagonMismatch?
         <div style={{padding:30,textAlign:'center',color:C.rose,fontFamily:F.b,fontSize:13}}>
-          ⚠ Cannot combine — one rake is LONG wagon and the other is standard (BOSM/BRN).
+           Cannot combine — one rake is LONG wagon and the other is standard (BOSM/BRN).
           Mixing wagon types on one rake causes freight loss and isn't physically valid.
         </div>
       :<>
@@ -3765,13 +3771,13 @@ function CombineRakesModal({rakeA,rakeB,sidA,sidB,onClose}){
               border:`1px solid ${ready?C.green:rk.totalFG>=rk.totalBal&&rk.totalBal>0?C.sky:C.rose}`,
               fontFamily:F.h,fontSize:10,fontWeight:700,
               color:ready?C.green:rk.totalFG>=rk.totalBal&&rk.totalBal>0?C.sky:C.rose}}>
-              Rake {ri+1}: {ready?'🚂 READY':rk.totalFG>=rk.totalBal&&rk.totalBal>0?'🟡 FG PARTIAL':'🔴 FG SHORT'}
+              Rake {ri+1}: {ready?' READY':rk.totalFG>=rk.totalBal&&rk.totalBal>0?' FG PARTIAL':' FG SHORT'}
             </span>;
           })}
           {!combAllOk&&<span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'3px 10px',borderRadius:6,
             background:combHasNone?`${C._rose}18`:`${C._amber}18`,border:`1px solid ${combHasNone?C.rose:C.amber}`,
             fontFamily:F.h,fontSize:10,fontWeight:700,color:combHasNone?C.rose:C.amber}}>
-            {combHasNone?'⚠ NO PAY':'~ PART PAY'} · verify
+            {combHasNone?' NO PAY':'~ PART PAY'} · verify
           </span>}
           <div style={{display:'flex',gap:10,flexWrap:'wrap',rowGap:4}}>
             {[['Qty',combTot.qty,'var(--text)'],['Bal',combTot.bal,C.sky],['FG',combTot.fg,C.green],
@@ -4004,7 +4010,7 @@ function RakeDrillPanel({rakePlan,rakeIdx,onClose,mob}){
         border:`1px solid ${readyForDispatch?C.green:fgOk?C.sky:C.rose}`,
         fontFamily:F.h,fontSize:11,fontWeight:700,
         color:readyForDispatch?C.green:fgOk?C.sky:C.rose}}>
-        {readyForDispatch?'🚂 READY FOR DISPATCH':fgOk?'🟡 FG READY (PARTIAL)':'🔴 FG SHORT'}
+        {readyForDispatch?' READY FOR DISPATCH':fgOk?' FG READY (PARTIAL)':' FG SHORT'}
       </span>
 
       {/* Mini totals — same as DrillPanel */}
@@ -4021,7 +4027,7 @@ function RakeDrillPanel({rakePlan,rakeIdx,onClose,mob}){
       {!allOk&&<span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'3px 10px',borderRadius:6,
         background:hasNone?`${C._rose}18`:`${C._amber}18`,border:`1px solid ${hasNone?C.rose:C.amber}`,
         fontFamily:F.h,fontSize:11,fontWeight:700,color:hasNone?C.rose:C.amber}}>
-        {hasNone?'⚠ NO PAY':'~ PART PAY'} · verify
+        {hasNone?' NO PAY':'~ PART PAY'} · verify
       </span>}
 
       <div style={{flex:1}}/>
@@ -4185,7 +4191,7 @@ function RakePredictor({rows}){
       borderBottom:`1px solid ${open?C.bdr:'transparent'}`,
       background:`linear-gradient(135deg,${C.s2},${C.s1})`,
       transition:'border-color .15s',userSelect:'none',borderRadius:open?'var(--radius-lg) var(--radius-lg) 0 0':'var(--radius-lg)'}}>
-      <span style={{fontSize:22,lineHeight:1,filter:'drop-shadow(0 0 8px #f59e0b50)'}}>🚂</span>
+
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontFamily:F.h,fontSize:24,fontWeight:750,color:'var(--text)',letterSpacing:'-.025em'}}>Rake Predictor</div>
         <div style={{fontSize:13,color:'var(--dim)',marginTop:6,lineHeight:1.7}}>
@@ -4296,34 +4302,31 @@ function RakePredictor({rows}){
                 </div>
                 {dim&&<div className="rake-threshold-note">Below 50% capacity · available to combine</div>}
                 <div className="rake-status-row">
-                  {/* Tier breakdown pills */}
+                  <div className="rake-tier-markers" role="group" aria-label="Order stock and payment breakdown">
                   {(()=>{
                     const t=rk.items.reduce((a,{ord})=>{const p=rkPriority(ord);a[p]=(a[p]||0)+1;return a;},{});
-                    const pills=[
-                      t[0]&&{l:`FG W/ Pay ×${t[0]}`,c:C._green},
-                      t[2]&&{l:`FG W/O Pay ×${t[2]}`,c:C._amber},
-                      t[1]&&{l:`WIP W/ Pay ×${t[1]}`,c:C._sky},
-                      t[3]&&{l:`WIP W/O Pay ×${t[3]}`,c:'#f97316'},
-                      (t[4]||t[5])&&{l:`No Stock ×${(t[4]||0)+(t[5]||0)}`,c:C._rose},
-                    ].filter(Boolean);
-                    return pills.map((p,i)=>(
-                      <span key={i} style={{fontSize:11,padding:'5px 8px',borderRadius:'var(--radius-pill)',
-                        background:`${p.c}28`,border:`1px solid ${p.c}50`,
-                        color:p.c,fontFamily:F.h,fontWeight:700,lineHeight:1.5,display:'inline-block'}}>
-                        {p.l}
-                      </span>
-                    ));
+                    const markers=[
+                      {label:'FG · Pay',count:t[0],color:C._green,description:'Finished goods with payment'},
+                      {label:'FG · No pay',count:t[2],color:C._amber,description:'Finished goods without payment'},
+                      {label:'WIP · Pay',count:t[1],color:C._sky,description:'Work in progress with payment'},
+                      {label:'WIP · No pay',count:t[3],color:C._amber,description:'Work in progress without payment'},
+                      {label:'No stock',count:(t[4]||0)+(t[5]||0),color:C._rose,description:'Orders without stock'},
+                    ].filter(marker=>marker.count);
+                    return markers.map(marker=><span key={marker.label} className="rake-marker"
+                      style={{'--marker-color':marker.color}} title={marker.description}
+                      aria-label={`${marker.description}: ${marker.count} orders`}>
+                      <span>{marker.label}</span><strong>{marker.count}</strong>
+                    </span>);
                   })()}
-                  {/* FG / Dispatch badge */}
-                  <span style={{fontSize:11,fontFamily:F.h,fontWeight:700,padding:'3px 9px',borderRadius:4,
-                    background:readyForDispatch?`${C._green}28`:fgOk?`${C._sky}18`:`${C._rose}20`,
-                    color:readyForDispatch?C.green:fgOk?C.sky:C.rose,
-                    border:`1px solid ${readyForDispatch?C._green:fgOk?C._sky:C._rose}50`}}>
-                    {readyForDispatch?'🚂 READY FOR DISPATCH':fgOk?'🟡 FG READY (PARTIAL)':'🔴 FG SHORT'}
-                  </span>
-                  {(hasNone||hasPart)&&<span style={{fontSize:11,fontFamily:F.h,fontWeight:700,padding:'2px 8px',borderRadius:4,
-                    background:hasNone?`${C._rose}20`:`${C._amber}18`,color:hasNone?C.rose:C.amber,
-                    border:`1px solid ${hasNone?C._rose:C._amber}50`}}>{hasNone?'⚠ NO PAY':'~ PART PAY'}</span>}
+                  </div>
+                  <div className="rake-state-markers" role="group" aria-label="Dispatch and payment status">
+                    <span className="rake-marker" style={{'--marker-color':readyForDispatch?C._green:fgOk?C._sky:C._rose}}>
+                      {readyForDispatch?'Ready for dispatch':fgOk?'FG ready · partial':'FG short'}
+                    </span>
+                    {(hasNone||hasPart)&&<span className="rake-marker" style={{'--marker-color':hasNone?C._rose:C._amber}}>
+                      {hasNone?'No payment':'Partial payment'}
+                    </span>}
+                  </div>
                 </div>
                 <div className="rake-capacity">
                   <div className="rake-capacity-line">
@@ -4370,7 +4373,7 @@ function RakePredictor({rows}){
               cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,transition:'opacity .15s,background .15s'}}
               onMouseEnter={e=>{e.currentTarget.style.opacity='1';e.currentTarget.style.background='rgba(255,255,255,.05)'}}
               onMouseLeave={e=>{e.currentTarget.style.opacity='.8';e.currentTarget.style.background='rgba(0,0,0,.18)'}}>
-              🚛 Plan
+               Plan
             </button>
             <button onClick={()=>setRkAI(siding)} style={{
               flex:1,padding:'12px 8px',minHeight:44,background:'rgba(0,0,0,.18)',border:'none',
@@ -4380,7 +4383,7 @@ function RakePredictor({rows}){
               cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,transition:'opacity .15s,background .15s'}}
               onMouseEnter={e=>{e.currentTarget.style.opacity='1';e.currentTarget.style.background='rgba(255,255,255,.05)'}}
               onMouseLeave={e=>{e.currentTarget.style.opacity='.8';e.currentTarget.style.background='rgba(0,0,0,.18)'}}>
-              🤖 AI
+               AI
             </button>
             <button onClick={()=>setRkMap({sid:siding,idx:null})} style={{
               flex:1,padding:'12px 8px',minHeight:44,background:'rgba(0,0,0,.18)',border:'none',
@@ -4390,7 +4393,7 @@ function RakePredictor({rows}){
               cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:5,transition:'opacity .15s,background .15s'}}
               onMouseEnter={e=>{e.currentTarget.style.opacity='1';e.currentTarget.style.background='rgba(255,255,255,.05)'}}
               onMouseLeave={e=>{e.currentTarget.style.opacity='.75';e.currentTarget.style.background='rgba(0,0,0,.18)'}}>
-              🗺️ Map
+               Map
             </button>
             <button onClick={()=>exportRakeXLSX({siding,region,rakes})} style={{
               flex:1,padding:'12px 8px',minHeight:44,background:'rgba(0,0,0,.22)',border:'none',
@@ -4443,7 +4446,7 @@ function RakePredictor({rows}){
         padding:'10px 14px',display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',
         maxWidth:'94vw'}}>
         <span style={{fontSize:11,color:C.sky,fontFamily:F.h,fontWeight:700,letterSpacing:'.05em',textTransform:'uppercase'}}>
-          🔀 {combineSel.length} rake{combineSel.length!==1?'s':''} selected
+           {combineSel.length} rake{combineSel.length!==1?'s':''} selected
         </span>
         {combineSel.map(s=>{
           const rk=data[s.sid]?.rakes[s.idx];
@@ -4912,7 +4915,7 @@ function FilterPanel({allR,allS,allO,allM,allWagon,allHTC,allRem,allCust,
             background:active?`${wc}22`:'transparent',
             color:active?wc:'var(--dim)',
             transition:'all .15s'}}>
-            {wt==='BOSM/BRN'?'🚋 BOSM/BRN':wt==='BRN'?'🚋 BRN':'🚃 LONG'}
+            {wt==='BOSM/BRN'?' BOSM/BRN':wt==='BRN'?' BRN':' LONG'}
           </button>;
         })}
         {selWagon.size>0&&
@@ -5110,9 +5113,9 @@ async function fetchEbtpDirectly(onStep){
 /* ═══════════════════ THEME TOGGLE ═══════════════════ */
 function ThemeToggle({pref,setThemeConcrete}){
   const opts=[
-    {v:'dark', icon:'🌙', label:'Dark'},
-    {v:'light',icon:'☀️', label:'Light'},
-    {v:'auto', icon:'💻', label:'Auto'},
+    {v:'dark',label:'Dark'},
+    {v:'light',label:'Light'},
+    {v:'auto',label:'Auto'},
   ];
   return<div style={{display:'flex',background:'var(--s2)',borderRadius:'var(--radius-md)',
     border:'1px solid var(--bdr)',padding:3,gap:2,flexShrink:0}}>
@@ -5124,7 +5127,7 @@ function ThemeToggle({pref,setThemeConcrete}){
         color:active?'#fff':'var(--dim)',
         fontSize:13,lineHeight:1,transition:'all .18s ease',
         fontFamily:F.b,fontWeight:active?700:400}}>
-        {o.icon}
+        {o.label}
       </button>;
     })}
   </div>;
@@ -5678,7 +5681,7 @@ function App(){
         {onlineFetchErr?<>
           <div style={{fontFamily:F.h,fontSize:14,fontWeight:700,color:C.rose,
             letterSpacing:'.04em',textTransform:'uppercase',textAlign:'center',maxWidth:460}}>
-            ⚠ Live EBTP fetch failed
+             Live EBTP fetch failed
           </div>
           <div style={{fontFamily:F.b,fontSize:13,color:'var(--dim)',textAlign:'center',
             maxWidth:460,lineHeight:1.7}}>{onlineFetchErr}</div>
@@ -5775,7 +5778,7 @@ function App(){
             display:'flex',alignItems:'center',justifyContent:'center',gap:5,transition:'all .15s',flexShrink:0,whiteSpace:'nowrap'}}
           onMouseEnter={e=>e.currentTarget.style.background='rgba(20,184,166,.22)'}
           onMouseLeave={e=>e.currentTarget.style.background='rgba(20,184,166,.12)'}>
-          🗺{!mob&&' Overview'}
+          {mob?'Map':'Map overview'}
         </button>}
         <button onClick={()=>exportEBTPWithMapping(rows)}
           title="Export full EBTP raw file with _State, _Region, _Siding appended as last 3 columns"
@@ -6055,6 +6058,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 })();
 </script>
 <script src="edge-stretch.js"></script>
-<script src="glow.js"></script>
 </body>
 </html>

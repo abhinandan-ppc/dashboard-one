@@ -1577,7 +1577,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
           color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:13,fontWeight:700,cursor:'pointer',
           display:'flex',alignItems:'center',justifyContent:'center',gap:2,
           textTransform:'uppercase',transition:'all .15s',flexShrink:0}}>
-          {releasedOnly?'✓🔓':'🔓'}
+          {releasedOnly?'✓':'Rel'}
         </button>
         <button onClick={clearAll} disabled={!anyFilterActive} title="Clear Filters" style={{height:34,width:34,padding:0,borderRadius:'var(--radius-pill)',
           border:'1.5px solid var(--bdrHi)',background:'var(--s2)',color:anyFilterActive?C.rose:'var(--mute)',
@@ -1888,7 +1888,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         </div>
         <div ref={mapRef} style={{width:'100%',flex:1,minHeight:mob?260:340,borderRadius:'var(--radius-md)',overflow:'hidden'}}/>
         {stateAgg.unmapped>0&&<div style={{marginTop:8,fontSize:11.5,color:'var(--mute)',fontFamily:F.b}}>
-          ⚠ Other/Unmapped: {fmt(stateAgg.unmapped,0)} rows (no matching city or state/STO centroid — likely export/overseas or blank destination)
+           Other/Unmapped: {fmt(stateAgg.unmapped,0)} rows (no matching city or state/STO centroid — likely export/overseas or blank destination)
         </div>}
       </div>
       <div style={{...card,padding:mob?'12px':'18px',overflow:'hidden',display:'flex',flexDirection:'column',height:'100%'}}>
@@ -2100,7 +2100,7 @@ function App(){
       {err?<>
         <div style={{fontFamily:F.h,fontSize:14,fontWeight:700,color:C.rose,
           letterSpacing:'.04em',textTransform:'uppercase',textAlign:'center',maxWidth:460}}>
-          ⚠ Live EBTP fetch failed
+           Live EBTP fetch failed
         </div>
         <div style={{fontFamily:F.b,fontSize:13,color:'var(--dim)',textAlign:'center',
           maxWidth:460,lineHeight:1.7}}>{err}</div>
@@ -2151,13 +2151,13 @@ function App(){
 }
 
 function ThemeToggle({pref,setThemeConcrete}){
-  const opts=[['auto','◐'],['light','☀'],['dark','☾']];
+  const opts=[['auto','Auto'],['light','Light'],['dark','Dark']];
   return<div style={{position:'fixed',bottom:16,right:16,display:'flex',gap:4,padding:4,
     background:'var(--glass-hi)',backdropFilter:'blur(20px)',borderRadius:'var(--radius-pill)',
     border:'1px solid var(--bdrHi)',boxShadow:'var(--shadow-md)',zIndex:600}}>
     {opts.map(([v,ic])=>(
       <button key={v} onClick={()=>setThemeConcrete(v)} title={v} style={{
-        width:30,height:30,borderRadius:'50%',border:'none',cursor:'pointer',fontSize:14,
+        minWidth:44,height:36,borderRadius:'var(--radius-sm)',border:'none',cursor:'pointer',fontSize:14,
         background:pref===v?C.amber:'transparent',color:pref===v?'#1a1200':'var(--dim)'}}>{ic}</button>
     ))}
   </div>;
@@ -2168,6 +2168,5 @@ root.render(<App/>);
 checkReady();
 </script>
 <script src="edge-stretch.js"></script>
-<script src="glow.js"></script>
 </body>
 </html>
