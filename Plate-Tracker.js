@@ -137,6 +137,7 @@ function idbClear() {
 const SLOT_ORDER = ['casting', 'balanceHeat', 'slabStock', 'rolling', 'plateStock', 'finishing', 'dispatch', 'ebtp'];
 
 function renderSlots() {
+  updateUploadSummary();
   $('slots').innerHTML = SLOT_ORDER.map((id) => {
     const src = SOURCES[id];
     const info = state.loaded[id];
@@ -164,7 +165,9 @@ function renderSlots() {
     slot.addEventListener('drop', (e) => {
       e.preventDefault();
       slot.classList.remove('drag');
-      if (e.dataTransfer.files.length) ingest([...e.dataTransfer.files]);
+      e.stopPropagation();
+      clearFileDrag();
+      ingestDroppedFiles(e.dataTransfer.files);
     });
   }
 }
@@ -179,6 +182,8 @@ function slotStatus(info, sourceId) {
 }
 
 function setSlotError(id, message) {
+  $('uploadPanel').showPopover();
+  $('uploadSummaryStatus').textContent = 'Upload needs attention';
   const slot = $('slot-' + id);
   if (!slot) {
     $('linkReport').hidden = false;
@@ -190,12 +195,19 @@ function setSlotError(id, message) {
   slot.querySelector('.status').textContent = message;
 }
 
+function updateUploadSummary() {
+  const loaded = SLOT_ORDER.filter(id => state.loaded[id]).length;
+  $('uploadSummaryStatus').textContent = `${loaded} of ${SLOT_ORDER.length} sources loaded`;
+}
+
 function setProgress(done, total, label) {
   const pct = total ? (done / total) : 0;
   $('progress').classList.toggle('show', total > 0);
   $('progressBar').style.transform = 'scaleX(' + pct + ')';
   $('progressLabel').classList.toggle('show', total > 0);
   $('progressLabel').textContent = label || '';
+  if (total > 0) $('uploadSummaryStatus').textContent = label || 'Loading workbooks…';
+  else updateUploadSummary();
 }
 
 /* ═══════════════════ Ingest ═══════════════════ */
@@ -215,6 +227,7 @@ function getWorker() {
   worker.onerror = (e) => {
     $('dataStatus').classList.remove('live');
     $('dataStatusText').textContent = 'Parser failed to start';
+    setSlotError(null, 'Parser failed to start. Try loading the workbook again.');
     console.error('plate tracker worker', e);
   };
   return worker;
@@ -354,10 +367,7 @@ function onWorkerMessage(event) {
   }
   if (msg.type === 'file-error') {
     if (msg.sourceId) setSlotError(msg.sourceId, msg.error);
-    else {
-      $('linkReport').hidden = false;
-      $('linkReport').textContent = `${msg.name}: ${msg.error}`;
-    }
+    else setSlotError(null, `${msg.name}: ${msg.error}`);
     return;
   }
   if (msg.type === 'fatal') {
@@ -368,8 +378,7 @@ function onWorkerMessage(event) {
     setProgress(0, 0, '');
     $('dataStatus').classList.remove('live');
     $('dataStatusText').textContent = 'Parser failed to start';
-    $('linkReport').hidden = false;
-    $('linkReport').textContent = msg.error;
+    setSlotError(null, msg.error);
     return;
   }
   if (msg.type === 'done') {
@@ -2743,7 +2752,29 @@ function wireTree() {
 
 /* ═══════════════════ Controls + boot ═══════════════════ */
 
+function clearFileDrag() {
+  document.body.classList.remove('file-dragging');
+}
+
+function ingestDroppedFiles(fileList) {
+  const files = [...(fileList || [])].filter((file) => /\.(xlsx|xls)$/i.test(file.name));
+  if (files.length) ingest(files);
+  else setSlotError(null, 'Only .xlsx and .xls files can be read.');
+}
+
 function wireControls() {
+  const positionUploads = () => {
+    const top = Math.max(12, Math.min(document.querySelector('.app-header').getBoundingClientRect().bottom + 8, innerHeight - 200));
+    $('uploadPanel').style.top = `${top}px`;
+    $('uploadPanel').style.maxHeight = `calc(100dvh - ${top + 16}px)`;
+  };
+  $('uploadPanel').addEventListener('beforetoggle', (event) => {
+    if (event.newState === 'open') positionUploads();
+  });
+  window.addEventListener('resize', positionUploads);
+  $('uploadPanel').addEventListener('toggle', (event) => {
+    $('uploadButton').setAttribute('aria-expanded', String(event.newState === 'open'));
+  });
   window.addEventListener('message', (event) => {
     if (event.source !== window.parent || !event.data) return;
     if (event.data.type === 'plate-tracker-refresh-start') {
@@ -2763,22 +2794,32 @@ function wireControls() {
   dropAll.addEventListener('dragleave', () => dropAll.classList.remove('drag'));
   dropAll.addEventListener('drop', (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    clearFileDrag();
     dropAll.classList.remove('drag');
-    const files = [...e.dataTransfer.files].filter((f) => /\.(xlsx|xls)$/i.test(f.name));
-    if (!files.length) {
-      $('linkReport').hidden = false;
-      $('linkReport').textContent = 'Only .xlsx and .xls files can be read.';
-      return;
-    }
-    ingest(files);
+    ingestDroppedFiles(e.dataTransfer.files);
   });
-  // A drop anywhere on the page catches a file released outside the zones.
-  window.addEventListener('dragover', (e) => { e.preventDefault(); });
-  window.addEventListener('drop', (e) => {
-    if (e.target.closest('.slot, .drop-all')) return;
+  // File-only handling leaves text selections and link dragging untouched.
+  const isFileDrag = (event) => [...(event.dataTransfer?.types || [])].includes('Files');
+  window.addEventListener('dragenter', (e) => {
+    if (isFileDrag(e)) document.body.classList.add('file-dragging');
+  });
+  window.addEventListener('dragover', (e) => {
+    if (!isFileDrag(e)) return;
     e.preventDefault();
-    const files = [...(e.dataTransfer.files || [])].filter((f) => /\.(xlsx|xls)$/i.test(f.name));
-    if (files.length) ingest(files);
+    e.dataTransfer.dropEffect = 'copy';
+    document.body.classList.add('file-dragging');
+  });
+  window.addEventListener('dragleave', (e) => {
+    if (!e.relatedTarget) clearFileDrag();
+  });
+  window.addEventListener('dragend', clearFileDrag);
+  window.addEventListener('blur', clearFileDrag);
+  window.addEventListener('drop', (e) => {
+    clearFileDrag();
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    ingestDroppedFiles(e.dataTransfer.files);
   });
 
   $('searchBtn').addEventListener('click', refresh);

@@ -1006,7 +1006,6 @@ var DEFAULTS = [
   {id:"sms-heat-planner", name:"SMS Heat Planner", path:"SMS-Heat-Planner.html", icon:"flame"},
   {id:"rake-planner",     name:"Rake Planner",      path:"Rake-Planner.html",     icon:"train"},
   {id:"pm-yard",          name:"PM Yard",           path:"PM-Yard.html",         icon:"warehouse"},
-  {id:"plate-tracker",    name:"Plate Tracker",     path:"Plate-Tracker.html",   icon:"layers"},
   {id:"plate-tagging-tool", name:"Plate Tagging Tool", path:"Plate-Tagging-Tool.html", icon:"tag"},
   {id:"vdo-generator",     name:"VDO Generator",     path:"VDO-Generator.html",    icon:"clock"},
   {id:"grade-clubbing-matrix", name:"Grade Clubbing Matrix", path:"Grade-Clubbing-Matrix.html", icon:"layoutDashboard"},
@@ -1023,8 +1022,9 @@ function loadItems(){
     // AI Chat was retired — prune it from anyone's already-saved layout.
     // Retired/hidden pages: AI Chat was removed, and the SMS Heat Planner Daily/Monthly
     // tiles are folded into the single parent "SMS Heat Planner" card.
-    var RETIRED_IDS = { "ai-chat":1, "sms-heat-planner-daily":1, "sms-heat-planner-monthly":1 };
-    var pruned = parsed.filter(function(it){ return !it || !RETIRED_IDS[it.id]; });
+    // Main-only: Plate Tracker remains available in dev, but is unlisted here.
+    var RETIRED_IDS = { "ai-chat":1, "sms-heat-planner-daily":1, "sms-heat-planner-monthly":1, "plate-tracker":1 };
+    var pruned = parsed.filter(function(it){ return !it || (!RETIRED_IDS[it.id] && !/(^|\/)plate-tracker\.html(?:[?#]|$)/i.test(String(it.path||''))); });
     var seen = new Set(pruned.map(function(it){ return it && it.id; }).filter(Boolean));
     var merged = pruned.slice();
     DEFAULTS.forEach(function(def){
@@ -3586,5 +3586,6 @@ function fetchAndCacheSegment(force){
 </script>
 
 <script src="edge-stretch.js"></script>
+<script src="card-tilt.js"></script>
 </body>
 </html>

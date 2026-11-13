@@ -15,8 +15,9 @@ Build an operational interface for planners, not a product landing page. Put dat
 - Use the shared font tokens. Body text is sans-serif; table figures use tabular numerals or the data font. Do not introduce display fonts for individual cards.
 - Color communicates selection, availability, shortage or warning. Use neutral text for ordinary quantities and labels.
 - Use quiet theme surfaces. Classic and Neomorph menus are opaque. Modern (Glassmorphism) menus retain translucent fills and backdrop blur, with a solid fallback when reduced transparency is enabled. Never apply opaque theme overrides globally.
-- Use CSS hover/focus/pressed states. Do not add cursor-follow glow, card tilt, decorative ripples, animated backgrounds or startup overlays.
+- Use CSS hover/focus/pressed states. Pointer tilt is supported on dashboard tiles and KPI cards through `card-tilt.js`, capped at 6 degrees; exclude headers, dragging, touch and reduced motion. Do not add cursor-follow glow, decorative ripples, animated backgrounds or startup overlays.
 - Preserve loading indicators and the shared edge-overscroll behavior. Respect reduced motion.
+- Small interaction feedback lives in `theme.css`: 140ms control-state transitions, 180ms switch/disclosure movement, and a restrained 0.96 press scale. Keep tabs and repeated data interactions stationary; use `data-motion="static"` to opt a control out of press scaling. Preserve state colors and visible focus without motion. Do not add animation dependencies or animate layout properties.
 - Keep all three themes and the continuous light/dark and accent controls functional.
 - Keep keyboard focus visible. Target 4.5:1 text contrast and 3:1 control/state contrast; verify in the rendered page.
 - Let layout respond to available space. Avoid fixed card widths and tiny text as overflow fixes.

@@ -653,77 +653,108 @@ function runTagging(porRows, M, ebtpRows, gmRows, mode){
 /* ---------- Cross Order: donate excess stock from over-covered orders to older ageing orders ---------- */
 function runCrossOrder(porRows, M, ebtpRows, gmRows){
   const eligible=buildGradeMatrix(gmRows);
-  const { makeUid } = makeUidFns();
-
+  const finite = value => value==null || String(value).trim()==='' ? null
+    : (Number.isFinite(Number(value)) ? Number(value) : null);
+  const part = value => /^\d+$/.test(String(value??'').trim())
+    ? String(value).trim().replace(/^0+(?=\d)/,'') : '';
+  const keyFor = (so,item) => part(so) && part(item) ? part(so)+'|'+part(item) : '';
+  const today=new Date(); today.setUTCHours(0,0,0,0);
+  const created = row => {
+    const date=dateMs(row['SO Date']);
+    // Reject rolled-over calendar dates (e.g. 31/02); never guess order age.
+    const raw=String(row['SO Date']??'').trim();
+    const ymd=raw.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);
+    const dmy=raw.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);
+    if(date!=null){
+      if(ymd || dmy){
+        const y=ymd?+ymd[1]:(+dmy[3]<100?2000+(+dmy[3]):+dmy[3]);
+        const m=+(ymd?ymd[2]:dmy[2]),d=+(ymd?ymd[3]:dmy[1]),dt=new Date(date);
+        if(dt.getUTCFullYear()!==y || dt.getUTCMonth()!==m-1 || dt.getUTCDate()!==d) return null;
+      }
+      return date;
+    }
+    const age=finite(row['Age SO']);
+    return age!=null && age>=0 ? today.getTime()-age*86400000 : null;
+  };
+  // Duplicate identities are ambiguous: never create a second budget or plate.
+  const orderCounts=new Map(), plateCounts=new Map();
+  for(const r of ebtpRows){const key=keyFor(r['SO No.'],r['SOItm']);orderCounts.set(key,(orderCounts.get(key)||0)+1);}
+  for(const r of porRows){const id=up(r[M.id]);if(id)plateCounts.set(id,(plateCounts.get(id)||0)+1);}
+  const orders=[];
+  for(const r of ebtpRows){
+    const key=keyFor(r['SO No.'],r['SOItm']), btr=finite(r['BTR']), born=created(r);
+    if(!key || orderCounts.get(key)!==1 || btr==null || born==null) continue;
+    let demand=0;
+    if(KEEP_REMARKS.has(String(r['Remarks']).trim())){
+      if(btr>EPS) demand=Math.min(btr,Math.max(num(r['BTC']),0));
+      else if(String(r['Remarks']).trim()==='POR' && finite(r['Order Qty'])!=null && finite(r['Plate Stock'])!=null)
+        demand=Math.max(num(r['Order Qty'])-num(r['Plate Stock']),0);
+    }
+    orders.push({key,uid:r['UID']||part(r['SO No.'])+part(r['SOItm']),so:r['SO No.'],item:r['SOItm'],
+      cust:r['Sold To Party Name'],ig:up(r['Int Grade']),thk:r3(r['Thick']),width:num(r['Width']),length:num(r['Length Plan']),
+      ageSO:finite(r['Age SO'])??Math.max(0,(today.getTime()-born)/86400000),born,priorityMs:orderPriorityMs(r),btr,demand});
+  }
   const stockByUid=new Map();
   for(const r of porRows){
-    const sloc = M.sloc ? up(r[M.sloc]) : '';
-    const unres = num(r[M.unres]);
-    if((M.sloc && SLOC_DROP.has(sloc)) || unres<=EPS) continue;
-    const stockUid = M.soNo && M.soItem ? makeUid(r[M.soNo],r[M.soItem]) : '';
-    if(!stockUid) continue;
-    (stockByUid.get(stockUid) || stockByUid.set(stockUid,[]).get(stockUid))
-      .push({thk:r3(r[M.thk]), width:num(r[M.width]), length:num(r[M.length]), unres});
+    const key=M.soNo && M.soItem ? keyFor(r[M.soNo],r[M.soItem]) : '';
+    const plateId=up(r[M.id]), grade=up(r[M.grade]), thk=r3(r[M.thk]), width=num(r[M.width]), length=num(r[M.length]), qty=finite(r[M.unres]);
+    if(!key || !plateId || plateCounts.get(plateId)!==1 || !grade || !Number.isFinite(thk) ||
+      thk<=0 || width<=0 || length<=0 || qty==null || qty<=EPS || (M.sloc && SLOC_DROP.has(up(r[M.sloc])))) continue;
+    const pieceQty=thk*width*length*7.85e-6;
+    // Reserve the whole physical row, never manufacture multiple recipient-sized pieces.
+    // Use the larger measured/theoretical quantity so neither balance can be overdrawn.
+    // Round upward to the same 0.001 MT precision used in the result/export,
+    // so summing displayed allocations cannot exceed the internal budget.
+    const debit=Math.ceil((Math.max(qty,pieceQty)-1e-9)*1000)/1000;
+    (stockByUid.get(key)||stockByUid.set(key,[]).get(key)).push({
+      plateId:r[M.id],grade,thk,width,length,qty,pieceQty,debit,used:false,sloc:M.sloc?r[M.sloc]:''
+    });
   }
-
-  let recipients=[];
-  for(const r of ebtpRows){
-    if(!KEEP_REMARKS.has(r['Remarks'])) continue;
-    const btr=num(r['BTR']); let demand=0;
-    if(btr>EPS) demand=Math.max(num(r['BTC']),0);
-    else if(String(r['Remarks']).trim()==='POR') demand=Math.max(num(r['Order Qty'])-num(r['Plate Stock']),0);
-    if(demand<=EPS) continue;
-    const uid=r['UID']||makeUid(r['SO No.'],r['SOItm']);
-    recipients.push({uid,so:r['SO No.'],item:r['SOItm'],cust:r['Sold To Party Name'],
-      ig:up(r['Int Grade']),thk:r3(r['Thick']),width:num(r['Width']),length:num(r['Length Plan']),
-      pieceWt:num(r['Piece Wt']),priorityMs:orderPriorityMs(r),ageSO:num(r['Age SO']),demand,btr});
+  const recipients=orders.filter(o=>o.demand>EPS && o.thk>0 && o.width>0 && o.length>0);
+  recipients.sort((a,b)=>a.born-b.born || (a.priorityMs??Infinity)-(b.priorityMs??Infinity) || a.key.localeCompare(b.key));
+  const donors=orders.filter(o=>o.btr < -EPS && o.demand<=EPS && stockByUid.has(o.key));
+  for(const donor of donors){
+    const stock=stockByUid.get(donor.key);
+    donor.excess=Math.min(-donor.btr,stock.reduce((sum,p)=>sum+p.qty,0));
+    donor.initialExcess=donor.excess;
   }
-  recipients.sort((a,b)=>(a.priorityMs ?? Number.POSITIVE_INFINITY) - (b.priorityMs ?? Number.POSITIVE_INFINITY));
-
-  let donors=[];
-  for(const r of ebtpRows){
-    if(num(r['BTR'])>EPS) continue;                          // own BTR (balance to produce) already <=0 -> excess candidate
-    const stockUid=M.soNo && M.soItem ? makeUid(r['SO No.'],r['SOItm']) : '';
-    if(!stockUid || !stockByUid.has(stockUid)) continue;
-    const uid=r['UID']||makeUid(r['SO No.'],r['SOItm']);
-    donors.push({uid,so:r['SO No.'],item:r['SOItm'],cust:r['Sold To Party Name'],ig:up(r['Int Grade']),stockUid,ageSO:num(r['Age SO'])});
-  }
-
   const crossOrders=[];
   for(const rec of recipients){
     let remaining=rec.demand;
-    let btrLeft=rec.btr>EPS ? rec.btr : 0;
     const tiers=eligible(rec.ig,rec.thk);
     if(!tiers || !tiers.size) continue;
-    const grades=new Set(); for(const s of tiers.values()) for(const g of s) grades.add(g);
-    for(const d of donors){
-      if(remaining<=EPS) break;
-      if(rec.btr>EPS && btrLeft<=EPS) break;
-      if(d.uid===rec.uid) continue;
-      if(!grades.has(d.ig)) continue;
-      if(d.ageSO>rec.ageSO) continue;                          // donor must not be older than the recipient it's fulfilling
-      for(const p of stockByUid.get(d.stockUid)){
-        if(remaining<=EPS) break;
-        if(rec.btr>EPS && btrLeft<=EPS) break;
-        if(p.unres<=EPS) continue;
-        if(Math.abs(p.thk-rec.thk)>EPS) continue;
-        if(p.width+EPS<rec.width || p.length+EPS<rec.length) continue;
-        const pieceWt=rec.pieceWt>EPS ? rec.pieceWt : rec.thk*rec.width*rec.length*7.85e-6;
-        const cap=rec.btr>EPS ? Math.min(remaining,p.unres,btrLeft) : Math.min(remaining,p.unres);
-        const plateCount=pieceWt>EPS ? Math.floor(cap/pieceWt) : 0;
-        if(plateCount<=0) continue;
-        const qty=r3(plateCount*pieceWt);
-        const donorExcess=r3(stockByUid.get(d.stockUid).reduce((s,x)=>s+x.unres,0));
-        remaining-=qty; p.unres-=qty; if(rec.btr>EPS) btrLeft=r3(btrLeft-qty);
-        crossOrders.push({recipUid:rec.uid,recipSo:rec.so,recipItem:rec.item,recipCust:rec.cust,recipAgeSO:rec.ageSO,
-          donorUid:d.uid,donorSo:d.so,donorItem:d.item,donorCust:d.cust,donorExcess,donorAgeSO:d.ageSO,donorGrade:d.ig,
-          grade:rec.ig,thk:rec.thk,width:rec.width,length:rec.length,qty,plates:plateCount,
-          recipBtr:r3(rec.btr),updatedBtr:rec.btr>EPS?btrLeft:r3(rec.btr)});
+    for(const prio of [...tiers.keys()].sort((a,b)=>a-b)){
+      const grades=tiers.get(prio);
+      const candidates=[];
+      for(const donor of donors){
+        if(donor.key===rec.key || part(donor.so)===part(rec.so) || donor.born<=rec.born) continue;
+        for(const p of stockByUid.get(donor.key)){
+          if(!p.used && grades.has(p.grade) && Math.abs(p.thk-rec.thk)<=EPS &&
+            p.width+EPS>=rec.width && p.length+EPS>=rec.length){
+            candidates.push({donor,p,waste:p.width*p.length-rec.width*rec.length});
+          }
+        }
       }
+      candidates.sort((a,b)=>a.waste-b.waste || a.p.debit-b.p.debit || b.donor.born-a.donor.born ||
+        String(a.p.plateId).localeCompare(String(b.p.plateId)));
+      for(const {donor:d,p} of candidates){
+        if(remaining<=EPS) break;
+        if(p.used || p.debit>remaining+1e-9 || p.debit>d.excess+1e-9) continue;
+        const donorExcess=d.excess;
+        remaining=Math.max(0,remaining-p.debit);d.excess=Math.max(0,d.excess-p.debit);p.used=true;
+        const cutQty=rec.thk*rec.width*rec.length*7.85e-6;
+        crossOrders.push({recipUid:rec.uid,recipSo:rec.so,recipItem:rec.item,recipCust:rec.cust,recipAgeSO:rec.ageSO,
+          donorUid:d.uid,donorSo:d.so,donorItem:d.item,donorCust:d.cust,donorExcess:r3(donorExcess),
+          donorExcessLeft:r3(d.excess),donorAgeSO:d.ageSO,donorGrade:d.ig,
+          plateId:p.plateId,plateGrade:p.grade,plateW:p.width,plateL:p.length,plateMT:r3(p.qty),prio,
+          grade:rec.ig,thk:rec.thk,width:rec.width,length:rec.length,qty:r3(p.debit),plates:1,
+          cutQty:r3(cutQty),lossMT:r3(Math.max(0,p.pieceQty-cutQty)),sloc:p.sloc,
+          recipBtr:r3(rec.btr),updatedBtr:rec.btr>EPS?r3(Math.max(0,rec.btr-(rec.demand-remaining))):r3(rec.btr)});
+      }
+      if(remaining<=EPS) break;
     }
   }
-  crossOrders.sort((a,b)=>(b.recipAgeSO??-Infinity)-(a.recipAgeSO??-Infinity));
-  return {crossOrders, scope:recipients.length};
+  return {crossOrders,scope:recipients.length,skippedOrders:ebtpRows.length-orders.length};
 }
 
 /* ---------- plate-stock field mapping ---------- */
@@ -1087,7 +1118,7 @@ function bestEbtpParse(wb){
 // format; this only re-renders its dashboard on a change.
 function setTheme(value){
   window.jsplTheme.set(value);
-  if(RESULT) renderDashboard(RESULT);
+  if(RESULT){ if(RESULT.crossOrders) renderCrossOrder(RESULT); else renderDashboard(RESULT); }
 }
 window.__hub_handle_theme = setTheme;
 function resetSlot(kind,title,code){
@@ -1116,7 +1147,7 @@ function resetAll(){
   document.getElementById('dashMid').innerHTML='';
   document.getElementById('dashBottom').innerHTML='';
   clearAnalysisDetail();
-  ['tags','cov','idle','nim'].forEach(k=>{ document.getElementById('tab-'+k).innerHTML=''; });
+  ['tags','cov','idle','nim','cross'].forEach(k=>{ document.getElementById('tab-'+k).innerHTML=''; });
   document.getElementById('results').classList.remove('show');
   document.querySelectorAll('.tabbtn').forEach((b,i)=>b.classList.toggle('active',i===0));
   document.querySelectorAll('.tabpane').forEach(p=>p.classList.remove('show'));
@@ -1287,13 +1318,13 @@ function setGradeMode(mode){
   document.getElementById('gradeModeHint').textContent = TAG_MODE==='ext'
     ? 'Matches Order → Plate External Grade directly (exact match, no matrix).'
     : TAG_MODE==='cross'
-    ? 'Finds excess stock from over-covered orders (BTR ≤ 0) to donate to older ageing orders with matching dimensions & compatible Int Grade.'
+    ? 'Transfers whole plates from strictly newer orders to older orders. Donor excess is capped at −BTR (BTR < 0); actual plate grades follow matrix priority and size rules.'
     : 'Matches Order → Plate Int Grade via the embedded grade matrix.';
   if(hasEbtp && TAG_MODE==='int' && mode==='cross'){
     // Called via syncGradeModeSwitch (EBTP just loaded) — auto-activate Cross Order
     document.getElementById('gmOptCross').classList.add('active');
     TAG_MODE='cross';
-    document.getElementById('gradeModeHint').textContent = 'Finds excess stock from over-covered orders (BTR ≤ 0) to donate to older ageing orders with matching dimensions & compatible Int Grade.';
+    document.getElementById('gradeModeHint').textContent = 'Transfers whole plates from strictly newer orders to older orders, capped at donor excess (−BTR), using plate grade and size rules.';
   }
 }
 document.getElementById('gmOptInt').addEventListener('click',()=>setGradeMode('int'));
@@ -1735,6 +1766,8 @@ function showTab(k,el){document.querySelectorAll('.tabpane').forEach(p=>p.classL
   document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+k).classList.add('show'); el.classList.add('active');}
 function renderCrossOrder(R){
+  destroyCharts();
+  document.getElementById('analysisDetail').textContent='Cross Order uses SO Date (Age SO when the date is absent), oldest recipients first. BTR = 0 is not excess. Each physical plate is used once; the larger of unrestricted stock and calculated plate weight is reserved against both balances. Unknown or duplicate order identities are excluded: '+(R.skippedOrders||0)+'. Duplicate or unidentified plate IDs are excluded.';
   const {crossOrders}=R;
   const qty=crossOrders.reduce((s,c)=>s+c.qty,0), plates=crossOrders.reduce((s,c)=>s+c.plates,0);
   const recips=new Set(crossOrders.map(c=>c.recipUid)).size, donors=new Set(crossOrders.map(c=>c.donorUid)).size;
@@ -1747,6 +1780,7 @@ function renderCrossOrder(R){
     ['Plates to be tagged',plates.toLocaleString(),''],
   ].map(c=>`<div class="kpi ${c[2]}"><div class="kv">${c[1]}</div><div class="kl">${c[0]}</div></div>`).join('');
   document.getElementById('tab-cross').innerHTML=table(crossOrders,[
+    {h:'Plate ID',k:'plateId'},{h:'Plate Grade',k:'plateGrade'},{h:'Grade Priority',k:'prio',num:1},{h:'Plate Width',k:'plateW',num:1,fmt:0},{h:'Plate Length',k:'plateL',num:1,fmt:3},{h:'Donor Excess Left (MT)',k:'donorExcessLeft',num:1,fmt:3},
     {h:'Donor UID',k:'donorUid'},{h:'Donor SO',k:'donorSo'},{h:'Item',k:'donorItem'},{h:'Donor Customer',k:'donorCust'},{h:'Donor Int Grade',k:'donorGrade'},{h:'Donor Ageing (d)',k:'donorAgeSO',num:1,fmt:0},{h:'Donor Excess (MT)',k:'donorExcess',num:1,fmt:3},
     {h:'Recipient UID',k:'recipUid'},{h:'Recipient SO',k:'recipSo'},{h:'Item',k:'recipItem'},{h:'Recipient Customer',k:'recipCust'},{h:'Recipient Ageing (d)',k:'recipAgeSO',num:1,fmt:0},{h:'Updated BTR (MT)',k:'updatedBtr',num:1,fmt:3},
     {h:'Grade',k:'grade'},{h:'Thk',k:'thk',num:1,fmt:2},{h:'Width',k:'width',num:1,fmt:0},{h:'Length',k:'length',num:1,fmt:3},
@@ -1788,6 +1822,7 @@ function kvSheet(sections){
 function buildCrossWorkbook(R){
   const wb=XLSX.utils.book_new();
   const crossWs=sheetFromCols([
+    {h:'Plate ID',k:'plateId',w:18},{h:'Plate Grade',k:'plateGrade',w:14},{h:'Grade Priority',k:'prio',w:12},{h:'Plate Width',k:'plateW',w:12,z:'0'},{h:'Plate Length',k:'plateL',w:12,z:'0.000'},{h:'Donor Excess Left (MT)',k:'donorExcessLeft',w:20,z:'0.000'},
     {h:'Donor UID',k:'donorUid',w:14},{h:'Donor SO',k:'donorSo',w:11},{h:'Item',k:'donorItem',w:7},{h:'Donor Customer',k:'donorCust',w:24},{h:'Donor Int Grade',k:'donorGrade',w:14},{h:'Donor Ageing (d)',k:'donorAgeSO',w:13,z:'#,##0'},{h:'Donor Excess (MT)',k:'donorExcess',w:13,z:'#,##0.000'},
     {h:'Recipient UID',k:'recipUid',w:14},{h:'Recipient SO',k:'recipSo',w:11},{h:'Item',k:'recipItem',w:7},{h:'Recipient Customer',k:'recipCust',w:24},{h:'Recipient Ageing (d)',k:'recipAgeSO',w:13,z:'#,##0'},{h:'Updated BTR (MT)',k:'updatedBtr',w:13,z:'#,##0.000'},
     {h:'Grade',k:'grade',w:14},{h:'Thk',k:'thk',w:7,z:'0.00'},{h:'Width',k:'width',w:9,z:'#,##0'},{h:'Length',k:'length',w:9,z:'0.000'},
@@ -1924,5 +1959,6 @@ window.addEventListener('message',e=>{
 });
 </script>
 <script src="edge-stretch.js"></script>
+<script src="card-tilt.js"></script>
 </body>
 </html>
