@@ -80,6 +80,7 @@ input:focus{outline:none;border-color:var(--amber) !important;box-shadow:var(--s
 .rake-marker::before{content:'';width:5px;height:5px;flex-shrink:0;border-radius:50%;background:var(--marker-color)}
 .rake-marker strong{padding-left:6px;border-left:1px solid var(--bdrHi);font-family:var(--font-data);font-size:11px;font-weight:600;line-height:16px;font-variant-numeric:tabular-nums;color:var(--text)}
 .rake-state-markers .rake-marker{font-weight:600;background:color-mix(in srgb,var(--marker-color) 8%,var(--s2));border-color:color-mix(in srgb,var(--marker-color) 28%,var(--bdr))}
+.rake-state-markers .rake-marker::before{display:none}
 html[data-theme-style="classic"] .rake-marker{border-radius:0}
 html[data-theme-style="neomorph"] .rake-tier-markers .rake-marker{background:var(--neo-bg)}
 .rake-capacity{padding:18px 18px 14px}
@@ -2602,7 +2603,7 @@ function OverviewMapModal({rows,onClose}){
         <div style={{padding:'12px 18px',borderBottom:'1px solid var(--bdr)',flexShrink:0,
           background:`linear-gradient(135deg,${C.s2},${C.s1})`,
           display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',rowGap:6}}>
-          <span style={{fontSize:18}}>Map</span>
+          <span style={{fontSize:18}}><svg className="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#map"/></svg> Map</span>
           <div>
             <div style={{fontFamily:F.h,fontSize:15,fontWeight:800,color:'var(--text)',letterSpacing:'.05em',textTransform:'uppercase'}}>
               {selSid?`${selHub?.name||selSid} (${selSid}) · ${selPlan?.rakes.length||0} Rakes`:'Overview · All Sidings'}
@@ -2643,7 +2644,7 @@ function OverviewMapModal({rows,onClose}){
         <div style={{padding:'8px 18px',borderBottom:'1px solid var(--bdr)',flexShrink:0,
           background:'var(--s2)',display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
           <span style={{fontSize:11,color:'var(--mute)',fontFamily:F.h,letterSpacing:'.08em',textTransform:'uppercase',flexShrink:0}}>
-             Search Place
+             <svg className="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#search"/></svg> Search Place
           </span>
           <input type="text" placeholder="City / place name…" value={searchQ}
             onChange={e=>{setSearchQ(e.target.value);if(searchErr)setSearchErr('');}}
@@ -3060,7 +3061,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
       <div style={{padding:'12px 18px',borderBottom:'1px solid var(--bdr)',flexShrink:0,
         background:`linear-gradient(135deg,${C.s2},${C.s1})`,
         display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',rowGap:6}}>
-        <span style={{fontSize:18}}>Map</span>
+        <span style={{fontSize:18}}><svg className="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#map"/></svg> Map</span>
         <div>
           <div style={{fontFamily:F.h,fontSize:15,fontWeight:800,color:'var(--text)',letterSpacing:'.05em',textTransform:'uppercase'}}>{title}</div>
           <div style={{fontSize:11,color:'var(--dim)',marginTop:2}}>
@@ -3093,7 +3094,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
       <div style={{padding:'8px 18px',borderBottom:'1px solid var(--bdr)',flexShrink:0,
         background:'var(--s2)',display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
         <span style={{fontSize:11,color:'var(--mute)',fontFamily:F.h,letterSpacing:'.08em',textTransform:'uppercase',flexShrink:0}}>
-           Search Place
+           <svg className="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#search"/></svg> Search Place
         </span>
         <input type="text" placeholder="City / place name…" value={searchQ}
           onChange={e=>{setSearchQ(e.target.value);if(searchErr)setSearchErr('');}}
@@ -4321,9 +4322,11 @@ function RakePredictor({rows}){
                   </div>
                   <div className="rake-state-markers" role="group" aria-label="Dispatch and payment status">
                     <span className="rake-marker" style={{'--marker-color':readyForDispatch?C._green:fgOk?C._sky:C._rose}}>
+                      <svg className="ui-icon" aria-hidden="true" focusable="false"><use href={`ui-icons.svg#${fgOk?'checkCircle':'alertTriangle'}`}/></svg>
                       {readyForDispatch?'Ready for dispatch':fgOk?'FG ready · partial':'FG short'}
                     </span>
                     {(hasNone||hasPart)&&<span className="rake-marker" style={{'--marker-color':hasNone?C._rose:C._amber}}>
+                      <svg className="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#creditCard"/></svg>
                       {hasNone?'No payment':'Partial payment'}
                     </span>}
                   </div>
@@ -4373,7 +4376,7 @@ function RakePredictor({rows}){
               cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,transition:'opacity .15s,background .15s'}}
               onMouseEnter={e=>{e.currentTarget.style.opacity='1';e.currentTarget.style.background='rgba(255,255,255,.05)'}}
               onMouseLeave={e=>{e.currentTarget.style.opacity='.8';e.currentTarget.style.background='rgba(0,0,0,.18)'}}>
-               Plan
+               <svg className="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#truck"/></svg> Plan
             </button>
             <button onClick={()=>setRkAI(siding)} style={{
               flex:1,padding:'12px 8px',minHeight:44,background:'rgba(0,0,0,.18)',border:'none',
@@ -4383,7 +4386,7 @@ function RakePredictor({rows}){
               cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:4,transition:'opacity .15s,background .15s'}}
               onMouseEnter={e=>{e.currentTarget.style.opacity='1';e.currentTarget.style.background='rgba(255,255,255,.05)'}}
               onMouseLeave={e=>{e.currentTarget.style.opacity='.8';e.currentTarget.style.background='rgba(0,0,0,.18)'}}>
-               AI
+               <svg className="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#cpu"/></svg> AI
             </button>
             <button onClick={()=>setRkMap({sid:siding,idx:null})} style={{
               flex:1,padding:'12px 8px',minHeight:44,background:'rgba(0,0,0,.18)',border:'none',
@@ -4393,7 +4396,7 @@ function RakePredictor({rows}){
               cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:5,transition:'opacity .15s,background .15s'}}
               onMouseEnter={e=>{e.currentTarget.style.opacity='1';e.currentTarget.style.background='rgba(255,255,255,.05)'}}
               onMouseLeave={e=>{e.currentTarget.style.opacity='.75';e.currentTarget.style.background='rgba(0,0,0,.18)'}}>
-               Map
+               <svg className="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#map"/></svg> Map
             </button>
             <button onClick={()=>exportRakeXLSX({siding,region,rakes})} style={{
               flex:1,padding:'12px 8px',minHeight:44,background:'rgba(0,0,0,.22)',border:'none',
@@ -4402,7 +4405,7 @@ function RakePredictor({rows}){
               cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,transition:'opacity .15s,background .15s'}}
               onMouseEnter={e=>{e.currentTarget.style.opacity='1';e.currentTarget.style.background='rgba(255,255,255,.05)'}}
               onMouseLeave={e=>{e.currentTarget.style.opacity='.75';e.currentTarget.style.background='rgba(0,0,0,.22)'}}>
-              ↓ Excel
+              <svg className="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#download"/></svg> Excel
             </button>
           </div>
         </article>;
@@ -4662,7 +4665,7 @@ function DrillPanel({rows,info,onClose,mob}){
         textTransform:'uppercase',padding:'7px 14px',cursor:'pointer',flexShrink:0,transition:'all .15s'}}
         onMouseEnter={e=>e.currentTarget.style.background=`${C._green}30`}
         onMouseLeave={e=>e.currentTarget.style.background=`${C._green}18`}>
-        ↓ Excel
+        <svg className="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#download"/></svg> Excel
       </button>
       <button onClick={onClose} style={{
         background:'transparent',border:'1px solid var(--bdrHi)',borderRadius:'var(--radius-xs)',
@@ -5127,7 +5130,7 @@ function ThemeToggle({pref,setThemeConcrete}){
         color:active?'#fff':'var(--dim)',
         fontSize:13,lineHeight:1,transition:'all .18s ease',
         fontFamily:F.b,fontWeight:active?700:400}}>
-        {o.label}
+        <svg className="ui-icon" aria-hidden="true" focusable="false"><use href={`ui-icons.svg#${o.v==='light'?'sun':o.v==='dark'?'moon':'clock'}`}/></svg>
       </button>;
     })}
   </div>;

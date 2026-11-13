@@ -3370,3 +3370,9 @@ html body #boot-spinner{box-shadow:none!important}
 html body #boot-status::before{display:none!important}
 html body :is(.upload-opt-icon,.pi):empty{display:none!important}
 html body :is(button,a,input,select,textarea):focus-visible{outline:2px solid var(--primary)!important;outline-offset:3px}
+
+/* Shared monochrome icon language. SVGs inherit the label's theme color. */
+svg.ui-icon{display:inline-block;width:16px;height:16px;min-width:16px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px;pointer-events:none;margin-inline-end:6px}
+button>svg.ui-icon:only-child{margin:0}
+.rake-siding-actions svg.ui-icon{width:14px;height:14px;min-width:14px;margin-inline-end:4px}
+.rake-marker svg.ui-icon{width:12px;height:12px;min-width:12px;margin:0}

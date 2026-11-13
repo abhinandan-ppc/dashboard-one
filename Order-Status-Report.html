@@ -1577,7 +1577,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
           color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:13,fontWeight:700,cursor:'pointer',
           display:'flex',alignItems:'center',justifyContent:'center',gap:2,
           textTransform:'uppercase',transition:'all .15s',flexShrink:0}}>
-          {releasedOnly?'✓':'Rel'}
+          <svg className="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#checkCircle"/></svg>
         </button>
         <button onClick={clearAll} disabled={!anyFilterActive} title="Clear Filters" style={{height:34,width:34,padding:0,borderRadius:'var(--radius-pill)',
           border:'1.5px solid var(--bdrHi)',background:'var(--s2)',color:anyFilterActive?C.rose:'var(--mute)',
@@ -2158,7 +2158,7 @@ function ThemeToggle({pref,setThemeConcrete}){
     {opts.map(([v,ic])=>(
       <button key={v} onClick={()=>setThemeConcrete(v)} title={v} style={{
         minWidth:44,height:36,borderRadius:'var(--radius-sm)',border:'none',cursor:'pointer',fontSize:14,
-        background:pref===v?C.amber:'transparent',color:pref===v?'#1a1200':'var(--dim)'}}>{ic}</button>
+        background:pref===v?C.amber:'transparent',color:pref===v?'#1a1200':'var(--dim)'}} aria-label={`${ic} theme`}><svg className="ui-icon" aria-hidden="true" focusable="false"><use href={`ui-icons.svg#${v==='light'?'sun':v==='dark'?'moon':'clock'}`}/></svg></button>
     ))}
   </div>;
 }
