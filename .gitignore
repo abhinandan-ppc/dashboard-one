@@ -69,6 +69,7 @@ scripts/syntax-check-page.mjs
 .github/
 .env.example
 *.md
+!README.md
 check-html.mjs
 check-js.mjs
 local-auth.mjs
