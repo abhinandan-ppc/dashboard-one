@@ -1022,7 +1022,7 @@ html[data-theme-style="neomorph"] .user-btn:hover {
 
 /* Neomorphism: a tactile material wake-up. A single soft canvas presents a
    pressed-in frame; the lockup rises, settles once, then gently dissolves. */
-.intro.intro--neomorph { font-family:'Nunito Sans','Segoe UI',sans-serif; background:var(--neo-bg); }
+.intro.intro--neomorph { font-family:var(--font-body); background:var(--neo-bg); }
 .intro--neomorph .intro-shutter { background:var(--neo-bg); }
 .intro--neomorph .intro-shutter-t,.intro--neomorph .intro-shutter-b { background:var(--neo-bg); }
 .intro--neomorph .intro-bloom,.intro--neomorph .intro-rail,.intro--neomorph .intro-seam { display:none; }
@@ -1031,14 +1031,14 @@ html[data-theme-style="neomorph"] .user-btn:hover {
 .intro--neomorph .intro-crest { margin-bottom:20px; padding:10px 16px; border:0; border-radius:18px; background:var(--neo-bg); box-shadow:5px 5px 11px var(--neo-shadow-dark),-5px -5px 11px var(--neo-shadow-light); }
 .intro--neomorph .intro-logo-box { width:clamp(58px,11vw,92px); }
 .intro--neomorph .intro-eyebrow { font-weight:700; letter-spacing:.12em; text-indent:.12em; text-transform:none; }
-.intro--neomorph .intro-hero { font-family:'Nunito Sans','Segoe UI',sans-serif; font-weight:800; letter-spacing:-.055em; text-indent:0; text-transform:none; }
+.intro--neomorph .intro-hero { font-family:var(--font-display); font-weight:700; letter-spacing:-.015em; text-indent:0; text-transform:none; }
 .intro--neomorph .intro-hero-2 { margin-top:-.02em; }
 .intro--neomorph .intro-rule { width:92px; height:8px; margin:20px 0 18px; border-radius:999px; background:var(--neo-bg); box-shadow:inset 2px 2px 5px var(--neo-shadow-dark),inset -2px -2px 5px var(--neo-shadow-light); }
 .intro--neomorph .intro-sub { letter-spacing:.1em; text-indent:.1em; text-transform:none; }
 .intro--neomorph .intro-meter { width:132px; justify-content:center; gap:10px; }
 .intro--neomorph .intro-meter > i { flex:0 0 8px; height:8px; border-radius:50%; background:var(--neo-bg); box-shadow:inset 2px 2px 4px var(--neo-shadow-dark),inset -2px -2px 4px var(--neo-shadow-light); }
 .intro--neomorph .intro-meter > i::before { border-radius:50%; background:var(--primary); }
-.intro--neomorph .intro-skip { border:0; border-radius:14px; background:var(--neo-bg); box-shadow:3px 3px 7px var(--neo-shadow-dark),-3px -3px 7px var(--neo-shadow-light); font-family:'Nunito Sans','Segoe UI',sans-serif; letter-spacing:.05em; text-transform:none; }
+.intro--neomorph .intro-skip { border:0; border-radius:14px; background:var(--neo-bg); box-shadow:3px 3px 7px var(--neo-shadow-dark),-3px -3px 7px var(--neo-shadow-light); font-family:var(--font-body); letter-spacing:.02em; text-transform:none; }
 .intro--neomorph.is-active .intro-ch { animation-name:neoChar; }
 .intro--neomorph.is-active .intro-crest { animation:neoInsetRelease .55s cubic-bezier(.22,1.3,.36,1) .04s both; }
 .intro--neomorph.is-active .intro-hero-1 { animation:neoWord .56s cubic-bezier(.22,1.3,.36,1) .24s both; }
@@ -2451,7 +2451,7 @@ window.addEventListener('message', function(e){
     // force), and shares one in-flight promise if already fetching.
     if(e.data && e.data.type === 'request-ebtp-fetch'){
       try{ if(window.__hubSyncSheet) window.__hubSyncSheet('ebtp', !!e.data.force); }catch(err){}
-      try{ fetchAndCacheSegment(!!e.data.force); }catch(err){}
+      try{ if(activeRefreshPage() === 'rake-planner.html') fetchAndCacheSegment(!!e.data.force); }catch(err){}
     }
     if(e.source === pageFrame.contentWindow && e.data && e.data.type === 'request-live-plate-tracker-refresh'){
       requestLiveDataRefresh();
@@ -3592,8 +3592,38 @@ function fetchStatusHide(source){
 }
 
 var liveDataRefreshInFlight = false;
+function activeRefreshPage(){
+  var src = pageFrame && pageFrame.getAttribute('src');
+  if(!src) return '';
+  try{ return decodeURIComponent(new URL(src, location.href).pathname.split('/').pop()).toLowerCase(); }
+  catch(e){ return ''; }
+}
+
 function requestLiveDataRefresh(){
   if(liveDataRefreshInFlight) return;
+  var page = activeRefreshPage();
+  if(page !== 'plate-tracker.html'){
+    var sources = {
+      '': ['ebtp', 'segment'],
+      'rake-planner.html': ['ebtp', 'segment'],
+      'order-status-report.html': ['ebtp'],
+      'vdo-generator.html': ['ebtp'],
+      'plate-tagging-tool.html': ['ebtp', 'zstk'],
+      'pm-yard.html': ['zstk', 'autobtr']
+    };
+    if(page === 'truck-dashboard.html'){
+      broadcastToFrame({ type: 'refresh-truck-sheets' });
+      return;
+    }
+    var selected = sources[page] || [];
+    if(!selected.length) return;
+    liveDataRefreshInFlight = true;
+    return Promise.allSettled(selected.map(function(source){
+      return Promise.resolve().then(function(){
+        return source === 'segment' ? fetchAndCacheSegment(true) : window.__hubSyncSheet(source, true);
+      });
+    })).then(function(){ liveDataRefreshInFlight = false; });
+  }
   liveDataRefreshInFlight = true;
   broadcastToFrame({ type: 'plate-tracker-refresh-start' });
   var finishEbtpRefresh = function(){
@@ -3634,13 +3664,6 @@ function requestLiveDataRefresh(){
       error: error instanceof Error ? error.message : String(error),
     });
     finishEbtpRefresh();
-  }
-  try{
-    fetchAndCacheSegment(true).catch(function(error){
-      console.error('Dashboard Segment refresh failed', error);
-    });
-  }catch(error){
-    console.error('Dashboard Segment refresh could not start', error);
   }
 }
 
@@ -4286,7 +4309,7 @@ function fetchAndCacheSegment(force){
     // One silent retry here absorbs the rest of that noise — the chip only
     // ever goes red if TWO attempts in a row genuinely failed. Past that, the
     // backoff loop above keeps healing attempts coming on its own.
-    pingOnce(src, force).then(function(res){
+    return pingOnce(src, force).then(function(res){
       done(true, res);
       clearRetry(src); // success resets the backoff to its 10s base
     }, function(firstErr){

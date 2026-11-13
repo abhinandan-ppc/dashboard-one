@@ -1920,6 +1920,7 @@ window.addEventListener('message',e=>{
   // was just written from, so it returns as soon as the rows are there.
   // Never overwrite a file the user dropped in themselves.
   if(msg.type==='zstk-cache-updated' && POR_SOURCE!=='file') fetchOnlineZstk();
+  if(msg.type==='ebtp-cache-updated') fetchOnlineEbtp();
 });
 </script>
 <script src="edge-stretch.js"></script>
