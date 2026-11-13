@@ -56,6 +56,85 @@ input:focus{outline:none;border-color:var(--amber) !important;box-shadow:var(--s
 .page-rake .kpi-strip::-webkit-scrollbar{height:0;width:0}
 .page-rake .kpi-strip{scrollbar-width:none;-ms-overflow-style:none}
 
+/* Predictor: readable names, distinct status and stock sections, roomy cards. */
+.rake-region-list{display:grid;gap:8px}
+.rake-siding-grid{display:block;columns:2 420px;column-gap:20px;padding-top:16px}
+.rake-siding-grid:has(>.rake-siding-card:only-child){columns:auto}
+.rake-siding-grid>.rake-siding-card{break-inside:avoid;page-break-inside:avoid;margin-bottom:20px}
+.rake-region-heading{break-after:avoid;page-break-after:avoid}
+.rake-region-heading{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto;gap:12px!important}
+.rake-region-heading>span:nth-last-child(2){display:none}
+.rake-siding-card{min-width:0;background:var(--component-surface);border:var(--glass-border-rule,1px solid var(--bdr));border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm)}
+.rake-siding-name{font-family:var(--font-heading,var(--font-body));font-size:clamp(22px,2vw,28px);font-weight:750;line-height:1.2;letter-spacing:-.025em;color:var(--text);overflow-wrap:anywhere}
+.rake-list{display:grid;gap:16px;padding:0 20px 20px}
+.rake-entry{min-width:0;border:1px solid var(--bdr)}
+.rake-entry-heading{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;padding:18px 18px 8px}
+.rake-select{display:flex;align-items:center;gap:12px;min-height:44px;cursor:pointer}
+.rake-select input{width:18px;height:18px;flex-shrink:0;accent-color:var(--primary)}
+.rake-name{font-size:22px;font-weight:750;letter-spacing:-.025em;line-height:1.2;color:var(--text)}
+.rake-order-count{font-size:12px;color:var(--dim);line-height:1.6}
+.rake-threshold-note{padding:0 18px 10px;color:var(--dim);font-size:12px}
+.rake-status-row{display:flex;gap:8px;flex-wrap:wrap;padding:4px 18px 16px;align-items:center;border-bottom:1px solid var(--bdr)}
+.rake-capacity{padding:18px 18px 14px}
+.rake-capacity-line{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.rake-detail-label{display:block;color:var(--dim);font-size:12px;font-weight:500;line-height:1.5;margin-bottom:6px}
+.rake-capacity strong{display:block;font-size:24px;line-height:1.25;letter-spacing:-.025em;color:var(--text);font-variant-numeric:tabular-nums}
+.rake-capacity-line>span{font-size:13px;font-weight:600}
+.rake-predictor small{font-size:11px;font-weight:500;letter-spacing:0;color:var(--dim)}
+.rake-progress{height:6px;border-radius:4px;overflow:hidden;background:var(--s3);margin-top:12px}
+.rake-progress>div{height:100%;border-radius:inherit}
+.rake-capacity-note{font-size:11px;line-height:1.6;color:var(--dim);margin-top:8px}
+.rake-stock-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:4px 18px 20px}
+.rake-stock-item{min-width:0}
+.rake-stock-item strong{font-size:17px;font-weight:650;color:var(--text);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.rake-stock-item .rake-progress{height:4px;margin-top:8px}
+.rake-siding-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0 16px 16px;border:1px solid var(--bdr);border-radius:999px;overflow:hidden;background:var(--s2);box-shadow:var(--shadow-xs)}
+html body.page-rake .rake-predictor .rake-siding-actions>button,
+html body.page-rake .rake-predictor .rake-siding-actions>button:is(:hover,:focus-visible,:active){position:relative;border:0!important;border-radius:0!important;box-shadow:none!important;transform:none!important;min-width:0}
+.rake-predictor .rake-siding-actions>button+button::before{content:'';position:absolute;left:0;top:25%;height:50%;width:1px;background:var(--bdrHi);pointer-events:none}
+.rake-predictor .rake-siding-actions>button:focus-visible{outline-offset:-4px}
+.rake-predictor .rake-siding-actions>button,.rake-predictor .rake-details-button{background:var(--s2)!important;color:var(--text)!important;opacity:1!important;letter-spacing:0!important;text-transform:none!important;font-size:13px!important}
+.rake-predictor .rake-siding-actions>button:hover,.rake-predictor .rake-details-button:hover{background:var(--s3)!important;color:var(--primary)!important}
+/* Integrated card footer: the card owns its outer corners and elevation. */
+html body.page-rake .rake-predictor .rake-entry>.rake-details-button,
+html body.page-rake .rake-predictor .rake-entry>.rake-details-button:is(:hover,:focus-visible,:active){border:0!important;border-top:1px solid var(--bdr)!important;border-radius:0!important;box-shadow:none!important;transform:none!important}
+html body.page-rake .rake-predictor .rake-entry>.rake-details-button:focus-visible{outline:2px solid var(--primary)!important;outline-offset:-4px}
+html body.page-rake .rake-predictor .rake-entry>.rake-details-button[aria-expanded="true"]{color:var(--primary)!important;background:var(--primary-bg)!important}
+.rake-status-row>span{color:var(--text)!important}
+.rake-entry[data-selected="true"]{outline:2px solid var(--primary);outline-offset:2px}
+html[data-theme-style="classic"] .rake-siding-card{box-shadow:var(--shadow-xs);border:1px solid var(--bdr)}
+html[data-theme-style="neomorph"] .rake-siding-card{background:var(--neo-bg);border:none;box-shadow:var(--shadow-md)}
+html[data-theme-style="neomorph"] .rake-entry{background:var(--neo-bg)!important;border:none!important;box-shadow:var(--shadow-inset)}
+html[data-theme-style="neomorph"] .rake-progress{background:var(--neo-bg);box-shadow:var(--shadow-inset)}
+html[data-theme-style="neomorph"] .rake-predictor .rake-siding-actions>button,html[data-theme-style="neomorph"] .rake-predictor .rake-details-button{background:var(--neo-bg)!important}
+html[data-theme-style="neomorph"] .rake-siding-actions{background:var(--neo-bg);border:none;box-shadow:var(--shadow-sm)}
+.rake-drill-heading{display:flex;gap:12px 18px;align-items:center;flex-wrap:wrap;padding:20px 24px;border-bottom:1px solid var(--bdr);background:var(--s1);flex-shrink:0;max-height:45dvh;overflow-y:auto}
+.rake-drill-panel{background:var(--bg)!important}
+html[data-theme-style="neomorph"] .rake-drill-panel{background:var(--neo-bg)!important}
+.rake-drill-heading .rake-drill-name{font-size:24px;font-weight:750;letter-spacing:-.025em;line-height:1.25;color:var(--text)}
+.rake-drill-summary{display:flex;flex-wrap:wrap;gap:12px 24px;width:100%;padding:12px 0;border-block:1px solid var(--bdr)}
+.rake-drill-summary>span{font-size:16px!important;font-variant-numeric:tabular-nums}
+.rake-drill-summary>span>span{display:block;margin-bottom:4px;font-size:12px!important}
+.rake-drill-panel td{padding:12px 14px!important;font-size:13px!important;line-height:1.5}
+.rake-drill-panel th{padding:12px 14px!important;font-size:12px!important}
+@media(max-width:600px){
+  .rake-predictor-heading{display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:12px!important;padding:20px 16px!important}
+  .rake-predictor-heading>span:first-child{display:none}
+  .rake-predictor-heading>div{grid-column:1;grid-row:1}
+  .rake-predictor-heading>span:last-child{grid-column:2;grid-row:1}
+  .rake-predictor-heading>button{grid-column:1/-1;justify-self:start;min-height:40px}
+  .rake-siding-grid{gap:16px}
+  .rake-list{padding:0 12px 16px;gap:14px}
+  .rake-entry-heading{padding:14px 14px 6px}
+  .rake-status-row{padding:4px 14px 14px;gap:6px}
+  .rake-capacity{padding:16px 14px 12px}
+  .rake-stock-grid{grid-template-columns:1fr;padding:0 14px 16px;gap:0}
+  .rake-stock-item{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:12px 0;border-top:1px solid var(--bdr)}
+  .rake-stock-item .rake-detail-label{margin:0;align-self:center}
+  .rake-stock-item .rake-progress{grid-column:1/-1;margin-top:4px}
+  .rake-drill-heading{padding:16px;gap:12px}
+}
+
 /* ── Table ── */
 table{border-collapse:collapse}
 thead tr th:first-child{border-radius:var(--radius-xs) 0 0 0}
@@ -195,7 +274,7 @@ function useThemeManager(){
   return{pref,setPref,effective,setThemeConcrete};
 }
 
-const F={h:"'Poppins',sans-serif",b:"'Poppins',sans-serif",m:"'JetBrains Mono',monospace"};
+const F={h:"var(--font-display)",b:"var(--font-body)",m:"var(--font-data)"};
 const JINDAL_LOGO='data:image/png;base64,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';
 const RAKE_CAP=2850,RAKE_TOL=0.03,RAKE_MIN_SHOW=0.5; // hide rakes < 50% in predictor
 const isFullRake = (rake) => rake.totalBal >= RAKE_CAP;
@@ -3790,7 +3869,7 @@ function RakeDrillPanel({rakePlan,rakeIdx,onClose,mob}){
   const rc=C.region[rakePlan.region]||C.region.Unknown;
   const[srt,setSrt]=useState({k:'Bal to PGI',d:-1});
   const[srch,setSrch]=useState('');
-  const[panelH,setPanelH]=useState(mob?'100dvh':'52vh');
+  const[panelH,setPanelH]=useState(mob?'100dvh':'68vh');
   const dragRef=useRef(null);
 
   // Drag-to-resize logic
@@ -3877,8 +3956,8 @@ function RakeDrillPanel({rakePlan,rakeIdx,onClose,mob}){
   // 620, not 500: drill panels are opened from INSIDE the map dialogs (520 and
   // 600), so they must paint above every full-screen overlay on the page —
   // otherwise the panel they open from covers its own drill-down.
-  return<div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:620,
-    background:'rgba(13,18,28,.88)',
+  return<div className="rake-drill-panel" role="region" aria-label={`Order details for ${rakePlan.siding} Rake ${rakeIdx+1}`} style={{position:'fixed',bottom:0,left:0,right:0,zIndex:620,
+    background:'var(--s1)',
     backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
     borderTop:`1px solid ${rc.bdr}`,
     boxShadow:`0 -20px 60px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.1)`,
@@ -3887,7 +3966,7 @@ function RakeDrillPanel({rakePlan,rakeIdx,onClose,mob}){
     height:mob?'100dvh':panelH,
     minHeight:mob?'100dvh':280,
     borderRadius:mob?0:'20px 20px 0 0',
-    userSelect:'none'}}>
+    userSelect:'text'}}>
 
     {/* ── Drag handle (desktop only) ── */}
     {!mob&&<div ref={dragRef} style={{
@@ -3901,13 +3980,8 @@ function RakeDrillPanel({rakePlan,rakeIdx,onClose,mob}){
     </div>}
 
     {/* Header — matches DrillPanel exactly */}
-    <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 16px',flexShrink:0,
-      flexWrap:'wrap',rowGap:6,borderBottom:'1px solid var(--bdr)',
-      background:'var(--s1)'}}>
-      <span style={{fontFamily:F.h,fontSize:15,fontWeight:800,color:rc.txt,letterSpacing:'.06em',textTransform:'uppercase',flexShrink:0}}>
-        🚂 Rake {rakeIdx+1}
-      </span>
-      <STag code={rakePlan.siding}/>
+    <div className="rake-drill-heading">
+      <span className="rake-drill-name">{rakePlan.siding} · Rake {rakeIdx+1}</span>
       <RBadge region={rakePlan.region}/>
       <span style={{fontFamily:F.b,fontSize:12,color:'var(--dim)'}}>{rows.length} orders</span>
 
@@ -3934,7 +4008,7 @@ function RakeDrillPanel({rakePlan,rakeIdx,onClose,mob}){
       </span>
 
       {/* Mini totals — same as DrillPanel */}
-      <div style={{display:'flex',gap:10,flexWrap:'wrap',rowGap:4}}>
+      <div className="rake-drill-summary">
         {[['Bal',tot.bal,C.sky],['FG',tot.fg,C.green],['WIP',tot.wip,'#f97316'],
           ['BTR',tot.btr,'#a78bfa'],['TotSlab',tot.tsl,'#facc15']
         ].map(([l,v,cl])=>(
@@ -4105,16 +4179,16 @@ function RakePredictor({rows}){
   const combineRakeA=rkCombine?data[rkCombine.selA.sid]?.rakes[rkCombine.selA.idx]:null;
   const combineRakeB=rkCombine?data[rkCombine.selB.sid]?.rakes[rkCombine.selB.idx]:null;
 
-  return<div style={{...card,overflow:'hidden',boxShadow:'var(--shadow-sm)'}}>
-    <div onClick={()=>setOpen(o=>!o)} style={{padding:'14px 20px',cursor:'pointer',
+  return<div className="rake-predictor" style={{...card,overflow:'hidden',boxShadow:'var(--shadow-sm)'}}>
+    <div className="rake-predictor-heading" onClick={()=>setOpen(o=>!o)} style={{padding:'14px 20px',cursor:'pointer',
       display:'flex',alignItems:'center',gap:14,
       borderBottom:`1px solid ${open?C.bdr:'transparent'}`,
       background:`linear-gradient(135deg,${C.s2},${C.s1})`,
       transition:'border-color .15s',userSelect:'none',borderRadius:open?'var(--radius-lg) var(--radius-lg) 0 0':'var(--radius-lg)'}}>
       <span style={{fontSize:22,lineHeight:1,filter:'drop-shadow(0 0 8px #f59e0b50)'}}>🚂</span>
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontFamily:F.h,fontSize:17,fontWeight:800,color:'var(--text)',letterSpacing:'.04em',textTransform:'uppercase'}}>Rake Predictor</div>
-        <div style={{fontSize:11,color:'var(--dim)',marginTop:2}}>
+        <div style={{fontFamily:F.h,fontSize:24,fontWeight:750,color:'var(--text)',letterSpacing:'-.025em'}}>Rake Predictor</div>
+        <div style={{fontSize:13,color:'var(--dim)',marginTop:6,lineHeight:1.7}}>
           <span style={{color:C.amber,fontWeight:600}}>{totRakes}</span> rakes ·{' '}
           <span style={{color:C.green,fontWeight:600}}>{fullRakes}</span> full ·{' '}
           <span style={{color:C.sky}}>{sids.length}</span> sidings ·{' '}
@@ -4133,7 +4207,7 @@ function RakePredictor({rows}){
       <span style={{fontFamily:F.m,fontSize:12,color:'var(--mute)',transform:`rotate(${open?'0':'180deg'})`,transition:'transform .2s'}}>▲</span>
     </div>
 
-    {open&&<div style={{padding:mob?'10px 8px':'16px 18px'}}>
+    {open&&<div className="rake-region-list" style={{padding:mob?'16px 12px':'24px'}}>
       {regions.map(region=>{
         const list=byRegion[region]||[];
         if(!list.length)return null;
@@ -4141,58 +4215,50 @@ function RakePredictor({rows}){
         const isRegionOpen=regionOpen[region]!==false;
         const regRakes=list.reduce((s,d)=>s+d.rakes.filter(r=>r.totalBal>=RAKE_CAP*RAKE_MIN_SHOW).length,0);
         const regBal=list.reduce((s,d)=>s+d.totalBal,0);
-        return<div key={region} style={{marginBottom:12}}>
-          <div onClick={()=>setRegionOpen(p=>({...p,[region]:!isRegionOpen}))} style={{
-            cursor:'pointer',display:'flex',alignItems:'center',gap:10,padding:'9px 14px',
+        return<div key={region} style={{marginBottom:24}}>
+          <div className="rake-region-heading" onClick={()=>setRegionOpen(p=>({...p,[region]:!isRegionOpen}))} style={{
+            cursor:'pointer',display:'flex',alignItems:'center',gap:12,padding:'14px 16px',flexWrap:'wrap',
             background:rrc.bg,border:`1px solid ${rrc.bdr}`,
             borderRadius:isRegionOpen?'var(--radius-sm) var(--radius-sm) 0 0':'var(--radius-sm)',
             userSelect:'none',transition:'border-radius .15s'}}>
             <RBadge region={region}/>
-            <span style={{fontSize:11.5,color:rrc.txt,opacity:.85}}>
+            <span style={{fontSize:13,color:rrc.txt,opacity:.85}}>
               {list.length} siding{list.length!==1?'s':''} · {regRakes} rake{regRakes!==1?'s':''} · {fmt(regBal)} MT bal
             </span>
             <span style={{flex:1}}/>
             <span style={{fontFamily:F.m,fontSize:11,color:rrc.txt,opacity:.7,
               transform:`rotate(${isRegionOpen?'0':'180deg'})`,transition:'transform .2s'}}>▲</span>
           </div>
-          {isRegionOpen&&<div style={{display:'flex',flexWrap:'wrap',gap:mob?8:12,
-            border:`1px solid ${rrc.bdr}`,borderTop:'none',borderRadius:'0 0 var(--radius-sm) var(--radius-sm)',
-            background:'rgba(0,0,0,.08)',padding:mob?8:12}}>
+          {isRegionOpen&&<div className="rake-siding-grid">
           {list.map(({siding,region,rakes,totalBal,totalQty,n})=>{
         const rc=C.region[region]||C.region.Unknown;
         // Only count/show rakes that meet the 50% minimum threshold
         const visRakes=rakes.filter(r=>r.totalBal>=RAKE_CAP*RAKE_MIN_SHOW);
         const full=visRakes.filter(isFullRake).length;
         const partial=visRakes.length-full;
-        return<div key={siding} style={{
-          background:rc.bg,border:`1px solid ${rc.bdr}`,borderRadius:'var(--radius-md)',
-          flex:'1 1 280px',minWidth:260,maxWidth:mob?'100%':'calc(50% - 6px)',overflow:'hidden',
-          boxShadow:'var(--shadow-xs)',
-          transition:'box-shadow .22s ease,transform .22s ease'}}
-          onMouseEnter={e=>{e.currentTarget.style.boxShadow=`var(--shadow-md),0 0 20px ${rc.glow}30`;e.currentTarget.style.transform='translateY(-2px)'}}
-          onMouseLeave={e=>{e.currentTarget.style.boxShadow='var(--shadow-xs)';e.currentTarget.style.transform='translateY(0)'}}>
+        return<article key={siding} className="rake-siding-card">
           {/* Card header */}
-          <div style={{padding:'13px 15px',display:'flex',alignItems:'flex-start',gap:10}}>
+          <div style={{padding:mob?'20px 16px':'24px',display:'flex',alignItems:'flex-start',gap:20}}>
             <div style={{flex:1,minWidth:0}}>
               <div style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap',marginBottom:6}}>
-                <STag code={siding}/><RBadge region={region}/>
+                <h3 className="rake-siding-name">{siding}</h3><RBadge region={region}/>
               </div>
-              <div style={{fontSize:12.5,color:rc.txt,display:'flex',gap:12,flexWrap:'wrap',marginTop:4}}>
+              <div style={{fontSize:13,color:'var(--dim)',display:'flex',gap:'6px 16px',flexWrap:'wrap',marginTop:10}}>
                 <span>{n} orders</span>
                 <span>Bal: <span style={{color:C.amber,fontWeight:600}}>{fmt(totalBal)}</span> MT</span>
-                <span style={{opacity:.6}}>Qty: {fmt(totalQty)} MT</span>
+                <span style={{color:'var(--dim)'}}>Qty: {fmt(totalQty)} MT</span>
               </div>
 
             </div>
             <div style={{textAlign:'right',flexShrink:0}}>
-              <div style={{fontFamily:F.m,fontSize:32,fontWeight:700,color:rc.txt,lineHeight:1}}>{visRakes.length}</div>
+              <div style={{fontFamily:F.m,fontSize:36,fontWeight:700,color:'var(--text)',lineHeight:1}}>{visRakes.length}</div>
               <div style={{fontSize:11,color:rc.txt,opacity:.7,fontFamily:F.h,letterSpacing:'.08em',textTransform:'uppercase'}}>rake{visRakes.length!==1?'s':''}</div>
-              <div style={{fontSize:11,color:rc.txt,opacity:.65,marginTop:2}}>{full} full · {partial} partial</div>
+              <div style={{fontSize:12,color:'var(--dim)',marginTop:6}}>{full} full · {partial} partial</div>
             </div>
           </div>
 
           {/* Per-rake rows — only show rakes ≥50% capacity in predictor */}
-          <div style={{padding:'0 12px 10px'}}>
+          <div className="rake-list">
             {(()=>{let runningBal=totalBal;return[
               ...rakes.map((rk,realIdx)=>({rk,realIdx,dim:false})).filter(({rk})=>rk.totalBal>=RAKE_CAP*RAKE_MIN_SHOW),
               ...rakes.map((rk,realIdx)=>({rk,realIdx,dim:true})).filter(({rk})=>rk.totalBal<RAKE_CAP*RAKE_MIN_SHOW&&rk.totalBal>0),
@@ -4215,26 +4281,21 @@ function RakePredictor({rows}){
               const combSelected=combineSel.some(s=>s.sid===siding&&s.idx===realIdx);
               const combDisabled=!combSelected&&(combineSel.length>=2||
                 (combineSel.length===1&&combineSel[0].wagonType!==rk.wagonType));
-              return<div key={realIdx} style={{marginBottom:8,
-                background:isActive?'var(--s3)':readyForDispatch?'rgba(34,197,94,.06)':'rgba(0,0,0,.18)',
-                border:`1px solid ${combSelected?C.sky:isActive?C.amber:readyForDispatch?C._green+'50':rc.bdr+'30'}`,
-                borderRadius:'var(--radius-sm)',overflow:'hidden',transition:'all .15s',
-                opacity:dim?.45:1,
-                filter:dim?'saturate(.35)':'none'}}>
-                <div style={{padding:'5px 10px',display:'flex',alignItems:'center',gap:5,
-                  borderBottom:`1px solid ${rc.bdr}20`,flexWrap:'wrap',rowGap:3}}>
-                  <input type="checkbox" checked={combSelected} disabled={combDisabled}
-                    onChange={()=>toggleCombineSel(siding,realIdx,rk.wagonType)}
-                    title={combDisabled?"Can't mix LONG and standard wagon rakes, or more than 2 at once":'Select to combine with another rake'}
-                    style={{width:13,height:13,cursor:combDisabled?'default':'pointer',accentColor:C.sky,flexShrink:0,opacity:combDisabled?.4:1}}/>
-                  <span style={{fontFamily:F.m,fontSize:12,color:rc.txt,fontWeight:600}}>Rake {realIdx+1} · {rk.items.length} orders</span>
-                  {rk.wagonType&&<span style={{fontSize:9,padding:'1px 7px',borderRadius:'var(--radius-pill)',
-                    background:rk.wagonType==='LONG'?'rgba(212,121,60,.2)':'rgba(91,163,217,.15)',
-                    border:rk.wagonType==='LONG'?'1px solid rgba(212,121,60,.5)':'1px solid rgba(91,163,217,.4)',
-                    color:rk.wagonType==='LONG'?'#d4793c':C.sky,
-                    fontFamily:F.h,fontWeight:700,letterSpacing:'.04em',whiteSpace:'nowrap'}}>
-                    {rk.wagonType==='LONG'?'🚃 LONG':'🚋 '+rk.wagonType}
-                  </span>}
+              return<div key={realIdx} className="rake-entry" data-selected={combSelected||isActive} style={{
+                background:isActive?'var(--s3)':'var(--s1)',
+                border:`1px solid ${combSelected?C.sky:isActive?C.amber:readyForDispatch?C._green+'50':'var(--bdr)'}`,
+                borderRadius:'var(--radius-md)',overflow:'hidden',transition:'border-color .15s'}}>
+                <div className="rake-entry-heading">
+                  <label className="rake-select" title={combDisabled?"Choose up to two rakes of the same wagon type":'Select to combine'}>
+                    <input type="checkbox" checked={combSelected} disabled={combDisabled}
+                      aria-label={`Select ${siding} Rake ${realIdx+1} to combine`}
+                      onChange={()=>toggleCombineSel(siding,realIdx,rk.wagonType)}/>
+                    <span className="rake-name">Rake {realIdx+1}</span>
+                  </label>
+                  <span className="rake-order-count">{rk.items.length} orders{rk.wagonType?' · '+rk.wagonType:''}</span>
+                </div>
+                {dim&&<div className="rake-threshold-note">Below 50% capacity · available to combine</div>}
+                <div className="rake-status-row">
                   {/* Tier breakdown pills */}
                   {(()=>{
                     const t=rk.items.reduce((a,{ord})=>{const p=rkPriority(ord);a[p]=(a[p]||0)+1;return a;},{});
@@ -4246,9 +4307,9 @@ function RakePredictor({rows}){
                       (t[4]||t[5])&&{l:`No Stock ×${(t[4]||0)+(t[5]||0)}`,c:C._rose},
                     ].filter(Boolean);
                     return pills.map((p,i)=>(
-                      <span key={i} style={{fontSize:9,padding:'3px 9px',borderRadius:'var(--radius-pill)',
+                      <span key={i} style={{fontSize:11,padding:'5px 8px',borderRadius:'var(--radius-pill)',
                         background:`${p.c}28`,border:`1px solid ${p.c}50`,
-                        color:p.c,fontFamily:F.h,fontWeight:700,letterSpacing:'.03em',whiteSpace:'nowrap',display:'inline-block'}}>
+                        color:p.c,fontFamily:F.h,fontWeight:700,lineHeight:1.5,display:'inline-block'}}>
                         {p.l}
                       </span>
                     ));
@@ -4263,66 +4324,36 @@ function RakePredictor({rows}){
                   {(hasNone||hasPart)&&<span style={{fontSize:11,fontFamily:F.h,fontWeight:700,padding:'2px 8px',borderRadius:4,
                     background:hasNone?`${C._rose}20`:`${C._amber}18`,color:hasNone?C.rose:C.amber,
                     border:`1px solid ${hasNone?C._rose:C._amber}50`}}>{hasNone?'⚠ NO PAY':'~ PART PAY'}</span>}
-                  <span style={{flex:1}}/>
-                  <span style={{fontFamily:F.m,fontSize:10,color:cl,fontWeight:600}}>
-                    {fmt(rk.totalBal)}{isFull?' ✓':''} / {fmt(balBefore)} MT
-                  </span>
                 </div>
-                <div style={{padding:'5px 10px 3px'}}>
-                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:2}}>
-                    <span style={{fontSize:11.5,color:rc.txt,fontWeight:600}}>Bal to PGI</span>
-                    <span style={{fontFamily:F.m,fontSize:11,color:cl,fontWeight:700}}>{pct.toFixed(0)}% of rake capacity</span>
+                <div className="rake-capacity">
+                  <div className="rake-capacity-line">
+                    <div><span className="rake-detail-label">Balance to dispatch</span><strong>{fmt(rk.totalBal)} <small>MT</small></strong></div>
+                    <span style={{color:cl}}>{pct.toFixed(0)}% capacity</span>
                   </div>
-                  <div style={{height:4,borderRadius:3,background:'rgba(0,0,0,.35)',overflow:'hidden',marginBottom:5}}>
-                    <div style={{height:'100%',width:`${Math.round(pct)}%`,borderRadius:3,
-                      background:`linear-gradient(90deg,${clHex}88,${clHex})`,
-                      transition:'width .9s cubic-bezier(.4,0,.2,1)'}}/>
+                  <div className="rake-progress" role="meter" aria-label="Rake capacity" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+                    <div style={{width:`${pct}%`,background:cl}}/>
                   </div>
-                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:2}}>
-                    <span style={{fontSize:11.5,color:rc.txt,fontWeight:600}}>FG Stock</span>
-                    <span style={{fontFamily:F.m,fontSize:11,color:fgOk?C.green:C.rose,fontWeight:700}}>{fmt(rk.totalFG)} MT</span>
-                  </div>
-                  <div style={{height:4,borderRadius:3,background:'rgba(0,0,0,.35)',overflow:'hidden',marginBottom:5}}>
-                    <div style={{height:'100%',width:`${fgPct}%`,borderRadius:3,
-                      background:`linear-gradient(90deg,${fgOk?C._green:C._rose}77,${fgOk?C._green:C._rose})`,
-                      transition:'width .9s cubic-bezier(.4,0,.2,1)'}}/>
-                  </div>
-                  {wipTot>0&&(()=>{
-                    const wipPct=rk.totalBal>0?Math.min(100,((rk.totalFG+wipTot)/rk.totalBal)*100):0;
-                    const wipCol='#f97316';
-                    return<>
-                      <div style={{display:'flex',justifyContent:'space-between',marginBottom:2}}>
-                        <span style={{fontSize:11.5,color:rc.txt,fontWeight:600}}>WIP Stock</span>
-                        <span style={{fontFamily:F.m,fontSize:11,color:wipCol,fontWeight:700}}>{fmt(wipTot)} MT</span>
-                      </div>
-                      <div style={{height:4,borderRadius:3,background:'rgba(0,0,0,.35)',overflow:'hidden',position:'relative',marginBottom:5}}>
-                        <div style={{height:'100%',width:`${fgPct}%`,borderRadius:3,
-                          background:`linear-gradient(90deg,${fgOk?C._green:C._rose}55,${fgOk?C._green:C._rose}88)`,
-                          position:'absolute',left:0,top:0}}/>
-                        <div style={{height:'100%',width:`${wipPct}%`,borderRadius:3,
-                          background:`linear-gradient(90deg,#ea580c55,#f97316aa)`,
-                          position:'absolute',left:0,top:0,transition:'width .9s cubic-bezier(.4,0,.2,1)'}}/>
-                      </div>
-                    </>;
-                  })()}
-                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:2}}>
-                    <span style={{fontSize:11.5,color:rc.txt,fontWeight:600}}>From Rolling</span>
-                    <span style={{fontFamily:F.m,fontSize:11,color:fromRolling>0?C.rose:C.green,fontWeight:700}}>{fmt(fromRolling)} MT</span>
-                  </div>
-                  <div style={{height:4,borderRadius:3,background:'rgba(0,0,0,.35)',overflow:'hidden'}}>
-                    <div style={{height:'100%',width:`${rollingPct}%`,borderRadius:3,
-                      background:`linear-gradient(90deg,${C._rose}77,${C._rose})`,
-                      transition:'width .9s cubic-bezier(.4,0,.2,1)'}}/>
-                  </div>
+                  <div className="rake-capacity-note">Capacity {fmt(RAKE_CAP)} MT · Balance before allocation {fmt(balBefore)} MT</div>
                 </div>
-                <button onClick={()=>setRkDrill(p=>p?.sid===siding&&p?.idx===realIdx?null:{sid:siding,idx:realIdx})}
-                  style={{width:'100%',padding:'5px',background:isActive?`${C._amber}18`:'rgba(0,0,0,.2)',border:'none',
-                    borderTop:`1px solid ${isActive?C.amber:rc.bdr+'30'}`,
-                    color:isActive?C.amber:rc.txt,opacity:isActive?1:.6,
-                    fontFamily:F.b,fontSize:10,cursor:'pointer',
+                <div className="rake-stock-grid">
+                  {[
+                    {label:'FG stock',value:rk.totalFG,percent:fgPct,color:fgOk?C.green:C.rose},
+                    {label:'WIP stock',value:wipTot,percent:rk.totalBal>0?Math.min(100,wipTot/rk.totalBal*100):0,color:C.amber},
+                    {label:'From rolling',value:fromRolling,percent:rollingPct,color:fromRolling>0?C.rose:C.green}
+                  ].map(metric=><div key={metric.label} className="rake-stock-item">
+                    <span className="rake-detail-label">{metric.label}</span>
+                    <strong>{fmt(metric.value)} <small>MT</small></strong>
+                    <div className="rake-progress" aria-hidden="true"><div style={{width:`${metric.percent}%`,background:metric.color}}/></div>
+                  </div>)}
+                </div>
+                <button className="rake-details-button" aria-expanded={isActive} aria-label={`View order details for ${siding} Rake ${realIdx+1}`} onClick={()=>setRkDrill(p=>p?.sid===siding&&p?.idx===realIdx?null:{sid:siding,idx:realIdx})}
+                  style={{width:'100%',padding:'12px 16px',minHeight:44,background:isActive?`${C._amber}18`:'rgba(0,0,0,.2)',border:'none',
+                    borderTop:'1px solid var(--bdr)',
+                    color:isActive?C.amber:rc.txt,opacity:1,
+                    fontFamily:F.b,fontSize:13,fontWeight:600,cursor:'pointer',
                     display:'flex',alignItems:'center',justifyContent:'center',gap:4,transition:'opacity .15s,background .15s'}}
                   onMouseEnter={e=>{e.currentTarget.style.opacity='1';e.currentTarget.style.background='rgba(255,255,255,.06)'}}
-                  onMouseLeave={e=>{e.currentTarget.style.opacity=isActive?'1':'.6';e.currentTarget.style.background=isActive?`${C._amber}18`:'rgba(0,0,0,.2)'}}>
+                  onMouseLeave={e=>{e.currentTarget.style.opacity='1';e.currentTarget.style.background=isActive?`${C._amber}18`:'rgba(0,0,0,.2)'}}>
                   {isActive?'▲ Close details':'▼ Order details'}
                 </button>
               </div>;
@@ -4330,9 +4361,9 @@ function RakePredictor({rows}){
           </div>
 
           {/* Siding footer: AI + Map + Excel */}
-          <div style={{display:'flex',borderTop:`1px solid ${rc.bdr}40`}}>
+          <div className="rake-siding-actions" role="group" aria-label={`${siding} actions`}>
             <button onClick={()=>setRkTransport(siding)} style={{
-              flex:1,padding:'7px',background:'rgba(0,0,0,.18)',border:'none',
+              flex:1,padding:'12px 8px',minHeight:44,background:'rgba(0,0,0,.18)',border:'none',
               borderRight:`1px solid ${rc.bdr}30`,
               color:'#34d399',opacity:.8,fontFamily:F.h,fontSize:11,fontWeight:700,
               letterSpacing:'.05em',textTransform:'uppercase',
@@ -4342,7 +4373,7 @@ function RakePredictor({rows}){
               🚛 Plan
             </button>
             <button onClick={()=>setRkAI(siding)} style={{
-              flex:1,padding:'7px',background:'rgba(0,0,0,.18)',border:'none',
+              flex:1,padding:'12px 8px',minHeight:44,background:'rgba(0,0,0,.18)',border:'none',
               borderRight:`1px solid ${rc.bdr}30`,
               color:'#a78bfa',opacity:.8,fontFamily:F.h,fontSize:11,fontWeight:700,
               letterSpacing:'.05em',textTransform:'uppercase',
@@ -4352,7 +4383,7 @@ function RakePredictor({rows}){
               🤖 AI
             </button>
             <button onClick={()=>setRkMap({sid:siding,idx:null})} style={{
-              flex:1,padding:'7px',background:'rgba(0,0,0,.18)',border:'none',
+              flex:1,padding:'12px 8px',minHeight:44,background:'rgba(0,0,0,.18)',border:'none',
               borderRight:`1px solid ${rc.bdr}30`,
               color:C.sky,opacity:.75,fontFamily:F.h,fontSize:11,fontWeight:700,
               letterSpacing:'.05em',textTransform:'uppercase',
@@ -4362,7 +4393,7 @@ function RakePredictor({rows}){
               🗺️ Map
             </button>
             <button onClick={()=>exportRakeXLSX({siding,region,rakes})} style={{
-              flex:1,padding:'7px',background:'rgba(0,0,0,.22)',border:'none',
+              flex:1,padding:'12px 8px',minHeight:44,background:'rgba(0,0,0,.22)',border:'none',
               color:C.green,opacity:.75,fontFamily:F.h,fontSize:11,fontWeight:700,
               letterSpacing:'.07em',textTransform:'uppercase',
               cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,transition:'opacity .15s,background .15s'}}
@@ -4371,7 +4402,7 @@ function RakePredictor({rows}){
               ↓ Excel
             </button>
           </div>
-        </div>;
+        </article>;
           })}
           </div>}
         </div>;

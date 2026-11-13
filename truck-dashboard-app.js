@@ -862,6 +862,9 @@ function renderDbStrip() {
     render();refreshDatabase();
   }
   window.__hub_handle_reset=resetAll;
+  window.addEventListener('message', e => {
+    if (e.source === window.parent && e.data?.type === 'refresh-truck-sheets') refreshDatabase();
+  });
   window.__hub_handle_theme=function(value){ if(window.jsplTheme)window.jsplTheme.apply(value); };
   window.addEventListener('message',e=>{const m=e.data||{};if(m.type==='theme'&&window.__hub_handle_theme)window.__hub_handle_theme(m.value);if(m.type==='reset')resetAll();});
   if(window.parent&&window.parent!==window){try{window.parent.postMessage({type:'ready'},'*');}catch{}}
