@@ -531,6 +531,45 @@ aside.collapsed .left-toggle {
 }
 .kpi-dashboard::-webkit-scrollbar { display: none; }
 
+/* Header inventory figures are informational groups, not hoverable surfaces.
+   glow.js decorates generic KPI selectors, so suppress only its injected
+   overlay layers inside this strip. This applies independently of theme. */
+.app-header .glow-edge,
+.app-header .glow-sheen,
+.app-header .glow-ripple,
+.kpi-dashboard .glow-edge,
+.kpi-dashboard .glow-sheen,
+.kpi-dashboard .glow-ripple {
+  display: none !important;
+}
+
+/* The shared Classic and Neo themes classify these generic KPI names as
+   cards. In this header they are compact readouts, so keep their surface
+   completely flat in every preset; only their text receives hover feedback. */
+html[data-theme-style="classic"] .kpi-dashboard :is(.kpi-pill, .kpi-group),
+html[data-theme-style="neomorph"] .kpi-dashboard :is(.kpi-pill, .kpi-group) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none !important;
+}
+
+/* Keep the header strip flat: hover feedback belongs to the metric type,
+   values, and labels—not to a perimeter around the group. */
+.kpi-group :is(.kpi-group-title, .kpi-stat .val) {
+  transition: color 0.22s ease, text-shadow 0.22s cubic-bezier(.22, 1, .36, 1);
+}
+@media (hover: hover) {
+  .kpi-dashboard .kpi-group:hover {
+    opacity: 1;
+  }
+  .kpi-dashboard .kpi-group:hover :is(.kpi-group-title, .kpi-stat .val) {
+    text-shadow: 0 1px 6px color-mix(in srgb, currentColor 28%, transparent);
+  }
+}
+
 .kpi-pill {
   display: flex; align-items: center; gap: 8px;
   padding: 0; background: transparent; border: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
@@ -731,6 +770,84 @@ html[data-theme-style="neomorph"] .theme-opt:hover,
 html[data-theme-style="neomorph"] .upload-opt:hover,
 html[data-theme-style="neomorph"] .ctab:hover {
   box-shadow: var(--neo-glow-hover-btn);
+}
+
+/* PM Yard menus use a different density from dashboard cards. Keep a single
+   clear menu surface and quiet, readable controls in the two authored themes. */
+html[data-theme-style="classic"] .dropdown-panel {
+  /* Opaque by design: a HUD menu must never reveal the moving 3D yard. */
+  background: #172a3e !important;
+  border: 1px solid var(--bdrHi) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-theme-style="classic"] .dropdown-panel :is(.dd-head, .ctrl-tabs) {
+  background: var(--input-bg) !important;
+}
+html[data-theme-style="classic"] .dropdown-panel :is(.theme-opt, .upload-opt) {
+  background: transparent !important;
+  border-color: var(--bdr) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme-style="neomorph"] .dropdown-panel {
+  /* Use a solid canvas colour rather than a mixed/translucent surface. */
+  background: #20262f !important;
+  border: none !important;
+  border-radius: 18px !important;
+  box-shadow: 7px 7px 15px var(--neo-shadow-dark), -7px -7px 15px var(--neo-shadow-light) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-theme-style="neomorph"] .dropdown-panel:hover {
+  box-shadow: 7px 7px 15px var(--neo-shadow-dark), -7px -7px 15px var(--neo-shadow-light) !important;
+  transform: none !important;
+}
+html[data-theme-style="neomorph"] .dropdown-panel :is(.dd-head, .ctrl-tabs) {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+html[data-theme-style="neomorph"] .dropdown-panel :is(.theme-opt, .upload-opt) {
+  background: var(--neo-bg) !important;
+  border: none !important;
+  box-shadow: inset 1px 1px 3px var(--neo-shadow-dark), inset -1px -1px 3px var(--neo-shadow-light) !important;
+  transform: none !important;
+}
+html[data-theme-style="neomorph"] .dropdown-panel :is(.theme-opt, .upload-opt):hover {
+  color: var(--primary) !important;
+  box-shadow: inset 2px 2px 5px var(--neo-shadow-dark), inset -2px -2px 5px var(--neo-shadow-light) !important;
+  transform: none !important;
+}
+html[data-theme-style="neomorph"] .dropdown-panel .ctab {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+html[data-theme-style="neomorph"] .dropdown-panel .ctab.on {
+  color: var(--primary) !important;
+  box-shadow: inset 1px 1px 3px var(--neo-shadow-dark), inset -1px -1px 3px var(--neo-shadow-light) !important;
+}
+html[data-theme-style="classic"][data-theme="light"] .dropdown-panel {
+  background: #eef5fb !important;
+}
+html[data-theme-style="neomorph"][data-theme="light"] .dropdown-panel {
+  background: #e8eaed !important;
+}
+
+/* Menu IDs are the final paint authority. This guards the interactive menus
+   from any generic panel override added by a theme or future page component. */
+body.page-pm :is(#analysis-dropdown, #upload-dropdown, #ctrl-dropdown) {
+  background: #172a3e !important;
+}
+html[data-theme-style="classic"][data-theme="light"] body.page-pm :is(#analysis-dropdown, #upload-dropdown, #ctrl-dropdown) {
+  background: #eef5fb !important;
+}
+html[data-theme-style="neomorph"] body.page-pm :is(#analysis-dropdown, #upload-dropdown, #ctrl-dropdown) {
+  background: #20262f !important;
+}
+html[data-theme-style="neomorph"][data-theme="light"] body.page-pm :is(#analysis-dropdown, #upload-dropdown, #ctrl-dropdown) {
+  background: #e8eaed !important;
 }
 
 /* Small Phones (320-480px) */

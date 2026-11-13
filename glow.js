@@ -15,9 +15,6 @@
     '.kpi-card',
     '.stat-card',
     '.kcard',
-    '.kpi-pill',
-    '.kpi-group',
-    '.kpi-dashboard > div',
     '.card',
     '.glass-card',
     '.m3-surface',
@@ -34,7 +31,6 @@
   /* ── Card cursor tilt selectors (KPI cards + index dashboard cards only) ── */
   var TILT_SELECTORS = [
     '.kpi', '.stat', '.kpi-card', '.stat-card', '.kcard',
-    '.kpi-pill', '.kpi-group', '.kpi-dashboard > div',
     '.card-lift',
     'a.card'
   ].join(', ');
