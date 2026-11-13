@@ -469,7 +469,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
     <div class="controls-sidebar">
       
       <div class="panel" id="panel-plan">
-        <div class="ph"><h2>Plan & Export</h2></div>
+        <div class="ph"><h2><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#calendar"/></svg> Plan & Export</h2></div>
         <div class="pb" style="padding: 16px;">
           <div class="f3" style="margin-bottom:16px; gap: 8px;">
             <div class="fg">
@@ -492,12 +492,12 @@ select option { background-color: var(--bg-color); color: var(--tx); }
               <input type="number" id="planDays" value="31" readonly style="background:var(--input-hover); cursor:not-allowed; border-bottom-color:transparent;" title="Days automatically calculated">
             </div>
           </div>
-          <button class="btn btn-primary" onclick="window.exportXLSX()"> Generate Monthly Plan XLSX</button>
+          <button class="btn btn-primary" onclick="window.exportXLSX()"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#download"/></svg> Generate Monthly Plan XLSX</button>
         </div>
       </div>
 
       <div class="panel" id="panel-sms">
-        <div class="ph"><h2>SMS Allocation</h2></div>
+        <div class="ph"><h2><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#factory"/></svg> SMS Allocation</h2></div>
         <div class="pb" style="padding: 16px;"> 
           <div class="sms-blk" style="background:var(--ic); border:1px solid rgba(14,165,233,0.3);">
             <div class="sms-blk-title" style="color:var(--md-sys-color-primary);"> SMS 1 — EAF + BOF1</div>
@@ -511,7 +511,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
                   <div style="color:var(--sg);font-size:10px;font-weight:800;text-transform:uppercase;margin-bottom:2px">⇄ SMS1 → TC1 (Direct)</div>
                   <div id="s1tc1_suggest" style="font-weight:800;color:var(--sg);font-size:10px;">Suggested: — t/d</div>
                 </div>
-                <button class="btn btn-sm btn-green" onclick="window.applyAutoTransfer()"> Apply Optimal</button>
+                <button class="btn btn-sm btn-green" onclick="window.applyAutoTransfer()"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#checkCircle"/></svg> Apply Optimal</button>
               </div>
               <div style="display:flex;align-items:center;justify-content:space-between">
                 <div style="display:flex;align-items:center;gap:6px">
@@ -535,7 +535,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
                   <div style="color:var(--mo);font-size:10px;font-weight:800;text-transform:uppercase;margin-bottom:2px">⇄ SMS2 → SMS1 Overflow</div>
                   <div id="sms2_of_suggest" style="font-weight:800;color:var(--mo);font-size:10px;">Suggested: — t/d</div>
                 </div>
-                <button class="btn btn-sm btn-orange" onclick="window.applyAutoTransferSMS2()"> Apply Optimal</button>
+                <button class="btn btn-sm btn-orange" onclick="window.applyAutoTransferSMS2()"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#checkCircle"/></svg> Apply Optimal</button>
               </div>
               <div style="display:flex;align-items:center;justify-content:space-between">
                 <div style="display:flex;align-items:center;gap:6px">
@@ -553,7 +553,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
       <div id="panel-bottom-controls">
           <div class="coll-panel">
             <div class="coll-h" onclick="window.tog('castAdv')">
-              <span> Caster Allocation Ratios</span><span class="chev" id="castAdvChev">▼</span>
+              <span><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#slidersHorizontal"/></svg> Caster Allocation Ratios</span><span class="chev" id="castAdvChev">▼</span>
             </div>
             <div class="coll-b" id="castAdv">
               <p style="font-size:9px;font-weight:800;color:var(--tm);text-transform:uppercase;margin-bottom:8px">SMS2 → TC1</p>
@@ -593,7 +593,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
     
           <div class="coll-panel">
             <div class="coll-h" onclick="window.tog('capSet')">
-              <span> Capacity & Yield</span><span class="chev" id="capSetChev">▼</span>
+              <span><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#gauge"/></svg> Capacity & Yield</span><span class="chev" id="capSetChev">▼</span>
             </div>
             <div class="coll-b" id="capSet" style="padding: 16px 12px;">
                <div class="cap-micro-grid-wrap">
@@ -641,7 +641,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
           </div>
 
           <button class="btn btn-pu" onclick="window.maximizeAllocations()" style="margin-bottom:0; width:100%; box-sizing:border-box;">
-             Auto-Maximize Ratios
+             <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#trendingUp"/></svg> Auto-Maximize Ratios
           </button>
       </div>
 
@@ -650,10 +650,10 @@ select option { background-color: var(--bg-color); color: var(--tx); }
     <div class="content-area" id="main-content">
       <div class="panel">
         <div class="tabs-hdr">
-          <button class="tab-btn act" onclick="window.stab(this,'t-ov')"> Overview</button>
-          <button class="tab-btn" onclick="window.stab(this,'t-fl')"> Allocation Flow</button>
+          <button class="tab-btn act" onclick="window.stab(this,'t-ov')"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#layoutDashboard"/></svg> Overview</button>
+          <button class="tab-btn" onclick="window.stab(this,'t-fl')"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#gitBranch"/></svg> Allocation Flow</button>
           <button class="tab-btn" onclick="window.stab(this,'t-eb')">₹ EBITDA Rank</button>
-          <button class="tab-btn" onclick="window.stab(this,'t-pm')"> Product Mix Optimizer</button>
+          <button class="tab-btn" onclick="window.stab(this,'t-pm')"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#package"/></svg> Product Mix Optimizer</button>
         </div>
 
         <div id="t-ov" class="tc act">
@@ -678,9 +678,9 @@ select option { background-color: var(--bg-color); color: var(--tx); }
 
         <div id="t-fl" class="tc">
           <div class="flow-toolbar">
-            <button class="flow-view-btn act" onclick="window.setFlowView('flow',this)"> Flow View</button>
-            <button class="flow-view-btn" onclick="window.setFlowView('table',this)"> Table View</button>
-            <button class="flow-view-btn" onclick="window.setFlowView('sankey',this)"> Sankey View</button>
+            <button class="flow-view-btn act" onclick="window.setFlowView('flow',this)"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#gitBranch"/></svg> Flow View</button>
+            <button class="flow-view-btn" onclick="window.setFlowView('table',this)"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#clipboardList"/></svg> Table View</button>
+            <button class="flow-view-btn" onclick="window.setFlowView('sankey',this)"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#gitBranch"/></svg> Sankey View</button>
             <div class="flow-legend">
               <div class="leg-item"><div class="leg-dot" style="background:var(--md-sys-color-primary)"></div>Furnace</div>
               <div class="leg-item"><div class="leg-dot" style="background:var(--md-sys-color-primary-container)"></div>Caster</div>
@@ -716,7 +716,7 @@ select option { background-color: var(--bg-color); color: var(--tx); }
               <br><span style="color:var(--tm); display:inline-block; margin-top:6px;"><b>Auto-Maximize</b> optimizes the mix by mathematically shifting % to higher-margin grades (dynamically capped at 200% of base plan to preserve operational realism).</span>
             </p>
             <button class="btn btn-gold" onclick="window.maximizeProductMixEbitda()" style="white-space:nowrap;">
-               Auto-Maximize EBITDA
+               <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#trendingUp"/></svg> Auto-Maximize EBITDA
             </button>
           </div>
           <div id="prodMixContent" class="pm-grid"></div>

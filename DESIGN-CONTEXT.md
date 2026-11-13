@@ -10,6 +10,7 @@ Build an operational interface for planners, not a product landing page. Put dat
 
 - Use concise sentence-case labels: Plan, Map, Export, Order details. Keep AI labels only on actual AI functionality.
 - Use text or consistent monochrome SVG icons. Remove decorative emojis. Preserve directional symbols, map attributions, trademarks and vendor code.
+- Reuse `ui-icons.svg` and the `.ui-icon` class for page actions, navigation and status cues. Keep icons at 16px (18px on compact toolbars), with a 1.75px stroke and inherited `currentColor`. Mark label-adjacent icons `aria-hidden="true"` and `focusable="false"`. Preserve text labels except on compact mobile toolbars, where the button must retain an accessible name and tooltip. Keep icons out of exported text and report data.
 - Icon-only controls require an accessible name, a tooltip and a usable touch target. Never remove a symbol and leave an empty button.
 - Use the shared font tokens. Body text is sans-serif; table figures use tabular numerals or the data font. Do not introduce display fonts for individual cards.
 - Color communicates selection, availability, shortage or warning. Use neutral text for ordinary quantities and labels.

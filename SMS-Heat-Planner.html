@@ -101,13 +101,13 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
   .view-tabs button {
     padding: 0; width: 34px; height: 34px; font-size: 0; display: inline-flex; align-items: center; justify-content: center;
   }
-  .view-tabs button[data-view="daily"]::before { content: "Daily"; font-size: 11px; }
-  .view-tabs button[data-view="monthly"]::before { content: "Monthly"; font-size: 11px; }
-  .view-tabs button { min-width: 54px; }
+  .view-tabs button::before { display:none; }
+  .view-tabs button { min-width:44px; }
+  .view-tabs button>svg.ui-icon,.reset-btn>svg.ui-icon{margin:0;width:18px;height:18px}
   .reset-btn {
     width: 34px; padding: 0; font-size: 0; gap: 0; justify-content: center;
   }
-  .reset-btn::before { content: "Reset"; font-size: 11px; }
+  .reset-btn::before { display:none; }
   .reset-btn { min-width:44px; }
 }
 @media (max-width: 480px) {
@@ -139,11 +139,11 @@ button { font: inherit; cursor: pointer; border: none; outline: none; }
       </div>
     </div>
     <nav class="view-tabs" id="viewTabs">
-      <button data-view="daily" class="on" type="button"> Daily Planner</button>
-      <button data-view="monthly" type="button"> Monthly Planner</button>
+      <button data-view="daily" title="Daily planner" aria-label="Daily planner" class="on" type="button"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#calendar"/></svg> Daily Planner</button>
+      <button data-view="monthly" title="Monthly planner" aria-label="Monthly planner" type="button"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#calendarDays"/></svg> Monthly Planner</button>
     </nav>
     <div class="hdr-r">
-      <button class="reset-btn" id="resetAllBtn" type="button"> Reset</button>
+      <button class="reset-btn" id="resetAllBtn" title="Reset planners" aria-label="Reset planners" type="button"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#refresh"/></svg> Reset</button>
     </div>
     <div id="hubFrameHeaderSlot"></div>
   </div>

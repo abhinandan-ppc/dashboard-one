@@ -699,15 +699,16 @@ html[data-theme-style="neomorph"] .kpi-dashboard :is(.kpi-pill, .kpi-group) {
   /* Compact mobile text labels; the full accessible button names remain
      in the markup. Keep the same four actions without emoji-only controls. */
   #btn-analysis, #btn-export, #btn-upload-dd, #btn-ctrl {
-    font-size: 0; padding: 0; width: 66px; height: 40px; justify-content: center; align-items: center; gap: 0; position: relative;
+    font-size: 0; padding: 0; width: 44px; height: 44px; justify-content: center; align-items: center; gap: 0; position: relative;
   }
   #btn-analysis::before, #btn-export::before, #btn-upload-dd::before, #btn-ctrl::before {
-    font-size: 11px; line-height: 1;
+    display:none;
   }
   #btn-analysis::before { content: "Analysis"; }
   #btn-export::before { content: "Export"; }
   #btn-upload-dd::before { content: "Upload"; }
   #btn-ctrl::before { content: "Settings"; }
+  .h-actions button>svg.ui-icon{margin:0;width:18px;height:18px}
 
   /* Row 3: KPIs */
   .kpi-dashboard {
@@ -976,8 +977,8 @@ html[data-theme-style="neomorph"][data-theme="light"] body.page-pm :is(#analysis
   <div class="h-actions">
   <!-- ANALYSIS POPDOWN -->
   <div class="dropdown-wrapper" id="analysis-dd-wrapper">
-    <button class="btn" id="btn-analysis" onclick="toggleAnalysisDropdown(event)" style="background: rgba(167, 139, 250, 0.15); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.4);">
-   Analysis ▾
+    <button class="btn" id="btn-analysis" title="Analysis" aria-label="Analysis" onclick="toggleAnalysisDropdown(event)" style="background: rgba(167, 139, 250, 0.15); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.4);">
+   <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#barChart"/></svg> Analysis ▾
 </button>
 
     <div class="dropdown-panel" id="analysis-dropdown" style="right: 0; width: 750px; max-width: calc(100vw - 20px);">
@@ -986,8 +987,8 @@ html[data-theme-style="neomorph"][data-theme="light"] body.page-pm :is(#analysis
         <button onclick="toggleAnalysisDropdown(event)">✕</button>
       </div>
       <div class="ctrl-tabs">
-        <button class="ctab on" id="tab-dispatch" onclick="switchAnalysisTab('dispatch')"> Truck Dispatch Plan</button>
-        <button class="ctab" id="tab-restack" onclick="switchAnalysisTab('restack')"> Restacking Targets</button>
+        <button class="ctab on" id="tab-dispatch" onclick="switchAnalysisTab('dispatch')"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#truck"/></svg> Truck Dispatch Plan</button>
+        <button class="ctab" id="tab-restack" onclick="switchAnalysisTab('restack')"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#layers"/></svg> Restacking Targets</button>
       </div>
       <div class="ctab-body" id="analysis-content" style="display: block; max-height: 60dvh; overflow-y: auto; padding: 16px;">
         <!-- Rendered via JS -->
@@ -996,19 +997,19 @@ html[data-theme-style="neomorph"][data-theme="light"] body.page-pm :is(#analysis
   </div>
   
   <!-- EXPORT BUTTON -->
-  <button class="btn" id="btn-export" onclick="downloadFilteredData()" style="background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.4);">
-   Export
+  <button class="btn" id="btn-export" title="Export" aria-label="Export" onclick="downloadFilteredData()" style="background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.4);">
+   <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#download"/></svg> Export
 </button>
   
   <!-- UPLOAD DROPDOWN (replaces separate ZSTK + BTR buttons) -->
   <div class="dropdown-wrapper" id="upload-dd-wrapper">
-    <button class="btn" id="btn-upload-dd" onclick="toggleDropdown('upload-dropdown', event)" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">
-   Upload ▾
+    <button class="btn" id="btn-upload-dd" title="Upload" aria-label="Upload" onclick="toggleDropdown('upload-dropdown', event)" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">
+   <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#upload"/></svg> Upload ▾
 </button>
 
     <div class="dropdown-panel" id="upload-dropdown" style="right: 0; width: 310px;">
       <div class="dd-head">
-        <span> Data Upload</span>
+        <span><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#upload"/></svg> Data Upload</span>
         <button onclick="toggleDropdown('upload-dropdown',event)">✕</button>
       </div>
       <div style="padding:14px; display:flex; flex-direction:column; gap:10px;">
@@ -1021,7 +1022,7 @@ html[data-theme-style="neomorph"][data-theme="light"] body.page-pm :is(#analysis
             <div class="upload-opt-desc">Plate inventory &amp; bin positions</div>
             <span class="upload-opt-status empty" id="zstk-upload-status">No file loaded</span>
           </div>
-          <button type="button" class="upload-opt-sync-btn" id="zstk-sync-btn" title="Sync live from Google Sheet" onclick="event.stopPropagation(); syncZSTKLive(true);"> Sync Live</button>
+          <button type="button" class="upload-opt-sync-btn" id="zstk-sync-btn" title="Sync live from Google Sheet" onclick="event.stopPropagation(); syncZSTKLive(true);"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#refresh"/></svg> Sync Live</button>
         </div>
 
         <!-- BTR Card -->
@@ -1032,7 +1033,7 @@ html[data-theme-style="neomorph"][data-theme="light"] body.page-pm :is(#analysis
             <div class="upload-opt-desc">Remarks · Dispatch Mode · Finance Status</div>
             <span class="upload-opt-status empty" id="btr-upload-status">No file loaded</span>
           </div>
-          <button type="button" class="upload-opt-sync-btn" id="btr-sync-btn" title="Sync live from Drive" onclick="event.stopPropagation(); syncAutoBTRLive(true);"> Sync Live</button>
+          <button type="button" class="upload-opt-sync-btn" id="btr-sync-btn" title="Sync live from Drive" onclick="event.stopPropagation(); syncAutoBTRLive(true);"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#refresh"/></svg> Sync Live</button>
         </div>
 
         <div style="font-size:10px;color:var(--tm);text-align:center;padding-top:2px;">Click a card above to browse for a file</div>
@@ -1048,19 +1049,19 @@ html[data-theme-style="neomorph"][data-theme="light"] body.page-pm :is(#analysis
 
   <!-- Settings Dropdown -->
   <div class="dropdown-wrapper">
-    <button class="btn" id="btn-ctrl" onclick="toggleDropdown('ctrl-dropdown', event)" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.4);">
-   Settings ▾
+    <button class="btn" id="btn-ctrl" title="Settings" aria-label="Settings" onclick="toggleDropdown('ctrl-dropdown', event)" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.4);">
+   <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#settings"/></svg> Settings ▾
 </button>
     <div class="dropdown-panel" id="ctrl-dropdown" style="right: 0;">
       <div class="dd-head">
-        <span> Controls &amp; Settings</span>
+        <span><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#settings"/></svg> Controls &amp; Settings</span>
         <button onclick="toggleDropdown('ctrl-dropdown', event)">✕</button>
       </div>
       <div class="ctrl-tabs">
-        <button class="ctab on" id="tab-disp" onclick="showCtrlTab('disp')"> Display</button>
-        <button class="ctab" id="tab-gfx" onclick="showCtrlTab('gfx')"> Graphics</button>
-        <button class="ctab" id="tab-info" onclick="showCtrlTab('info')"> Info</button>
-        <button class="ctab" id="tab-nav" onclick="showCtrlTab('nav')"> Nav</button>
+        <button class="ctab on" id="tab-disp" onclick="showCtrlTab('disp')"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#sun"/></svg> Display</button>
+        <button class="ctab" id="tab-gfx" onclick="showCtrlTab('gfx')"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#layoutDashboard"/></svg> Graphics</button>
+        <button class="ctab" id="tab-info" onclick="showCtrlTab('info')"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#info"/></svg> Info</button>
+        <button class="ctab" id="tab-nav" onclick="showCtrlTab('nav')"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#compass"/></svg> Nav</button>
       </div>
       <div class="ctab-body" id="body-disp">
         <div class="ctrl-divider">Environment Themes</div>
@@ -1150,7 +1151,7 @@ html[data-theme-style="neomorph"][data-theme="light"] body.page-pm :is(#analysis
         <div class="ctrl-divider">Camera Presets</div>
         <table class="ctrl-table">
           <tr><td><span class="key">3D View</span></td><td>Default perspective overview</td></tr>
-          <tr><td><span class="key">Top View</span></td><td>Centered bird's-eye orthographic view</td></tr>
+          <tr><td><span class="key"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#layers"/></svg> Top View</span></td><td>Centered bird's-eye orthographic view</td></tr>
           <tr><td><span class="key">FG Bays</span></td><td>Focus on FG sections</td></tr>
           <tr><td><span class="key">AA' Bay</span></td><td>Focus on AA' cross-section</td></tr>
         </table>
@@ -1170,8 +1171,8 @@ html[data-theme-style="neomorph"][data-theme="light"] body.page-pm :is(#analysis
 
 <!-- Camera Toolbar -->
 <div class="toolbar">
-  <button class="tbtn" id="view-persp" onclick="setView('persp')"> 3D Isometric</button>
-  <button class="tbtn on" id="view-top" onclick="setView('top')"> Top View</button>
+  <button class="tbtn" id="view-persp" onclick="setView('persp')"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#boxes"/></svg> 3D Isometric</button>
+  <button class="tbtn on" id="view-top" onclick="setView('top')"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#layers"/></svg> Top View</button>
   <button class="tbtn" id="view-fg" onclick="setView('fg')">FG Bays</button>
   <button class="tbtn" id="view-aa" onclick="setView('aa')">AA' Bay</button>
   <button class="tbtn" id="view-ab" onclick="setView('ab')">AB/BC Bay</button>
@@ -5151,7 +5152,7 @@ function generateRestackPlan() {
                       <p style="font-size:14px; color:var(--tx); margin:0 0 4px 0; font-weight:800;"> Crane Action Plan</p>
                       <p style="font-size:11px; color:var(--tm); margin:0; line-height:1.5;">This AI scans the yard for <b>Priority 1 & 2</b> plates (Dispatch-Ready) that are physically trapped under non-priority stock. Target bins with high dead-weight to prevent crane bottlenecks during truck loading.</p>
                   </div>
-                  <button onclick="exportRestackPlan()" class="btn btn-primary" style="height:32px; font-size:11px; flex-shrink:0;"> Export List</button>
+                  <button onclick="exportRestackPlan()" class="btn btn-primary" style="height:32px; font-size:11px; flex-shrink:0;"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#download"/></svg> Export List</button>
                 </div>
                 <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">`;
 
@@ -5233,7 +5234,7 @@ function generateRestackPlan() {
 
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div style="font-size:12px; color:var(--tm);">Target Priority: ${pLabel}</div>
-                    <button onclick="selectBinFromAnalysis('${t.binId}')" class="btn" style="height:28px; padding:0 12px; font-size:11px; margin:0; background:rgba(56, 189, 248, 0.15); color:#38bdf8; border:1px solid #38bdf8;"> Inspect Bin</button>
+                    <button onclick="selectBinFromAnalysis('${t.binId}')" class="btn" style="height:28px; padding:0 12px; font-size:11px; margin:0; background:rgba(56, 189, 248, 0.15); color:#38bdf8; border:1px solid #38bdf8;"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#search"/></svg> Inspect Bin</button>
                 </div>
             </div>`;
         });
@@ -5356,7 +5357,7 @@ function generateDispatchPlan() {
             <div style="font-size:12px; color:var(--tm); margin-bottom:4px;"><b>Dest:</b> <span style="color:var(--tx)">${t.primaryCity}</span> (+${t.customers.size} Cust)</div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                 <div style="font-size:12px; color:var(--tm);"><b>Priority:</b> ${pLabel}</div>
-                <button onclick="highlightTruckIn3D(${idx})" class="btn" style="height:24px; padding:0 8px; font-size:10px; margin:0; background:rgba(56, 189, 248, 0.15); color:#38bdf8; border:1px solid #38bdf8;"> View in 3D</button>
+                <button onclick="highlightTruckIn3D(${idx})" class="btn" style="height:24px; padding:0 8px; font-size:10px; margin:0; background:rgba(56, 189, 248, 0.15); color:#38bdf8; border:1px solid #38bdf8;"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="ui-icons.svg#boxes"/></svg> View in 3D</button>
             </div>
             <div style="background:var(--input-bg); border-radius:6px; padding:8px; max-height:160px; overflow-y:auto; border:1px solid var(--br);">
                 ${pList}
