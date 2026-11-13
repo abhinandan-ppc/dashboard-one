@@ -597,7 +597,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 .m3-field{min-height:var(--touch-target);background:var(--input-bg);color:var(--text);border:1px solid var(--bdr);border-radius:var(--radius-sm);padding:.65rem .8rem}
 .m3-field:hover{background:var(--input-hover);border-color:var(--bdrHi)}
 .m3-button{min-height:var(--touch-target);display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.65rem 1rem;border-radius:var(--radius-pill);font-weight:700}
-.m3-button:active{transform:scale(.98)}
+.m3-button:active{scale:.96}
 .m3-button-primary{background:var(--primary);color:var(--on-primary);box-shadow:var(--shadow-sm)}
 .m3-button-primary:hover{filter:saturate(1.05) brightness(1.06);box-shadow:var(--shadow-md);transform:translateY(-1px)}
 .m3-button-tonal{background:var(--primary-bg);color:var(--primary);border:1px solid color-mix(in srgb,var(--primary) 30%,transparent)}
@@ -3063,7 +3063,7 @@ html{
   -webkit-tap-highlight-color:transparent;
 }
 :is(button,[role="button"]):not([disabled]):active{
-  transform:translateY(1px) scale(.985);
+  scale:.96;
 }
 :is(input,select,textarea):focus-visible{
   border-color:var(--border-accent-hi, var(--primary)) !important;
@@ -3214,7 +3214,7 @@ html[data-theme-style="neomorph"] :is(button,a,input,select,textarea,[tabindex])
     transition:color 140ms ease,background-color 140ms ease,border-color 140ms ease,transform 140ms ease !important;
   }
   html[data-theme-style="classic"] :is(button,.btn,.m3-button,.action-btn):active:not(:disabled){
-    transform:translateX(1px) !important;
+    scale:.96;
   }
 
   html[data-theme-style="neomorph"] :is(.app-header,.top-bar,.panel,.card,.glass-card,.kcard,.kpi-card,.data-table-wrap){
@@ -3230,7 +3230,7 @@ html[data-theme-style="neomorph"] :is(button,a,input,select,textarea,[tabindex])
     transition:box-shadow 180ms cubic-bezier(.22,1.2,.36,1),color 160ms ease,transform 180ms cubic-bezier(.22,1.2,.36,1) !important;
   }
   html[data-theme-style="neomorph"] :is(button,.btn,.m3-button,.action-btn):active:not(:disabled){
-    transform:translateY(1px) scale(.975) !important;
+    scale:.96;
   }
 }
 
@@ -3362,7 +3362,7 @@ html body,html[data-theme-style][data-theme] body{background-image:none!importan
 html body::before,html body::after,html[data-theme-style][data-theme] body::before,html[data-theme-style][data-theme] body::after{background-image:none!important}
 html body :is(.glow-edge,.glow-sheen,.glow-ripple){display:none!important}
 html body :is(.header-enter,.card-enter,.intro-card-in){animation:none!important}
-html body :is(.card,.glass-card,.kpi-card,.stat-card,.kcard):not(.dragging):not([style*="transform"]):hover{transform:none!important}
+html body :is(.card,.glass-card,.kpi-card,.stat-card,.kcard):not(.dragging):not([data-card-tilt]):not([style*="transform"]):hover{transform:none!important}
 html body :is(.fc-node.bottleneck,.fc-path-fg,.tree-edge){animation:none!important}
 html body :is(.card,.glass-card,.kpi-card,.stat-card,.kcard,.btn,.action-btn,.m3-button){text-shadow:none!important}
 html body :is(.hero,.hero::before,.hero::after){background-image:none!important}
@@ -3376,3 +3376,46 @@ svg.ui-icon{display:inline-block;width:16px;height:16px;min-width:16px;flex-shri
 button>svg.ui-icon:only-child{margin:0}
 .rake-siding-actions svg.ui-icon{width:14px;height:14px;min-width:14px;margin-inline-end:4px}
 .rake-marker svg.ui-icon{width:12px;height:12px;min-width:12px;margin:0}
+
+@media (hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+  html[data-theme-style] body [data-card-tilt]:hover{
+    transform:perspective(800px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg))!important;
+    transition:transform 160ms ease-out!important;
+  }
+}
+
+/* Small interaction feedback, shared by every page and all three materials.
+   Independent scale preserves positioning transforms. No entrance sequences,
+   looping decoration, layout animation, or additional JavaScript listeners. */
+@media (prefers-reduced-motion:no-preference){
+  html[data-theme-style] body :is(button,a.btn,[role="button"],summary,.switch-chip,.theme-opt,.sw){
+    transition:color 140ms ease-out,background-color 140ms ease-out,
+      border-color 140ms ease-out,box-shadow 140ms ease-out,
+      scale 140ms cubic-bezier(.2,0,0,1),transform 140ms ease-out !important;
+  }
+  html body :is(button,a.btn,[role="button"]):not(:disabled):not([aria-disabled="true"]):not([role="tab"]):not([role="switch"]):not([data-motion="static"]):active{
+    scale:.96;
+  }
+  /* Preserve the state owners' rotations; only interpolate their changes. */
+  html body :is(.chev,.chevron,.caret),
+  html body .upload-summary::after{
+    transition:transform 180ms cubic-bezier(.2,0,0,1),opacity 140ms ease-out !important;
+  }
+  html body :is(.view-tabs,.chart-mode-switch,.tabs,.seg) button,
+  html body :is(button[role="tab"],button[role="switch"],[data-motion="static"]){
+    scale:none!important;
+  }
+  /* Yard's switch previously animated left, requiring layout on each frame. */
+  html body .sw{transition:background-color 140ms ease-out,border-color 140ms ease-out !important}
+  html body .sw .knob{left:2px;translate:0;transition:translate 180ms cubic-bezier(.2,0,0,1),background-color 140ms ease-out !important}
+  html body .sw.on .knob{left:2px;translate:16px}
+}
+/* Keep disabled controls still, including the older theme-level press rules. */
+html body :is(button,[role="button"]):is(:disabled,[aria-disabled="true"]):active{scale:none!important;transform:none!important}
+@media (prefers-reduced-motion:reduce){
+  html[data-theme-style] body :is(button,a.btn,[role="button"],summary,.switch-chip,.theme-opt,.sw,.knob,.chev,.chevron,.caret),
+  html body .upload-summary::after{
+    transition:none!important;
+  }
+  html body :is(button,a.btn,[role="button"]):active{scale:none!important;transform:none!important}
+}
