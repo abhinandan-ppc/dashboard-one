@@ -221,3 +221,9 @@ html body.auto-btp #run.stop:hover{background:#a51e1e!important;border-color:#a5
  html:not([data-theme-style="neomorph"]) body.auto-btp :is(.glow-edge,.glow-sheen){display:block!important}
 }
 @media(max-width:600px){.auto-btp .header-pc-status{padding-right:12px;min-width:0}.auto-btp .header-status-caption{font-size:9px}.auto-btp .app-header #status[data-tone]{font-size:13px}}
+
+/* Keep labels and secondary batch counts on one stable text column. */
+.auto-btp .step{display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:12px;align-items:start;padding:12px 4px}
+.auto-btp .step>.badge{box-sizing:border-box;width:28px;height:28px;margin:0;line-height:1}
+.auto-btp .step>span:last-child{min-width:0;padding-top:4px;line-height:20px}
+.auto-btp .step .batch-detail{margin-top:2px;line-height:18px}
