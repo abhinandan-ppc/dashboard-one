@@ -83,7 +83,7 @@ async function guard(fn){try{await fn()}catch(e){notice(e.message);if($('#accoun
 
 async function launch(mode){if(mode==='resume'){const run=state.run;if(!run?.checkpoint)throw Error('No saved checkpoint is available');await api({action:'run',id:crypto.randomUUID(),pcId:run.pcId,scope:run.scope,account:run.account,years:run.years,resume:true});notice('Resume requested on the original PC');return}if(!['all','btr','btp','ebtp','btr-btp','btp-ebtp'].includes($('#scope').value))throw Error('Select one stage or consecutive stages. To run BTR and EBTP together, also select BTP.');if(!$('#accounts').value)throw Error('Choose a SAP user');if(!$('#years').selectedOptions.length)throw Error('Select at least one export year');await api({action:'run',id:crypto.randomUUID(),scope:$('#scope').value,pcId:$('#pc').value||undefined,account:$('#accounts').value,years:[...$('#years').selectedOptions].map(o=>Number(o.value)),resume:mode==='resume',abandon:mode==='fresh'});notice('Run requested');}
 
-$('#run').onclick=()=>guard(()=>finished(state.run)?launch():api({action:'stop'}));$('#resume').onclick=()=>guard(()=>launch('resume'));$('#fresh').onclick=()=>{if(confirm('Abandon the saved continuation and start fresh?'))guard(()=>launch('fresh'))};$('#refresh').onclick=()=>guard(async()=>{const button=$('#refresh');button.disabled=true;button.textContent='Refreshing…';try{const fresh=await api();acknowledgedFailure=fresh.run?.id;render(fresh)}finally{button.disabled=false;button.textContent='Refresh PC status'}});$('#history').onchange=()=>{selected=[state.run,...state.history].find(r=>r?.id===$('#history').value);paintWorkflow(selected,selected?.stage||lastStages.get(selected?.id)||0);if(!selected){$('#activityText').replaceChildren();$('#logCount').textContent='0 lines';$('#runtime').textContent='Runtime --';return}guard(async()=>{await logs();await outputs()})};$('#downloadRefresh').onclick=()=>guard(outputs);
+$('#run').onclick=()=>guard(()=>finished(state.run)?launch():api({action:'stop'}));$('#resume').onclick=()=>guard(()=>launch('resume'));$('#fresh').onclick=()=>{if(confirm('Abandon the saved continuation and start fresh?'))guard(()=>launch('fresh'))};$('#refresh').onclick=()=>guard(refreshPCStatus);$('#history').onchange=()=>{selected=[state.run,...state.history].find(r=>r?.id===$('#history').value);paintWorkflow(selected,selected?.stage||lastStages.get(selected?.id)||0);if(!selected){$('#activityText').replaceChildren();$('#logCount').textContent='0 lines';$('#runtime').textContent='Runtime --';return}guard(async()=>{await logs();await outputs()})};$('#downloadRefresh').onclick=()=>guard(outputs);
 
 $('#clear').onclick=()=>{const run=state.run;if(!run?.checkpoint)return;const name=state.machines.find(p=>p.id===run.pcId)?.name||'the original PC';if(confirm(`Clear the saved checkpoint on ${name}?`))guard(async()=>{await api({action:'clear',pcId:run.pcId,runId:run.id});render(await api());notice(`Checkpoint clearing requested on ${name}.`);})};$('#enroll').onclick=()=>guard(async()=>{const name=$('#pcName').value.trim();if(!name){$('#pcName').focus();throw Error('Enter a PC display name')}const button=$('#enroll');button.disabled=true;try{const {code}=await api({action:'enroll',name});$('#enrollment').hidden=false;$('#enrollment').textContent=`Enrollment code: ${code} · Valid for 10 minutes. Enter this on ${name} during host setup.`}finally{button.disabled=false}});$('#resolve').onclick=()=>{if(confirm('Have you verified that the reserved workflow has stopped on its PC?'))guard(()=>api({action:'resolve',confirmStopped:true}))};
 
@@ -152,3 +152,29 @@ for(const id of ['hostPicker','scopePicker','accountPicker','yearPicker']){
 }
 
 function renderBatches(text){const batch=batchProgress(text);for(const [index,label] of [[5,batch.total?`${batch.total} planned batches`:''],[7,batch.total?`${batch.current||0} / ${batch.total} batches`:'']]){const step=document.querySelectorAll('.step')[index];let detail=step.querySelector('.batch-detail');if(!detail){detail=document.createElement('small');detail.className='batch-detail';step.lastElementChild.append(detail)}detail.textContent=label;detail.hidden=!label}}
+
+let refreshingPC=false;
+async function refreshPCStatus(){
+ if(refreshingPC)return;
+ refreshingPC=true;
+ const buttons=[$('#refresh'),$('#headerRefresh')].filter(Boolean);
+ buttons.forEach(b=>{b.disabled=true;b.setAttribute('aria-busy','true')});
+ $('#refresh').textContent='Refreshing…';
+ try{const fresh=await api();acknowledgedFailure=fresh.run?.id;noticeUntil=0;render(fresh)}
+ finally{refreshingPC=false;buttons.forEach(b=>{b.disabled=false;b.removeAttribute('aria-busy')});$('#refresh').textContent='Refresh PC status'}
+}
+window.addEventListener('message',event=>{
+ if(event.source===window.parent&&event.origin===location.origin&&event.data?.type==='refresh-automation-status')guard(refreshPCStatus);
+});
+// Embedded pages use the hub controls; direct visits get the same core actions.
+if(window.parent===window){
+ const slot=$('#hubFrameHeaderSlot');
+ const refresh=document.createElement('button');refresh.id='headerRefresh';refresh.title='Refresh PC status';refresh.setAttribute('aria-label','Refresh PC status');
+ refresh.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>';
+ refresh.onclick=()=>guard(refreshPCStatus);
+ const theme=document.createElement('button');theme.id='headerTheme';
+ const syncTheme=()=>{const dark=document.documentElement.dataset.theme==='dark';theme.title=dark?'Switch to light theme':'Switch to dark theme';theme.setAttribute('aria-label',theme.title);theme.innerHTML=dark?'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>'};
+ theme.onclick=()=>window.jsplTheme.set(document.documentElement.dataset.theme==='dark'?'light':'dark');
+ new MutationObserver(syncTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+ syncTheme();slot.append(refresh,theme);
+}
