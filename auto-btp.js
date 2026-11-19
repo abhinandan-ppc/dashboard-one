@@ -29,9 +29,9 @@ function runningStep(run){
 
 function renderAvailability(){const selectedPC=$('#pc').value;const status=availability(selectedPC?{...state,machines:state.machines.filter(p=>p.id===selectedPC)}:state);const failed=state.run?.status==='failed'&&acknowledgedFailure!==state.run.id;if(failed){status.label='Failed';status.tone='danger';status.message=state.run.error||'The last workflow failed. Resume its checkpoint or start afresh.'}$('#status').textContent=status.label;$('#status').dataset.tone=status.tone;$('#notice').dataset.tone=status.tone;$('#progressLabel').textContent=failed?'Failed':finished(state.run)?(status.canRun?'Ready to run':'Waiting for an available PC'):`${status.label} · ${runningStep(state.run)}`;if(Date.now()>noticeUntil)$('#notice').textContent=status.message;$('#run').disabled=finished(state.run)&&!status.canRun;}
 
-let stateLoaded=false;const observedRuns=new Set(),lastStages=new Map();
+let stateLoaded=false;const observedRuns=new Set(),lastStages=new Map(),revealedOutputs=new Set();
 
-function render(data){const previousRunId=state.run?.id;stateLoaded=true;state=data;const run=state.run;renderAvailability();$('#run').textContent=finished(run)?'Start':'Stop';$('#run').classList.toggle('stop',!finished(run));$('#run').classList.toggle('primary',finished(run));if(run&&!finished(run))observedRuns.add(run.id);
+function render(data){const previousRunId=state.run?.id;stateLoaded=true;state=data;const run=state.run;const revealOutputs=run&&finished(run)&&observedRuns.has(run.id)&&!revealedOutputs.has(run.id);renderAvailability();$('#run').textContent=finished(run)?'Start':'Stop';$('#run').classList.toggle('stop',!finished(run));$('#run').classList.toggle('primary',finished(run));if(run&&!finished(run))observedRuns.add(run.id);
 
  const accounts=$('#accounts'),previous=accounts.value;accounts.replaceChildren();for(const uid of new Set(state.machines.filter(p=>!p.revoked&&(!$('#pc').value||p.id===$('#pc').value)).flatMap(p=>p.accounts||[]).filter(uid=>typeof uid==='string'&&uid.trim()&&!/"|&\s*UID\d/i.test(uid))))option(accounts,uid,uid);accounts.value=[...accounts.options].some(o=>o.value===previous)?previous:accounts.options[0]?.value||'';
 
@@ -42,11 +42,12 @@ function render(data){const previousRunId=state.run?.id;stateLoaded=true;state=d
 
  if(!accounts.options.length)option(accounts,'','No SAP users available');accounts.disabled=!accounts.value;if(!pc.options.length)option(pc,'','No enrolled PCs');pc.disabled=!state.machines.some(p=>!p.revoked);
 
- const history=$('#history'),choice=history.value;history.replaceChildren();if(!run||(run.status==='completed'&&!observedRuns.has(run.id)))option(history,'','New run');if(run)option(history,run.id,`Current: ${statusLabel(run.status)}`);for(const r of state.history||[])if(r.id!==run?.id)option(history,r.id,`${new Date(r.createdAt).toLocaleString()} — ${r.status}`);if(run&&!finished(run)&&run.id!==previousRunId)history.value=run.id;else if([...history.options].some(o=>o.value===choice))history.value=choice;
+ const history=$('#history'),choice=history.value;history.replaceChildren();if(!run||(run.status==='completed'&&!observedRuns.has(run.id)))option(history,'','New run');if(run)option(history,run.id,`Current: ${statusLabel(run.status)}`);for(const r of state.history||[])if(r.id!==run?.id)option(history,r.id,`${new Date(r.createdAt).toLocaleString()} — ${r.status}`);if(revealOutputs||(run&&!finished(run)&&run.id!==previousRunId))history.value=run.id;else if([...history.options].some(o=>o.value===choice))history.value=choice;
 
  if(!history.options.length)option(history,'','No runs yet');history.disabled=![...history.options].some(o=>o.value);$('#downloadRefresh').disabled=!history.value;selected=[run,...state.history||[]].find(r=>r?.id===history.value);if(selected?.id!==previousRunId)renderBatches('');if(!selected){paintWorkflow(null);$('#runtime').textContent='Runtime --';}else if(selected.id!==previousRunId||finished(selected)){paintWorkflow(selected,selected.stage||lastStages.get(selected.id)||0)}for(const el of document.querySelectorAll('[data-admin]'))el.hidden=!admin;
 
  $('#checkpoint').hidden=!run?.checkpoint||!finished(run);const origin=state.machines.find(p=>p.id===run?.pcId);$('#clear').disabled=!run?.checkpoint||!!origin?.checkpointClearing;$('#clear').textContent=origin?.checkpointClearing?'Clearing checkpoint…':'Clear checkpoint';$('#checkpointMessage').textContent=origin?.checkpointClearing?`Waiting for ${origin.name} to confirm checkpoint clearing${origin.connected?'':'; reconnect this PC to finish'}.`:`Resume on ${origin?.name||'the original PC'} or start afresh.`;$('#activityTitle').textContent=selected?.error||'Live output from the selected PC.';
+ if(revealOutputs){revealedOutputs.add(run.id);$('#outputsPanel').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});guard(outputs);}
 
 
 
@@ -71,19 +72,62 @@ window.addEventListener('online',()=>{clearTimeout(reconnectTimer);connect()});
 setInterval(()=>{if(socket?.readyState!==1&&!document.hidden)api().then(render).catch(()=>{})},15000);
 
 
-function read(kind,extra={}){return new Promise((resolve,reject)=>{if(!selected)return reject(Error('Choose a run'));if(socket?.readyState!==1)return reject(Error('Relay disconnected'));if(!state.machines.some(p=>p.id===selected.pcId&&p.connected&&!p.revoked))return reject(Error('This run’s PC is offline. Reconnect it to view its logs or outputs.'));const requestId=crypto.randomUUID();pending.set(requestId,{resolve,reject});socket.send(JSON.stringify({type:'read',pcId:selected.pcId,runId:selected.id,kind,requestId,...extra}));setTimeout(()=>{if(pending.delete(requestId))reject(Error('PC did not respond'))},15000)});}
+function read(kind,extra={},run=selected){return new Promise((resolve,reject)=>{if(!run)return reject(Error('Choose a run'));if(socket?.readyState!==1)return reject(Error('Relay disconnected'));if(!state.machines.some(p=>p.id===run.pcId&&p.connected&&!p.revoked))return reject(Error('This run’s PC is offline. Reconnect it to view its logs or outputs.'));const requestId=crypto.randomUUID();pending.set(requestId,{resolve,reject});socket.send(JSON.stringify({type:'read',pcId:run.pcId,runId:run.id,kind,requestId,...extra}));setTimeout(()=>{if(pending.delete(requestId))reject(Error('PC did not respond'))},15000)});}
 
 let activityRunId=null,loadingLog=false;
 const logSnapshots=new Map(),clearedLogs=new Map();
 async function logs(){if(!selected||loadingLog||socket?.readyState!==1)return;if(!state.machines.some(p=>p.id===selected.pcId&&p.connected&&!p.revoked)){$('#activityTitle').textContent='This run’s PC is offline. Last received output is preserved.';return}loadingLog=true;const runId=selected.id;try{const raw=await read('log');if(selected?.id!==runId)return;const text=cleanAutomationLog(raw);const area=$('#activity'),output=$('#activityText');const follow=activityRunId!==runId||area.scrollTop<32;activityRunId=runId;const oldHeight=area.scrollHeight,oldTop=area.scrollTop;logSnapshots.set(runId,text);renderLogView(runId,text);area.scrollTop=follow?0:oldTop+(area.scrollHeight-oldHeight);const patterns=['Dashboard selected','PHASE A:','PHASE B:','PHASE C:','PHASE 1:','Auto-planned batches:','PHASE 2:','--- Batch','PHASE 3:','PHASE 4:','PHASE 5:','EBTP MACRO: Starting','EBTP MACRO: Saving','EBTP CLEANUP:','EBTP output created','EBTP POST: Downloading','Applying UID pivot','All selected steps are finished'];let stage=0;patterns.forEach((p,i)=>{if(text.toLowerCase().includes(p.toLowerCase()))stage=i+1});renderBatches(text);lastStages.set(runId,stage);paintWorkflow(selected,stage);renderAvailability();}catch(e){$('#activityTitle').textContent=e.message+' — retaining last received output.'}finally{loadingLog=false}}
 
-async function outputs(){const manifest=await read('manifest');$('#files').replaceChildren();if(!manifest.files?.length)$('#files').textContent='No output files are available for this run.';for(const f of manifest.files||[]){const button=document.createElement('button');button.textContent=`${f.name} · ${(f.size/1048576).toFixed(1)} MB`;button.onclick=()=>guard(async()=>{button.disabled=true;try{let offset=0,parts=[];while(offset<f.size){const c=await read('chunk',{file:f.name,offset});const bytes=Uint8Array.from(atob(c.chunk),c=>c.charCodeAt(0));if(!bytes.length||c.offset!==offset)throw Error('Invalid transfer');parts.push(bytes);offset+=bytes.length;}const blob=new Blob(parts);const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()))].map(x=>x.toString(16).padStart(2,'0')).join('');if(hash!==f.sha256)throw Error('Download checksum mismatch');const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}finally{button.disabled=false}});$('#files').append(button)}}
+let outputRequest=0;
+async function outputs(){
+ const run=selected,request=++outputRequest,files=$('#files');
+ files.textContent='Loading outputs…';files.setAttribute('aria-busy','true');
+ try{
+  const manifest=await read('manifest',{},run);
+  if(request!==outputRequest||selected?.id!==run?.id)return;
+  files.replaceChildren();
+  if(!manifest.files?.length)files.textContent='No output files are available for this run.';
+  for(const f of manifest.files||[]){
+   const button=document.createElement('button');button.className='download-pill';
+   const fill=document.createElement('span');fill.className='download-fill';fill.setAttribute('aria-hidden','true');
+   const label=document.createElement('span');label.className='download-label';
+   const detail=document.createElement('span');detail.className='download-detail';
+   label.textContent=f.name;detail.textContent=`${(f.size/1048576).toFixed(1)} MB`;
+   button.append(fill,label,detail);
+   button.onclick=()=>guard(async()=>{
+    button.disabled=true;button.classList.add('downloading');button.setAttribute('aria-busy','true');
+    const progress=(value,text)=>{button.style.setProperty('--download-progress',value+'%');detail.textContent=text;button.setAttribute('aria-label',`${f.name}: ${text}`)};
+    progress(0,'Downloading · 0%');
+    try{
+     let offset=0,parts=[];
+     while(offset<f.size){
+      const c=await read('chunk',{file:f.name,offset},run);
+      const bytes=Uint8Array.from(atob(c.chunk),c=>c.charCodeAt(0));
+      if(!bytes.length||c.offset!==offset||offset+bytes.length>f.size)throw Error('Invalid transfer');
+      parts.push(bytes);offset+=bytes.length;
+      progress(Math.round(offset/f.size*100),`Downloading · ${Math.round(offset/f.size*100)}%`);
+     }
+     progress(100,'Verifying…');
+     const blob=new Blob(parts);
+     const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()))].map(x=>x.toString(16).padStart(2,'0')).join('');
+     if(hash!==f.sha256)throw Error('Download checksum mismatch');
+     const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);
+     progress(100,'Download ready');
+    }catch(error){progress(0,'Failed · click to retry');throw error}
+    finally{button.disabled=false;button.classList.remove('downloading');button.removeAttribute('aria-busy')}
+   });
+   files.append(button);
+  }
+ }catch(error){if(request===outputRequest)files.textContent=error.message+' Use Load outputs to retry.';throw error}
+ finally{if(request===outputRequest)files.removeAttribute('aria-busy')}
+}
+
 
 async function guard(fn){try{await fn()}catch(e){notice(e.message);if($('#accountPanel').open)$('#accountFeedback').textContent=e.message}}
 
 async function launch(mode){if(mode==='resume'){const run=state.run;if(!run?.checkpoint)throw Error('No saved checkpoint is available');await api({action:'run',id:crypto.randomUUID(),pcId:run.pcId,scope:run.scope,account:run.account,years:run.years,resume:true});notice('Resume requested on the original PC');return}if(!['all','btr','btp','ebtp','btr-btp','btp-ebtp'].includes($('#scope').value))throw Error('Select one stage or consecutive stages. To run BTR and EBTP together, also select BTP.');if(!$('#accounts').value)throw Error('Choose a SAP user');if(!$('#years').selectedOptions.length)throw Error('Select at least one export year');await api({action:'run',id:crypto.randomUUID(),scope:$('#scope').value,pcId:$('#pc').value||undefined,account:$('#accounts').value,years:[...$('#years').selectedOptions].map(o=>Number(o.value)),resume:mode==='resume',abandon:mode==='fresh'});notice('Run requested');}
 
-$('#run').onclick=()=>guard(()=>finished(state.run)?launch():api({action:'stop'}));$('#resume').onclick=()=>guard(()=>launch('resume'));$('#fresh').onclick=()=>{if(confirm('Abandon the saved continuation and start fresh?'))guard(()=>launch('fresh'))};$('#refresh').onclick=()=>guard(refreshPCStatus);$('#history').onchange=()=>{selected=[state.run,...state.history].find(r=>r?.id===$('#history').value);paintWorkflow(selected,selected?.stage||lastStages.get(selected?.id)||0);if(!selected){$('#activityText').replaceChildren();$('#logCount').textContent='0 lines';$('#runtime').textContent='Runtime --';return}guard(async()=>{await logs();await outputs()})};$('#downloadRefresh').onclick=()=>guard(outputs);
+$('#run').onclick=()=>guard(()=>finished(state.run)?launch():api({action:'stop'}));$('#resume').onclick=()=>guard(()=>launch('resume'));$('#fresh').onclick=()=>{if(confirm('Abandon the saved continuation and start fresh?'))guard(()=>launch('fresh'))};$('#refresh').onclick=()=>guard(refreshPCStatus);$('#history').onchange=()=>{selected=[state.run,...state.history].find(r=>r?.id===$('#history').value);paintWorkflow(selected,selected?.stage||lastStages.get(selected?.id)||0);if(!selected){outputRequest++;$('#files').textContent='Select a run to load its outputs.';$('#files').removeAttribute('aria-busy');$('#activityText').replaceChildren();$('#logCount').textContent='0 lines';$('#runtime').textContent='Runtime --';return}guard(async()=>{await logs();await outputs()})};$('#downloadRefresh').onclick=()=>guard(outputs);
 
 $('#clear').onclick=()=>{const run=state.run;if(!run?.checkpoint)return;const name=state.machines.find(p=>p.id===run.pcId)?.name||'the original PC';if(confirm(`Clear the saved checkpoint on ${name}?`))guard(async()=>{await api({action:'clear',pcId:run.pcId,runId:run.id});render(await api());notice(`Checkpoint clearing requested on ${name}.`);})};$('#enroll').onclick=()=>guard(async()=>{const name=$('#pcName').value.trim();if(!name){$('#pcName').focus();throw Error('Enter a PC display name')}const button=$('#enroll');button.disabled=true;try{const {code}=await api({action:'enroll',name});$('#enrollment').hidden=false;$('#enrollment').textContent=`Enrollment code: ${code} · Valid for 10 minutes. Enter this on ${name} during host setup.`}finally{button.disabled=false}});$('#resolve').onclick=()=>{if(confirm('Have you verified that the reserved workflow has stopped on its PC?'))guard(()=>api({action:'resolve',confirmStopped:true}))};
 
