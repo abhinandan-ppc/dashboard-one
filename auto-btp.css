@@ -226,4 +226,4 @@ html body.auto-btp #run.stop:hover{background:#a51e1e!important;border-color:#a5
 .auto-btp .step{display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:12px;align-items:start;padding:12px 4px}
 .auto-btp .step>.badge{box-sizing:border-box;width:28px;height:28px;margin:0;line-height:1}
 .auto-btp .step>span:last-child{min-width:0;padding-top:4px;line-height:20px}
-.auto-btp .step .batch-detail{margin-top:2px;line-height:18px}
+.auto-btp .step .batch-detail{margin:2px 0 0;padding:0;text-indent:0;font-family:inherit;font-size:12px;font-weight:500;letter-spacing:normal;line-height:18px;font-variant-numeric:tabular-nums}
