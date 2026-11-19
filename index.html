@@ -1346,9 +1346,15 @@ function broadcastToFrame(msg){
             }
           }catch(e){}
           if(!handledTheme){
-            try{ doc.documentElement.setAttribute('data-theme', msg.value); }catch(e){}
-            var tsel = ['[data-hub-theme]','#themeToggle','.theme-toggle','button[title="Theme"]'];
-            tsel.forEach(function(s){ try{ var el = doc.querySelector(s); if(el) el.click(); }catch(e){} });
+            // Apply state directly. Clicking a theme control here can hit our
+            // own injected button, toggle the hub back, and re-enter this path.
+            try{
+              if(pageFrame.contentWindow.jsplTheme){
+                pageFrame.contentWindow.jsplTheme.apply(currentDarkness, currentAccent);
+              } else {
+                applyThemeToDocument(doc);
+              }
+            }catch(e){}
           }
         }
       }catch(e){}
