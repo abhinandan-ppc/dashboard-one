@@ -227,3 +227,29 @@ html body.auto-btp #run.stop:hover{background:#a51e1e!important;border-color:#a5
 .auto-btp .step>.badge{box-sizing:border-box;width:28px;height:28px;margin:0;line-height:1}
 .auto-btp .step>span:last-child{min-width:0;padding-top:4px;line-height:20px}
 .auto-btp .step .batch-detail{margin:2px 0 0;padding:0;text-indent:0;font-family:inherit;font-size:12px;font-weight:500;letter-spacing:normal;line-height:18px;font-variant-numeric:tabular-nums}
+
+.auto-btp #runtime{font-family:var(--font-body);font-size:13px;font-weight:500;letter-spacing:normal;font-variant-numeric:tabular-nums;white-space:nowrap}
+.auto-btp progress{appearance:none;-webkit-appearance:none;height:10px;border:0;border-radius:999px;overflow:hidden;background:var(--s2)}
+.auto-btp progress::-webkit-progress-bar{background:var(--s2);border-radius:999px}
+.auto-btp progress::-webkit-progress-value{background:var(--primary);border-radius:999px}
+.auto-btp progress::-moz-progress-bar{background:var(--primary);border-radius:999px}
+.auto-btp #hubFrameHeaderSlot{display:flex;align-items:center;gap:8px}
+.auto-btp #hubFrameHeaderSlot>button{display:grid;place-items:center;width:40px;height:40px;padding:0;border-radius:50%}
+.auto-btp #hubFrameHeaderSlot>button>svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+html[data-theme="light"]:has(body.auto-btp){color-scheme:light}
+html[data-theme="dark"]:has(body.auto-btp){color-scheme:dark}
+html[data-theme="light"] .auto-btp dialog::backdrop{background:rgba(30,45,60,.22)}
+html[data-theme="light"] .auto-btp .group{background:var(--s0);border-color:var(--bdr)}
+html[data-theme="light"] .auto-btp .log-line[data-level="phase"]{background:color-mix(in srgb,var(--primary) 8%,var(--s0))}
+
+/* Explicit light surfaces also cover a live switch from the dark header. */
+html[data-theme="light"] body.auto-btp{
+ --bg:#f3f6f9;--text:#172330;--dim:#536273;
+ --s0:#ffffff;--s1:#f7f9fc;--s2:#eaf0f6;--bdr:rgba(35,55,75,.14);--bdrHi:rgba(35,55,75,.25);
+ --component-surface:rgba(255,255,255,.94);--component-shadow:0 3px 16px rgba(30,50,70,.07);
+ --shadow-sm:0 2px 6px rgba(30,50,70,.08);--shadow-md:0 4px 16px rgba(30,50,70,.08);--shadow-lg:0 8px 28px rgba(30,50,70,.12);--shadow-xl:0 10px 32px rgba(30,50,70,.12);--shadow-inset:inset 0 1px 2px rgba(30,50,70,.07);
+ background:var(--bg);color:var(--text)
+}
+html[data-theme="light"] .auto-btp .app-header{background:var(--component-surface)!important;color:var(--text);box-shadow:var(--component-shadow)!important}
+html[data-theme="light"] .auto-btp :is(#runtime,#progressLabel,#percent,.step,.log-message){color:var(--text)}
+html[data-theme="light"][data-theme-style="neomorph"] body.auto-btp{--bg:var(--neo-bg);--component-surface:var(--neo-bg);--component-shadow:var(--shadow-md)}

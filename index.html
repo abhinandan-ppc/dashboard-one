@@ -3009,6 +3009,10 @@ function activeRefreshPage(){
 function requestLiveDataRefresh(){
   if(liveDataRefreshInFlight) return;
   var page = activeRefreshPage();
+  if(page === 'auto-btp.html'){
+    broadcastToFrame({ type: 'refresh-automation-status' });
+    return;
+  }
   if(page !== 'plate-tracker.html'){
     var sources = {
       '': ['ebtp', 'segment'],
