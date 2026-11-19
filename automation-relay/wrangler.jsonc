@@ -1,0 +1,7 @@
+{
+  "name": "dashboard-one-automation",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-19",
+  "durable_objects": {"bindings": [{"name": "POOL", "class_name": "Pool"}]},
+  "migrations": [{"tag": "v1", "new_sqlite_classes": ["Pool"]}]
+}

@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+process.env.ADMIN_EMAILS='test@example.invalid';process.env.SESSION_SECRET='test-session-key';
+const {default:handler}=await import('../api/automation.js');
+const {createSession}=await import('../api/_session.js');
+const {readAutomationResponse}=await import('../automation-response.js');
+const response=()=>({code:200,setHeader(){},status(n){this.code=n;return this},json(value){this.body=value;return this}});
+test('plain Node headers return JSON 401 instead of crashing',async()=>{const r=response();await handler({headers:{},method:'GET'},r);assert.equal(r.code,401);assert.equal(r.body.error,'Sign in required')});
+test('authenticated Node request reaches relay and returns JSON',async()=>{const cookie=await createSession({email:'test@example.invalid',exp:Date.now()+60000});process.env.AUTOMATION_RELAY_URL='https://relay.invalid';process.env.AUTOMATION_RELAY_SECRET='test';const original=globalThis.fetch;globalThis.fetch=async()=>Response.json({machines:[]});try{const r=response();await handler({headers:{cookie:'session='+cookie,host:'example.invalid'},method:'GET'},r);assert.equal(r.code,200);assert.deepEqual(r.body.machines,[]);assert.equal(r.body.admin,true)}finally{globalThis.fetch=original}});
+test('plain-text server failures display a useful error',async()=>{await assert.rejects(readAutomationResponse(new Response('A server error has occurred',{status:500})),/unexpected response \(HTTP 500\)/)});
+test('JSON API errors retain their message',async()=>{await assert.rejects(readAutomationResponse(Response.json({error:'No PC ready'},{status:409})),/No PC ready/)});

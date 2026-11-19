@@ -8,6 +8,8 @@
 
   var SELECTORS = [
     '.app-header',
+    '.auto-btp .panel',
+    '.auto-btp .machine-card',
     '.top-bar',
     '.top-wrapper > div',
     '.kpi',

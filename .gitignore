@@ -89,3 +89,8 @@ tools/
 .playwright-mcp/
 truck-header-*.png
 temp_gitignore.txt
+!automation-relay/IMPLEMENTATION.md
+automation-relay/.wrangler/
+automation-relay/.dev.vars
+
+automation-relay/preview-*.png
