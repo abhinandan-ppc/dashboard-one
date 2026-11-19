@@ -4,6 +4,12 @@ const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control
 export default {fetch(r,e){return e.POOL.get(e.POOL.idFromName(e.POOL_NAME||'production')).fetch(r)}};
 export class Pool {
  constructor(ctx,env){this.ctx=ctx;this.env=env;}
+ async locked(work){
+  // Expected request errors must not escape this callback and reset the object.
+  const result=await this.ctx.blockConcurrencyWhile(async()=>{try{return {value:await work()}}catch(error){return {error:error.message}}});
+  if(result.error)throw Error(result.error);
+  return result.value;
+ }
  sockets(role,id){return this.ctx.getWebSockets().filter(s=>{const a=s.deserializeAttachment();return a.role===role&&(!id||a.id===id)});}
  send(role,id,data){for(const s of this.sockets(role,id))try{const a=s.deserializeAttachment();if(role==='browser'&&a.expires<Date.now()){s.close(1008,'Renew authorization');continue;}s.send(JSON.stringify(data))}catch{}}
  async state(){return {run:await this.ctx.storage.get('run')||null,machines:[...(await this.ctx.storage.list({prefix:'pc:'})).values()].map(({secret,...p})=>({...p,connected:!!this.sockets('agent',p.id).length})),history:[...(await this.ctx.storage.list({prefix:'history:',reverse:true,limit:100})).values()],schedule:await this.ctx.storage.get('schedule')||null};}
@@ -12,14 +18,14 @@ export class Pool {
   const url=new URL(request.url);
   if(url.pathname==='/connect')return await this.connect(request,url);
   if(url.pathname==='/enroll'&&request.method==='POST'){
-   const b=await request.json();return await this.ctx.blockConcurrencyWhile(async()=>{const key='enroll:'+await digest(String(b.code)),grant=await this.ctx.storage.get(key);if(!grant||grant.expires<Date.now())return json({error:'Enrollment code expired'},403);if(typeof b.publicKey!=='string'||b.publicKey.length>4096)throw Error('Invalid device key');const id=crypto.randomUUID(),secret=token();await this.ctx.storage.put('pc:'+id,{id,name:grant.name,secret:await digest(secret),publicKey:b.publicKey,seen:0,accounts:[],lastRun:0});await this.ctx.storage.delete(key);return json({id,secret});});
+   const b=await request.json();return await this.locked(async()=>{const key='enroll:'+await digest(String(b.code)),grant=await this.ctx.storage.get(key);if(!grant||grant.expires<Date.now())return json({error:'Enrollment code expired'},403);if(typeof b.publicKey!=='string'||b.publicKey.length>4096)throw Error('Invalid device key');const id=crypto.randomUUID(),secret=token();await this.ctx.storage.put('pc:'+id,{id,name:grant.name,secret:await digest(secret),publicKey:b.publicKey,seen:0,accounts:[],lastRun:0});await this.ctx.storage.delete(key);return json({id,secret});});
   }
   if(!this.env.RELAY_SECRET||request.headers.get('Authorization')!==`Bearer ${this.env.RELAY_SECRET}`)return json({error:'Unauthorized'},401);
   if(request.method==='GET')return json(await this.state());
   const b=await request.json(),action=b.action;
   if(action==='ticket'){const ticket=token();await this.ctx.storage.put('ticket:'+await digest(ticket),{expires:Date.now()+60000,email:b.requestedBy});return json({ticket});}
   if(action==='enroll'){const code=token();await this.ctx.storage.put('enroll:'+await digest(code),{name:String(b.name).slice(0,80),expires:Date.now()+600000});return json({code});}
-  if(action==='remove'){return await this.ctx.blockConcurrencyWhile(async()=>{const run=await this.ctx.storage.get('run');if(run?.pcId===b.pcId&&!terminal(run))throw Error('Stop and confirm this PC’s workflow before removing it');if(!b.pcId)throw Error('Select a PC');await this.clearCheckpoint(b.pcId);await this.ctx.storage.delete('pc:'+b.pcId);await this.ctx.storage.delete('command:'+b.pcId);for(const ws of this.sockets('agent',b.pcId))ws.close(1008,'Removed');await this.broadcast();return json({ok:true});});}
+  if(action==='remove'){return await this.locked(async()=>{const run=await this.ctx.storage.get('run');if(run?.pcId===b.pcId&&!terminal(run))throw Error('Stop and confirm this PCâ€™s workflow before removing it');if(!b.pcId)throw Error('Select a PC');await this.clearCheckpoint(b.pcId);await this.ctx.storage.delete('pc:'+b.pcId);await this.ctx.storage.delete('command:'+b.pcId);for(const ws of this.sockets('agent',b.pcId))ws.close(1008,'Removed');await this.broadcast();return json({ok:true});});}
   if(action==='revoke'){const pc=await this.ctx.storage.get('pc:'+b.pcId);if(pc){await this.ctx.storage.put('pc:'+b.pcId,{...pc,revoked:true});for(const s of this.sockets('agent',b.pcId))s.close(1008,'Revoked');}return json({ok:true});}
   if(action==='schedule'){if(b.time&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(b.time))throw Error('Invalid time');await this.ctx.storage.put('schedule',{time:b.time||null,account:b.account});await this.nextAlarm();return json({ok:true});}
   if(action==='run'){const run=await this.start(b);await this.broadcast();return json(run);}
@@ -34,7 +40,7 @@ export class Pool {
   }throw Error('Unknown action');
  }catch(e){return json({error:e.message},409)}}
  async clearCheckpoint(pcId){const run=await this.ctx.storage.get('run');if(run?.pcId===pcId&&terminal(run)&&run.checkpoint){const next={...run,checkpoint:false};await this.ctx.storage.put('run',next);if(run.createdAt)await this.ctx.storage.put('history:'+run.createdAt,next);}}
- async start(b){return this.ctx.blockConcurrencyWhile(async()=>{const previous=await this.ctx.storage.get('request:'+b.id);if(previous)return previous;const state=await this.state();const pending=await this.ctx.storage.list({prefix:'command:'});const baseline=state.machines.find(p=>p.version&&!p.revoked)?.version;const machines=state.machines.map(p=>({...p,ready:p.ready&&p.connected&&!p.revoked&&p.version===baseline&&!pending.has('command:'+p.id)}));const run=reserve({run:state.run},b,machines);await this.ctx.storage.put('run',run);await this.ctx.storage.put('request:'+run.id,run);this.send('agent',run.pcId,{type:'command',action:'run',run});return run;});}
+ async start(b){return this.locked(async()=>{const previous=await this.ctx.storage.get('request:'+b.id);if(previous)return previous;const state=await this.state();const pending=await this.ctx.storage.list({prefix:'command:'});const machines=state.machines.map(p=>({...p,ready:p.ready&&p.connected&&!p.revoked&&!pending.has('command:'+p.id)}));const run=reserve({run:state.run},b,machines);await this.ctx.storage.put('run',run);await this.ctx.storage.put('request:'+run.id,run);this.send('agent',run.pcId,{type:'command',action:'run',run});return run;});}
  async connect(request,url){
   if(request.headers.get('Upgrade')!=='websocket')return json({error:'WebSocket required'},400);let a;
   if(url.searchParams.has('ticket')){const key='ticket:'+await digest(url.searchParams.get('ticket'));a=await this.ctx.storage.get(key);await this.ctx.storage.delete(key);if(!a||a.expires<Date.now())return json({error:'Ticket expired'},403);a={role:'browser',id:crypto.randomUUID(),email:a.email,expires:Date.now()+300000};}
@@ -46,7 +52,7 @@ export class Pool {
   if(a.role==='browser'){
    if(a.expires<Date.now()){ws.close(1008,'Renew authorization');return;}
    if(m.type==='state'){ws.send(JSON.stringify({type:'state',...await this.state()}));return;}
-   if(m.type==='read'){if(!['log','manifest','chunk'].includes(m.kind))throw Error('Invalid read');if(!this.sockets('agent',m.pcId).length){ws.send(JSON.stringify({type:'readResult',requestId:m.requestId,pcId:m.pcId,error:'This run’s PC is offline. Reconnect it to view its logs or outputs.'}));return;}this.send('agent',m.pcId,{type:'read',client:a.id,requestId:String(m.requestId).slice(0,80),kind:m.kind,runId:m.runId,file:m.file,offset:m.offset});return;}throw Error('Invalid message');
+   if(m.type==='read'){if(!['log','manifest','chunk'].includes(m.kind))throw Error('Invalid read');if(!this.sockets('agent',m.pcId).length){ws.send(JSON.stringify({type:'readResult',requestId:m.requestId,pcId:m.pcId,error:'This runâ€™s PC is offline. Reconnect it to view its logs or outputs.'}));return;}this.send('agent',m.pcId,{type:'read',client:a.id,requestId:String(m.requestId).slice(0,80),kind:m.kind,runId:m.runId,file:m.file,offset:m.offset});return;}throw Error('Invalid message');
   }
   const pc=await this.ctx.storage.get('pc:'+a.id);if(!pc||pc.revoked){ws.close(1008,'Revoked');return;}
   if(m.type==='localRequest'){
