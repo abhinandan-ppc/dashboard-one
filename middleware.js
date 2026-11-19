@@ -86,6 +86,10 @@ export default async function middleware(req) {
 
     if (admin) return; // admins (env-configured or promoted) have full access everywhere, including dev previews
 
+    // The automation handler requires an explicit page grant and rechecks the
+    // session. Allow it through so API errors remain JSON rather than HTML.
+    if (path === 'api/automation') return;
+
     if (path === 'api/ebtp-proxy' || path === 'api/balance-heat-proxy'
       || path === 'api/zstk-proxy' || path === 'api/autobtr-proxy'
       || path === 'api/truckdb-proxy') {

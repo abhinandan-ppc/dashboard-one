@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {availability} from '../automation-status.js';
+test('busy PC replaces checking placeholder with reason',()=>{const s=availability({machines:[{name:'Host',connected:true,seen:100,ready:false,reason:'Close SAP and Excel'}]},100);assert.equal(s.label,'PC unavailable');assert.match(s.message,/Close SAP and Excel/);assert.equal(s.canRun,false)});
+test('ready requires fresh heartbeat',()=>{const s={machines:[{name:'Host',connected:true,seen:100,ready:true}]};assert.equal(availability(s,100).canRun,true);assert.equal(availability(s,40000).label,'PCs offline')});
+test('lost execution PC retains reservation message',()=>{const s=availability({machines:[],run:{status:'running',pcId:'x'}});assert.equal(s.label,'Run connection lost');assert.match(s.message,/reserved/)});

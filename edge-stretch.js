@@ -44,6 +44,15 @@
       if (/^(SCRIPT|STYLE|LINK|IFRAME|SVG)$/.test(el.tagName) ||
           css.position === 'fixed' || css.position === 'sticky' || css.display === 'none' ||
           el.matches(ignored)) return { safe: false, parts: [] };
+      // An opted-in card moves as one surface, including controls and offscreen
+      // rows. Do not recursively fragment its visual border/background.
+      // Opted-in cards contain no pinned UI. During page overscroll the card
+      // moves as a whole; a nested scroller still owns gestures inside it
+      // and stretches only its own content through the owner() lookup.
+      if (el.hasAttribute('data-edge-surface') && css.transform === 'none' &&
+          (css.scale === 'none' || !css.scale)) {
+        return { safe: true, parts: [{ el: el, top: rect.top }] };
+      }
       var children = [], safe = css.transform === 'none' && (css.scale === 'none' || !css.scale);
       if (/(auto|scroll|hidden|clip)/.test(css.overflowY) && el.scrollHeight > el.clientHeight + 1) return { safe: false, parts: [] };
       Array.from(el.children).forEach(function (child) {
