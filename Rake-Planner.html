@@ -1912,7 +1912,7 @@ function RemarksMSel({all,sel,onChange}){
   const allSelected=sel.size===0||sel.size===all.length;
   const lbl=allSelected?'All Remarks':sel.size===1?[...sel][0]:`${sel.size} selected`;
   const dropdown=open&&pos&&ReactDOM.createPortal(
-    <div ref={ref} style={{position:'fixed',top:pos.top,bottom:pos.bottom,left:pos.left,width:pos.width,zIndex:9999,
+    <div ref={ref} data-overlay-surface style={{position:'fixed',top:pos.top,bottom:pos.bottom,left:pos.left,width:pos.width,zIndex:9999,
       background:'var(--glass-hi)',
       backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
       border:'1px solid var(--glass-border-hi)',borderRadius:'var(--radius-md)',overflow:'hidden',
@@ -1970,7 +1970,7 @@ function MultiSel({all,sel,onChange,placeholder='All',accent,searchable=false}){
   const lbl=sel.size===0?placeholder:sel.size===1?[...sel][0]:`${sel.size} selected`;
   const vis=searchable&&sq?all.filter(v=>v.toLowerCase().includes(sq.toLowerCase())):all;
   const dropdown=open&&pos&&ReactDOM.createPortal(
-    <div ref={ref} style={{position:'fixed',top:pos.top,bottom:pos.bottom,left:pos.left,width:pos.width,zIndex:9999,
+    <div ref={ref} data-overlay-surface style={{position:'fixed',top:pos.top,bottom:pos.bottom,left:pos.left,width:pos.width,zIndex:9999,
       background:'var(--glass-hi)',
       backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
       border:'1px solid var(--glass-border-hi)',borderRadius:'var(--radius-md)',overflow:'hidden',
@@ -2590,11 +2590,11 @@ function OverviewMapModal({rows,onClose}){
   },[searchResult]);
 
   return ReactDOM.createPortal(
-    <><div style={{position:'fixed',inset:0,zIndex:600,background:'rgba(2,5,18,.88)',
+    <><div data-overlay-backdrop style={{position:'fixed',inset:0,zIndex:600,background:'rgba(2,5,18,.88)',
       backdropFilter:'blur(5px)',display:'flex',alignItems:'center',justifyContent:'center',
       animation:'fadeUp .18s ease-out'}}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{background:'var(--s1)',borderRadius:16,border:'1px solid var(--bdrHi)',
+      <div data-overlay-surface style={{background:'var(--s1)',borderRadius:16,border:'1px solid var(--bdrHi)',
         boxShadow:`var(--shadow-xl)${selHub?',0 0 40px '+(C.region[selHub.region]||C.region.Unknown).glow+'28':''}`,
         display:'flex',flexDirection:'column',
         width:'min(1100px,97vw)',height:'min(760px,95dvh)',overflow:'hidden'}}>
@@ -3048,11 +3048,11 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
   // 520, the overview map 600, and the drill panels 620 — so a drill-down
   // opened from either map still paints on top, which is why neither map can
   // simply take the highest number.
-  return<><div style={{position:'fixed',inset:0,zIndex:520,background:'rgba(2,5,18,.88)',
+  return<><div data-overlay-backdrop style={{position:'fixed',inset:0,zIndex:520,background:'rgba(2,5,18,.88)',
     backdropFilter:'blur(5px)',display:'flex',alignItems:'center',justifyContent:'center',
     animation:'fadeUp .18s ease-out'}}
     onClick={e=>e.target===e.currentTarget&&onClose()}>
-    <div style={{background:'var(--s1)',borderRadius:16,border:'1px solid var(--bdrHi)',
+    <div data-overlay-surface style={{background:'var(--s1)',borderRadius:16,border:'1px solid var(--bdrHi)',
       boxShadow:`var(--shadow-xl),0 0 40px ${rc.glow}28`,
       display:'flex',flexDirection:'column',
       width:'min(920px,96vw)',height:'min(700px,93dvh)',overflow:'hidden'}}>
@@ -3270,10 +3270,10 @@ function RakeAIAnalysis({sidingData,onClose}){
   // Generate analysis synchronously — no network needed
   const text=useMemo(()=>generateAnalysis(sidingData),[sidingData.siding]);
 
-  return<div style={{position:'fixed',inset:0,zIndex:400,background:'rgba(2,5,18,.88)',
+  return<div data-overlay-backdrop style={{position:'fixed',inset:0,zIndex:400,background:'rgba(2,5,18,.88)',
     backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',
     animation:'fadeUp .18s ease-out'}} onClick={e=>e.target===e.currentTarget&&onClose()}>
-    <div style={{background:'var(--s1)',borderRadius:14,border:'1px solid var(--bdrHi)',
+    <div data-overlay-surface style={{background:'var(--s1)',borderRadius:14,border:'1px solid var(--bdrHi)',
       boxShadow:`var(--shadow-xl),0 0 32px ${rc.glow}25`,width:'min(580px,94vw)',overflow:'hidden',
       display:'flex',flexDirection:'column',maxHeight:'82dvh'}}>
       <div style={{padding:'12px 18px',borderBottom:'1px solid var(--bdr)',
@@ -3395,10 +3395,10 @@ function TransportPlan({sidingData,onClose}){
     XLSX.writeFile(wb,`JSP_TransportPlan_${sid}_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
-  return<div style={{position:'fixed',inset:0,zIndex:400,background:'rgba(2,5,18,.85)',
+  return<div data-overlay-backdrop style={{position:'fixed',inset:0,zIndex:400,background:'rgba(2,5,18,.85)',
     backdropFilter:'blur(6px)',display:'flex',alignItems:'center',justifyContent:'center'}}
     onClick={e=>e.target===e.currentTarget&&onClose()}>
-    <div style={{background:'var(--s1)',borderRadius:'var(--radius-xl)',
+    <div data-overlay-surface style={{background:'var(--s1)',borderRadius:'var(--radius-xl)',
       border:`1px solid ${rc.bdr}`,
       boxShadow:`var(--shadow-xl),0 0 40px ${rc.glow}22`,
       width:'min(860px,96vw)',maxHeight:'88dvh',
@@ -3697,11 +3697,11 @@ function CombineRakesModal({rakeA,rakeB,sidA,sidB,onClose}){
     exportRakeXLSX({siding:`COMBINED (${sidA}+${sidB} → ${active.siding})`,region:active.region||'Unknown',rakes:repackedRakes});
   };
 
-  return<div style={{position:'fixed',inset:0,zIndex:500,background:'rgba(2,5,18,.88)',
+  return<div data-overlay-backdrop style={{position:'fixed',inset:0,zIndex:500,background:'rgba(2,5,18,.88)',
     backdropFilter:'blur(5px)',display:'flex',alignItems:'center',justifyContent:'center',
     animation:'fadeUp .18s ease-out'}}
     onClick={e=>e.target===e.currentTarget&&onClose()}>
-    <div style={{background:'var(--s1)',borderRadius:16,border:`1px solid ${rc.bdr}`,
+    <div data-overlay-surface style={{background:'var(--s1)',borderRadius:16,border:`1px solid ${rc.bdr}`,
       boxShadow:`var(--shadow-xl),0 0 40px ${rc.glow}22`,
       display:'flex',flexDirection:'column',
       width:'min(980px,97vw)',maxHeight:'92dvh',overflow:'hidden'}}>
@@ -4442,7 +4442,7 @@ function RakePredictor({rows}){
     )}
 
     {combineSel.length>0&&ReactDOM.createPortal(
-      <div style={{position:'fixed',left:'50%',bottom:24,transform:'translateX(-50%)',zIndex:250,
+      <div data-overlay-surface style={{position:'fixed',left:'50%',bottom:24,transform:'translateX(-50%)',zIndex:250,
         background:'var(--s1)',border:`1px solid ${C.sky}70`,borderRadius:'var(--radius-lg)',
         boxShadow:`var(--shadow-xl),0 0 24px ${C._sky}30`,
         backdropFilter:'blur(14px) saturate(1.4)',WebkitBackdropFilter:'blur(14px) saturate(1.4)',
@@ -4589,7 +4589,7 @@ function DrillPanel({rows,info,onClose,mob}){
   // 620, not 500: drill panels are opened from INSIDE the map dialogs (520 and
   // 600), so they must paint above every full-screen overlay on the page —
   // otherwise the panel they open from covers its own drill-down.
-  return<div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:620,
+  return<div data-overlay-surface style={{position:'fixed',bottom:0,left:0,right:0,zIndex:620,
     background:'var(--glass-hi)',
     backdropFilter:'blur(24px)',WebkitBackdropFilter:'blur(24px)',
     borderTop:'1px solid var(--glass-border-hi)',
@@ -5749,6 +5749,16 @@ function App(){
       minHeight:mob?'auto':64,boxSizing:'border-box'}}>
 
       <div className="app-header-brand-row" style={{display:'flex',alignItems:'center',gap:mob?8:14,justifyContent:'flex-start',flexWrap:mob?'nowrap':'wrap'}}>
+        <JSPLBadge compact={mob}/>
+        <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0,display:mob?'none':'block'}}/>
+        <div className="app-header-title" style={{flexShrink:mob?1:0,minWidth:0,flex:mob?'1 1 auto':'0 0 auto'}}>
+          <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:'left'}}>Rake Planning</div>
+          <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:'left',overflow:mob?'hidden':'visible',textOverflow:mob?'ellipsis':'clip'}}>Rake Planner</div>
+        </div>
+
+      </div>
+
+      <div className="app-header-filter-actions" style={{display:'flex',alignItems:'center',gap:8}}>
       {/* Hamburger on narrow */}
       {isNarrow&&<button onClick={()=>setSideOpen(o=>!o)} style={{
         background:'transparent',border:'1px solid var(--bdr)',borderRadius:'var(--radius-sm)',
@@ -5764,13 +5774,6 @@ function App(){
           {actCnt}
         </span>}
       </button>}
-
-        <JSPLBadge compact={mob}/>
-        <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0,display:mob?'none':'block'}}/>
-        <div className="app-header-title" style={{flexShrink:mob?1:0,minWidth:0,flex:mob?'1 1 auto':'0 0 auto'}}>
-          <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:'left'}}>Rake Planning</div>
-          <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:'left',overflow:mob?'hidden':'visible',textOverflow:mob?'ellipsis':'clip'}}>Rake Planner</div>
-        </div>
 
         {rows.length>0&&<button onClick={()=>setOvMap(true)}
           title="Siding Overview Map"
@@ -5944,7 +5947,7 @@ function App(){
             page's dialogs (analysis 400, combine 500, maps 520/600) and well
             below the drill panels (620), so a drawer can never bury an open
             dialog or its drill-down. */}
-        <div onClick={()=>setSideOpen(false)} style={{
+        <div data-overlay-backdrop onClick={()=>setSideOpen(false)} style={{
           position:'fixed',inset:0,background:'rgba(0,0,0,.6)',zIndex:340,
           backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}/>
         <div className="app-side-drawer" style={{

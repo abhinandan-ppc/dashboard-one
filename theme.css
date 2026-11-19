@@ -3114,7 +3114,7 @@ html{
    effects. The surface and its hierarchy provide enough feedback on their
    own, and removing the extra layer prevents phantom light at card edges. */
 
-/* CLASSIC — no glass, ambient washes, bloom, or floating depth. */
+/* CLASSIC — flat data surfaces; floating overlays use the shared material below. */
 html[data-theme-style="classic"]{
   --glass-blur:none;
   --glass-shadow:none;
@@ -3148,7 +3148,7 @@ html[data-theme-style="classic"] .app-header:focus-within{
   outline-offset:2px;
 }
 
-/* NEOMORPH — the canvas is matte; no blur, halo, gradient, or cursor glow.
+/* NEOMORPH — the canvas is matte; floating overlays use the shared material below.
    Hover only deepens the same lower-right / upper-left shadow pair. */
 html[data-theme-style="neomorph"]{
   --glass-blur:none;
@@ -3418,4 +3418,174 @@ html body :is(button,[role="button"]):is(:disabled,[aria-disabled="true"]):activ
     transition:none!important;
   }
   html body :is(button,a.btn,[role="button"]):active{scale:none!important;transform:none!important}
+}
+
+/* Shared floating surfaces. Menus, headers and dialogs sample content behind
+   them; ordinary data cards keep each preset's original material and density.
+   Keep this contract after the preset rules. No blur on individual buttons. */
+:root {
+  --overlay-solid:#202226;
+  --overlay-tint:86%;
+  --overlay-fill:color-mix(in srgb,var(--overlay-solid) var(--overlay-tint),transparent);
+  --overlay-blur:blur(24px) saturate(125%);
+  --overlay-scrim:rgb(5 10 18 / .42);
+  --overlay-radius:16px;
+  --overlay-shadow:0 16px 48px rgb(0 0 0 / .24),inset 0 1px 0 rgb(255 255 255 / .07);
+}
+html[data-theme="light"] {--overlay-solid:#f8fafc;--overlay-tint:88%;--overlay-scrim:rgb(30 45 60 / .22)}
+html[data-theme-style="classic"] {--overlay-solid:#172a3e;--overlay-radius:4px;--overlay-shadow:0 8px 24px rgb(0 0 0 / .18)}
+html[data-theme-style="classic"][data-theme="light"] {--overlay-solid:#eef5fb}
+html[data-theme-style="neomorph"] {
+  --overlay-solid:#20262f;--overlay-radius:18px;
+  --overlay-shadow:7px 7px 18px var(--neo-shadow-dark),-5px -5px 14px var(--neo-shadow-light);
+}
+html[data-theme-style="neomorph"][data-theme="light"] {--overlay-solid:#e8eaed}
+
+/* Explicit menu vocabulary includes portalled React filters, top-layer
+   popovers and the account panel injected into embedded dashboard headers. */
+html body :is(#hubFrameUserPanel,.theme-panel,.user-panel,.sheet-sync-panel,
+  .dropdown-panel,.dd-menu,.filterpop,.m3-popover,.portal-dropdown,
+  .select-items,.suggestions,.upload-panel,.year-options,
+  .column-filter-panel,.trace-filter-popover,.tooltip,.m3-tooltip,
+  .leaflet-popup-content-wrapper,.leaflet-tooltip,[data-overlay-surface],
+  dialog,.modal,.detail-drawer,.app-side-drawer,.rake-drill-panel) {
+  background:var(--overlay-fill)!important;
+  color:var(--text)!important;
+  backdrop-filter:var(--overlay-blur)!important;
+  -webkit-backdrop-filter:var(--overlay-blur)!important;
+  border-color:var(--bdrHi)!important;
+  border-radius:var(--overlay-radius)!important;
+  box-shadow:var(--overlay-shadow)!important;
+  max-width:calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right));
+  overscroll-behavior:contain;
+  text-shadow:none;
+}
+html body :is(#detailDrawer,.detail-drawer,.rake-drill-panel,.m3-popover[style*="bottom: 0"],[data-overlay-surface][style*="bottom: 0"]){
+  max-width:100%;border-radius:var(--overlay-radius) var(--overlay-radius) 0 0!important;
+}
+html body #root .app-side-drawer {border-radius:0 var(--overlay-radius) var(--overlay-radius) 0!important}
+html body #hubFrameUserPanel > div {color:var(--text)!important;overflow-wrap:anywhere}
+html body #hubFrameUserPanel > div + div {color:var(--dim)!important}
+html body :is(.theme-panel,.user-panel,.sheet-sync-panel,.dd-menu,.filterpop,.suggestions,.upload-panel) {
+  max-height:calc(100dvh - 32px);overflow-y:auto;scrollbar-width:thin;
+}
+html body :is(.overlay,.drawer-overlay,[data-overlay-backdrop]),
+html body dialog::backdrop {
+  background:var(--overlay-scrim)!important;
+  backdrop-filter:blur(8px)!important;
+  -webkit-backdrop-filter:blur(8px)!important;
+}
+html body [data-overlay-backdrop] > [data-overlay-surface] {max-height:calc(100dvh - 24px)}
+html:root[data-theme] body[class] :is(.app-header,.page-order .glass-card.header-enter,.page-rake .glass-card.header-enter) {
+  background:var(--overlay-fill)!important;
+  backdrop-filter:var(--overlay-blur)!important;
+  -webkit-backdrop-filter:var(--overlay-blur)!important;
+}
+/* PM's previous pseudo-surface made two glass layers and obscured the blur. */
+html[data-theme] body.page-pm > header.app-header::before {
+  background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+}
+html body :is(.flow-controls,.flow-toolbar,.toolbar,.fetch-status,.frame-pill > .pill) {
+  background:var(--overlay-fill)!important;
+  backdrop-filter:var(--overlay-blur)!important;-webkit-backdrop-filter:var(--overlay-blur)!important;
+}
+/* Modern browser native pickers use the top layer: preserve native keyboard,
+   touch and form behavior instead of replacing every select with script. */
+@supports (appearance:base-select) {
+  select:not([multiple]):not([size]),select:not([multiple]):not([size])::picker(select) {appearance:base-select!important}
+  html body select:not([multiple]):not([size]) {align-items:center;background-image:none!important}
+  html body select:not([multiple]):not([size])::picker(select) {
+    background:var(--overlay-fill);color:var(--text);
+    backdrop-filter:var(--overlay-blur);-webkit-backdrop-filter:var(--overlay-blur);
+    border:1px solid var(--bdrHi);border-radius:var(--overlay-radius);
+    box-shadow:var(--overlay-shadow);padding:6px;margin-block:6px;
+    max-height:min(360px,60dvh);max-width:calc(100vw - 24px);overflow:auto;
+  }
+  html body select:not([multiple]):not([size]) option {
+    background:transparent;color:var(--text);padding:10px 12px;min-height:44px;
+    white-space:normal;overflow-wrap:anywhere;border-radius:4px;
+  }
+  html body select:not([multiple]):not([size]) option:is(:hover,:focus,:checked) {
+    background:var(--primary-bg);color:var(--text);
+  }
+}
+html body :is(.year-options label,.dd-item,.select-items > div,.theme-opt,.upload-opt) {min-height:44px}
+html body .dd-item {width:100%;text-align:left;white-space:normal}
+html body :is(.app-header,.theme-panel,.user-panel,.dropdown-panel,.dd-menu,.filterpop,dialog)
+  :is(button,a,input,select,summary,[tabindex]):focus-visible {
+  outline:2px solid var(--primary)!important;outline-offset:3px;
+}
+
+/* Mobile navigation gets its own centered, wrapping row, including slots
+   nested inside a page's status/actions group. Empty slots take no space. */
+@media (max-width:768px) {
+  :root {--header-control-size:44px}
+  html body .app-header {flex-wrap:wrap!important;min-width:0}
+  html body .app-header :is(.hdr-r,.hd-actions,.h-actions,.top-right,.truck-header-actions,.app-header-actions) {
+    display:flex!important;align-items:center!important;justify-content:center!important;
+    flex-wrap:wrap!important;width:100%!important;min-width:0;gap:8px!important;margin-inline:0!important;
+  }
+  html body #hubFrameHeaderSlot:not(:empty) {
+    display:flex!important;flex:1 0 100%!important;width:100%!important;
+    justify-content:center!important;margin-inline:0!important;padding-block:8px 0;
+  }
+  html body #hubFrameHeaderSlot:empty {display:none!important}
+  html body #hubFrameHeaderControls {
+    justify-content:center!important;align-items:center!important;flex-wrap:wrap!important;
+    margin-inline:0!important;max-width:100%;gap:8px!important;
+  }
+  html body .page-copy {min-width:0}
+  html body .app-header :is(button,.theme-menu,.user-menu) {flex-shrink:0}
+  html body .app-header :is(.view-tabs,.app-header-filter-actions) {flex-wrap:wrap;justify-content:center}
+  html body .auto-btp .header-pc-status {min-width:0}
+  html body dialog {padding:18px;max-height:calc(100dvh - 24px)}
+  html body :is(.modal,.login-box) {max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow:auto}
+  html body input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  html body select,html body textarea {font-size:16px}
+}
+/* Reduced transparency is a first-class material, not an alpha-only change.
+   The tokens also reach inline React blur declarations and native pickers. */
+html[data-reduce-transparency="1"] {
+  --overlay-tint:100%;--overlay-blur:none;--glass-blur:none;
+}
+html[data-reduce-transparency="1"] body :is(.overlay,.drawer-overlay,[data-overlay-backdrop]),
+html[data-reduce-transparency="1"] body dialog::backdrop {
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+}
+@media (prefers-reduced-transparency:reduce) {
+  :root[data-theme] {--overlay-tint:100%;--overlay-blur:none;--glass-blur:none}
+  html body :is(.overlay,.drawer-overlay,[data-overlay-backdrop]),html body dialog::backdrop {
+    backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  }
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  :root {--overlay-tint:100%}
+}
+@media (forced-colors:active) {
+  :root {--overlay-solid:Canvas!important;--overlay-tint:100%!important;--overlay-blur:none!important;--overlay-shadow:none!important}
+}
+
+html body [data-floating-menu][popover] {
+  position:fixed!important;inset:auto;margin:0;min-width:0;
+  overflow:auto;transform:none!important;animation:none!important;
+}
+html body .dropdown-panel[data-floating-menu]:popover-open {display:flex}
+html body .dd-menu[data-floating-menu]:popover-open {display:flex}
+html body .suggestions[data-floating-menu]:popover-open {display:grid}
+html body .year-options label:hover {background:var(--primary-bg)}
+
+@media (max-width:768px) {
+ html body .app-header .app-header-filter-actions {width:100%;justify-content:center!important}
+ html body .app-header .app-header-actions:has(> #hubFrameHeaderSlot:only-child:empty) {display:none!important}
+}
+/* A missing avatar still reads as an account button. */
+:is(#userMenuBtn,#hubFrameHeaderControls button):has(img:not([src])) {align-items:center!important;justify-content:center!important}
+:is(#userMenuBtn,#hubFrameHeaderControls button) img:not([src]) {display:none!important}
+:is(#userMenuBtn,#hubFrameHeaderControls button):has(img:not([src]))::after {
+ content:"";width:20px;height:20px;background:var(--text);display:block;
+ mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21v-2a8 8 0 0 1 16 0v2'/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+@media (max-width:768px) {
+ html body .app-header #sheetSyncClub {margin-left:0!important}
 }
