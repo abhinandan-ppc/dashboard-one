@@ -831,27 +831,8 @@ html[data-theme-style="neomorph"] .dropdown-panel .ctab.on {
   color: var(--primary) !important;
   box-shadow: inset 1px 1px 3px var(--neo-shadow-dark), inset -1px -1px 3px var(--neo-shadow-light) !important;
 }
-html[data-theme-style="classic"][data-theme="light"] .dropdown-panel {
-  background: #eef5fb !important;
-}
-html[data-theme-style="neomorph"][data-theme="light"] .dropdown-panel {
-  background: #e8eaed !important;
-}
 
-/* Opaque menu overrides belong only to Classic and Neomorph. Modern uses
-   the translucent --glass-bg and backdrop blur from .dropdown-panel. */
-html[data-theme-style="classic"] body.page-pm :is(#analysis-dropdown, #upload-dropdown, #ctrl-dropdown) {
-  background: #172a3e !important;
-}
-html[data-theme-style="classic"][data-theme="light"] body.page-pm :is(#analysis-dropdown, #upload-dropdown, #ctrl-dropdown) {
-  background: #eef5fb !important;
-}
-html[data-theme-style="neomorph"] body.page-pm :is(#analysis-dropdown, #upload-dropdown, #ctrl-dropdown) {
-  background: #20262f !important;
-}
-html[data-theme-style="neomorph"][data-theme="light"] body.page-pm :is(#analysis-dropdown, #upload-dropdown, #ctrl-dropdown) {
-  background: #e8eaed !important;
-}
+
 
 /* Small Phones (320-480px) */
 @media (max-width: 480px) {
@@ -5740,5 +5721,6 @@ try { autoSyncLiveDataOnLoad(); } catch (e) {}
 </script>
 <script src="edge-stretch.js"></script>
 <script src="card-tilt.js"></script>
+<script src="dashboard-overlays.js" defer></script>
 </body>
 </html>

@@ -15,7 +15,7 @@ Use IBM Plex Sans for body and headings, and JetBrains Mono for technical figure
 - Buttons: subtle raised state and pressed feedback; no cursor glow or decorative bloom.
 - Tables: one outer data well, flat rows, clear separators and a readable header band.
 - Status markers: quiet canvas fill, explicit text and small semantic indicators. Information-only markers are not raised buttons.
-- Menus: opaque light/dark surfaces, with readable control boundaries over the yard.
+- Menus: frosted light/dark surfaces with opposed soft shadows and readable boundaries; use shared overlay tokens and a solid reduced-transparency fallback.
 - Rake action group: one outer pill shadow; flat segments and dividers.
 - Order details: no independent elevation, outline or rounded pill. The parent owns the outer corners.
 

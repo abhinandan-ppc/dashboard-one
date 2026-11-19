@@ -308,24 +308,24 @@ a { color: var(--primary); }
   </div>
 
   <div class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-    <input type="search" id="searchInput" placeholder="Search by name or email&hellip;"
+    <input type="search" id="searchInput" aria-label="Search users" placeholder="Search by name or email&hellip;"
       style="flex:1;min-width:200px;padding:9px 14px;border-radius:999px;border: 1px solid var(--glass-border);background:var(--input-bg);color:var(--tx);font-size:13px">
     <div class="dd" id="statusFilterDd" data-value="">
       <button type="button" class="dd-btn"><span class="dd-label">All statuses</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
       <div class="dd-menu">
-        <div class="dd-item on" data-value="">All statuses</div>
-        <div class="dd-item" data-value="pending">Pending</div>
-        <div class="dd-item" data-value="approved">Approved</div>
-        <div class="dd-item" data-value="blocked">Blocked</div>
-        <div class="dd-item" data-value="admin">Admins</div>
+        <button type="button" class="dd-item on" data-value="">All statuses</button>
+        <button type="button" class="dd-item" data-value="pending">Pending</button>
+        <button type="button" class="dd-item" data-value="approved">Approved</button>
+        <button type="button" class="dd-item" data-value="blocked">Blocked</button>
+        <button type="button" class="dd-item" data-value="admin">Admins</button>
       </div>
     </div>
     <div class="dd" id="pageFilterDd" data-value="">
       <button type="button" class="dd-btn"><span class="dd-label">Any page access</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
       <div class="dd-menu">
-        <div class="dd-item on" data-value="">Any page access</div>
-        <div class="dd-item" data-value="__all__">Has "all pages"</div>
-        <div class="dd-item" data-value="__dev__">Has dev preview access</div>
+        <button type="button" class="dd-item on" data-value="">Any page access</button>
+        <button type="button" class="dd-item" data-value="__all__">Has "all pages"</button>
+        <button type="button" class="dd-item" data-value="__dev__">Has dev preview access</button>
       </div>
     </div>
     <span class="sub" id="filterCount"></span>
@@ -591,7 +591,7 @@ function initDropdown(rootId, onChange){
     setItems: function(items){
       var current = root.getAttribute('data-value') || '';
       menu.innerHTML = items.map(function(it){
-        return '<div class="dd-item' + (it.value === current ? ' on' : '') + '" data-value="' + esc(it.value) + '">' + esc(it.label) + '</div>';
+        return '<button type="button" class="dd-item' + (it.value === current ? ' on' : '') + '" data-value="' + esc(it.value) + '">' + esc(it.label) + '</button>';
       }).join('');
       var stillValid = items.some(function(it){ return it.value === current; });
       if(!stillValid && items.length){
@@ -931,5 +931,6 @@ refresh();
 </script>
 <script src="edge-stretch.js"></script>
 <script src="card-tilt.js"></script>
+<script src="dashboard-overlays.js" defer></script>
 </body>
 </html>

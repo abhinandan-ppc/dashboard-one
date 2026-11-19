@@ -59,7 +59,6 @@ body.auto-btp{margin:0;background:var(--bg);color:var(--text);font-size:14px}
 .auto-btp summary:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
 .auto-btp .year-options{position:absolute;top:100%;left:0;min-width:100%;width:240px;max-width:80vw;z-index:30;padding:8px;background:var(--s0);border:1px solid var(--bdrHi);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);max-height:280px;overflow:auto;overscroll-behavior:contain}
 .auto-btp .year-options label{display:flex;align-items:center;gap:12px;padding:6px 10px;color:var(--text);cursor:pointer;border-radius:var(--radius-sm)}
-.auto-btp .year-options label:hover{background:var(--s2)}
 .auto-btp .year-options input{width:18px;height:18px;min-height:0;margin:0;padding:0;accent-color:var(--primary)}
 .auto-btp .run-panel{position:relative;z-index:3}
 .auto-btp .output-controls label{max-width:640px}
@@ -76,7 +75,6 @@ body.auto-btp{margin:0;background:var(--bg);color:var(--text);font-size:14px}
 .auto-btp .step{line-height:1.5}.auto-btp .step.active{border-radius:var(--radius-sm)}
 .auto-btp progress{display:block;margin-top:14px}
 :root[data-theme-style="neomorph"] .auto-btp .year-field summary{background:var(--neo-bg);box-shadow:var(--shadow-inset)}
-:root[data-theme-style="neomorph"] .auto-btp .year-options{background:var(--neo-bg)}
 @media(max-width:900px){.auto-btp main{padding:12px 16px 32px}.auto-btp .automation-header{top:8px}.auto-btp .steps{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:600px){.auto-btp .automation-header{position:relative;top:0}.auto-btp .app-header .h-actions{gap:8px}.auto-btp .steps{grid-template-columns:1fr}.auto-btp section{padding:16px}.auto-btp .controls>button{flex:1 1 140px}.auto-btp .controls>label,.auto-btp .year-field{flex-basis:100%}.auto-btp #runtime{font-size:12px}.auto-btp .year-options{width:100%;max-width:100%}}
 
@@ -86,9 +84,6 @@ body.auto-btp{margin:0;background:var(--bg);color:var(--text);font-size:14px}
 .auto-btp .jspl-brand-text{display:grid;gap:4px}
 .auto-btp section{margin-top:var(--space-stack);margin-bottom:0}
 .auto-btp .grid,.auto-btp .controls{gap:var(--space-section)}
-.auto-btp .year-options{background:var(--glass-card);backdrop-filter:var(--glass-blur)}
-:root[data-theme-style="classic"] .auto-btp .year-options,:root[data-reduce-transparency="1"] .auto-btp .year-options{background:var(--s0);backdrop-filter:none}
-:root[data-theme-style="neomorph"] .auto-btp .year-options{background:var(--neo-bg);backdrop-filter:none}
 @media(max-width:640px){.auto-btp .header-brand{gap:12px}.auto-btp section{margin-top:var(--space-stack-sm)}}
 .auto-btp #run.stop{background:var(--danger)!important;color:#fff!important}
 
@@ -105,8 +100,6 @@ body.auto-btp{margin:0;background:var(--bg);color:var(--text);font-size:14px}
 .auto-btp #activityText{min-height:100%}
 
 /* Dense menus require a reliable surface even inside a blurred card. */
-.auto-btp .year-options{background:var(--s0)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;isolation:isolate}
-:root[data-theme-style="neomorph"] .auto-btp .year-options{background:var(--neo-bg)!important}
 .auto-btp dialog{width:min(640px,calc(100vw - 32px));max-height:calc(100dvh - 48px);overflow:auto;box-sizing:border-box;padding:24px;background:var(--s0);color:var(--text);border:1px solid var(--bdrHi);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg)}
 .auto-btp dialog::backdrop{background:rgba(0,0,0,.6);backdrop-filter:blur(5px)}
 .auto-btp dialog h3{margin-top:20px}
@@ -116,7 +109,6 @@ body.auto-btp{margin:0;background:var(--bg);color:var(--text);font-size:14px}
 .auto-btp #accountFeedback{min-height:24px;color:var(--text)}
 :root[data-theme-style="neomorph"] .auto-btp dialog{background:var(--neo-bg)}
 @media(prefers-reduced-transparency:reduce){.auto-btp dialog::backdrop{backdrop-filter:none}}
-.auto-btp .year-options,.auto-btp dialog{background:linear-gradient(var(--s0),var(--s0)),var(--bg)!important}
 .auto-btp .year-field summary::after{content:'';width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;right:16px;top:50%;transform:translateY(-65%) rotate(45deg);opacity:.75;pointer-events:none}
 .auto-btp .year-field details[open]>summary::after{transform:translateY(-25%) rotate(225deg)}
 .auto-btp #existingUsers{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
@@ -189,9 +181,6 @@ html body.auto-btp #run.stop:hover{background:#a51e1e!important;border-color:#a5
 
 /* Let open menus sample the page backdrop instead of a nested blur layer. */
 .auto-btp .run-panel:has(details[open]){backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-.auto-btp .year-options{background:color-mix(in srgb,var(--bg) 90%,transparent)!important;backdrop-filter:blur(22px) saturate(125%)!important;-webkit-backdrop-filter:blur(22px) saturate(125%)!important;box-shadow:var(--shadow-lg)}
-:root[data-theme-style="neomorph"] .auto-btp .year-options{background:color-mix(in srgb,var(--neo-bg) 94%,transparent)!important}
-:root[data-reduce-transparency="1"] .auto-btp .year-options{background:linear-gradient(var(--s0),var(--s0)),var(--bg)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 .auto-btp #hostSummary{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .auto-btp #hostOptions{width:360px;max-width:calc(100vw - 64px)}
 .auto-btp .host-option-copy{display:grid;gap:3px;min-width:0}
@@ -201,9 +190,8 @@ html body.auto-btp #run.stop:hover{background:#a51e1e!important;border-color:#a5
 .auto-btp #hostOptions label{padding:10px;align-items:flex-start}
 .auto-btp #hostOptions input{flex-shrink:0;margin-top:3px}
 
+.auto-btp .year-options[popover]:popover-open{display:block}
 .auto-btp .year-options[popover]{position:fixed;inset:auto;margin:0;min-width:0;box-sizing:border-box}
-.auto-btp .year-options[popover]:popover-open{display:block;background:rgb(from var(--s0) r g b / .72)!important;backdrop-filter:blur(28px) saturate(135%)!important;-webkit-backdrop-filter:blur(28px) saturate(135%)!important;border-color:var(--bdrHi)}
-:root[data-reduce-transparency="1"] .auto-btp .year-options[popover]:popover-open{background:linear-gradient(var(--s0),var(--s0)),var(--bg)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 .auto-btp .step.failed{background:var(--danger-bg);border-radius:var(--radius-sm)}
 .auto-btp .step.failed .badge{color:var(--danger);background:var(--danger-bg);border:1px solid var(--danger);font-weight:800}
 
@@ -262,3 +250,18 @@ html[data-theme="light"][data-theme-style="neomorph"] body.auto-btp{--bg:var(--n
 .auto-btp #files .download-pill.downloading{opacity:1;cursor:progress}
 @media(max-width:600px){.auto-btp #outputsPanel{scroll-margin-top:16px}.auto-btp #files .download-pill{width:100%;flex-wrap:wrap;gap:4px 12px}}
 @media(prefers-reduced-motion:reduce){.auto-btp .download-fill{transition:none}}
+
+/* Fields must shrink inside their grid tracks; long host names must never
+   cover the neighboring scope control. */
+.auto-btp .year-field,.auto-btp .year-field details {min-width:0;max-width:100%}
+.auto-btp .year-field summary {min-width:0;width:100%;padding-right:38px}
+.auto-btp .year-field summary > span {display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:1099px) {
+ .auto-btp .run-panel > .controls {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:end}
+ .auto-btp .run-panel > .controls > * {min-width:0;max-width:100%}
+}
+@media (max-width:600px) {
+ .auto-btp .run-panel > .controls > .year-field {grid-column:1 / -1}
+ .auto-btp .run-panel > .controls > #refresh {grid-column:1 / -1}
+ .auto-btp .output-controls > label {min-width:0;max-width:100%;width:100%}
+}
