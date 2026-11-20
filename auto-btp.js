@@ -30,6 +30,7 @@ function runningStep(run){
 function renderAvailability(){const selectedPC=$('#pc').value;const status=availability(selectedPC?{...state,machines:state.machines.filter(p=>p.id===selectedPC)}:state);const failed=state.run?.status==='failed'&&acknowledgedFailure!==state.run.id;if(failed){status.label='Failed';status.tone='danger';status.message=state.run.error||'The last workflow failed. Resume its checkpoint or start afresh.'}$('#status').textContent=status.label;$('#status').dataset.tone=status.tone;$('#notice').dataset.tone=status.tone;$('#progressLabel').textContent=failed?'Failed':finished(state.run)?(status.canRun?'Ready to run':'Waiting for an available PC'):`${status.label} · ${runningStep(state.run)}`;if(Date.now()>noticeUntil)$('#notice').textContent=status.message;$('#run').disabled=finished(state.run)&&!status.canRun;}
 
 let stateLoaded=false;const observedRuns=new Set(),lastStages=new Map(),revealedOutputs=new Set();
+let lastLogState='';
 
 function render(data){const previousRunId=state.run?.id;stateLoaded=true;state=data;const run=state.run;const revealOutputs=run&&finished(run)&&observedRuns.has(run.id)&&!revealedOutputs.has(run.id);renderAvailability();$('#run').textContent=finished(run)?'Start':'Stop';$('#run').classList.toggle('stop',!finished(run));$('#run').classList.toggle('primary',finished(run));if(run&&!finished(run))observedRuns.add(run.id);
 
@@ -48,6 +49,8 @@ function render(data){const previousRunId=state.run?.id;stateLoaded=true;state=d
 
  $('#checkpoint').hidden=!run?.checkpoint||!finished(run);const origin=state.machines.find(p=>p.id===run?.pcId);$('#clear').disabled=!run?.checkpoint||!!origin?.checkpointClearing;$('#clear').textContent=origin?.checkpointClearing?'Clearing checkpoint…':'Clear checkpoint';$('#checkpointMessage').textContent=origin?.checkpointClearing?`Waiting for ${origin.name} to confirm checkpoint clearing${origin.connected?'':'; reconnect this PC to finish'}.`:`Resume on ${origin?.name||'the original PC'} or start afresh.`;$('#activityTitle').textContent=selected?.error||'Live output from the selected PC.';
  if(revealOutputs){revealedOutputs.add(run.id);$('#outputsPanel').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});guard(outputs);}
+ const logState=selected ? selected.id+':'+selected.status : '';
+ if(logState!==lastLogState){lastLogState=logState;queueMicrotask(()=>logs());}
 
 
 
@@ -142,7 +145,9 @@ const b64=bytes=>btoa(String.fromCharCode(...new Uint8Array(bytes)));
 
 $('#saveAccount').onclick=()=>guard(async()=>{const values={slot:Number($('#slot').value),user:$('#uid').value,password:$('#password').value};if(!Number.isInteger(values.slot)||values.slot<1||values.slot>9)throw Error('Choose an account slot from 1 to 9');if(!state.machines.some(p=>!p.revoked))throw Error('Enroll a PC before updating users');if(!values.user||!values.password)throw Error('Enter user ID and new password');const envelopes={};for(const pc of state.machines.filter(p=>!p.revoked&&p.id===$('#accountPC').value)){const key=await crypto.subtle.importKey('spki',Uint8Array.from(atob(pc.publicKey),c=>c.charCodeAt(0)),{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);const aes=await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt']);const iv=crypto.getRandomValues(new Uint8Array(12));envelopes[pc.id]={key:b64(await crypto.subtle.encrypt({name:'RSA-OAEP'},key,await crypto.subtle.exportKey('raw',aes))),iv:b64(iv),data:b64(await crypto.subtle.encrypt({name:'AES-GCM',iv},aes,new TextEncoder().encode(JSON.stringify(values))))};}if(!Object.keys(envelopes).length)throw Error('Select an enrolled PC');const version=crypto.randomUUID();await api({action:'accounts',pcId:$('#accountPC').value,version,envelopes});pendingAccountUpdate={pcId:$('#accountPC').value,version};$('#password').value='';$('#accountFeedback').textContent='Encrypted update sent to the selected PC. Waiting for confirmation.';notice('Encrypted update sent to the selected PC.');});
 
-setInterval(()=>{if(selected){const end=finished(selected)?selected.updatedAt||selected.createdAt:Date.now();$('#runtime').textContent='Runtime '+new Date(Math.max(0,end-selected.createdAt)).toISOString().slice(11,19)}},1000);setInterval(()=>{if(!document.hidden&&selected)logs()},5000);
+setInterval(()=>{if(selected){const end=finished(selected)?selected.updatedAt||selected.createdAt:Date.now();$('#runtime').textContent='Runtime '+new Date(Math.max(0,end-selected.createdAt)).toISOString().slice(11,19)}},1000);
+setInterval(()=>{if(!document.hidden&&selected&&!finished(selected))logs()},1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){logs();if(socket?.readyState===1)socket.send(JSON.stringify({type:'state'}));else connect();}});
 
 guard(async()=>{render(await api())});connect();
 
