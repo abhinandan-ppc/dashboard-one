@@ -67,9 +67,7 @@ body.auto-btp{margin:0;background:var(--bg);color:var(--text);font-size:14px}
 .auto-btp #files .output-group{box-sizing:border-box;width:100%;min-width:0;display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;margin:0;padding:10px 0}
 .auto-btp #files .output-group h3{flex-basis:100%;margin:0 0 4px;font-size:14px;color:var(--text)}
 .auto-btp #files .output-group+.output-group{border-top:1px solid var(--bdr);padding-top:20px}
-.auto-btp #files .main-outputs .download-pill{border-color:#087b96;background:#087b96!important;color:#fff}
-.auto-btp #files .main-outputs .download-detail{color:#e2f5f9}
-.auto-btp #files .main-outputs .download-pill:hover:not(:disabled){background:#09677e!important}
+.auto-btp #files .main-outputs .download-pill{border-color:var(--primary)}
 .auto-btp #machines{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px}
 .auto-btp .machine-card{border:1px solid var(--bdr);border-radius:var(--radius-sm);padding:16px;min-width:0}
 .auto-btp .machine-card p{margin:6px 0 12px;overflow-wrap:anywhere}
@@ -249,16 +247,13 @@ html[data-theme="light"] .auto-btp :is(#runtime,#progressLabel,#percent,.step,.l
 html[data-theme="light"][data-theme-style="neomorph"] body.auto-btp{--bg:var(--neo-bg);--component-surface:var(--neo-bg);--component-shadow:var(--shadow-md)}
 
 .auto-btp #outputsPanel{scroll-margin-top:110px}
-.auto-btp #files .download-pill{position:relative;isolation:isolate;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;flex-direction:row;flex:0 1 auto;gap:10px;border-radius:8px!important;padding:9px 14px;--download-progress:0%;width:auto;min-width:0;max-width:100%;box-sizing:border-box;text-align:left;min-height:40px;background:color-mix(in srgb,var(--text) 10%,var(--bg))!important;font-size:13px}
-.auto-btp #files .download-fill{position:absolute;inset:auto auto 0 0;height:4px;width:var(--download-progress);background:var(--primary);pointer-events:none;transition:width 160ms linear;z-index:2;visibility:hidden}
+.auto-btp #files .download-pill{position:relative;isolation:isolate;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;flex-direction:row;flex:0 1 auto;gap:10px;border-radius:999px!important;padding:9px 14px;--download-progress:0%;width:auto;min-width:0;max-width:100%;box-sizing:border-box;text-align:left;min-height:40px;background:transparent!important;color:var(--text);font-size:13px}
+.auto-btp #files .download-fill{position:absolute;inset:0 auto 0 0;width:var(--download-progress);background:color-mix(in srgb,var(--primary) 35%,transparent);pointer-events:none;transition:width 160ms linear;z-index:0;visibility:hidden}
+.auto-btp #files :is(.download-label,.download-detail){position:relative;z-index:1}
 .auto-btp .download-label{font-weight:600;min-width:0;overflow-wrap:anywhere}
 .auto-btp .download-detail{font-size:12px;white-space:nowrap;color:var(--dim);font-variant-numeric:tabular-nums}
 .auto-btp #files .download-pill.downloading{opacity:1!important;cursor:progress;color:var(--text)!important;-webkit-text-fill-color:currentColor}
-.auto-btp #files .download-pill.downloading::after{content:'';position:absolute;inset:auto 0 0;height:4px;background:color-mix(in srgb,var(--text) 20%,transparent);pointer-events:none;z-index:1}
 .auto-btp #files .download-pill.downloading .download-fill{visibility:visible}
-.auto-btp #files .main-outputs .download-pill.downloading{color:#fff!important}
-.auto-btp #files .main-outputs .download-fill{background:#fff}
-.auto-btp #files .main-outputs .download-pill.downloading::after{background:#055568}
 .auto-btp #files .download-pill.downloading .download-label{color:inherit!important;opacity:1!important}
 @media(max-width:600px){.auto-btp #outputsPanel{scroll-margin-top:16px}.auto-btp #files .download-pill{min-height:44px;flex-wrap:wrap;gap:4px 10px}}
 @media(prefers-reduced-motion:reduce){.auto-btp .download-fill{transition:none}}
