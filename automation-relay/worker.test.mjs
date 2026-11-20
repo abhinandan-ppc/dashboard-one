@@ -1,6 +1,27 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {Pool} from './worker.mjs';
 function fixture(){const data=new Map(),sockets=[];let tail=Promise.resolve();const storage={get:async k=>structuredClone(data.get(k)),put:async(k,v)=>data.set(k,structuredClone(v)),delete:async k=>data.delete(k),list:async({prefix='',reverse=false,limit=1000}={})=>new Map([...data].filter(([k])=>k.startsWith(prefix)).sort(([a],[b])=>reverse?b.localeCompare(a):a.localeCompare(b)).slice(0,limit)),setAlarm:async()=>{},deleteAlarm:async()=>{}};const ctx={storage,getWebSockets:()=>sockets,blockConcurrencyWhile:fn=>{const p=tail.then(fn);tail=p.catch(()=>{});return p}};const pool=new Pool(ctx,{RELAY_SECRET:'test'});const socket=(role,id)=>{const s={messages:[],deserializeAttachment:()=>({role,id,expires:Date.now()+60000}),send:raw=>s.messages.push(JSON.parse(raw)),close:()=>{}};sockets.push(s);return s};return {pool,data,storage,socket};}
 const req=id=>({id,scope:'all',account:'test',years:[2026]});
+
+test('live resume targets original PC and HTTP retry does not dispatch twice',async()=>{
+ const f=fixture();await f.storage.put('pc:p',{id:'p',ready:true,seen:Date.now(),accounts:['test'],lastRun:0});
+ const host=f.socket('agent','p'),viewer=f.socket('browser','viewer');
+ viewer.deserializeAttachment=()=>({role:'browser',id:'viewer',email:'signed-in@example.invalid',expires:Date.now()+60000});
+ await f.storage.put('run',{...req('old'),pcId:'p',status:'stopped',checkpoint:true});
+ const request={...req('resumed'),resume:true,pcId:'wrong',requestedBy:'spoofed'};
+ await f.pool.webSocketMessage(viewer,JSON.stringify({type:'runRequest',requestId:'resumed',run:request}));
+ const result=viewer.messages.find(m=>m.type==='runResult');
+ assert.equal(result.data.pcId,'p');assert.equal(result.data.requestedBy,'signed-in@example.invalid');
+ assert.equal(host.messages.length,1);assert.equal((await f.pool.state()).liveRunRequests,true);
+ await f.pool.fetch(control({action:'run',...request}));assert.equal(host.messages.length,1);
+});
+test('live run rejection is correlated and expired browser cannot launch',async()=>{
+ const f=fixture(),viewer=f.socket('browser','viewer');
+ await f.pool.webSocketMessage(viewer,JSON.stringify({type:'runRequest',requestId:'r',run:req('r')}));
+ assert.equal(viewer.messages[0].requestId,'r');assert.match(viewer.messages[0].error,/No compatible/);
+ viewer.deserializeAttachment=()=>({role:'browser',expires:0});let closed=false;viewer.close=()=>{closed=true};
+ await f.pool.webSocketMessage(viewer,JSON.stringify({type:'runRequest',requestId:'r',run:req('r')}));
+ assert.equal(closed,true);assert.equal(f.data.has('run'),false);
+});
 test('simultaneous starts reserve one PC only',async()=>{const f=fixture();await f.storage.put('pc:p',{id:'p',ready:true,seen:Date.now(),accounts:['test'],lastRun:0});const s=f.socket('agent','p');const results=await Promise.allSettled([f.pool.start(req('one')),f.pool.start(req('two'))]);assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal(s.messages.length,1)});
 test('completed request cannot replay after another run',async()=>{const f=fixture();await f.storage.put('pc:p',{id:'p',ready:true,seen:Date.now(),accounts:['test'],lastRun:0});const s=f.socket('agent','p');await f.pool.start(req('one'));await f.pool.webSocketMessage(s,JSON.stringify({type:'status',runId:'one',status:'completed'}));await f.pool.start(req('two'));const count=s.messages.length;await f.pool.start(req('one'));assert.equal(s.messages.length,count);assert.equal(f.data.get('run').id,'two')});
 test('pending credential update excludes PC',async()=>{const f=fixture();await f.storage.put('pc:p',{id:'p',ready:true,seen:Date.now(),accounts:['test'],lastRun:0});f.socket('agent','p');await f.storage.put('command:p',{action:'accounts'});await assert.rejects(f.pool.start(req('one')),/No compatible/)});

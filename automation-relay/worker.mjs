@@ -12,7 +12,7 @@ export class Pool {
  }
  sockets(role,id){return this.ctx.getWebSockets().filter(s=>{const a=s.deserializeAttachment();return a.role===role&&(!id||a.id===id)});}
  send(role,id,data){for(const s of this.sockets(role,id))try{const a=s.deserializeAttachment();if(role==='browser'&&a.expires<Date.now()){s.close(1008,'Renew authorization');continue;}s.send(JSON.stringify(data))}catch{}}
- async state(){return {run:await this.ctx.storage.get('run')||null,machines:[...(await this.ctx.storage.list({prefix:'pc:'})).values()].map(({secret,...p})=>({...p,connected:!!this.sockets('agent',p.id).length})),history:[...(await this.ctx.storage.list({prefix:'history:',reverse:true,limit:100})).values()],schedule:await this.ctx.storage.get('schedule')||null};}
+ async state(){return {liveRunRequests:true,run:await this.ctx.storage.get('run')||null,machines:[...(await this.ctx.storage.list({prefix:'pc:'})).values()].map(({secret,...p})=>({...p,connected:!!this.sockets('agent',p.id).length})),history:[...(await this.ctx.storage.list({prefix:'history:',reverse:true,limit:100})).values()],schedule:await this.ctx.storage.get('schedule')||null};}
  async broadcast(){this.send('browser',null,{type:'state',...await this.state()});}
  async fetch(request){try{
   const url=new URL(request.url);
@@ -66,6 +66,11 @@ export class Pool {
   if(typeof raw!=='string'||raw.length>400000)throw Error('Message too large');const m=JSON.parse(raw),a=ws.deserializeAttachment();
   if(a.role==='browser'){
    if(a.expires<Date.now()){ws.close(1008,'Renew authorization');return;}
+   if(m.type==='runRequest'){
+    try{const run=await this.start({...m.run,requestedBy:a.email});ws.send(JSON.stringify({type:'runResult',requestId:m.requestId,data:run}));await this.broadcast();}
+    catch(e){ws.send(JSON.stringify({type:'runResult',requestId:m.requestId,error:e.message}));}
+    return;
+   }
    if(m.type==='state'){ws.send(JSON.stringify({type:'state',...await this.state()}));return;}
    if(m.type==='read'){if(!['log','manifest','chunk'].includes(m.kind))throw Error('Invalid read');if(!this.sockets('agent',m.pcId).length){ws.send(JSON.stringify({type:'readResult',requestId:m.requestId,pcId:m.pcId,error:'This run’s PC is offline. Reconnect it to view its logs or outputs.'}));return;}this.send('agent',m.pcId,{type:'read',client:a.id,requestId:String(m.requestId).slice(0,80),kind:m.kind,runId:m.runId,file:m.file,offset:m.offset});return;}throw Error('Invalid message');
   }
