@@ -14,6 +14,43 @@ let noticeUntil=0,acknowledgedFailure=null;
 
 const notice=text=>{noticeUntil=Date.now()+8000;$('#notice').textContent=text;};
 
+const readyButton=document.createElement('button');
+readyButton.textContent='Make System Ready';
+$('#resolve').parentElement.append(readyButton);
+const readyDialog=document.createElement('dialog');
+readyDialog.innerHTML='<h2>Make System Ready</h2><p class="ready-warning"></p><p>Excel and SAP GUI will be force-closed. Unsaved work may be lost. Bot-owned processes will also be stopped. Windows must remain signed in and unlocked.</p><p class="ready-countdown" role="status"></p><div class="controls"><button type="button" class="ready-cancel">Cancel</button><button type="button" class="ready-confirm">Start 10-second countdown</button></div>';
+document.body.append(readyDialog);
+let readyTimer=null;
+function cancelReady(){clearInterval(readyTimer);readyTimer=null;readyDialog.close();}
+readyDialog.querySelector('.ready-cancel').onclick=cancelReady;
+readyDialog.addEventListener('cancel',()=>{clearInterval(readyTimer);readyTimer=null;});
+readyButton.onclick=()=>guard(async()=>{
+ const pc=state.machines.find(p=>p.id===$('#pc').value&&!p.revoked);
+ if(!pc)throw Error('Select a specific PC first.');
+ if(!finished(state.run))throw Error('Stop the active bot run first.');
+ if(!pc.connected)throw Error('The selected PC is offline.');
+ if(!pc.makeReady)throw Error('Update agent.py on the selected PC and restart its agent first.');
+ readyDialog.querySelector('.ready-warning').textContent='Target PC: '+pc.name;
+ const start=readyDialog.querySelector('.ready-confirm'),count=readyDialog.querySelector('.ready-countdown');
+ start.disabled=false;count.textContent='Nothing will close until you start the countdown.';
+ start.onclick=()=>{
+  start.disabled=true;
+  const deadline=Date.now()+10000;
+  count.textContent='Closing applications in 10 seconds…';
+  readyTimer=setInterval(()=>{
+   const remaining=Math.max(0,Math.ceil((deadline-Date.now())/1000));
+   count.textContent='Closing applications in '+remaining+' seconds…';
+   if(remaining)return;
+   cancelReady();
+   guard(async()=>{
+    await api({action:'make-ready',pcId:pc.id,confirmCloseApps:true});
+    notice('Preparation requested on '+pc.name+'. Waiting for its live readiness status.');
+   });
+  },200);
+ };
+ readyDialog.showModal();
+});
+
 async function api(body){const r=await fetch('/api/automation',{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(25000)});const data=await readAutomationResponse(r);admin=data.admin;return data;}
 
 function option(select,value,label){const o=new Option(label,value);select.add(o);}

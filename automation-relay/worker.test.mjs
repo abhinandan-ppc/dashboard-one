@@ -22,6 +22,16 @@ test('clearing checkpoints updates current run and history only after matching a
 test('heartbeat reconciles removed checkpoints but never changes active or other host runs',async()=>{for(const [pcId,status,expected] of [['p','failed',false],['other','failed',true],['p','running',true]]){const f=fixture();await f.storage.put('pc:p',{id:'p'});await f.storage.put('run',{id:'old',pcId,status,checkpoint:true});await f.pool.webSocketMessage(f.socket('agent','p'),JSON.stringify({type:'heartbeat',data:{checkpoint:false}}));assert.equal(f.data.get('run').checkpoint,expected)}});
 test('offline read returns correlated result instead of global error',async()=>{const f=fixture(),viewer=f.socket('browser','v');await f.pool.webSocketMessage(viewer,JSON.stringify({type:'read',kind:'log',pcId:'offline',requestId:'read-1'}));assert.equal(viewer.messages[0].type,'readResult');assert.equal(viewer.messages[0].requestId,'read-1');assert.match(viewer.messages[0].error,/offline/)});
 const control=(body)=>new Request('https://relay/control',{method:'POST',headers:{Authorization:'Bearer test','Content-Type':'application/json'},body:JSON.stringify(body)});
+test('prepare host requires warning confirmation and an updated idle host',async()=>{
+ const f=fixture();await f.storage.put('pc:p',{id:'p',makeReady:true,seen:Date.now(),ready:true});const host=f.socket('agent','p');
+ assert.equal((await f.pool.fetch(control({action:'make-ready',pcId:'p'}))).status,409);
+ await f.storage.put('run',{pcId:'p',status:'running'});
+ assert.equal((await f.pool.fetch(control({action:'make-ready',pcId:'p',confirmCloseApps:true}))).status,409);
+ await f.storage.delete('run');
+ assert.equal((await f.pool.fetch(control({action:'make-ready',pcId:'p',confirmCloseApps:true}))).status,200);
+ assert.equal(host.messages[0].action,'make-ready');assert.ok(host.messages[0].expiresAt>Date.now());
+ assert.equal(f.data.get('pc:p').ready,false);assert.ok(f.data.has('command:p'));
+});
 test('remove deletes enrollment and pending work and clears terminal continuation',async()=>{const f=fixture();await f.storage.put('pc:p',{id:'p'});await f.storage.put('command:p',{id:'old'});await f.storage.put('run',{id:'old',pcId:'p',status:'failed',checkpoint:true});const response=await f.pool.fetch(control({action:'remove',pcId:'p'}));assert.equal(response.status,200);assert.equal(f.data.has('pc:p'),false);assert.equal(f.data.has('command:p'),false);assert.equal(f.data.get('run').checkpoint,false)});
 test('remove rejects an active execution host',async()=>{const f=fixture();await f.storage.put('pc:p',{id:'p'});await f.storage.put('run',{pcId:'p',status:'running'});assert.equal((await f.pool.fetch(control({action:'remove',pcId:'p'}))).status,409);assert.equal(f.data.has('pc:p'),true)});
 test('banner clear targets original run and exposes pending confirmation',async()=>{const f=fixture();await f.storage.put('pc:p',{id:'p'});await f.storage.put('run',{id:'old',pcId:'p',status:'failed',checkpoint:true});assert.equal((await f.pool.fetch(control({action:'clear',pcId:'p',runId:'other'}))).status,409);assert.equal((await f.pool.fetch(control({action:'clear',pcId:'p',runId:'old'}))).status,200);assert.equal(f.data.get('pc:p').checkpointClearing,true);assert.equal(f.data.get('run').checkpoint,true)});

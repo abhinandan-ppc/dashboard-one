@@ -32,6 +32,20 @@ export class Pool {
   if(action==='run'){const run=await this.start(b);await this.broadcast();return json(run);}
   if(action==='stop'){const run=await this.ctx.storage.get('run');if(!terminal(run)){await this.ctx.storage.put('run',{...run,status:'stopping'});this.send('agent',run.pcId,{type:'command',action:'stop',runId:run.id});}return json({ok:true});}
   if(action==='resolve'){const run=await this.ctx.storage.get('run');if(!b.confirmStopped)throw Error('Confirm workflow is stopped');if(run)await this.ctx.storage.put('run',{...run,status:'stopped',checkpoint:true});await this.broadcast();return json({ok:true});}
+  if(action==='make-ready')return await this.locked(async()=>{
+   if(!b.confirmCloseApps)throw Error('Confirm that unsaved SAP and Excel work may be lost');
+   if(!terminal(await this.ctx.storage.get('run')))throw Error('Stop the active bot run before preparing a PC');
+   const pc=await this.ctx.storage.get('pc:'+b.pcId);
+   if(!pc||pc.revoked||!this.sockets('agent',b.pcId).length||Date.now()-pc.seen>30000)throw Error('Select an online PC');
+   if(!pc.makeReady)throw Error('Update agent.py on this PC and restart its agent first');
+   if(await this.ctx.storage.get('command:'+b.pcId))throw Error('Wait for pending maintenance');
+   const command={type:'command',action,id:crypto.randomUUID(),expiresAt:Date.now()+15000};
+   await this.ctx.storage.put('command:'+b.pcId,command);
+   await this.ctx.storage.put('pc:'+b.pcId,{...pc,ready:false,reason:'Preparing system'});
+   this.send('agent',b.pcId,command);
+   await this.broadcast();
+   return json({ok:true});
+  });
   if(['setup','clear','accounts'].includes(action)){
    if(!terminal(await this.ctx.storage.get('run')))throw Error('Stop automation before maintenance');
    const current=await this.ctx.storage.get('run');if(action==='clear'&&b.runId&&(current?.id!==b.runId||current?.pcId!==b.pcId))throw Error('The workflow changed. Refresh before clearing its checkpoint');
@@ -59,7 +73,7 @@ export class Pool {
   if(m.type==='localRequest'){
    try{if(m.action==='stop'){const run=await this.ctx.storage.get('run');if(run?.pcId===a.id&&!terminal(run)){await this.ctx.storage.put('run',{...run,status:'stopping'});this.send('agent',a.id,{type:'command',action:'stop',runId:run.id});}}else await this.start({...m,pcId:a.id,requestedBy:'local:'+a.id});ws.send(JSON.stringify({type:'localReply',id:m.id}));await this.broadcast();}catch(e){ws.send(JSON.stringify({type:'localReply',id:m.id,error:e.message}));}return;
   }
-  if(m.type==='heartbeat'){const d=m.data||{};await this.ctx.storage.put('pc:'+a.id,{...pc,seen:Date.now(),ready:!!d.ready,reason:String(d.reason||''),accounts:d.accounts||[],accountSlots:d.accountSlots||[],version:d.version,checkpoint:!!d.checkpoint,accountVersion:d.accountVersion,files:d.files||[]});if(d.checkpoint===false)await this.clearCheckpoint(a.id);const run=await this.ctx.storage.get('run');if(run?.pcId===a.id&&!terminal(run))this.send('agent',a.id,{type:'command',action:run.status==='stopping'?'stop':'run',run,runId:run.id});const cmd=await this.ctx.storage.get('command:'+a.id);if(cmd)this.send('agent',a.id,cmd);await this.broadcast();return;}
+  if(m.type==='heartbeat'){const d=m.data||{};await this.ctx.storage.put('pc:'+a.id,{...pc,seen:Date.now(),makeReady:!!d.makeReady,ready:!!d.ready,reason:String(d.reason||''),accounts:d.accounts||[],accountSlots:d.accountSlots||[],version:d.version,checkpoint:!!d.checkpoint,accountVersion:d.accountVersion,files:d.files||[]});if(d.checkpoint===false)await this.clearCheckpoint(a.id);const run=await this.ctx.storage.get('run');if(run?.pcId===a.id&&!terminal(run))this.send('agent',a.id,{type:'command',action:run.status==='stopping'?'stop':'run',run,runId:run.id});const cmd=await this.ctx.storage.get('command:'+a.id);if(cmd)this.send('agent',a.id,cmd);await this.broadcast();return;}
   if(m.type==='ack'){const cmd=await this.ctx.storage.get('command:'+a.id);if(cmd?.id===m.id){if(cmd.action==='clear'){await this.clearCheckpoint(a.id);await this.ctx.storage.put('pc:'+a.id,{...pc,checkpoint:false,checkpointClearing:false});}await this.ctx.storage.delete('command:'+a.id);await this.broadcast();}return;}
   if(m.type==='status'){const run=await this.ctx.storage.get('run');if(run?.id!==m.runId||run.pcId!==a.id)return;if(!['running','completed','failed','stopped'].includes(m.status))throw Error('Invalid status');const next={...run,status:m.status,checkpoint:!!m.checkpoint,updatedAt:Date.now(),stage:m.stage||0,error:String(m.error||'').slice(0,500)};await this.ctx.storage.put('run',next);if(terminal(next)){await this.ctx.storage.put('history:'+next.createdAt,next);await this.ctx.storage.put('pc:'+a.id,{...pc,lastRun:Date.now()});}await this.broadcast();return;}
   if(m.type==='readResult')this.send('browser',m.client,{...m,pcId:a.id});
