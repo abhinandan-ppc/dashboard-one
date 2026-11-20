@@ -16,6 +16,18 @@ in Cloudflare. The page requires the originating PC online for logs/downloads.
 
 ## Deploy to your free Cloudflare account
 
+For the existing `dashboard-one-automation-dev` relay, deploy with its dedicated
+configuration (PowerShell):
+
+    $env:NODE_USE_SYSTEM_CA='1'
+    npx wrangler deploy --config wrangler.dev.jsonc
+
+This preserves `POOL_NAME=development`, which selects the existing enrolled-PC
+state. Using only `--name dashboard-one-automation-dev` with the default config
+omits that variable and opens a different, empty pool. Do not re-enroll hosts to
+repair a pool-name mismatch. The system CA setting enables the Windows trust
+store without disabling TLS certificate verification.
+
 From this directory:
 
     npx wrangler login
