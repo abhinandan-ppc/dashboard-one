@@ -141,7 +141,7 @@ async function outputs(){
   files.replaceChildren();
   if(!manifest.files?.length)files.textContent='No output files are available for this run.';
   for(const group of outputGroups(manifest.files||[])){
-   const section=document.createElement('section');section.className='output-group'+(group.main?' main-outputs':'');
+   const section=document.createElement('div');section.className='output-group'+(group.main?' main-outputs':'');
    const heading=document.createElement('h3');heading.textContent=group.title;section.append(heading);
    files.append(section);
   for(const f of group.files){
