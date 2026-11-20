@@ -3016,7 +3016,8 @@ function fetchStatusShow(phase, source){
   var lbl = document.getElementById('fetchStatusLabel');
   if(lbl){
     var act = Object.keys(_fetchStatusActive);
-    if(act.length > 1) lbl.textContent = 'Syncing ' + act.map(fetchSrcName).join(', ') + '…';
+    lbl.title = 'Syncing ' + act.map(fetchSrcName).join(', ');
+    if(act.length > 1) lbl.textContent = 'Syncing sheets…';
     else lbl.textContent = (phase === 'parsing' ? 'Validating ' : 'Fetching ') + fetchSrcName(source) + '…';
   }
   var bar = document.getElementById('fetchStatusBar');
