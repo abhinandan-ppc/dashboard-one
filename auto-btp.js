@@ -1,5 +1,6 @@
 import {cleanAutomationLog,logEntries,workflowStepState,batchProgress,workflowOutcome} from './automation-log.js';
 import {readAutomationResponse} from './automation-response.js';
+import {outputGroups} from './automation-outputs.js';
 
 import {availability,selectedHostAvailability,hostStatus,statusLabel} from './automation-status.js';
 
@@ -139,7 +140,11 @@ async function outputs(){
   if(request!==outputRequest||selected?.id!==run?.id)return;
   files.replaceChildren();
   if(!manifest.files?.length)files.textContent='No output files are available for this run.';
-  for(const f of manifest.files||[]){
+  for(const group of outputGroups(manifest.files||[])){
+   const section=document.createElement('section');section.className='output-group'+(group.main?' main-outputs':'');
+   const heading=document.createElement('h3');heading.textContent=group.title;section.append(heading);
+   files.append(section);
+  for(const f of group.files){
    const button=document.createElement('button');button.className='download-pill';
    const fill=document.createElement('span');fill.className='download-fill';fill.setAttribute('aria-hidden','true');
    const label=document.createElement('span');label.className='download-label';
@@ -168,7 +173,8 @@ async function outputs(){
     }catch(error){progress(0,'Failed · click to retry');throw error}
     finally{button.disabled=false;button.classList.remove('downloading');button.removeAttribute('aria-busy')}
    });
-   files.append(button);
+   section.append(button);
+  }
   }
  }catch(error){if(request===outputRequest)files.textContent=error.message+' Use Load outputs to retry.';throw error}
  finally{if(request===outputRequest)files.removeAttribute('aria-busy')}
