@@ -13,4 +13,15 @@ test('presentation removes banners and preserves top-to-bottom messages',()=>{co
 test('completed scope ticks final step without marking unrelated scopes done',()=>{assert.equal(workflowStepState(17,18,'completed','all').done,true);assert.equal(workflowStepState(17,0,'completed','ebtp').done,true);assert.equal(workflowStepState(9,0,'completed','ebtp').skipped,true);assert.equal(workflowStepState(17,18,'running','all').active,true);assert.equal(workflowStepState(17,18,'failed','all').done,false)});
 
 import {batchProgress} from '../automation-log.js';
+import {workflowOutcome} from '../automation-log.js';
+test('cleanup failure preserves verified workflow completion without hiding unverified output failures',()=>{
+ const run={id:'r',status:'failed',error:'Post-run process cleanup failed: AccessDenied: (pid=5572)'};
+ assert.equal(workflowOutcome(run),'failed');
+ assert.equal(workflowOutcome(run,{run:{id:'other'},status:'completed'}),'failed');
+ assert.equal(workflowOutcome(run,{run:{id:'r'},status:'failed'}),'failed');
+ assert.equal(workflowOutcome(run,{run:{id:'r'},status:'completed'}),'completed');
+ assert.equal(workflowOutcome({...run,workflowStatus:'completed'}),'completed');
+ assert.equal(workflowOutcome({...run,error:'Expected fresh outputs are missing',workflowStatus:'failed'}),'failed');
+ assert.equal(workflowStepState(17,18,workflowOutcome(run,{run:{id:'r'},status:'completed'})).done,true);
+});
 test('reads planned and resumed BTP batch counts',()=>{assert.deepEqual(batchProgress('AUTO-PLANNED BATCHES: 12 balanced batches'),{total:12,current:0});assert.deepEqual(batchProgress('--- Batch 7/12 : SOs 1801-2100 ---'),{total:12,current:7});assert.deepEqual(batchProgress(''),{total:0,current:0})});

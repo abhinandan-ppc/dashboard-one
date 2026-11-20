@@ -1,4 +1,4 @@
-import {cleanAutomationLog,logEntries,workflowStepState,batchProgress} from './automation-log.js';
+import {cleanAutomationLog,logEntries,workflowStepState,batchProgress,workflowOutcome} from './automation-log.js';
 import {readAutomationResponse} from './automation-response.js';
 
 import {availability,selectedHostAvailability,hostStatus,statusLabel} from './automation-status.js';
@@ -64,10 +64,22 @@ function runningStep(run){
  return label.textContent.trim()+(stage===8&&batch.current?` · Batch ${batch.current} of ${batch.total}`:'');
 }
 
-function renderAvailability(){const selectedPC=$('#pc').value;const status=selectedHostAvailability(state,selectedPC);const failed=state.run?.status==='failed'&&acknowledgedFailure!==state.run.id;if(failed&&!selectedPC){status.label='Failed';status.tone='danger';status.message=state.run.error||'The last workflow failed. Resume its checkpoint or start afresh.'}$('#status').textContent=refreshingPC?'Refreshing':status.label;$('#status').dataset.tone=refreshingPC?'warning':status.tone;$('#notice').dataset.tone=status.tone;$('#progressLabel').textContent=failed?'Failed':finished(state.run)?(status.canRun?'Ready to run':'Waiting for an available PC'):`${availability(state).label} · ${runningStep(state.run)}`;if(refreshingPC)$('#notice').textContent='Refreshing PC status…';else if(Date.now()>noticeUntil)$('#notice').textContent=status.message;$('#run').disabled=launchPending||(finished(state.run)&&!status.canRun);$('#resume').disabled=launchPending;$('#fresh').disabled=launchPending;}
+function renderAvailability(){const selectedPC=$('#pc').value;const status=selectedHostAvailability(state,selectedPC);const failed=state.run?.status==='failed'&&acknowledgedFailure!==state.run.id;if(failed&&!selectedPC){status.label='Failed';status.tone='danger';status.message=state.run.error||'The last workflow failed. Resume its checkpoint or start afresh.'}$('#status').textContent=refreshingPC?'Refreshing':status.label;$('#status').dataset.tone=refreshingPC?'warning':status.tone;$('#notice').dataset.tone=status.tone;$('#progressLabel').textContent=workflowOutcome(selected,verifiedManifests.get(selected?.id))==='completed'?(selected?.status==='failed'?'Completed · PC cleanup needs attention':'Completed'):failed?'Failed':finished(state.run)?(status.canRun?'Ready to run':'Waiting for an available PC'):`${availability(state).label} · ${runningStep(state.run)}`;if(refreshingPC)$('#notice').textContent='Refreshing PC status…';else if(Date.now()>noticeUntil)$('#notice').textContent=status.message;$('#run').disabled=launchPending||(finished(state.run)&&!status.canRun);$('#resume').disabled=launchPending;$('#fresh').disabled=launchPending;}
 
 let stateLoaded=false;const observedRuns=new Set(),lastStages=new Map(),revealedOutputs=new Set();
 let lastLogState='';
+const verifiedManifests=new Map(),verifyingCleanup=new Set();
+async function verifyCleanupOutcome(run){
+ if(run?.status!=='failed'||!String(run.error||'').startsWith('Post-run process cleanup failed:')||verifiedManifests.has(run.id)||verifyingCleanup.has(run.id))return;
+ verifyingCleanup.add(run.id);
+ try{
+  const manifest=await read('manifest',{},run);
+  if(manifest?.run?.id!==run.id)return;
+  verifiedManifests.set(run.id,manifest);
+  if(selected?.id===run.id){paintWorkflow(selected,lastStages.get(run.id)||selected.stage||0);renderAvailability()}
+ }catch{/* Retain failure until the host confirms the saved output manifest. */}
+ finally{verifyingCleanup.delete(run.id)}
+}
 
 function render(data){const previousRunId=state.run?.id,previousSelectedId=selected?.id;stateLoaded=true;state=data;const run=state.run;const revealOutputs=run&&finished(run)&&observedRuns.has(run.id)&&!revealedOutputs.has(run.id);renderAvailability();$('#run').textContent=finished(run)?'Start':'Stop';$('#run').classList.toggle('stop',!finished(run));$('#run').classList.toggle('primary',finished(run));if(run&&!finished(run))observedRuns.add(run.id);
 
@@ -244,9 +256,10 @@ function renderHostPicker(){
 }
 
 function paintWorkflow(run,stage=0){
+ verifyCleanupOutcome(run);
  if(!run)renderBatches('');
  let done=0,total=0;
- document.querySelectorAll('.step').forEach((el,i)=>{const step=run?workflowStepState(i,stage,run.status,run.scope):{done:false,active:false,skipped:false,failed:false};for(const name of ['done','active','skipped','failed'])el.classList.toggle(name,step[name]);if(!step.skipped)total++;if(step.done)done++;const badge=el.querySelector('.badge');badge.textContent=step.done?'✓':step.failed?'!':step.skipped?'—':String(i+1);badge.setAttribute('aria-label',step.done?'Completed':step.failed?'Stopped here':step.active?'In progress':step.skipped?'Not selected':`Step ${i+1}`)});
+ document.querySelectorAll('.step').forEach((el,i)=>{const step=run?workflowStepState(i,stage,workflowOutcome(run,verifiedManifests.get(run.id)),run.scope):{done:false,active:false,skipped:false,failed:false};for(const name of ['done','active','skipped','failed'])el.classList.toggle(name,step[name]);if(!step.skipped)total++;if(step.done)done++;const badge=el.querySelector('.badge');badge.textContent=step.done?'✓':step.failed?'!':step.skipped?'—':String(i+1);badge.setAttribute('aria-label',step.done?'Completed':step.failed?'Stopped here':step.active?'In progress':step.skipped?'Not selected':`Step ${i+1}`)});
  $('progress').value=run?.status==='completed'?100:Math.round(done/Math.max(1,total)*100);$('#percent').textContent=$('progress').value+'%';
 }
 // Top-layer menus sample the actual page backdrop, outside ancestor blur layers.

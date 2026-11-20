@@ -31,6 +31,13 @@ export function workflowStepState(index,stage,status,scope='all'){
  return {done:included&&(status==='completed'||index<stage-1),active:included&&index===stage-1&&!['completed','failed','stopped','missed'].includes(status),skipped:!included,failed:included&&index===stage-1&&['failed','stopped'].includes(status)};
 }
 
+export function workflowOutcome(run,manifest){
+ if(!run)return undefined;
+ const cleanupFailure=run.status==='failed'&&String(run.error||'').startsWith('Post-run process cleanup failed:');
+ if(cleanupFailure&&(run.workflowStatus==='completed'||(manifest?.run?.id===run.id&&manifest.status==='completed')))return 'completed';
+ return run.status;
+}
+
 export function batchProgress(text){
  const plan=[...text.matchAll(/AUTO-PLANNED BATCHES:\s*(\d+)/gi)].at(-1);
  const batch=[...text.matchAll(/---\s*Batch\s+(\d+)\s*\/\s*(\d+)/gi)].at(-1);
