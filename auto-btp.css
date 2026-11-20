@@ -64,6 +64,10 @@ body.auto-btp{margin:0;background:var(--bg);color:var(--text);font-size:14px}
 .auto-btp .output-controls label{max-width:640px}
 .auto-btp #files{padding:16px 0;margin:0 0 16px;border-bottom:1px solid var(--bdr);color:var(--dim)}
 .auto-btp #files button{text-align:left;overflow-wrap:anywhere}
+.auto-btp #files .output-group{width:100%;display:flex;flex-wrap:wrap;gap:10px;padding:12px 0}
+.auto-btp #files .output-group h3{width:100%;margin:0 0 4px;font-size:14px;color:var(--fg)}
+.auto-btp #files .main-outputs{border-bottom:1px solid var(--bdr);padding-bottom:20px}
+.auto-btp #files .main-outputs .download-pill{border:2px solid #0bafd4;font-weight:600;background:rgba(11,175,212,.1)}
 .auto-btp #machines{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px}
 .auto-btp .machine-card{border:1px solid var(--bdr);border-radius:var(--radius-sm);padding:16px;min-width:0}
 .auto-btp .machine-card p{margin:6px 0 12px;overflow-wrap:anywhere}
