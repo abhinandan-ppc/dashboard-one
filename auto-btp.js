@@ -14,7 +14,7 @@ let noticeUntil=0,acknowledgedFailure=null;
 
 const notice=text=>{noticeUntil=Date.now()+8000;$('#notice').textContent=text;};
 
-async function api(body){const r=await fetch('/api/automation',{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(15000)});const data=await readAutomationResponse(r);admin=data.admin;return data;}
+async function api(body){const r=await fetch('/api/automation',{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(25000)});const data=await readAutomationResponse(r);admin=data.admin;return data;}
 
 function option(select,value,label){const o=new Option(label,value);select.add(o);}
 
@@ -27,12 +27,12 @@ function runningStep(run){
  return label.textContent.trim()+(stage===8&&batch.current?` · Batch ${batch.current} of ${batch.total}`:'');
 }
 
-function renderAvailability(){const selectedPC=$('#pc').value;const status=availability(selectedPC?{...state,machines:state.machines.filter(p=>p.id===selectedPC)}:state);const failed=state.run?.status==='failed'&&acknowledgedFailure!==state.run.id;if(failed){status.label='Failed';status.tone='danger';status.message=state.run.error||'The last workflow failed. Resume its checkpoint or start afresh.'}$('#status').textContent=status.label;$('#status').dataset.tone=status.tone;$('#notice').dataset.tone=status.tone;$('#progressLabel').textContent=failed?'Failed':finished(state.run)?(status.canRun?'Ready to run':'Waiting for an available PC'):`${status.label} · ${runningStep(state.run)}`;if(Date.now()>noticeUntil)$('#notice').textContent=status.message;$('#run').disabled=finished(state.run)&&!status.canRun;}
+function renderAvailability(){const selectedPC=$('#pc').value;const status=availability(selectedPC&&finished(state.run)?{...state,machines:state.machines.filter(p=>p.id===selectedPC)}:state);const failed=state.run?.status==='failed'&&acknowledgedFailure!==state.run.id;if(failed){status.label='Failed';status.tone='danger';status.message=state.run.error||'The last workflow failed. Resume its checkpoint or start afresh.'}$('#status').textContent=status.label;$('#status').dataset.tone=status.tone;$('#notice').dataset.tone=status.tone;$('#progressLabel').textContent=failed?'Failed':finished(state.run)?(status.canRun?'Ready to run':'Waiting for an available PC'):`${status.label} · ${runningStep(state.run)}`;if(Date.now()>noticeUntil)$('#notice').textContent=status.message;$('#run').disabled=finished(state.run)&&!status.canRun;}
 
 let stateLoaded=false;const observedRuns=new Set(),lastStages=new Map(),revealedOutputs=new Set();
 let lastLogState='';
 
-function render(data){const previousRunId=state.run?.id;stateLoaded=true;state=data;const run=state.run;const revealOutputs=run&&finished(run)&&observedRuns.has(run.id)&&!revealedOutputs.has(run.id);renderAvailability();$('#run').textContent=finished(run)?'Start':'Stop';$('#run').classList.toggle('stop',!finished(run));$('#run').classList.toggle('primary',finished(run));if(run&&!finished(run))observedRuns.add(run.id);
+function render(data){const previousRunId=state.run?.id,previousSelectedId=selected?.id;stateLoaded=true;state=data;const run=state.run;const revealOutputs=run&&finished(run)&&observedRuns.has(run.id)&&!revealedOutputs.has(run.id);renderAvailability();$('#run').textContent=finished(run)?'Start':'Stop';$('#run').classList.toggle('stop',!finished(run));$('#run').classList.toggle('primary',finished(run));if(run&&!finished(run))observedRuns.add(run.id);
 
  const accounts=$('#accounts'),previous=accounts.value;accounts.replaceChildren();for(const uid of new Set(state.machines.filter(p=>!p.revoked&&(!$('#pc').value||p.id===$('#pc').value)).flatMap(p=>p.accounts||[]).filter(uid=>typeof uid==='string'&&uid.trim()&&!/"|&\s*UID\d/i.test(uid))))option(accounts,uid,uid);accounts.value=[...accounts.options].some(o=>o.value===previous)?previous:accounts.options[0]?.value||'';
 
@@ -45,7 +45,7 @@ function render(data){const previousRunId=state.run?.id;stateLoaded=true;state=d
 
  const history=$('#history'),choice=history.value;history.replaceChildren();if(!run||(run.status==='completed'&&!observedRuns.has(run.id)))option(history,'','New run');if(run)option(history,run.id,`Current: ${statusLabel(run.status)}`);for(const r of state.history||[])if(r.id!==run?.id)option(history,r.id,`${new Date(r.createdAt).toLocaleString()} — ${r.status}`);if(revealOutputs||(run&&!finished(run)&&run.id!==previousRunId))history.value=run.id;else if([...history.options].some(o=>o.value===choice))history.value=choice;
 
- if(!history.options.length)option(history,'','No runs yet');history.disabled=![...history.options].some(o=>o.value);$('#downloadRefresh').disabled=!history.value;selected=[run,...state.history||[]].find(r=>r?.id===history.value);if(selected?.id!==previousRunId)renderBatches('');if(!selected){paintWorkflow(null);$('#runtime').textContent='Runtime --';}else if(selected.id!==previousRunId||finished(selected)){paintWorkflow(selected,selected.stage||lastStages.get(selected.id)||0)}for(const el of document.querySelectorAll('[data-admin]'))el.hidden=!admin;
+ if(!history.options.length)option(history,'','No runs yet');history.disabled=![...history.options].some(o=>o.value);$('#downloadRefresh').disabled=!history.value;selected=[run,...state.history||[]].find(r=>r?.id===history.value);if(!selected&&run&&!finished(run)){selected=run;history.value=run.id;}if(selected&&selected.id!==previousSelectedId){renderLogView(selected.id,logSnapshots.get(selected.id)||'');}if(selected?.id!==previousRunId)renderBatches('');if(!selected){paintWorkflow(null);$('#runtime').textContent='Runtime --';}else if(selected.id!==previousRunId||finished(selected)){paintWorkflow(selected,selected.stage||lastStages.get(selected.id)||0)}for(const el of document.querySelectorAll('[data-admin]'))el.hidden=!admin;
 
  $('#checkpoint').hidden=!run?.checkpoint||!finished(run);const origin=state.machines.find(p=>p.id===run?.pcId);$('#clear').disabled=!run?.checkpoint||!!origin?.checkpointClearing;$('#clear').textContent=origin?.checkpointClearing?'Clearing checkpoint…':'Clear checkpoint';$('#checkpointMessage').textContent=origin?.checkpointClearing?`Waiting for ${origin.name} to confirm checkpoint clearing${origin.connected?'':'; reconnect this PC to finish'}.`:`Resume on ${origin?.name||'the original PC'} or start afresh.`;$('#activityTitle').textContent=selected?.error||'Live output from the selected PC.';
  if(revealOutputs){revealedOutputs.add(run.id);$('#outputsPanel').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});guard(outputs);}
@@ -69,10 +69,10 @@ async function connect(){
   ws.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='state')render(m);else if(m.type==='readResult'){const p=pending.get(m.requestId);if(p){pending.delete(m.requestId);m.error?p.reject(Error(m.error)):p.resolve(m.data)}}else if(m.error)notice(m.error)}catch{$('#activityTitle').textContent='Unable to read a live update. Retrying…'}};
   ws.onclose=()=>{clearTimeout(opening);clearTimeout(renewTimer);connecting=false;for(const p of pending.values())p.reject(Error('Live connection interrupted'));pending.clear();$('#activityTitle').textContent='Reconnecting live updates… Last received log is preserved.';retryConnection()};
   ws.onerror=()=>ws.close();
- }catch(e){connecting=false;$('#activityTitle').textContent=`Live updates unavailable: ${e.message}. Retrying…`;retryConnection()}
+ }catch(e){connecting=false;$('#activityTitle').textContent=`Live updates unavailable: ${e.name==='TimeoutError'?'Dashboard authorization request timed out; this does not mean the Bot PC stopped':e.message}. Retrying…`;retryConnection()}
 }
 window.addEventListener('online',()=>{clearTimeout(reconnectTimer);connect()});
-setInterval(()=>{if(socket?.readyState!==1&&!document.hidden)api().then(render).catch(()=>{})},15000);
+setInterval(()=>{if(socket?.readyState!==1&&!connecting&&!document.hidden)api().then(render).catch(()=>{})},15000);
 
 
 function read(kind,extra={},run=selected){return new Promise((resolve,reject)=>{if(!run)return reject(Error('Choose a run'));if(socket?.readyState!==1)return reject(Error('Relay disconnected'));if(!state.machines.some(p=>p.id===run.pcId&&p.connected&&!p.revoked))return reject(Error('This run’s PC is offline. Reconnect it to view its logs or outputs.'));const requestId=crypto.randomUUID();pending.set(requestId,{resolve,reject});socket.send(JSON.stringify({type:'read',pcId:run.pcId,runId:run.id,kind,requestId,...extra}));setTimeout(()=>{if(pending.delete(requestId))reject(Error('PC did not respond'))},15000)});}
@@ -209,7 +209,7 @@ async function refreshPCStatus(){
  const buttons=[$('#refresh'),$('#headerRefresh')].filter(Boolean);
  buttons.forEach(b=>{b.disabled=true;b.setAttribute('aria-busy','true')});
  $('#refresh').textContent='Refreshing…';
- try{const fresh=await api();acknowledgedFailure=fresh.run?.id;noticeUntil=0;render(fresh)}
+ try{if(socket?.readyState===1){socket.send(JSON.stringify({type:'state'}));logs();}else{connect();}const fresh=await api();acknowledgedFailure=fresh.run?.id;noticeUntil=0;render(fresh)}
  finally{refreshingPC=false;buttons.forEach(b=>{b.disabled=false;b.removeAttribute('aria-busy')});$('#refresh').textContent='Refresh PC status'}
 }
 window.addEventListener('message',event=>{
