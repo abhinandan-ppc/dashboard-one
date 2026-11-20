@@ -26,8 +26,7 @@
     '.btn',
     '.action-btn',
     '.tbtn',
-    '.data-table-wrap tbody tr',
-    'table tbody tr'
+    '.panel'
   ].join(', ');
 
   /* ── Card cursor tilt selectors (KPI cards + index dashboard cards only) ── */
@@ -82,6 +81,9 @@
       el.remove();
     });
   }
+  window.addEventListener('blur', clearPointerEffects);
+  document.addEventListener('pointerleave', clearPointerEffects);
+  window.addEventListener('scroll', clearPointerEffects, { passive: true, capture: true });
 
   if (motionQuery) {
     var onMotionPreferenceChange = function(e) {
@@ -135,7 +137,7 @@
 
     // Ripple click interaction
     el.addEventListener('pointerdown', function(e) {
-      if (prefersReducedMotion()) return;
+      if (prefersReducedMotion() || e.pointerType === 'touch' || e.target.closest('.has-glow-fx') !== el) return;
       // Don't intercept clicks on inputs, toggles or select boxes
       var targetTag = e.target.tagName ? e.target.tagName.toLowerCase() : '';
       if (targetTag === 'input' || targetTag === 'select' || targetTag === 'textarea') return;
@@ -161,6 +163,7 @@
 
   function initTilt(el) {
     if (el.dataset.tiltReady) return;
+    if (el.hasAttribute('data-card-tilt')) return;
 
     // Never tilt page header bars / shells (or anything inside them),
     // even if they carry a card class
@@ -210,7 +213,7 @@
   // Global mouse tracker with edge detection and proximity falloff
   var ticking = false;
   window.addEventListener('pointermove', function(e) {
-    if (prefersReducedMotion() || e.pointerType === 'touch') return;
+    if (prefersReducedMotion() || e.pointerType === 'touch') { clearPointerEffects(); return; }
     if (ticking) return;
     ticking = true;
 
