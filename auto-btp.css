@@ -67,7 +67,8 @@ body.auto-btp{margin:0;background:var(--bg);color:var(--text);font-size:14px}
 .auto-btp #files .output-group{box-sizing:border-box;width:100%;min-width:0;display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;margin:0;padding:10px 0}
 .auto-btp #files .output-group h3{flex-basis:100%;margin:0 0 4px;font-size:14px;color:var(--text)}
 .auto-btp #files .output-group+.output-group{border-top:1px solid var(--bdr);padding-top:20px}
-.auto-btp #files .main-outputs .download-pill{border-color:var(--primary)}
+.auto-btp #files .download-pill{border:1px solid var(--bdrHi)!important}
+.auto-btp #files .main-outputs .download-pill{border-color:var(--primary)!important}
 .auto-btp #machines{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px}
 .auto-btp .machine-card{border:1px solid var(--bdr);border-radius:var(--radius-sm);padding:16px;min-width:0}
 .auto-btp .machine-card p{margin:6px 0 12px;overflow-wrap:anywhere}
