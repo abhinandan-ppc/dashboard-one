@@ -1,9 +1,18 @@
 export function statusLabel(status){return ({ready:'Ready',reserved:'Starting',running:'Running',stopping:'Stopping',completed:'Completed',failed:'Failed',stopped:'Stopped',missed:'Missed'})[status]||'Checking';}
 export function hostStatus(pc,run,now=Date.now()) {
-  const online=!!pc?.connected&&now-(pc.seen||0)<30000;
+  const online=!!pc?.connected&&!pc.revoked&&now-(pc.seen||0)<30000;
   if(run&&run.pcId===pc?.id&&!['completed','failed','stopped','missed'].includes(run.status))return online?'Running':'Offline';
   if(!online)return 'Offline';
-  return pc.ready?'Ready':'Failed';
+  return pc.ready?'Ready':'Not ready';
+}
+export function selectedHostAvailability(state,pcId,now=Date.now()){
+  if(!pcId)return availability(state,now);
+  const pc=(state.machines||[]).find(p=>p.id===pcId);
+  const label=hostStatus(pc,state.run,now);
+  const active=state.run&&!['completed','failed','stopped','missed'].includes(state.run.status);
+  const detail=label==='Not ready'?(pc?.reason||'Host prerequisites are not ready.'):label==='Offline'?'Host is offline or its heartbeat is out of date.':label;
+  return {label,tone:label==='Ready'?'success':label==='Offline'?'danger':'warning',
+    message:(pc?.name||'Selected PC')+': '+detail,canRun:!active&&label==='Ready'};
 }
 export function availability(state,now=Date.now()) {
   const machines=(state.machines||[]).filter(p=>!p.revoked);
@@ -16,6 +25,6 @@ export function availability(state,now=Date.now()) {
   }
   if(!machines.length)return {tone:'danger',label:'Offline',message:'Enroll a host PC to run automation.',canRun:false};
   if(ready.length)return {tone:'success',label:'Ready',message:`${ready.length} PC${ready.length===1?' is':'s are'} ready. Run automation will select an available PC.`,canRun:true};
-  if(online.length)return {tone:'danger',label:'Failed',message:online.map(p=>`${p.name}: ${p.reason||'Not ready'}`).join(' · '),canRun:false};
+  if(online.length)return {tone:'warning',label:'Not ready',message:online.map(p=>`${p.name}: ${p.reason||'Not ready'}`).join(' · '),canRun:false};
   return {tone:'danger',label:'Offline',message:'No execution PC is connected. Start the host agent and sign in to Windows.',canRun:false};
 }
