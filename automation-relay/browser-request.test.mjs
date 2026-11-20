@@ -1,0 +1,38 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import {readFileSync} from 'node:fs';
+const source=readFileSync(new URL('../auto-btp.js',import.meta.url),'utf8');
+const submit=source.slice(source.indexOf('async function submitRun('),source.indexOf('async function launch('));
+function setup(live=true){
+ const messages=[],calls=[],notices=[],context={state:{liveRunRequests:live,run:null},launchPending:false,pending:new Map(),setTimeout,clearTimeout,Error,JSON,
+  notice:m=>notices.push(m),renderAvailability(){},finished:r=>!r||r.status==='stopped',render(s){context.state=s},
+  api:async r=>{calls.push(r);return {...r,status:'reserved'}},socket:{readyState:1,send:m=>messages.push(JSON.parse(m))}};
+ vm.createContext(context);vm.runInContext(submit,context);return {context,messages,calls,notices};
+}
+test('resume shows immediate feedback and prevents repeated clicks while awaiting acknowledgement',async()=>{
+ const f=setup(),r={id:'resume-1',resume:true};const pending=f.context.submitRun(r);
+ assert.match(f.notices[0],/Sending resume/);assert.equal(f.context.launchPending,true);
+ await f.context.submitRun({id:'duplicate'});assert.equal(f.messages.length,1);
+ f.context.pending.get(r.id).resolve({...r,status:'reserved'});await pending;
+ assert.equal(f.calls.length,0);assert.equal(f.context.state.run.id,r.id);assert.equal(f.context.launchPending,false);
+});
+test('live transport interruption falls back with the same run ID; server rejection does not retry',async()=>{
+ for(const commandRejected of [false,true]){
+  const f=setup(),r={id:'stable-id'};const promise=f.context.submitRun(r);
+  f.context.pending.get(r.id).reject(Object.assign(Error('interrupted'),{commandRejected}));
+  if(commandRejected){await assert.rejects(promise);assert.equal(f.calls.length,0)}
+  else{await promise;assert.equal(f.calls[0].id,r.id)}
+ }
+});
+test('older relay uses HTTP directly without waiting for unsupported live commands',async()=>{
+ const f=setup(false);await f.context.submitRun({id:'legacy'});assert.equal(f.messages.length,0);assert.equal(f.calls.length,1);
+});
+test('refresh status survives intervening live updates and clears on completion',()=>{
+ const nodes=new Map(),context={state:{machines:[]},refreshingPC:true,launchPending:false,acknowledgedFailure:null,noticeUntil:0,Date,
+  $:s=>{if(!nodes.has(s))nodes.set(s,{value:'',dataset:{}});return nodes.get(s)},
+  selectedHostAvailability:()=>({label:'Ready',tone:'success',canRun:true,message:'Ready PC'}),finished:()=>true};
+ vm.createContext(context);vm.runInContext(source.slice(source.indexOf('function renderAvailability('),source.indexOf('let stateLoaded=')),context);
+ context.renderAvailability();context.renderAvailability();assert.equal(nodes.get('#status').textContent,'Refreshing');
+ context.refreshingPC=false;context.renderAvailability();assert.equal(nodes.get('#status').textContent,'Ready');
+});

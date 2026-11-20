@@ -10,7 +10,7 @@ let state={machines:[],history:[]},socket,selected,admin=false,pending=new Map()
 const finished=r=>!r||['completed','failed','stopped','missed'].includes(r.status);
 
 let pendingAccountUpdate=null;
-let noticeUntil=0,acknowledgedFailure=null;
+let noticeUntil=0,acknowledgedFailure=null,refreshingPC=false,launchPending=false;
 
 const notice=text=>{noticeUntil=Date.now()+8000;$('#notice').textContent=text;};
 
@@ -64,7 +64,7 @@ function runningStep(run){
  return label.textContent.trim()+(stage===8&&batch.current?` · Batch ${batch.current} of ${batch.total}`:'');
 }
 
-function renderAvailability(){const selectedPC=$('#pc').value;const status=selectedHostAvailability(state,selectedPC);const failed=state.run?.status==='failed'&&acknowledgedFailure!==state.run.id;if(failed&&!selectedPC){status.label='Failed';status.tone='danger';status.message=state.run.error||'The last workflow failed. Resume its checkpoint or start afresh.'}$('#status').textContent=status.label;$('#status').dataset.tone=status.tone;$('#notice').dataset.tone=status.tone;$('#progressLabel').textContent=failed?'Failed':finished(state.run)?(status.canRun?'Ready to run':'Waiting for an available PC'):`${availability(state).label} · ${runningStep(state.run)}`;if(Date.now()>noticeUntil)$('#notice').textContent=status.message;$('#run').disabled=finished(state.run)&&!status.canRun;}
+function renderAvailability(){const selectedPC=$('#pc').value;const status=selectedHostAvailability(state,selectedPC);const failed=state.run?.status==='failed'&&acknowledgedFailure!==state.run.id;if(failed&&!selectedPC){status.label='Failed';status.tone='danger';status.message=state.run.error||'The last workflow failed. Resume its checkpoint or start afresh.'}$('#status').textContent=refreshingPC?'Refreshing':status.label;$('#status').dataset.tone=refreshingPC?'warning':status.tone;$('#notice').dataset.tone=status.tone;$('#progressLabel').textContent=failed?'Failed':finished(state.run)?(status.canRun?'Ready to run':'Waiting for an available PC'):`${availability(state).label} · ${runningStep(state.run)}`;if(refreshingPC)$('#notice').textContent='Refreshing PC status…';else if(Date.now()>noticeUntil)$('#notice').textContent=status.message;$('#run').disabled=launchPending||(finished(state.run)&&!status.canRun);$('#resume').disabled=launchPending;$('#fresh').disabled=launchPending;}
 
 let stateLoaded=false;const observedRuns=new Set(),lastStages=new Map(),revealedOutputs=new Set();
 let lastLogState='';
@@ -103,7 +103,7 @@ async function connect(){
   const ws=new WebSocket(ticket.relay.replace(/^http/,'ws')+'/connect?ticket='+encodeURIComponent(ticket.ticket));socket=ws;
   const opening=setTimeout(()=>{if(ws.readyState===0)ws.close()},15000);
   ws.onopen=()=>{clearTimeout(opening);connecting=false;ws.send(JSON.stringify({type:'state'}));$('#activityTitle').textContent='Live output from the selected PC.';logs();clearTimeout(renewTimer);renewTimer=setTimeout(()=>ws.close(),290000)};
-  ws.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='state')render(m);else if(m.type==='readResult'){const p=pending.get(m.requestId);if(p){pending.delete(m.requestId);m.error?p.reject(Error(m.error)):p.resolve(m.data)}}else if(m.error)notice(m.error)}catch{$('#activityTitle').textContent='Unable to read a live update. Retrying…'}};
+  ws.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='state')render(m);else if(m.type==='readResult'||m.type==='runResult'){const p=pending.get(m.requestId);if(p){pending.delete(m.requestId);m.error?p.reject(Object.assign(Error(m.error),{commandRejected:true})):p.resolve(m.data)}}else if(m.error)notice(m.error)}catch{$('#activityTitle').textContent='Unable to read a live update. Retrying…'}};
   ws.onclose=()=>{clearTimeout(opening);clearTimeout(renewTimer);connecting=false;for(const p of pending.values())p.reject(Error('Live connection interrupted'));pending.clear();$('#activityTitle').textContent='Reconnecting live updates… Last received log is preserved.';retryConnection()};
   ws.onerror=()=>ws.close();
  }catch(e){connecting=false;$('#activityTitle').textContent=`Live updates unavailable: ${e.name==='TimeoutError'?'Dashboard authorization request timed out; this does not mean the Bot PC stopped':e.message}. Retrying…`;retryConnection()}
@@ -165,7 +165,27 @@ async function outputs(){
 
 async function guard(fn){try{await fn()}catch(e){notice(e.message);if($('#accountPanel').open)$('#accountFeedback').textContent=e.message}}
 
-async function launch(mode){if(mode==='resume'){const run=state.run;if(!run?.checkpoint)throw Error('No saved checkpoint is available');await api({action:'run',id:crypto.randomUUID(),pcId:run.pcId,scope:run.scope,account:run.account,years:run.years,resume:true});notice('Resume requested on the original PC');return}if(!['all','btr','btp','ebtp','btr-btp','btp-ebtp'].includes($('#scope').value))throw Error('Select one stage or consecutive stages. To run BTR and EBTP together, also select BTP.');if(!$('#accounts').value)throw Error('Choose a SAP user');if(!$('#years').selectedOptions.length)throw Error('Select at least one export year');await api({action:'run',id:crypto.randomUUID(),scope:$('#scope').value,pcId:$('#pc').value||undefined,account:$('#accounts').value,years:[...$('#years').selectedOptions].map(o=>Number(o.value)),resume:mode==='resume',abandon:mode==='fresh'});notice('Run requested');}
+async function submitRun(request){
+ if(launchPending)return;
+ launchPending=true;notice(request.resume?'Sending resume request to the original PC…':'Sending run request…');renderAvailability();
+ try{
+  let accepted;
+  if(state.liveRunRequests&&socket?.readyState===1){
+   let timer;
+   try{accepted=await new Promise((resolve,reject)=>{
+    pending.set(request.id,{resolve,reject});
+    timer=setTimeout(()=>{pending.delete(request.id);reject(Error('Run acknowledgement delayed'))},5000);
+    socket.send(JSON.stringify({type:'runRequest',requestId:request.id,run:request}));
+   })}catch(e){if(e.commandRejected)throw e;/* Retry the SAME id: the relay returns its existing reservation. */}
+   finally{clearTimeout(timer);pending.delete(request.id)}
+  }
+  if(!accepted)accepted=await api(request);
+  // Show the reservation immediately; never overwrite a newer live run update.
+  if(state.run?.id!==accepted.id&&finished(state.run))render({...state,run:accepted});
+  notice(request.resume?'Resume accepted on the original PC. Waiting for host startup.':'Run accepted. Waiting for host startup.');
+ }finally{launchPending=false;renderAvailability()}
+}
+async function launch(mode){if(mode==='resume'){const run=state.run;if(!run?.checkpoint)throw Error('No saved checkpoint is available');await submitRun({action:'run',id:crypto.randomUUID(),pcId:run.pcId,scope:run.scope,account:run.account,years:run.years,resume:true});return}if(!['all','btr','btp','ebtp','btr-btp','btp-ebtp'].includes($('#scope').value))throw Error('Select one stage or consecutive stages. To run BTR and EBTP together, also select BTP.');if(!$('#accounts').value)throw Error('Choose a SAP user');if(!$('#years').selectedOptions.length)throw Error('Select at least one export year');await submitRun({action:'run',id:crypto.randomUUID(),scope:$('#scope').value,pcId:$('#pc').value||undefined,account:$('#accounts').value,years:[...$('#years').selectedOptions].map(o=>Number(o.value)),resume:mode==='resume',abandon:mode==='fresh'});}
 
 $('#run').onclick=()=>guard(()=>finished(state.run)?launch():api({action:'stop'}));$('#resume').onclick=()=>guard(()=>launch('resume'));$('#fresh').onclick=()=>{if(confirm('Abandon the saved continuation and start fresh?'))guard(()=>launch('fresh'))};$('#refresh').onclick=()=>guard(refreshPCStatus);$('#history').onchange=()=>{selected=[state.run,...state.history].find(r=>r?.id===$('#history').value);paintWorkflow(selected,selected?.stage||lastStages.get(selected?.id)||0);if(!selected){outputRequest++;$('#files').textContent='Select a run to load its outputs.';$('#files').removeAttribute('aria-busy');$('#activityText').replaceChildren();$('#logCount').textContent='0 lines';$('#runtime').textContent='Runtime --';return}guard(async()=>{await logs();await outputs()})};$('#downloadRefresh').onclick=()=>guard(outputs);
 
@@ -239,15 +259,15 @@ for(const id of ['hostPicker','scopePicker','accountPicker','yearPicker']){
 
 function renderBatches(text){const batch=batchProgress(text);for(const [index,label] of [[5,batch.total?`${batch.total} planned batches`:''],[7,batch.total?`${batch.current||0} / ${batch.total} batches`:'']]){const step=document.querySelectorAll('.step')[index];let detail=step.querySelector('.batch-detail');if(!detail){detail=document.createElement('small');detail.className='batch-detail';step.lastElementChild.append(detail)}detail.textContent=label;detail.hidden=!label}}
 
-let refreshingPC=false;
 async function refreshPCStatus(){
  if(refreshingPC)return;
  refreshingPC=true;
+ renderAvailability();
  const buttons=[$('#refresh'),$('#headerRefresh')].filter(Boolean);
  buttons.forEach(b=>{b.disabled=true;b.setAttribute('aria-busy','true')});
  $('#refresh').textContent='Refreshing…';
  try{if(socket?.readyState===1){socket.send(JSON.stringify({type:'state'}));logs();}else{connect();}const fresh=await api();acknowledgedFailure=fresh.run?.id;noticeUntil=0;render(fresh)}
- finally{refreshingPC=false;buttons.forEach(b=>{b.disabled=false;b.removeAttribute('aria-busy')});$('#refresh').textContent='Refresh PC status'}
+ finally{refreshingPC=false;buttons.forEach(b=>{b.disabled=false;b.removeAttribute('aria-busy')});$('#refresh').textContent='Refresh PC status';renderAvailability()}
 }
 window.addEventListener('message',event=>{
  if(event.source===window.parent&&event.origin===location.origin&&event.data?.type==='refresh-automation-status')guard(refreshPCStatus);
