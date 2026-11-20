@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
+import {workflowOutcome} from '../automation-log.js';
 const source=readFileSync(new URL('../auto-btp.js',import.meta.url),'utf8');
 const submit=source.slice(source.indexOf('async function submitRun('),source.indexOf('async function launch('));
 function setup(live=true){
@@ -29,7 +30,7 @@ test('older relay uses HTTP directly without waiting for unsupported live comman
  const f=setup(false);await f.context.submitRun({id:'legacy'});assert.equal(f.messages.length,0);assert.equal(f.calls.length,1);
 });
 test('refresh status survives intervening live updates and clears on completion',()=>{
- const nodes=new Map(),context={state:{machines:[]},refreshingPC:true,launchPending:false,acknowledgedFailure:null,noticeUntil:0,Date,
+ const nodes=new Map(),context={state:{machines:[]},selected:null,workflowOutcome,verifiedManifests:new Map(),refreshingPC:true,launchPending:false,acknowledgedFailure:null,noticeUntil:0,Date,
   $:s=>{if(!nodes.has(s))nodes.set(s,{value:'',dataset:{}});return nodes.get(s)},
   selectedHostAvailability:()=>({label:'Ready',tone:'success',canRun:true,message:'Ready PC'}),finished:()=>true};
  vm.createContext(context);vm.runInContext(source.slice(source.indexOf('function renderAvailability('),source.indexOf('let stateLoaded=')),context);
