@@ -279,6 +279,7 @@
   }, { passive: true });
 
   function scan(root) {
+    if (root && root.matches && root.matches(SELECTORS)) initGlow(root);
     var targets = (root || document).querySelectorAll(SELECTORS);
     for (var i = 0; i < targets.length; i++) {
       initGlow(targets[i]);
@@ -299,16 +300,13 @@
 
   if (window.MutationObserver) {
     var observer = new MutationObserver(function(mutations) {
-      var needsRescan = false;
+      var added = [];
       for (var i = 0; i < mutations.length; i++) {
-        if (mutations[i].addedNodes.length > 0) {
-          needsRescan = true;
-          break;
-        }
+        Array.prototype.forEach.call(mutations[i].addedNodes, function(node) {
+          if (node.nodeType === 1 && !node.matches('.glow-edge,.glow-sheen,.glow-ripple')) added.push(node);
+        });
       }
-      if (needsRescan) {
-        scan(document);
-      }
+      added.forEach(function(node) { if (node.isConnected) scan(node); });
     });
     observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
   }

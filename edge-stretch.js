@@ -36,6 +36,8 @@
     // Split branches containing pinned controls or independent scrollers.
     // React roots, flex/grid children and table structure retain their parents.
     function collect(el) {
+      // Decoration is not a content surface and must not disqualify its card.
+      if (el.matches('.glow-edge,.glow-sheen,.glow-ripple') || /^(SCRIPT|STYLE|LINK)$/.test(el.tagName)) return { safe: true, parts: [] };
       var rect = el.getBoundingClientRect();
       // Large reports can contain thousands of offscreen cells. Do not inspect
       // descendants of offscreen branches or promote those branches to layers.
@@ -54,7 +56,7 @@
         var position = getComputedStyle(child).position;
         return position === 'fixed' || position === 'sticky';
       });
-      if (optedIn && !pinned && css.transform === 'none' &&
+      if (optedIn && !pinned &&
           (css.scale === 'none' || !css.scale)) {
         return { safe: true, parts: [{ el: el, top: rect.top }] };
       }
