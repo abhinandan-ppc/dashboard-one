@@ -2802,6 +2802,7 @@ setStyle(readStoredStyle());
         <i class="fs-toggle-center"></i>
       </span>
     </button>
+    <button class="fetch-status-minimize" id="fetchStatusClose" type="button" aria-label="Close sync progress; syncing continues in background" title="Close — sync continues in background">×</button>
   </div>
   <div class="fetch-status-sources">
     <span class="fetch-status-src" data-src="EBTP"><i class="fetch-status-src-dot"></i><span>EBTP</span></span>
@@ -2983,6 +2984,16 @@ function clearLegacyEbtpCaches(){
 // grey/idle by default, amber-pulsing while that source fetches, then green (✓)
 // or red (✗) once it settles.
 var _fetchStatusActive = {};
+var _fetchStatusDismissed = false;
+document.getElementById('fetchStatusClose').addEventListener('click', function(){
+  _fetchStatusDismissed = true;
+  document.getElementById('fetchStatus').style.display = 'none';
+});
+function cacheIsToday(record){
+  if(!record || !record.fetchedAt || record.csvText == null) return false;
+  var day = function(t){ return new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(t)); };
+  return day(record.fetchedAt) === day(Date.now());
+}
 var _fetchStatusOutcome = {}; // source -> 'ok' | 'error', set by a ✓/✗ log line
 var _FETCH_SRC_LABEL = { EBTP: 'EBTP', AutoBTR: 'BTR', ZSTK: 'ZSTK', Heats: 'Heats' };
 function fetchSrcName(s){ return _FETCH_SRC_LABEL[s] || s; }
@@ -3001,7 +3012,7 @@ function fetchStatusShow(phase, source){
   _fetchStatusActive[source] = true;
   delete _fetchStatusOutcome[source]; // this (re)started — clear any stale settle state
   var el = document.getElementById('fetchStatus');
-  if(el) el.style.display = 'flex';
+  if(el && !_fetchStatusDismissed) el.style.display = 'flex';
   var lbl = document.getElementById('fetchStatusLabel');
   if(lbl){
     var act = Object.keys(_fetchStatusActive);
@@ -3130,7 +3141,7 @@ function fetchAndCacheEBTP(force){
 
   ebtpFetchInFlight = (async function(){
     var cached = await readEbtpCache();
-    if(cached && !force) { ebtpFetchInFlight = null; return { ok: true, cached: true, fetchedAt: cached.fetchedAt }; }
+    if(cacheIsToday(cached) && !force) { ebtpFetchInFlight = null; return { ok: true, cached: true, fetchedAt: cached.fetchedAt, rowCount: cached.rowCount }; }
 
     // EBTP is fetched EXCLUSIVELY through the service-account proxy
     // (/api/ebtp-proxy → Google Sheets API, signed by the shared service account).
@@ -3189,7 +3200,7 @@ function fetchAndCacheSegment(force){
 
   segmentFetchInFlight = (async function(){
     var cached = await readSegmentCache();
-    if(cached && !force) { segmentFetchInFlight = null; return { ok: true, cached: true, fetchedAt: cached.fetchedAt }; }
+    if(cacheIsToday(cached) && !force) { segmentFetchInFlight = null; return { ok: true, cached: true, fetchedAt: cached.fetchedAt }; }
 
     for(var i = 0; i < strats.length; i++){
       var f = strats[i].f;
@@ -3399,7 +3410,7 @@ function fetchAndCacheSegment(force){
     if(src === 'ebtp'){
       if(typeof fetchAndCacheEBTP !== 'function') return Promise.reject(new Error('EBTP fetcher not loaded'));
       // fetchAndCacheEBTP already drives the shared #fetchStatus popup itself.
-      return fetchAndCacheEBTP(true).then(function(res){
+      return fetchAndCacheEBTP(!!force).then(function(res){
         if(res && res.error) throw new Error(res.error);
         return { rows: res && res.rowCount };
       });
@@ -3420,7 +3431,8 @@ function fetchAndCacheSegment(force){
           if(!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status));
           var rows = Math.max(0, (data.values || []).length - 1);
           fetchStatusShow('parsing', label);
-          return writeZstkCache(data.values || [], rows).then(function(){
+          return writeZstkCache(data.values || [], rows).then(function(saved){
+            if(!saved) throw new Error('Unable to save ZSTK in browser cache');
             fetchStatusLog('✓ Synced ' + rows.toLocaleString() + ' rows — cached for all dashboards', label);
             try{ broadcastToFrame({ type: 'zstk-cache-updated', fetchedAt: Date.now(), rowCount: rows }); }catch(e){}
             return { rows: rows };
@@ -3437,12 +3449,16 @@ function fetchAndCacheSegment(force){
           var rows = Math.max(0, csv.split(/\r?\n/).filter(function(line){ return line.trim(); }).length - 1);
           fetchStatusShow('parsing', label);
           fetchStatusLog('✓ Verified ' + rows.toLocaleString() + ' rows from Balance Heat SAP', label);
-          return { rows: rows };
+          return writeDbCache('heats', csv, rows).then(function(saved){
+            if(!saved) throw new Error('Unable to save Heats in browser cache');
+            return { rows: rows };
+          });
         });
       }
       return r.arrayBuffer().then(function(buf){
         fetchStatusShow('parsing', label);
-        return writeAutoBtrCache(buf).then(function(){
+        return writeAutoBtrCache(buf).then(function(saved){
+          if(!saved) throw new Error('Unable to save BTR in browser cache');
           fetchStatusLog('✓ Synced — cached for all dashboards', label);
           try{ broadcastToFrame({ type: 'autobtr-cache-updated', fetchedAt: Date.now() }); }catch(e){}
           return {};
@@ -3489,6 +3505,7 @@ function fetchAndCacheSegment(force){
   }
 
   function peekStatus(src){
+    _fetchStatusDismissed = false;
     // Show the bottom loader popup for one source without starting a fetch —
     // used when a chip is tapped while idle, so every tap surfaces real state
     // (last result + what happens next) instead of feeling dead.
@@ -3512,7 +3529,21 @@ function fetchAndCacheSegment(force){
     }
   }
 
+  var syncInFlight = {};
   function syncSheet(src, force){
+    if(force) { _fetchStatusDismissed = false; }
+    if(syncInFlight[src]) return syncInFlight[src];
+    var keys = {ebtp:EBTP_DB_KEY,zstk:ZSTK_DB_KEY,autobtr:AUTOBTR_DB_KEY,heats:'heats'};
+    syncInFlight[src] = readDbCache(keys[src]).then(function(record){
+      if(!force && cacheIsToday(record)){
+        statusSet(src, {ok:true,at:record.fetchedAt,rows:record.rowCount});
+        return {ok:true,cached:true};
+      }
+      return performSync(src, force);
+    }).finally(function(){ delete syncInFlight[src]; });
+    return syncInFlight[src];
+  }
+  function performSync(src, force){
     // A tap always wins over the backoff loop: drop any pending auto-retry so
     // the manual attempt is the only one in flight, then reschedule from zero
     // if it fails again (fresh 10s base instead of a stale grown delay).
