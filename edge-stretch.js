@@ -49,12 +49,18 @@
       // Opted-in cards contain no pinned UI. During page overscroll the card
       // moves as a whole; a nested scroller still owns gestures inside it
       // and stretches only its own content through the owner() lookup.
-      if (el.hasAttribute('data-edge-surface') && css.transform === 'none' &&
+      var optedIn = el.matches('[data-edge-surface]');
+      var pinned = optedIn && Array.from(el.querySelectorAll('*')).some(function (child) {
+        var position = getComputedStyle(child).position;
+        return position === 'fixed' || position === 'sticky';
+      });
+      if (optedIn && !pinned && css.transform === 'none' &&
           (css.scale === 'none' || !css.scale)) {
         return { safe: true, parts: [{ el: el, top: rect.top }] };
       }
       var children = [], safe = css.transform === 'none' && (css.scale === 'none' || !css.scale);
-      if (/(auto|scroll|hidden|clip)/.test(css.overflowY) && el.scrollHeight > el.clientHeight + 1) return { safe: false, parts: [] };
+      if (/(auto|scroll)/.test(css.overflowY) && el.scrollHeight > el.clientHeight + 1) return { safe: false, parts: [] };
+      if (/(hidden|clip)/.test(css.overflowY) && el.scrollHeight > el.clientHeight + 1) safe = false;
       Array.from(el.children).forEach(function (child) {
         var result = collect(child);
         safe = safe && result.safe;

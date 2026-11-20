@@ -3361,6 +3361,9 @@ html[data-theme-style="neomorph"] :is(table,.data-table-wrap table,.table-wrap t
 html body,html[data-theme-style][data-theme] body{background-image:none!important}
 html body::before,html body::after,html[data-theme-style][data-theme] body::before,html[data-theme-style][data-theme] body::after{background-image:none!important}
 html body :is(.glow-edge,.glow-sheen,.glow-ripple){display:none!important}
+@media (hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference) {
+ html:not([data-theme-style="neomorph"]) body :is(.glow-edge,.glow-sheen){display:block!important;pointer-events:none}
+}
 html body :is(.header-enter,.card-enter,.intro-card-in){animation:none!important}
 html body :is(.card,.glass-card,.kpi-card,.stat-card,.kcard):not(.dragging):not([data-card-tilt]):not([style*="transform"]):hover{transform:none!important}
 html body :is(.fc-node.bottleneck,.fc-path-fg,.tree-edge){animation:none!important}
@@ -3523,16 +3526,16 @@ html body :is(.app-header,.theme-panel,.user-panel,.dropdown-panel,.dd-menu,.fil
   html body .app-header {flex-wrap:wrap!important;min-width:0}
   html body .app-header :is(.hdr-r,.hd-actions,.h-actions,.top-right,.truck-header-actions,.app-header-actions) {
     display:flex!important;align-items:center!important;justify-content:center!important;
-    flex-wrap:wrap!important;width:100%!important;min-width:0;gap:8px!important;margin-inline:0!important;
+    flex-wrap:nowrap!important;width:auto!important;max-width:100%;min-width:0;gap:6px!important;margin-inline:0!important;
   }
   html body #hubFrameHeaderSlot:not(:empty) {
-    display:flex!important;flex:1 0 100%!important;width:100%!important;
-    justify-content:center!important;margin-inline:0!important;padding-block:8px 0;
+    display:flex!important;flex:0 0 auto!important;width:auto!important;
+    justify-content:center!important;margin-inline:0!important;padding-block:0;
   }
   html body #hubFrameHeaderSlot:empty {display:none!important}
   html body #hubFrameHeaderControls {
-    justify-content:center!important;align-items:center!important;flex-wrap:wrap!important;
-    margin-inline:0!important;max-width:100%;gap:8px!important;
+    justify-content:center!important;align-items:center!important;flex-wrap:nowrap!important;
+    margin-inline:0!important;max-width:100%;gap:4px!important;
   }
   html body .page-copy {min-width:0}
   html body .app-header :is(button,.theme-menu,.user-menu) {flex-shrink:0}
