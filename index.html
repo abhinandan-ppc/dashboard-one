@@ -1141,6 +1141,8 @@ function animateCardReflow(beforeRects){
 
 function finishPointerDrag(shouldCommit){
   if(!pointerDrag) return;
+  clearTimeout(pointerDrag.holdTimer);
+  document.documentElement.classList.remove('card-reordering');
   var drag = pointerDrag;
   pointerDrag = null;
   if(shouldCommit && persistItemsFromDom()){
@@ -1148,9 +1150,11 @@ function finishPointerDrag(shouldCommit){
     render();
   }
   draggedCardId = null;
-  setTimeout(function(){ suppressCardClick = false; }, 0);
+  if(drag.started) suppressCardClick = true;
+  setTimeout(function(){ suppressCardClick = false; }, drag.touch ? 400 : 0);
   clearCardDropState();
   removeActiveDragGhost();
+  if(!shouldCommit && drag.started) render();
   document.removeEventListener('pointermove', handlePointerDragMove);
   document.removeEventListener('pointerup', handlePointerDragEnd);
   document.removeEventListener('pointercancel', handlePointerDragEnd);
@@ -1200,7 +1204,11 @@ function handlePointerDragMove(e){
   var dx = e.clientX - pointerDrag.startX;
   var dy = e.clientY - pointerDrag.startY;
   if(!pointerDrag.started){
-    if(Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+    if(pointerDrag.touch && !pointerDrag.armed) {
+      if(Math.abs(dx) > 8 || Math.abs(dy) > 8) finishPointerDrag(false);
+      return;
+    }
+    if(!pointerDrag.armed && Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
     pointerDrag.started = true;
     draggedCardId = pointerDrag.id;
     pointerDrag.sourceCard.classList.add('dragging', 'card-placeholder');
@@ -1223,6 +1231,7 @@ function handlePointerDragEnd(){
 }
 
 grid.addEventListener('pointerdown', function(e){
+  if(e.pointerType === 'touch') return;
   if(e.button !== 0) return;
   var card = e.target.closest('.card');
   if(!card || e.target.closest('.card-actions')) return;
@@ -1243,6 +1252,33 @@ grid.addEventListener('pointerdown', function(e){
   document.addEventListener('pointerup', handlePointerDragEnd);
   document.addEventListener('pointercancel', handlePointerDragEnd);
 });
+
+// Let ordinary swipes scroll; only a stationary long press arms reordering.
+grid.addEventListener('touchstart', function(e){
+  if(e.touches.length !== 1) { finishPointerDrag(false); return; }
+  var card = e.target.closest('.card');
+  if(!card || e.target.closest('.card-actions')) return;
+  var point = e.touches[0], rect = card.getBoundingClientRect();
+  pointerDrag = {id:card.dataset.id,sourceCard:card,startX:point.clientX,startY:point.clientY,
+    offsetX:point.clientX-rect.left,offsetY:point.clientY-rect.top,rect:rect,
+    started:false,touch:true,armed:false,targetId:null,placeAfter:false};
+  pointerDrag.holdTimer = setTimeout(function(){
+    if(!pointerDrag || !pointerDrag.touch) return;
+    pointerDrag.armed = true;
+    document.documentElement.classList.add('card-reordering');
+    handlePointerDragMove({clientX:pointerDrag.startX,clientY:pointerDrag.startY});
+  },450);
+},{passive:true});
+grid.addEventListener('touchmove', function(e){
+  if(!pointerDrag || !pointerDrag.touch) return;
+  if(e.touches.length !== 1) { finishPointerDrag(false); return; }
+  if(pointerDrag.armed && e.cancelable) e.preventDefault();
+  handlePointerDragMove(e.touches[0]);
+},{passive:false});
+grid.addEventListener('touchend', function(){ if(pointerDrag && pointerDrag.touch) handlePointerDragEnd(); },{passive:true});
+grid.addEventListener('touchcancel', function(){ if(pointerDrag && pointerDrag.touch) finishPointerDrag(false); },{passive:true});
+grid.addEventListener('contextmenu', function(e){ if(pointerDrag && pointerDrag.touch) e.preventDefault(); });
+window.addEventListener('blur', function(){ finishPointerDrag(false); });
 
 grid.addEventListener('dragstart', function(e){
   if(e.target.closest && e.target.closest('.card')){

@@ -283,4 +283,8 @@
       apply(storedDarkness(), storedAccent());
     }
   });
+  var smoothScript = document.createElement('script');
+  smoothScript.src = new URL('smooth-scroll.js', document.currentScript.src).href;
+  smoothScript.defer = true;
+  document.head.appendChild(smoothScript);
 })();
