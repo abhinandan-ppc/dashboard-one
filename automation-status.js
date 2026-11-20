@@ -12,7 +12,7 @@ export function availability(state,now=Date.now()) {
   const run=state.run;
   if(run&&!['completed','failed','stopped','missed'].includes(run.status)){
     const pc=online.find(p=>p.id===run.pcId);
-    return {tone:pc?'warning':'danger',label:pc?'Running':'Offline',message:pc?`${pc.name}: ${statusLabel(run.status)}.`:'The execution PC is disconnected. Its run remains reserved until it reconnects or is confirmed stopped.',canRun:false};
+    return {tone:pc?'warning':'danger',label:pc?'Running':'Offline',message:pc?`${pc.name}: ${statusLabel(run.status)}.`:'Live host status is unavailable or out of date. The workflow may still be running; its run remains reserved. Reconnecting does not stop the workflow.',canRun:false};
   }
   if(!machines.length)return {tone:'danger',label:'Offline',message:'Enroll a host PC to run automation.',canRun:false};
   if(ready.length)return {tone:'success',label:'Ready',message:`${ready.length} PC${ready.length===1?' is':'s are'} ready. Run automation will select an available PC.`,canRun:true};
