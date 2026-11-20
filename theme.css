@@ -2990,6 +2990,14 @@ html[data-theme-style="neomorph"] .theme-range:active::-moz-range-thumb {
 }
 
 
+/* Lenis owns document wheel smoothing; nested scrollers and touch stay native. */
+html.lenis, html.lenis body {height:auto}
+.lenis.lenis-smooth {scroll-behavior:auto!important}
+.lenis.lenis-stopped {overflow:hidden}
+.lenis.lenis-smooth.lenis-scrolling iframe {pointer-events:none}
+@media (pointer:coarse) {
+  #grid .card {-webkit-touch-callout:none;user-select:none}
+}
 /* Keep keyboard focus visible across theme presets and high contrast modes. */
 table { font-variant-numeric: tabular-nums; }
 h1, h2, h3 { text-wrap: balance; }
