@@ -34,7 +34,8 @@ export class Pool {
   if(action==='resolve'){const run=await this.ctx.storage.get('run');if(!b.confirmStopped)throw Error('Confirm workflow is stopped');if(run)await this.ctx.storage.put('run',{...run,status:'stopped',checkpoint:true});await this.broadcast();return json({ok:true});}
   if(action==='make-ready')return await this.locked(async()=>{
    if(!b.confirmCloseApps)throw Error('Confirm that unsaved SAP and Excel work may be lost');
-   if(!terminal(await this.ctx.storage.get('run')))throw Error('Stop the active bot run before preparing a PC');
+   const run=await this.ctx.storage.get('run');
+   if(run?.pcId===b.pcId&&!terminal(run))throw Error('Stop the bot run on the selected PC before preparing it');
    const pc=await this.ctx.storage.get('pc:'+b.pcId);
    if(!pc||pc.revoked||!this.sockets('agent',b.pcId).length||Date.now()-pc.seen>30000)throw Error('Select an online PC');
    if(!pc.makeReady)throw Error('Update agent.py on this PC and restart its agent first');

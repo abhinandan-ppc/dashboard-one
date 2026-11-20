@@ -53,6 +53,15 @@ test('prepare host requires warning confirmation and an updated idle host',async
  assert.equal(host.messages[0].action,'make-ready');assert.ok(host.messages[0].expiresAt>Date.now());
  assert.equal(f.data.get('pc:p').ready,false);assert.ok(f.data.has('command:p'));
 });
+test('prepare another PC preserves the active run and sends cleanup only to the selected host',async()=>{
+ const f=fixture();const run={id:'active',pcId:'bot',status:'running'};
+ await f.storage.put('run',run);await f.storage.put('pc:idle',{id:'idle',makeReady:true,seen:Date.now(),ready:false});
+ const bot=f.socket('agent','bot'),idle=f.socket('agent','idle');
+ const result=await f.pool.fetch(control({action:'make-ready',pcId:'idle',confirmCloseApps:true}));
+ assert.equal(result.status,200);assert.deepEqual(f.data.get('run'),run);
+ assert.equal(bot.messages.length,0);assert.equal(idle.messages.length,1);assert.equal(idle.messages[0].action,'make-ready');
+ assert.ok(f.data.has('command:idle'));assert.equal(f.data.has('command:bot'),false);
+});
 test('remove deletes enrollment and pending work and clears terminal continuation',async()=>{const f=fixture();await f.storage.put('pc:p',{id:'p'});await f.storage.put('command:p',{id:'old'});await f.storage.put('run',{id:'old',pcId:'p',status:'failed',checkpoint:true});const response=await f.pool.fetch(control({action:'remove',pcId:'p'}));assert.equal(response.status,200);assert.equal(f.data.has('pc:p'),false);assert.equal(f.data.has('command:p'),false);assert.equal(f.data.get('run').checkpoint,false)});
 test('remove rejects an active execution host',async()=>{const f=fixture();await f.storage.put('pc:p',{id:'p'});await f.storage.put('run',{pcId:'p',status:'running'});assert.equal((await f.pool.fetch(control({action:'remove',pcId:'p'}))).status,409);assert.equal(f.data.has('pc:p'),true)});
 test('banner clear targets original run and exposes pending confirmation',async()=>{const f=fixture();await f.storage.put('pc:p',{id:'p'});await f.storage.put('run',{id:'old',pcId:'p',status:'failed',checkpoint:true});assert.equal((await f.pool.fetch(control({action:'clear',pcId:'p',runId:'other'}))).status,409);assert.equal((await f.pool.fetch(control({action:'clear',pcId:'p',runId:'old'}))).status,200);assert.equal(f.data.get('pc:p').checkpointClearing,true);assert.equal(f.data.get('run').checkpoint,true)});

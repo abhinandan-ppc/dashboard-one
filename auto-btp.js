@@ -27,7 +27,7 @@ readyDialog.addEventListener('cancel',()=>{clearInterval(readyTimer);readyTimer=
 readyButton.onclick=()=>guard(async()=>{
  const pc=state.machines.find(p=>p.id===$('#pc').value&&!p.revoked);
  if(!pc)throw Error('Select a specific PC first.');
- if(!finished(state.run))throw Error('Stop the active bot run first.');
+ if(state.run?.pcId===pc.id&&!finished(state.run))throw Error('Stop the bot run on the selected PC first.');
  if(!pc.connected)throw Error('The selected PC is offline.');
  if(!pc.makeReady)throw Error('Update agent.py on the selected PC and restart its agent first.');
  readyDialog.querySelector('.ready-warning').textContent='Target PC: '+pc.name;
