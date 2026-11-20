@@ -2989,12 +2989,6 @@ html[data-theme-style="neomorph"] .theme-range:active::-moz-range-thumb {
   box-shadow: inset 2px 2px 5px var(--neo-shadow-dark), inset -2px -2px 5px var(--neo-shadow-light) !important;
 }
 
-/* Gesture-owned surfaces only; scrollers and pinned controls never transform. */
-.edge-stretch-surface{
-  transform-origin:var(--edge-origin);
-  scale:1 var(--edge-scale,1);
-}
-@media (prefers-reduced-motion:reduce){.edge-stretch-surface{scale:none!important}}
 
 /* Keep keyboard focus visible across theme presets and high contrast modes. */
 table { font-variant-numeric: tabular-nums; }
