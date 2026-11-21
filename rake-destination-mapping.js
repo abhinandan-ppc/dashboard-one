@@ -5,7 +5,7 @@ globalThis.RakeDestinationMapping=(()=>{
   const valid=r=>r&&Number.isFinite(r.lat)&&Number.isFinite(r.lng)&&Math.abs(r.lat)<=90&&Math.abs(r.lng)<=180;
   function create({cache={},storage,fetch:request=globalThis.fetch.bind(globalThis),endpoint='/api/rake-geocode',now=Date.now,sleep=ms=>new Promise(r=>setTimeout(r,ms)),locks}={}){
     const listeners=new Set();let places=[],running=null,entries={},lastAutoCheck=0;
-    let state={busy:false,phase:'idle',done:0,total:0,mapped:0,review:0,revision:0,status:'Cached destinations · checked daily',provider:'photon',lastChecked:0};
+    let state={busy:false,phase:'idle',done:0,total:0,mapped:0,review:0,revision:0,status:'Cached destinations · checked daily',provider:'photon',providers:['photon'],lastChecked:0};
     const emit=patch=>{state={...state,...patch};listeners.forEach(fn=>fn());};
     const restore=()=>{
       try{const saved=JSON.parse(storage?.getItem(STATE_KEY)||'{}');lastAutoCheck=Number(saved.lastAutoCheck)||lastAutoCheck;entries={...entries,...saved.entries};state={...state,lastChecked:Number(saved.lastChecked)||state.lastChecked};}catch{}
@@ -14,7 +14,7 @@ globalThis.RakeDestinationMapping=(()=>{
     Object.assign(entries,cache);restore();
     const persist=()=>{try{storage?.setItem(STATE_KEY,JSON.stringify({entries:Object.fromEntries(Object.entries(entries).slice(-LIMIT)),lastAutoCheck,lastChecked:state.lastChecked}));}catch{}};
     const json=async(url,options)=>{
-      const r=await request(url,{...options,signal:AbortSignal.timeout(30000)});
+      const r=await request(url,{...options,signal:AbortSignal.timeout(90000)});
       if(!r.headers.get('content-type')?.includes('json'))throw new Error('Sign in to map destinations');
       const body=await r.json();if(!r.ok)throw new Error(body.error||'Mapping unavailable');return body;
     };
@@ -30,7 +30,8 @@ globalThis.RakeDestinationMapping=(()=>{
         for(const[k,v]of Object.entries(shared.entries||{})){
           const id=key(k.split('|'));entries[id]=v;if(valid(v))cache[id]=v;
         }
-        emit({revision:state.revision+1,provider:shared.provider||'photon'});persist();
+        const used=Object.values(entries).map(v=>({'Photon':'photon','Geoapify':'geoapify','Maps.co':'mapsco'}[v.source?.split(' / ')[0]])).filter(Boolean);
+        emit({revision:state.revision+1,provider:shared.provider||'photon',providers:[...new Set([...(shared.providers||[shared.provider||'photon']),...used])]});persist();
         if(!shared.ready)throw new Error('Online mapping unavailable; using cached locations');
         // Automatic passes only map never-checked destinations. An explicit
         // manual run may retry a negative result after its server cooldown.

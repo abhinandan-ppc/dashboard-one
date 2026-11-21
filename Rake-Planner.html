@@ -1015,7 +1015,7 @@ function useLiveDestinations(){
   const control=<div className="rake-live-control">
     <div role="status">{state.status}</div>
     <div>Use Map destinations in the page header. New locations are checked daily; saved locations are reused.</div>
-    <div className="rake-map-attribution"><a href={state.provider==='geoapify'?'https://www.geoapify.com/':'https://github.com/komoot/photon'} target="_blank" rel="noreferrer">{state.provider==='geoapify'?'Geoapify':'Photon'}</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a></div>
+    <div className="rake-map-attribution">{(state.providers||[state.provider]).map(p=>{const source={photon:['Photon','https://github.com/komoot/photon'],geoapify:['Powered by Geoapify','https://www.geoapify.com/'],mapsco:['Maps.co','https://geocode.maps.co/']}[p];return source?<React.Fragment key={p}><a href={source[1]} target="_blank" rel="noreferrer">{source[0]}</a> · </React.Fragment>:null;})}<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a></div>
   </div>;
   return{...state,control};
 }
