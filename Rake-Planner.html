@@ -2152,13 +2152,13 @@ function MultiSel({all,sel,onChange,placeholder='All',accent,searchable=false}){
    by the actual EBTP siding (Column C "Mode", already in execution),
    with no region nesting. Each row also gets its own Map view. */
 function CompletionBar({items}){
-  const total=items.reduce((a,{ord})=>{const c=RakePlanningRules.completion(ord);a.bal+=c.bal;c.stages.forEach((s,i)=>a.values[i]+=s.value);return a;},{bal:0,values:[0,0,0,0]});
-  const colors=['#10b981','#fb923c','#a78bfa','#38bdf8'];
+  const total=items.reduce((a,{ord})=>{const c=RakePlanningRules.completion(ord);a.bal+=c.bal;c.stages.forEach((s,i)=>a.values[i]+=s.raw);return a;},{bal:0,values:[0,0,0,0]});
   const labels=['FG','WIP','Slab','Issued'];
   const covered=total.values.reduce((a,b)=>a+b,0);
+  const percentage=total.bal?covered/total.bal*100:0;
   return <div className="actual-completion" title={labels.map((l,i)=>`${l}: ${fmt(total.values[i])} MT`).join(' · ')}>
-    <div role="img" aria-label={`Stock coverage ${total.bal?Math.round(covered/total.bal*100):0}%: ${labels.map((l,i)=>`${l} ${fmt(total.values[i])} MT`).join(', ')}`} style={{display:'flex',height:6,borderRadius:4,overflow:'hidden',background:'var(--s3)'}}>{total.values.map((v,i)=><span key={i} style={{width:`${total.bal?v/total.bal*100:0}%`,background:colors[i]}}/>)}</div>
-    <small>{total.bal?Math.round(covered/total.bal*100):0}% stock coverage</small>
+    <div className="actual-stock-track" role="progressbar" aria-label="FG + WIP + Slab + Issued stock coverage" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100,Math.round(percentage))} aria-valuetext={`${fmt(covered)} MT, ${Math.round(percentage)}% of balance to PGI`}><span className="actual-stock-fill" style={{width:`${Math.min(100,percentage)}%`}}/></div>
+    <small>{Math.round(percentage)}% stock coverage</small>
   </div>;
 }
 function usePlanningDialog(onClose){
@@ -2252,14 +2252,10 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding,allRows=[]}){
     <div className="actual-plan-scroll" tabIndex={0} aria-label="Actual rake plan table" style={{overflowX:'auto',width:'100%'}}>
       <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed',minWidth:1100}}>
         <colgroup>
-          {/* Matches PivotTable's Region(8)+Siding(14)=22, data cols identical, trailing icon(7) — keeps both tables' columns pixel-aligned */}
-          <col style={{width:'22%'}}/>
-          <col style={{width:'9%'}}/><col style={{width:'9%'}}/>
-          <col style={{width:'8%'}}/><col style={{width:'8%'}}/>
-          <col style={{width:'8%'}}/><col style={{width:'8%'}}/>
-          <col style={{width:'7%'}}/><col style={{width:'7%'}}/>
-          <col style={{width:'7%'}}/>
-          <col style={{width:'7%'}}/>
+          <col style={{width:'13%'}}/>
+          <col style={{width:'7%'}}/><col style={{width:'13%'}}/>
+          {['fg','wip','btr','slab','btc','issued','btp'].map(k=><col key={k} style={{width:'7%'}}/>)}
+          <col style={{width:'6%'}}/><col style={{width:'12%'}}/>
         </colgroup>
         <thead>
           <tr>
@@ -2274,6 +2270,7 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding,allRows=[]}){
             <th style={{...th0,textAlign:'right'}}>Issued</th>
             <th style={{...th0,textAlign:'right'}}>BTP</th>
             <th style={{...th0,textAlign:'center'}}>Map</th>
+            <th style={{...th0,textAlign:'center'}}>Backup orders</th>
           </tr>
         </thead>
         <tbody>
@@ -2289,7 +2286,6 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding,allRows=[]}){
                 <div className="actual-siding-line"><button className="actual-siding-name" onClick={e=>{e.stopPropagation();onDrill(r.siding);}} aria-label={`View ${r.siding} orders`}>{r.siding}</button>{/ROAD/i.test(r.siding)&&<span className="actual-transport-kind">{r.siding.includes('ODC')?'ODC':'Road'}</span>}</div>
                 {!(/ROAD/i.test(r.siding))&&<div className="actual-wagon-type">{[...new Set(r.items.map(({ord})=>ord._WagonType==='LONG'?'LONG':'BOSM/BRN+BRN'))].join(' · ')}</div>}
                 {r.items.some(({ord})=>ord._RoutingConflict)&&<div className="actual-routing-conflict">Rail assignment conflict · ROAD-ODC</div>}
-                {!(/ROAD/i.test(r.siding))&&<button className="actual-probable-trigger" onClick={e=>{e.stopPropagation();setProbable(r);}}>Backup orders <span aria-hidden="true">↗</span></button>}
               </td>
               <td style={{...dc,fontWeight:600,color:'var(--text)'}}>{fmt(r.qty)}</td>
               <td style={{...tn0,fontSize:13,fontWeight:600,borderBottom:'1px solid var(--bdr)'}}>
@@ -2314,6 +2310,9 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding,allRows=[]}){
                   onMouseEnter={e=>r.items.length&&(e.currentTarget.style.background=rc.bgMd)}
                   onMouseLeave={e=>e.currentTarget.style.background=rc.bg}>Map</button>
               </td>
+              <td className="actual-backup-cell" style={{...td0,textAlign:'center'}}>
+                {!(/ROAD/i.test(r.siding))&&<button className="actual-probable-trigger" onClick={e=>{e.stopPropagation();setProbable(r);}}>Backup orders <span aria-hidden="true">↗</span></button>}
+              </td>
             </tr>;
           })}
           {/* Grand Total row */}
@@ -2328,7 +2327,7 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding,allRows=[]}){
             ].map(([v,clr,fw],i)=>(
               <td key={i} style={{...tn0,fontSize:13,fontWeight:fw,color:clr,borderBottom:'none'}}>{fmt(v)}</td>
             ))}
-            <td/>
+            <td/><td/>
           </tr>
         </tbody>
       </table>
