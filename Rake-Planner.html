@@ -26,7 +26,6 @@
 .rake-probable .probable-table-scroll{min-height:140px}.rake-probable .probable-table-scroll table{min-width:760px}.rake-probable header,.rake-probable footer,.probable-mapping,.rake-probable p{flex-shrink:0}
 .probable-mapping>div{position:static!important;max-width:none!important}.rake-probable button{padding:8px 12px;cursor:pointer}
 .actual-completion{min-width:70px;margin-top:5px}.actual-completion small{font-size:9px;color:var(--dim);white-space:nowrap}
-.actual-probable-trigger{display:block;margin-top:4px;padding:4px 0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;color:var(--sky)!important;font-size:11px;cursor:pointer}
 .transport-stock{padding:14px;background:var(--component-surface);border-radius:12px}.transport-stock summary{cursor:pointer;font-weight:600}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body,#root{min-height:100%;height:100%}
@@ -1043,7 +1042,7 @@ function useLiveDestinations(orders){
     <div role="status" style={{fontSize:12,marginTop:4}}>{message||'Live coordinates take priority; other locations use offline mapping.'}</div>
     <div className="rake-map-attribution"><a href={providerName==='geoapify'?'https://www.geoapify.com/':'https://github.com/komoot/photon'} target="_blank" rel="noreferrer">{providerName==='geoapify'?'Geoapify':'Photon'}</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a></div>
   </div>;
-  return{revision,control};
+  return{revision,control,status:message||availability,busy};
 }
 async function resolveCoords(cityRaw,onlineMode){
   const city=String(cityRaw||'').toUpperCase().trim();
@@ -2184,7 +2183,7 @@ function usePlanningDialog(onClose){
     const key=e=>{
       if(e.key==='Escape'){e.preventDefault();onClose();return;}
       if(e.key!=='Tab')return;
-      const nodes=[...(ref.current?.querySelectorAll('button:not(:disabled),input:not(:disabled),a[href]')||[])].filter(n=>n.getClientRects().length);
+      const nodes=[...(ref.current?.querySelectorAll('button:not(:disabled),input:not(:disabled),a[href],summary,[tabindex="0"]')||[])].filter(n=>n.getClientRects().length);
       const first=nodes[0],last=nodes.at(-1);
       if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}
       else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
@@ -2209,8 +2208,8 @@ function ProbableOrders({plan,rows,onClose}){
     try{const drafts=JSON.parse(localStorage.getItem('rake-plan-drafts-v1')||'[]');localStorage.setItem('rake-plan-drafts-v1',JSON.stringify([...drafts.slice(-49),record]));setNotice('Draft saved on this device. EBTP assignments are unchanged.');}catch{setNotice('Local draft storage is unavailable. Use Download draft.');}
   };
   const download=()=>{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(picked.map(({ord,release,km})=>({Siding:plan.siding,SO:ord['SO No.'],Item:ord._LineItem,UID:RakePlanningRules.orderKey(ord),City:ord['Ship To Party City'],State:ord._State,Release:release,'Balance MT':ord['Bal to PGI'],'Distance km':km==null?'Unknown':Math.round(km),Status:'DRAFT'}))),'Draft');XLSX.writeFile(wb,`Rake Draft ${plan.siding}.xlsx`);};
-  return ReactDOM.createPortal(<div className="rake-probable-backdrop"><section ref={dialogRef} className="rake-probable" role="dialog" aria-modal="true" aria-label={`Probable orders for ${plan.siding}`}>
-    <header><h3>{plan.siding} · Probable orders</h3><button onClick={onClose}>Close</button></header>
+  return ReactDOM.createPortal(<div className="rake-probable-backdrop"><section ref={dialogRef} className="rake-probable" role="dialog" aria-modal="true" aria-label={`Backup orders for ${plan.siding}`}>
+    <header><h3>{plan.siding} · Backup orders</h3><button onClick={onClose}>Close</button></header>
     <p>Plan {fmt(plan.bal)} MT · Target {fmt(limit.target)} MT · ±3% range {fmt(limit.minimum)}–{fmt(limit.maximum)} MT · Shortfall {fmt(limit.missing)} MT</p>
     <p>Within 100 km first, then within the state. Whole orders only. Orders already assigned to an actual plan are excluded.</p>
     <div className="probable-mapping">{live.control}</div>
@@ -2237,7 +2236,7 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding,allRows=[]}){
     </div>
   );
 
-  return<div style={{...card,boxShadow:'var(--shadow-sm)',display:'flex',flexDirection:'column',animation:'fadeUp .3s ease-out',overflow:'hidden'}}>
+  return<div className="actual-plan" style={{...card,boxShadow:'var(--shadow-sm)',display:'flex',flexDirection:'column',animation:'fadeUp .3s ease-out',overflow:'hidden'}}>
     <div style={{padding:'14px 18px',borderBottom:'1px solid var(--bdr)',
       background:`linear-gradient(135deg,var(--s2),var(--s1))`,
       borderRadius:'var(--radius-lg) var(--radius-lg) 0 0',
@@ -2247,13 +2246,13 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding,allRows=[]}){
           Actual Rake Plan
         </div>
         <div style={{fontSize:11,color:'var(--dim)',marginTop:3}}>
-          {grand.n.toLocaleString()} orders · {data.length} sidings already in execution (EBTP Mode) · click row → drill-down
+          {grand.n.toLocaleString()} orders · {data.length} sidings in execution · Select a siding to view orders
           {probable&&<ProbableOrders plan={probable} rows={allRows} onClose={()=>setProbable(null)}/>}
         </div>
       </div>
       <div style={{flex:1}}/>
     </div>
-    <div style={{overflowX:'auto',width:'100%'}}>
+    <div className="actual-plan-scroll" tabIndex={0} aria-label="Actual rake plan table" style={{overflowX:'auto',width:'100%'}}>
       <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed',minWidth:1100}}>
         <colgroup>
           {/* Matches PivotTable's Region(8)+Siding(14)=22, data cols identical, trailing icon(7) — keeps both tables' columns pixel-aligned */}
@@ -2267,7 +2266,7 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding,allRows=[]}){
         </colgroup>
         <thead>
           <tr>
-            <th style={th0}>Siding</th>
+            <th style={{...th0,textAlign:'left'}}>Siding / Transport</th>
             <th style={{...th0,textAlign:'right'}}>Ord Qty</th>
             <th style={{...th0,textAlign:'right'}}>Bal PGI</th>
             <th style={{...th0,textAlign:'right'}}>FG UR</th>
@@ -2289,7 +2288,12 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding,allRows=[]}){
                 transition:'background .1s',borderLeft:act?'3px solid '+rc.bdr:'3px solid transparent'}}
               onMouseEnter={e=>e.currentTarget.style.background=rc.bg}
               onMouseLeave={e=>e.currentTarget.style.background=act?rc.bgHi:'transparent'}>
-              <td style={{...td0,fontSize:13,paddingLeft:12}}><STag code={r.siding}/>{!(/ROAD/i.test(r.siding))&&<div style={{fontSize:10,color:'var(--dim)'}}>{[...new Set(r.items.map(({ord})=>ord._WagonType==='LONG'?'LONG':'BOSM/BRN+BRN'))].join(' · ')}</div>}{r.items.some(({ord})=>ord._RoutingConflict)&&<div style={{color:C.rose,fontSize:10}}>EBTP rail assignment conflict — ROAD-ODC</div>}{!(/ROAD/i.test(r.siding))&&<button className="actual-probable-trigger" onClick={e=>{e.stopPropagation();setProbable(r);}}>Probable orders</button>}</td>
+              <td className="actual-siding-cell" style={{...td0,fontSize:13,paddingLeft:12}}>
+                <div className="actual-siding-line"><button className="actual-siding-name" onClick={e=>{e.stopPropagation();onDrill(r.siding);}} aria-label={`View ${r.siding} orders`}>{r.siding}</button>{/ROAD/i.test(r.siding)&&<span className="actual-transport-kind">{r.siding.includes('ODC')?'ODC':'Road'}</span>}</div>
+                {!(/ROAD/i.test(r.siding))&&<div className="actual-wagon-type">{[...new Set(r.items.map(({ord})=>ord._WagonType==='LONG'?'LONG':'BOSM/BRN+BRN'))].join(' · ')}</div>}
+                {r.items.some(({ord})=>ord._RoutingConflict)&&<div className="actual-routing-conflict">Rail assignment conflict · ROAD-ODC</div>}
+                {!(/ROAD/i.test(r.siding))&&<button className="actual-probable-trigger" onClick={e=>{e.stopPropagation();setProbable(r);}}>Backup orders <span aria-hidden="true">↗</span></button>}
+              </td>
               <td style={{...dc,fontWeight:600,color:'var(--text)'}}>{fmt(r.qty)}</td>
               <td style={{...tn0,fontSize:13,fontWeight:600,borderBottom:'1px solid var(--bdr)'}}>
                 <div style={{display:'flex',alignItems:'center',gap:6,justifyContent:'flex-end'}}>
@@ -2305,7 +2309,7 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding,allRows=[]}){
               <td style={{...dc,color:'#94a3b8'}}>{fmt(r.issued||0)}</td>
               <td style={{...dc,color:'#fb923c'}}>{fmt(r.btp||0)}</td>
               <td style={{...td0,textAlign:'center',padding:'6px 4px'}}>
-                <button onClick={e=>{e.stopPropagation();onMap(r.siding);}} disabled={!r.items.length}
+                <button className="actual-map-button" onClick={e=>{e.stopPropagation();onMap(r.siding);}} disabled={!r.items.length}
                   title={r.items.length?'View '+r.siding+' on map':'No mapped orders'} style={{padding:'3px 8px',fontSize:12,
                   cursor:r.items.length?'pointer':'not-allowed',opacity:r.items.length?1:.35,
                   background:rc.bg,border:'1px solid '+rc.bdr,
@@ -2515,7 +2519,7 @@ function TotalEbtpMap({rows,onClose}){
   const dialogRef=usePlanningDialog(onClose);
   const[actualOnly,setActualOnly]=useState(true),[road,setRoad]=useState(false),[odc,setOdc]=useState(false),[exports,setExports]=useState(false);
   const[city,setCity]=useState(null),[selected,setSelected]=useState(null),[search,setSearch]=useState(''),[page,setPage]=useState(0);
-  const mapRef=useRef(null),map=useRef(null),markers=useRef(new Map());
+  const mapRef=useRef(null),map=useRef(null),markers=useRef(new Map()),fittedSource=useRef(null);
   const source=useMemo(()=>rows.filter(r=>{
     const category=RakePlanningRules.mapCategory(r);
     if(category==='export'&&!exports||category==='odc'&&!odc||category==='road'&&!road)return false;
@@ -2525,13 +2529,41 @@ function TotalEbtpMap({rows,onClose}){
   }),[rows,actualOnly,road,odc,exports]);
   const live=useLiveDestinations(source);
   const groups=useMemo(()=>{const m=new Map();for(const r of source){const k=orderPlaceKey(r);if(!m.has(k))m.set(k,{key:k,name:r['Ship To Party City']||'Unknown city',coords:orderCoords(r),rows:[],bal:0});const g=m.get(k);g.rows.push(r);g.bal+=n2(parseFloat(r['Bal to PGI']));}return[...m.values()];},[source,live.revision]);
-  const tableRows=useMemo(()=>source.filter(r=>(!city||orderPlaceKey(r)===city)&&(!search||[r['SO No.'],r._LineItem,r['Sold To Party Name'],r['Ship To Party City'],r._Siding].join(' ').toLowerCase().includes(search.toLowerCase()))),[source,city,search]);
+  const tableRows=useMemo(()=>source.filter(r=>(!city||orderPlaceKey(r)===city)&&(!search||[r['SO No.'],r._LineItem,r['Sold To Party Name'],r['Ship To Party City'],r._State,r._Siding,r._ODC].join(' ').toLowerCase().includes(search.toLowerCase()))),[source,city,search]);
+  const mappedGroups=groups.filter(g=>g.coords),activePlace=groups.find(g=>g.key===city);
+  const fitLocations=()=>{const points=groups.filter(g=>g.coords).map(g=>g.coords);if(points.length)map.current?.stop().fitBounds(points,{padding:[40,40],maxZoom:8,animate:false});};
   useEffect(()=>{setCity(null);setPage(0);setSelected(null);},[actualOnly,road,odc,exports]);
   useEffect(()=>{const m=L.map(mapRef.current,{center:[22,80],zoom:5});map.current=m;L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',maxZoom:19}).addTo(m);const resize=new ResizeObserver(()=>m.invalidateSize({animate:false}));resize.observe(mapRef.current);return()=>{resize.disconnect();m.remove();map.current=null;};},[]);
-useEffect(()=>{if(!map.current)return;const layer=L.layerGroup().addTo(map.current);markers.current.clear();const bounds=[];groups.forEach(g=>{if(!g.coords||g.coords.some(v=>!Number.isFinite(v)))return;bounds.push(g.coords);const marker=L.circleMarker(g.coords,{radius:8,color:'#0ea5e9',fillColor:'#0ea5e9',fillOpacity:.8}).addTo(layer);const label=document.createElement('div');label.textContent=`${g.name} · ${fmt(g.bal)} MT · ${g.rows.length} orders`;marker.bindTooltip(label);marker.on('click',()=>{setCity(g.key);setPage(0);setSelected(null);});markers.current.set(g.key,marker);});if(bounds.length)map.current.stop().fitBounds(bounds,{padding:[30,30],maxZoom:8,animate:false});return()=>layer.remove();},[groups]);
-  const focus=r=>{const k=orderPlaceKey(r),marker=markers.current.get(k);setSelected(RakePlanningRules.orderKey(r));markers.current.forEach((m,key)=>m.setStyle({color:key===k?'#f59e0b':'#0ea5e9',fillColor:key===k?'#f59e0b':'#0ea5e9'}));if(marker){map.current.stop().setView(marker.getLatLng(),9,{animate:false});marker.openTooltip();}};
-  return ReactDOM.createPortal(<div className="total-map-backdrop"><section ref={dialogRef} className="total-map" role="dialog" aria-modal="true" aria-label="Total EBTP map"><header><h3>Total EBTP map</h3><label><input type="checkbox" checked={actualOnly} onChange={e=>setActualOnly(e.target.checked)}/> Actual rail plan only</label>{[['Road',road,setRoad],['ROAD-ODC',odc,setOdc],['Exports',exports,setExports]].map(([label,v,set])=><label key={label}><input type="checkbox" checked={v} onChange={e=>set(e.target.checked)}/>{label}</label>)}<button onClick={onClose}>Close</button></header>
-    <div className="total-map-body"><div className="total-map-canvas"><div ref={mapRef} style={{height:'100%',minHeight:280}}/>{live.control}</div><div className="total-map-orders"><div className="total-map-tools"><input aria-label="Search mapped orders" placeholder="Search orders / city…" value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}}/><button onClick={()=>{setCity(null);setPage(0);}}>All locations</button><span>{tableRows.length} orders · {groups.filter(g=>!g.coords).length} unmapped destinations</span></div><div className="probable-table-scroll"><table><thead><tr>{['SO / Item','Customer','City / State','Plan / Transport','Balance MT','Location'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{tableRows.slice(page*100,page*100+100).map(r=><tr key={RakePlanningRules.orderKey(r)} onClick={()=>focus(r)} style={{cursor:'pointer',background:selected===RakePlanningRules.orderKey(r)?'var(--primary-bg)':''}}><td><button onClick={e=>{e.stopPropagation();focus(r);}}>{r['SO No.']} / {r._LineItem}</button></td><td>{r['Sold To Party Name']}</td><td>{r['Ship To Party City']} / {r._State}</td><td>{[actualSidingForOrder(r)||r._Siding,r._ODC||r._WagonType].filter((v,i,a)=>v&&a.indexOf(v)===i).join(' · ')}{r._RoutingConflict&&<small> · Assignment conflict</small>}</td><td>{fmt(r['Bal to PGI'])}</td><td>{GEO_CACHE[orderPlaceKey(r)]?'Online cached':orderCoords(r)?'Offline fallback':'Unmapped'}</td></tr>)}</tbody></table></div><footer><button disabled={!page} onClick={()=>setPage(p=>p-1)}>Previous</button><span>Page {page+1} / {Math.max(1,Math.ceil(tableRows.length/100))}</span><button disabled={(page+1)*100>=tableRows.length} onClick={()=>setPage(p=>p+1)}>Next</button></footer></div></div>
+  useEffect(()=>{
+    if(!map.current)return;
+    const layer=L.layerGroup().addTo(map.current);markers.current.clear();
+    const maxBal=Math.max(1,...groups.map(g=>g.bal));
+    groups.forEach(g=>{
+      if(!g.coords||g.coords.some(v=>!Number.isFinite(v)))return;
+      const marker=L.circleMarker(g.coords,{radius:6+10*Math.sqrt(g.bal/maxBal),weight:2,color:'#fff',fillColor:'#0284c7',fillOpacity:.85}).addTo(layer);
+      const label=document.createElement('div');label.textContent=`${g.name} · ${fmt(g.bal)} MT · ${g.rows.length} orders`;marker.bindTooltip(label);
+      const choose=()=>{setCity(g.key);setPage(0);setSelected(null);};marker.on('click',choose);
+      const el=marker.getElement();el?.setAttribute('tabindex','0');el?.setAttribute('role','button');el?.setAttribute('aria-label',`Show ${g.name} orders, ${fmt(g.bal)} MT`);
+      el?.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose();}});
+      markers.current.set(g.key,marker);
+    });
+    if(markers.current.size&&fittedSource.current!==source){fitLocations();fittedSource.current=source;}
+    return()=>layer.remove();
+  },[groups]);
+  useEffect(()=>{const focused=source.find(r=>RakePlanningRules.orderKey(r)===selected),key=focused?orderPlaceKey(focused):city;markers.current.forEach((m,k)=>m.setStyle({fillColor:k===key?'#d97706':'#0284c7',weight:k===key?3:2}));},[selected,city,groups]);
+  const focus=r=>{const marker=markers.current.get(orderPlaceKey(r));setSelected(RakePlanningRules.orderKey(r));if(marker){map.current.stop().setView(marker.getLatLng(),9,{animate:false});marker.openTooltip();}};
+  return ReactDOM.createPortal(<div className="total-map-backdrop"><section ref={dialogRef} className="total-map" role="dialog" aria-modal="true" aria-label="Total EBTP map">
+    <header><div><h3>Total EBTP map</h3><p>{source.length.toLocaleString()} orders · {fmt(source.reduce((sum,r)=>sum+n2(parseFloat(r['Bal to PGI'])),0))} MT balance</p></div><button onClick={onClose}>Close</button></header>
+    <div className="total-map-filters" aria-label="Map categories"><label><input type="checkbox" checked={actualOnly} onChange={e=>setActualOnly(e.target.checked)}/> Actual rail plan only</label>{[['Road',road,setRoad],['ROAD-ODC',odc,setOdc],['Exports',exports,setExports]].map(([label,v,set])=><label key={label}><input type="checkbox" checked={v} onChange={e=>set(e.target.checked)}/>{label}</label>)}<span>Marker size shows quantity</span></div>
+    <div className="total-map-body">
+      <div className="total-map-canvas"><div ref={mapRef} style={{height:'100%'}}/><button className="total-map-fit" onClick={fitLocations} disabled={!mappedGroups.length}>Fit locations</button><div className="total-map-caption">{mappedGroups.length} mapped destinations · {groups.length-mappedGroups.length} unmapped{!mappedGroups.length&&<small>No mapped locations in this view</small>}</div></div>
+      <div className="total-map-orders">
+        <div className="total-map-tools"><div className="total-map-selection"><strong>{activePlace?.name||'All locations'}</strong><span>{tableRows.length.toLocaleString()} orders</span><button onClick={()=>{setCity(null);setSelected(null);setPage(0);fitLocations();}}>All locations</button></div><input aria-label="Search mapped orders" placeholder="Search SO, customer, city or state…" value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}}/></div>
+        <div className="probable-table-scroll" tabIndex={0} aria-label="Mapped orders table"><table><thead><tr>{['SO / Item','Customer','City / State','Plan / Transport','Balance MT','Location'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{tableRows.slice(page*100,page*100+100).map(r=><tr key={RakePlanningRules.orderKey(r)} onClick={()=>focus(r)} data-selected={selected===RakePlanningRules.orderKey(r)}><td><button className="map-order-link" onClick={e=>{e.stopPropagation();focus(r);}}>{r['SO No.']} / {r._LineItem}</button></td><td>{r['Sold To Party Name']}</td><td><strong>{r['Ship To Party City']}</strong><small>{r._State}</small></td><td>{actualSidingForOrder(r)||r._Siding}<small>{r._ODC||r._WagonType}{r._RoutingConflict&&' · Assignment conflict'}</small></td><td className="map-quantity">{fmt(r['Bal to PGI'])}</td><td><span className="map-location-status" data-mapped={!!orderCoords(r)}>{GEO_CACHE[orderPlaceKey(r)]?'Online cached':orderCoords(r)?'Offline fallback':'Unmapped'}</span></td></tr>)}{!tableRows.length&&<tr><td colSpan={6} className="map-empty">No orders match this view. Change the search or map filters.</td></tr>}</tbody></table></div>
+        <footer><span>Page {page+1} / {Math.max(1,Math.ceil(tableRows.length/100))}</span><button disabled={!page} onClick={()=>setPage(p=>p-1)}>Previous</button><button disabled={(page+1)*100>=tableRows.length} onClick={()=>setPage(p=>p+1)}>Next</button></footer>
+        <details className="total-map-mapping"><summary>Live destination mapping <span role="status">{live.status}</span></summary>{live.control}</details>
+      </div>
+    </div>
   </section></div>,document.body);
 }
 function OverviewMapModal({rows,onClose}){
@@ -2593,12 +2625,14 @@ function OverviewMapModal({rows,onClose}){
     if(!mapRef.current||!window.L)return;
     const L=window.L;
     const map=L.map(mapRef.current,{center:[22,80],zoom:5,zoomControl:true,preferCanvas:true});
+    const resize=new ResizeObserver(()=>map.invalidateSize({animate:false}));resize.observe(mapRef.current);
     mapInst.current=map;
     flowRendererRef.current=L.svg({padding:.5}).addTo(map);
     const _markInteracting=()=>map.getContainer().classList.add('leaflet-interacting');
     const _clearInteracting=()=>map.getContainer().classList.remove('leaflet-interacting');
     map.on('movestart zoomstart',_markInteracting).on('moveend zoomend',_clearInteracting);
     return()=>{
+      resize.disconnect();
       map.off('movestart zoomstart',_markInteracting).off('moveend zoomend',_clearInteracting);
       if(baseLayerRef.current){baseLayerRef.current.remove();baseLayerRef.current=null;}
       if(overlayGroupRef.current){overlayGroupRef.current.remove();overlayGroupRef.current=null;}
@@ -2950,11 +2984,12 @@ function OverviewMapModal({rows,onClose}){
         </div>
 
         <div className="rake-map-destinations" aria-label="Destinations">
+          <details className="rake-map-mapping"><summary>Live destination mapping <small>{livePlaces.status}</small></summary>{livePlaces.control}</details>
           <strong>Destinations</strong>
           {Object.values(data).map(plan=><button type="button" key={plan.siding} aria-pressed={selSid===plan.siding} onClick={()=>setSelSid(plan.siding)}><span>{resolveHub(plan.siding)?.name||plan.siding}<small>{plan.siding}</small></span><span>{fmt(plan.totalBal)}<small>MT balance</small></span></button>)}
         </div>
         {/* Map */}
-        <div className="rake-map-canvas" style={{flex:1,minHeight:0,position:'relative',display:'flex'}}><div ref={mapRef} style={{flex:1,minHeight:0}}/>{livePlaces.control}<button className="rake-map-recenter" type="button" onClick={()=>mapInst.current?.setView([ANGUL.lat,ANGUL.lng],5)} aria-label="Recenter map on Angul">⌖</button></div>
+        <div className="rake-map-canvas" style={{flex:1,minHeight:0,position:'relative',display:'flex'}}><div ref={mapRef} style={{flex:1,minHeight:0}}/><button className="rake-map-recenter" type="button" onClick={()=>mapInst.current?.setView([ANGUL.lat,ANGUL.lng],5)} aria-label="Recenter map on Angul">⌖</button></div>
 
         {/* Footer */}
         <div style={{padding:'9px 18px',borderTop:'1px solid var(--bdr)',flexShrink:0,
@@ -3093,6 +3128,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
     if(!mapRef.current||!window.L)return;
     const L=window.L;
     const map=L.map(mapRef.current,{center:[22,80],zoom:5,zoomControl:true,attributionControl:true,preferCanvas:true});
+    const resize=new ResizeObserver(()=>map.invalidateSize({animate:false}));resize.observe(mapRef.current);
     mapInst.current=map;
     flowRendererRef.current=L.svg({padding:.5}).addTo(map);
     const _markInteracting=()=>map.getContainer().classList.add('leaflet-interacting');
@@ -3100,6 +3136,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
     map.on('movestart zoomstart',_markInteracting).on('moveend zoomend',_clearInteracting);
 
     return()=>{
+      resize.disconnect();
       map.off('movestart zoomstart',_markInteracting).off('moveend zoomend',_clearInteracting);
       if(baseLayerRef.current){baseLayerRef.current.remove();baseLayerRef.current=null;}
       if(overlayGroupRef.current){overlayGroupRef.current.remove();overlayGroupRef.current=null;}
@@ -3410,12 +3447,13 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
       </div>
 
       <div className="rake-map-destinations" aria-label="Delivery cities">
+        <details className="rake-map-mapping"><summary>Live destination mapping <small>{livePlaces.status}</small></summary>{livePlaces.control}</details>
         <strong>Delivery cities</strong>
         {cities.map(city=><button type="button" key={city.name} onClick={()=>{mapInst.current?.setView([city.lat,city.lng],9);setCityDrill({cityName:city.name,rows:city.ords});}}><span>{city.name}<small>{city.distFromHub} km from siding</small></span><span>{fmt(city.bal)}<small>MT balance</small></span></button>)}
         {!cities.length&&<p>No mapped delivery cities. Try live destination mapping.</p>}
       </div>
       {/* Leaflet map */}
-      <div className="rake-map-canvas" style={{flex:1,minHeight:0,position:'relative',display:'flex'}}><div ref={mapRef} style={{flex:1,minHeight:0}}/>{livePlaces.control}<button className="rake-map-recenter" type="button" onClick={()=>mapInst.current?.setView([hubLat,hubLng],7)} aria-label="Recenter map on destination">⌖</button></div>
+      <div className="rake-map-canvas" style={{flex:1,minHeight:0,position:'relative',display:'flex'}}><div ref={mapRef} style={{flex:1,minHeight:0}}/><button className="rake-map-recenter" type="button" onClick={()=>mapInst.current?.setView([hubLat,hubLng],7)} aria-label="Recenter map on destination">⌖</button></div>
 
       {/* Footer */}
       <div style={{padding:'9px 18px',borderTop:'1px solid var(--bdr)',flexShrink:0,
@@ -5509,6 +5547,7 @@ function App(){
       setActDrill(null);
       setActMap(null);
       setOvMap(false);
+      setPlanningView('actual');
       setSideOpen(false);
     };
     return ()=>{
@@ -5538,6 +5577,7 @@ function App(){
   const[actDrill,setActDrill] =useState(null); // siding string, Actual Rake Plan drill-down
   const[actMap,setActMap]     =useState(null); // siding string, Actual Rake Plan map view
   const[ovMap,setOvMap]       =useState(false);
+  const[planningView,setPlanningView]=useState('actual');
   const[sideOpen,setSideOpen] =useState(false);
   const fileRef=useRef();
 
@@ -6263,6 +6303,11 @@ function App(){
 
       {/* Main content */}
       <div style={{flex:1,display:'flex',flexDirection:'column',minWidth:0,gap:'var(--space-stack)'}}>
+        <div className="rake-view-switch" role="group" aria-label="Planning view">
+          <button aria-pressed={planningView==='actual'} aria-controls="actual-plan-view" onClick={()=>setPlanningView('actual')}>Actual plan</button>
+          <button aria-pressed={planningView==='predictor'} aria-controls="predictor-view" onClick={()=>setPlanningView('predictor')}>Rake predictor</button>
+        </div>
+        <section id="actual-plan-view" className="rake-view-panel" aria-label="Actual plan" hidden={planningView!=='actual'}>
         <ActualRakePlan
           data={actualPlanData}
           allRows={rows}
@@ -6270,17 +6315,19 @@ function App(){
           onDrill={sid=>setActDrill(d=>d===sid?null:sid)}
           onMap={sid=>setActMap(sid)}
         />
+        <TransportStockSummary rows={pivSrc}/>
+        </section>
+        <section id="predictor-view" className="rake-view-panel" aria-label="Rake predictor" hidden={planningView!=='predictor'}>
+        <RakePredictor rows={pivSrc}/>
+        <details className="rake-release-summary"><summary>Order release summary</summary>
         <PivotTable
           data={pivotData} remarksLbl={remLbl}
           activeCell={drill}
           onRegionExport={(region,regionRows)=>exportRegionXLSX(region,regionRows,filtered.filter(r=>r._Region===region))}
           onDrill={(region,siding)=>setDrill(d=>d?.region===region&&d?.siding===siding?null:{region,siding})}
         />
-        <RakePredictor rows={pivSrc}/>
-        <TransportStockSummary rows={pivSrc}/>
-        <div style={{marginTop:8,marginBottom:8,color:'var(--mute)',fontSize:11.5,textAlign:'center',fontFamily:F.m}}>
-          Rake Planner · self-contained offline tool
-        </div>
+        </details>
+        </section>
       </div>
     </div>
 
