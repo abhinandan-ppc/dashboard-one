@@ -62,7 +62,7 @@ input:focus{outline:none;border-color:var(--amber) !important;box-shadow:var(--s
 .rake-predictor>.rake-region-list{padding:14px!important}
 .rake-siding-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding-top:12px;align-items:start}
 .rake-siding-grid>.rake-siding-card{min-width:0}
-.rake-siding-grid{row-gap:16px;padding-top:12px}
+.rake-predictor .rake-siding-grid{grid-auto-rows:1px;row-gap:0;grid-auto-flow:row dense;padding-top:12px}
 .rake-siding-card.rake-folder{position:relative;overflow:hidden;margin-top:0}
 .rake-folder-cover{position:relative;list-style:none;cursor:pointer;min-height:132px;border-radius:var(--radius-lg);background:var(--component-surface)}
 .rake-folder-cover::-webkit-details-marker{display:none}
@@ -100,7 +100,8 @@ html body.page-rake .rake-folder[data-stack-open] .rake-entry{position:relative;
 .rake-folder[data-stack-open="false"] .rake-entry:first-child{margin-top:0}
 .rake-folder[data-stack-open="true"] .rake-entry{margin-top:10px}
 .rake-folder[data-stack-open="true"] .rake-entry:first-child{margin-top:0}
-.rake-folder[data-stack-open="false"] .rake-entry-heading{min-height:62px;padding:10px 12px 24px;align-items:flex-start}
+.rake-folder[data-stack-open="false"] .rake-entry-heading{min-height:56px;padding:10px 12px 18px;align-items:flex-start}
+.rake-folder[data-stack-open="false"] .rake-entry:last-child .rake-entry-heading{min-height:44px;padding-bottom:10px}
 .rake-folder[data-stack-open="false"] :is(.rake-select,.rake-order-count,.rake-entry-caret,.rake-siding-actions){display:none}
 .rake-folder[data-stack-open="true"] .rake-peek-quantity{display:none}
 .rake-peek-quantity{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -4287,6 +4288,14 @@ function RakeDrillPanel({rakePlan,rakeIdx,onClose,mob}){
 }
 
 function RakePredictor({rows}){
+  const predictorRef=useRef(null);
+  React.useLayoutEffect(()=>{
+    const cards=[...predictorRef.current.querySelectorAll('.rake-siding-grid>.rake-siding-card')];
+    const measure=el=>{const span=Math.ceil(el.getBoundingClientRect().height)+12;const value=`span ${span}`;if(el.style.gridRowEnd!==value)el.style.gridRowEnd=value;};
+    const observer=new ResizeObserver(entries=>entries.forEach(({target})=>measure(target)));
+    cards.forEach(el=>{measure(el);observer.observe(el);});
+    return()=>observer.disconnect();
+  });
   const[open,setOpen]=useState(true);
   const[rkDrill,setRkDrill]=useState(null);
   const[rkMap,setRkMap]=useState(null);
@@ -4335,7 +4344,7 @@ function RakePredictor({rows}){
   const combineRakeA=rkCombine?data[rkCombine.selA.sid]?.rakes[rkCombine.selA.idx]:null;
   const combineRakeB=rkCombine?data[rkCombine.selB.sid]?.rakes[rkCombine.selB.idx]:null;
 
-  return<div className="rake-predictor" style={{...card,overflow:'hidden',boxShadow:'var(--shadow-sm)'}}>
+  return<div ref={predictorRef} className="rake-predictor" style={{...card,overflow:'hidden',boxShadow:'var(--shadow-sm)'}}>
     <div className="rake-predictor-heading" onClick={()=>setOpen(o=>!o)} style={{padding:'14px 20px',cursor:'pointer',
       display:'flex',alignItems:'center',gap:14,
       borderBottom:`1px solid ${open?C.bdr:'transparent'}`,
