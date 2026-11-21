@@ -2796,13 +2796,9 @@ setStyle(readStoredStyle());
     <div class="fetch-status-spinner"></div>
     <div class="fetch-status-label" id="fetchStatusLabel">Fetching EBTP data…</div>
     <button class="fetch-status-minimize" id="fetchStatusMinimize" type="button" aria-label="Expand log" title="Expand log" aria-expanded="false">
-      <span class="fs-toggle-icon" aria-hidden="true">
-        <i class="fs-toggle-top"></i><i class="fs-toggle-bottom"></i>
-        <i class="fs-toggle-left"></i><i class="fs-toggle-right"></i>
-        <i class="fs-toggle-center"></i>
-      </span>
+      <span class="fs-toggle-icon" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="m4 6 4 4 4-4"/></svg></span>
     </button>
-    <button class="fetch-status-minimize" id="fetchStatusClose" type="button" aria-label="Close sync progress; syncing continues in background" title="Close — sync continues in background">×</button>
+    <button class="fetch-status-minimize" id="fetchStatusClose" type="button" aria-label="Close sync progress; syncing continues in background" title="Close — sync continues in background"><svg class="fs-close-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m4.5 4.5 7 7m0-7-7 7"/></svg></button>
   </div>
   <div class="fetch-status-sources">
     <span class="fetch-status-src" data-src="EBTP"><i class="fetch-status-src-dot"></i><span>EBTP</span></span>

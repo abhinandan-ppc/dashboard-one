@@ -504,25 +504,18 @@ a.card:hover {
   box-shadow:var(--shadow-lg);padding:10px 18px;
   display:flex;flex-direction:column;gap:10px;
 }
-.fetch-status-head{display:grid;grid-template-columns:16px minmax(0,1fr) 32px 32px;align-items:center;gap:8px}
-.fetch-status-minimize{background:transparent;border:none;color:var(--mute);cursor:pointer;font-size:16px;line-height:1;padding:2px 6px;border-radius:6px;margin-left:auto;display:flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;position:relative}
-.fs-toggle-icon{position:relative;width:14px;height:14px;display:block;flex:0 0 14px;margin:auto}
-.fs-toggle-icon i{position:absolute;display:block;background:currentColor;border-radius:1px;
-  box-shadow:0 1px 3px rgba(0,0,0,.35);transition:all .28s cubic-bezier(.4,0,.2,1)}
-.fs-toggle-top,.fs-toggle-bottom{left:1px;width:12px;height:2px;top:1px;opacity:1}
-.fs-toggle-bottom{top:11px}
-.fs-toggle-left,.fs-toggle-right{top:1px;width:2px;height:12px;left:1px;opacity:1}
-.fs-toggle-right{left:11px}
-.fs-toggle-center{left:1px;top:6px;width:12px;height:2px;opacity:0}
-.fetch-status:not(.minimized) .fs-toggle-top,.fetch-status:not(.minimized) .fs-toggle-bottom{top:6px;opacity:0}
-.fetch-status:not(.minimized) .fs-toggle-left,.fetch-status:not(.minimized) .fs-toggle-right{left:6px;opacity:0}
-.fetch-status:not(.minimized) .fs-toggle-center{opacity:1}
-.fetch-status-minimize:hover{background:var(--s2);color:var(--text)}
+.fetch-status-head{display:grid;grid-template-columns:16px minmax(0,1fr) 36px 36px;align-items:center;gap:6px}
+.fetch-status-minimize{background:transparent;border:1px solid transparent;color:var(--mute);cursor:pointer;line-height:1;padding:0;border-radius:50%;margin:0;display:flex;align-items:center;justify-content:center;min-width:36px;min-height:36px;position:relative;transition:background-color .16s ease,border-color .16s ease,color .16s ease,transform .16s ease}
+.fs-toggle-icon,.fs-close-icon{width:16px;height:16px;display:block;flex:0 0 16px}
+.fs-toggle-icon svg,.fs-close-icon{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.fs-toggle-icon svg{width:16px;height:16px;display:block;transition:transform .18s cubic-bezier(.2,0,0,1)}
+.fetch-status:not(.minimized) .fs-toggle-icon svg{transform:rotate(180deg)}
+.fetch-status-minimize:hover{background:var(--s2);border-color:var(--bdr);color:var(--text)}
+.fetch-status-minimize:active{transform:scale(.96)}
 .fetch-status-minimize:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
 .fetch-status.minimized .fetch-status-log{display:none}
 .fetch-status.minimized{padding:12px 14px;gap:10px}
-.fetch-status .fetch-status-minimize{margin:0;width:32px;height:32px;min-width:32px;padding:0;border-radius:8px;box-shadow:none;flex-shrink:0}
-.fetch-status #fetchStatusClose{font-size:22px;font-weight:400}
+.fetch-status .fetch-status-minimize{width:36px;height:36px;min-width:36px;padding:0;box-shadow:none;flex-shrink:0}
 .fetch-status .fetch-status-label{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:none;letter-spacing:0;font-size:13px}
 .fetch-status .fetch-status-sources{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0}
 .fetch-status .fetch-status-src{justify-content:center;min-width:0;padding:5px 6px;font-size:11px;letter-spacing:0}
@@ -3602,4 +3595,77 @@ html body .year-options label:hover {background:var(--primary-bg)}
 
 @media (max-width:768px) {
  html body .app-header #sheetSyncClub {margin-left:0!important}
+}
+
+/* One mobile header contract: identity and page actions, then shared navigation.
+   Role classes keep desktop arrangements and React-owned nodes intact. */
+.page-admin .mobile-header-identity {display:contents}
+@media (max-width:768px) {
+  html body .app-header.mobile-header {
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center!important;
+    gap:12px 8px!important;
+    padding:12px!important;
+    min-width:0;
+  }
+  html body .mobile-header .mobile-header-identity {
+    display:flex!important;align-items:center!important;gap:8px!important;
+    grid-column:1;grid-row:1;min-width:0;width:auto!important;
+    flex-wrap:nowrap!important;text-align:left!important;
+  }
+  html body .mobile-header .mobile-header-identity > :last-child {min-width:0;flex-shrink:1!important}
+  html body .mobile-header :is(.jspl-brand-text,.brand-text,.jspl-divider,.top-divider) {display:none!important}
+  html body .mobile-header :is(.jspl-logo,.top-brand img) {
+    width:32px!important;height:22px!important;flex:0 0 32px!important;
+  }
+  html body .mobile-header :is(h1,h2,.app-header-title,.app-header-title > div:last-child) {
+    font-size:16px!important;line-height:1.2!important;
+    white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
+    overflow-wrap:anywhere;
+  }
+  html body .mobile-header :is(.eyebrow,.app-header-title > div:first-child:not(:last-child)) {
+    font-size:10px!important;line-height:1.2!important;letter-spacing:.05em!important;
+    white-space:normal!important;margin-bottom:3px!important;
+  }
+  html body .mobile-header .mobile-header-controls {
+    grid-column:2;grid-row:1;justify-self:end;align-self:center;
+    display:flex!important;align-items:center!important;justify-content:flex-end!important;
+    flex-wrap:nowrap!important;gap:4px!important;width:auto!important;max-width:none;
+    margin:0!important;padding:0!important;border:0!important;
+  }
+  html body .mobile-header .mobile-header-controls > button {
+    width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;
+    padding:0!important;display:inline-flex;align-items:center;justify-content:center;
+    font-size:12px!important;flex-shrink:0;
+  }
+  html body .mobile-header .mobile-header-controls.view-tabs {padding:4px!important}
+  html body .mobile-header .mobile-header-controls.view-tabs > button {font-size:0!important}
+  html body.page-vdo .mobile-header #uploadBtn > span:not(.spinner) {display:none}
+  html body .mobile-header .app-header-title > div {text-align:left!important}
+  html body .mobile-header :is(.mobile-header-group,.mobile-header-navigation) {
+    display:contents!important;
+  }
+  html body .mobile-header :is(.mobile-header-details,#fileBadge) {
+    grid-column:1 / -1;order:1;min-width:0;width:100%!important;
+    margin:0!important;padding:0!important;border:0!important;text-align:left!important;
+    justify-content:flex-start!important;
+  }
+  html body .mobile-header #hubFrameHeaderSlot:not(:empty) {
+    grid-column:1 / -1;order:2;justify-self:stretch;
+    display:flex!important;align-items:center!important;justify-content:center!important;
+    width:100%!important;max-width:none;gap:8px!important;
+    border-top:1px solid var(--bdr)!important;
+    padding:10px 0 0!important;margin:0!important;
+  }
+  html body .mobile-header #hubFrameHeaderControls {gap:8px!important}
+  html body .mobile-header #hubFrameHeaderSlot button {
+    width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;
+    max-width:44px!important;max-height:44px!important;
+  }
+  html body .mobile-header :is(.mobile-header-identity .sub,.truck-brand-copy .subtitle) {
+    font-size:11px!important;line-height:1.4!important;white-space:normal!important;
+  }
+  html body.page-sms-shell .mobile-header > .hdr-r:has(> button:only-child[style*="display: none"]),
+  html body.page-grade .mobile-header > .top-right {display:none!important}
 }
