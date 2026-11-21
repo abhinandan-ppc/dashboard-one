@@ -2207,7 +2207,7 @@ function ProbableOrders({plan,rows,onClose}){
     {options.length>0?<div className="probable-table-scroll" tabIndex={0} aria-label="Backup orders table"><table><thead><tr><th>Select</th><th>SO / Item</th><th>Customer</th><th>City / State</th><th>Range</th><th>Wagon</th><th>Balance MT</th></tr></thead><tbody>
       {['Released','Unreleased','Other / review'].map(group=><React.Fragment key={group}>{options.some(o=>o.release===group)&&<tr className="backup-group"><th colSpan={7}>{group} <span>{options.filter(o=>o.release===group).length}</span></th></tr>}{options.filter(o=>o.release===group).map(({ord,km,band})=>{const id=RakePlanningRules.orderKey(ord);return<tr key={id} data-selected={selected.has(id)}><td><label className="backup-select"><input aria-label={`Select order ${id}`} type="checkbox" checked={selected.has(id)} onChange={()=>setSelected(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;})}/></label></td><td className="backup-order-id">{ord['SO No.']} / {ord._LineItem}</td><td>{ord['Sold To Party Name']}</td><td>{ord['Ship To Party City']}<small>{ord._State}</small></td><td>{band===0?`${Math.round(km)} km`:'Same state'}</td><td>{ord._WagonType}</td><td className="backup-quantity">{fmt(ord['Bal to PGI'])}</td></tr>;})}</React.Fragment>)}
     </tbody></table></div>:<div className="backup-empty" role="status"><strong>{live.busy?'Checking for nearby orders…':'No nearby orders found.'}</strong><span>{live.busy?'The list will update as new locations are cached.':'New destinations are checked daily. Orders already in an actual plan are excluded.'}</span></div>}
-    <footer><div className="backup-selection"><strong>{picked.length} orders selected · {fmt(added)} MT</strong><span>Remaining shortfall: {fmt(remaining)} MT{plan.bal+added>limit.maximum?' · Above target tolerance — review draft':''}</span></div><button className="backup-save" disabled={!picked.length} onClick={save}>Save draft</button><button disabled={!picked.length} onClick={download}>Download draft</button>{notice&&<span className="backup-notice" role="status">{notice}</span>}</footer>
+    <footer><div className="backup-selection"><strong>{picked.length} orders selected · {fmt(added)} MT</strong><span>Remaining shortfall: {fmt(remaining)} MT{plan.bal+added>limit.maximum?' · Above target tolerance — review draft':''}</span></div><button className="backup-save" disabled={!picked.length} onClick={save}>Save draft</button><button disabled={!picked.length} onClick={download}>Download draft</button>{notice&&<span className="backup-notice" role="status">{notice}</span>}<span className="backup-notice rake-map-attribution">Locations: <a href="https://www.geoapify.com/" target="_blank" rel="noreferrer">Powered by Geoapify</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a></span></footer>
   </section></div>,document.body);
 }
 function TransportStockSummary({rows}){
@@ -2530,7 +2530,7 @@ function TotalEbtpMap({rows,onClose}){
   const mappedGroups=groups.filter(g=>g.coords),activePlace=groups.find(g=>g.key===city);
   const fitLocations=()=>{const points=groups.filter(g=>g.coords).map(g=>g.coords);if(points.length)map.current?.stop().fitBounds(points,{padding:[40,40],maxZoom:8,animate:false});};
   useEffect(()=>{setCity(null);setPage(0);setSelected(null);},[actualOnly,road,odc,exports]);
-  useEffect(()=>{const m=L.map(mapRef.current,{center:[22,80],zoom:5});map.current=m;L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',maxZoom:19}).addTo(m);const resize=new ResizeObserver(()=>m.invalidateSize({animate:false}));resize.observe(mapRef.current);return()=>{resize.disconnect();m.remove();map.current=null;};},[]);
+  useEffect(()=>{const m=L.map(mapRef.current,{center:[22,80],zoom:5});map.current=m;L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · Powered by <a href="https://www.geoapify.com/">Geoapify</a>',maxZoom:19}).addTo(m);const resize=new ResizeObserver(()=>m.invalidateSize({animate:false}));resize.observe(mapRef.current);return()=>{resize.disconnect();m.remove();map.current=null;};},[]);
   useEffect(()=>{
     if(!map.current)return;
     const layer=L.layerGroup().addTo(map.current);markers.current.clear();
@@ -2647,7 +2647,7 @@ function OverviewMapModal({rows,onClose}){
     const style=lightMap?'World_Light_Gray_Base':'World_Dark_Gray_Base';
     baseLayerRef.current=window.L.tileLayer(
       `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${style}/MapServer/tile/{z}/{y}/{x}`,{
-        attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community',
+        attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community · Powered by <a href="https://www.geoapify.com/">Geoapify</a>',
         maxZoom:16,keepBuffer:3,updateWhenZooming:false,updateWhenIdle:true
       }).addTo(map);
     return()=>{
@@ -3151,7 +3151,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
     const style=lightMap?'World_Light_Gray_Base':'World_Dark_Gray_Base';
     baseLayerRef.current=window.L.tileLayer(
       `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${style}/MapServer/tile/{z}/{y}/{x}`,{
-        attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community',
+        attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community · Powered by <a href="https://www.geoapify.com/">Geoapify</a>',
         maxZoom:16,keepBuffer:3,updateWhenZooming:false,updateWhenIdle:true
       }).addTo(map);
     return()=>{
