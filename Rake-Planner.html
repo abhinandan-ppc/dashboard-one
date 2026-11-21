@@ -2156,8 +2156,9 @@ function CompletionBar({items}){
   const labels=['FG','WIP','Slab','Issued'];
   const covered=total.values.reduce((a,b)=>a+b,0);
   const percentage=total.bal?covered/total.bal*100:0;
+  const colors=['#10b981','#fb923c','#a78bfa','#38bdf8'];
   return <div className="actual-completion" title={labels.map((l,i)=>`${l}: ${fmt(total.values[i])} MT`).join(' · ')}>
-    <div className="actual-stock-track" role="progressbar" aria-label="FG + WIP + Slab + Issued stock coverage" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100,Math.round(percentage))} aria-valuetext={`${fmt(covered)} MT, ${Math.round(percentage)}% of balance to PGI`}><span className="actual-stock-fill" style={{width:`${Math.min(100,percentage)}%`}}/></div>
+    <div className="actual-stock-track" role="progressbar" aria-label="FG + WIP + Slab + Issued stock coverage" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100,Math.round(percentage))} aria-valuetext={`${fmt(covered)} MT, ${Math.round(percentage)}% of balance to PGI; ${labels.map((label,i)=>`${label} ${fmt(total.values[i])} MT`).join(', ')}`}><span className="actual-stock-fill" style={{width:`${Math.min(100,percentage)}%`}}>{total.values.map((value,i)=><span className="actual-stock-segment" key={labels[i]} title={`${labels[i]}: ${fmt(value)} MT`} style={{width:`${covered?value/covered*100:0}%`,background:colors[i]}}/>)}</span></div>
     <small>{Math.round(percentage)}% stock coverage</small>
   </div>;
 }

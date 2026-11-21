@@ -115,7 +115,8 @@ html body .actual-plan .actual-map-button:hover{color:var(--sky)!important;backg
 .actual-plan button:focus-visible,.actual-plan-scroll:focus-visible,.probable-table-scroll:focus-visible,.total-map-mapping summary:focus-visible{outline:2px solid var(--sky);outline-offset:-2px}
 .actual-plan .actual-completion{margin-top:7px}.actual-plan .actual-completion small{font-family:var(--font-body,system-ui);font-size:10px}
 .actual-stock-track{height:6px;border-radius:4px;overflow:hidden;background:var(--s3)}
-.actual-stock-fill{position:relative;display:block;height:100%;overflow:hidden;border-radius:inherit;background:var(--green,#10b981)}
+.actual-stock-fill{position:relative;display:flex;height:100%;overflow:hidden;border-radius:inherit}
+.actual-stock-segment{display:block;height:100%;flex-shrink:0}
 .actual-stock-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent 15%,rgba(255,255,255,.42) 50%,transparent 85%);transform:translateX(-100%);animation:actual-stock-sweep 2.8s ease-in-out infinite;pointer-events:none}
 @keyframes actual-stock-sweep{0%,15%{transform:translateX(-100%)}85%,100%{transform:translateX(100%)}}
 @media(prefers-reduced-motion:reduce){.actual-stock-fill::after{animation:none;display:none}}
