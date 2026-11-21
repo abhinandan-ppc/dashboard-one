@@ -4,6 +4,34 @@ globalThis.RakePlanningRules=(()=>{
   const key=v=>clean(v).toUpperCase();
   const qty=v=>Math.max(0,Number(v)||0);
   const orderKey=r=>clean(r.UID)||`${clean(r['SO No.'])}|${clean(r._LineItem??r.SOItm)}`;
+  function actualSiding(modeC){
+    const raw=key(modeC);
+    if(!raw)return null;
+    if(['ROAD','ROAD-ODC','EXPORT ROAD'].includes(raw))return raw;
+    if(/^RAKE[-\s]+/.test(raw))return raw.replace(/^RAKE[-\s]+/,'').trim()||null;
+    return null;
+  }
+  function simulatorCandidates(rows,scope='ALL',peerRakes=[]){
+    const selected=key(scope),peers=new Set(peerRakes.map(key)),seen=new Set(),candidates=[];
+    for(const row of rows){
+      if(qty(row['Bal to PGI'])<=0)continue;
+      if(selected==='ALL_RAKES'){
+        const assigned=actualSiding(row._ModeC);
+        if(!assigned||['ROAD','ROAD-ODC','EXPORT ROAD'].includes(assigned))continue;
+      }else if(selected==='ALL'){
+        if(isExport(row))continue;
+      }else if(selected){
+        const assigned=actualSiding(row._ModeC);
+        if(assigned===selected||!peers.has(assigned)||key(row._Country)!=='INDIA')continue;
+      }
+      const soItem=`${clean(row['SO No.'])}|${clean(row._LineItem??row.SOItm)}`;
+      const id=soItem==='|'?orderKey(row):soItem;
+      if(seen.has(id))continue;
+      seen.add(id);
+      candidates.push(row);
+    }
+    return candidates;
+  }
   const odc=r=>Number(r.Width)>3150||Number(r['Length Plan'])>14.2;
   function release(r){
     const s=key(r.Remarks).replace(/\s+/g,'');
@@ -40,7 +68,13 @@ globalThis.RakePlanningRules=(()=>{
     if(country==='India'||!country&&key(r['Customer TYPE'])!=='EXPORT')return{country:'India',group:'Domestic',state:state(r.STO)};
     return{country:country||'',group:country?countryGroup(country):'Export — country unresolved',state:state(r.STO)};
   }
-  const isExport=r=>key(r['Customer TYPE'])==='EXPORT'||!!r._Country&&r._Country!=='India';
+  const isExport=r=>{
+    const country=key(r._Country),group=key(r._ExportGroup);
+    return key(r['Customer TYPE'])==='EXPORT'||
+      !!country&&country!=='INDIA'||
+      !!group&&group!=='DOMESTIC'||
+      key(r._Region)==='EXPORT';
+  };
   const city=v=>clean(v).replace(/[.,]+$/,'').trim();
   const mapCategory=r=>r._ODC||odc(r)?'odc':isExport(r)?'export':/ROAD/i.test(r._Siding||'')||/^ROAD/i.test(r._ModeC||'')?'road':'rail';
   function shortfall(balance,capacity=2850,tolerance=.03){
@@ -57,5 +91,5 @@ globalThis.RakePlanningRules=(()=>{
       return{ord,km,band:km!==null&&km<=100?0:states.has(key(state(ord._State)))?1:2,release:release(ord)};
     }).filter(r=>r.band<2).sort((a,b)=>a.band-b.band||(a.km??Infinity)-(b.km??Infinity)||orderKey(a.ord).localeCompare(orderKey(b.ord)));
   }
-  return{clean,key,qty,orderKey,odc,release,completion,state,city,isExport,mapCategory,destination,countryGroup,shortfall,nearby};
+  return{clean,key,qty,orderKey,actualSiding,simulatorCandidates,odc,release,completion,state,city,isExport,mapCategory,destination,countryGroup,shortfall,nearby};
 })();
