@@ -62,17 +62,20 @@ input:focus{outline:none;border-color:var(--amber) !important;box-shadow:var(--s
 .rake-predictor>.rake-region-list{padding:14px!important}
 .rake-siding-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding-top:12px;align-items:start}
 .rake-siding-grid>.rake-siding-card{min-width:0}
-.rake-siding-grid{row-gap:28px;padding-top:38px}
-.rake-siding-card.rake-folder{position:relative;overflow:visible;margin-top:16px}
-.rake-folder::before{content:'';position:absolute;left:-1px;top:-19px;width:44%;height:24px;background:var(--component-surface);border:1px solid var(--bdr);border-bottom:0;border-radius:12px 18px 0 0;pointer-events:none}
+.rake-siding-grid{row-gap:16px;padding-top:12px}
+.rake-siding-card.rake-folder{position:relative;overflow:hidden;margin-top:0}
 .rake-folder-cover{position:relative;list-style:none;cursor:pointer;min-height:132px;border-radius:var(--radius-lg);background:var(--component-surface)}
 .rake-folder-cover::-webkit-details-marker{display:none}
-.rake-folder-cover::before,.rake-folder-cover::after{content:'';position:absolute;left:14px;right:14px;top:-10px;height:12px;border:1px solid var(--bdrHi);border-radius:8px 8px 0 0;background:var(--s2);z-index:-1;transform:rotate(-2deg);transition:transform .2s ease}
-.rake-folder-cover::after{left:24px;right:8px;top:-17px;background:var(--s3);transform:rotate(2deg)}
+.rake-folder:not([open])>.rake-folder-cover{padding-bottom:106px!important}
+.rake-stack-preview{position:absolute;left:12px;right:12px;bottom:12px;height:82px;pointer-events:none}
+.rake-stack-preview>span{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:14px;border:1px solid var(--bdrHi);border-radius:var(--radius-md);background:var(--s2);color:var(--text);box-shadow:var(--shadow-xs);font-size:12px;transform:translateY(calc(var(--stack-index)*10px)) scale(calc(.9 + var(--stack-index)*.05));transform-origin:top center}
+.rake-stack-preview>span:last-child{background:var(--component-surface);border-color:var(--primary);height:62px}
+.rake-stack-preview small{color:var(--dim)}
+.rake-folder[open] .rake-stack-preview{display:none}
 .rake-folder{isolation:isolate}
 .rake-folder[open]>.rake-folder-cover{margin-bottom:12px;border-bottom:1px solid var(--bdr);border-radius:var(--radius-lg) var(--radius-lg) 0 0}
 .rake-folder-hint{display:block;margin-top:12px;color:var(--primary);font-size:11px;font-weight:600}
-.rake-folder[open] .rake-folder-hint::after{content:'Close folder ↑'}
+.rake-folder[open] .rake-folder-hint::after{content:'Collapse rakes ↑'}
 .rake-folder:not([open]) .rake-folder-hint::after{content:'Open rakes ↓'}
 .rake-folder[open]>.rake-list{animation:rakeFolderReveal .25s ease-out}
 @supports (interpolate-size:allow-keywords){
@@ -4369,7 +4372,7 @@ function RakePredictor({rows}){
         const partial=visRakes.length-full;
         return<details key={siding} className="rake-siding-card rake-folder">
           {/* Card header */}
-          <summary className="rake-folder-cover" aria-label={`Open or close ${siding} rake folder`} style={{padding:'16px 12px',display:'flex',alignItems:'flex-start',gap:8}}>
+          <summary className="rake-folder-cover" aria-label={`Expand or collapse ${siding} rakes`} style={{padding:'16px 12px',display:'flex',alignItems:'flex-start',gap:8}}>
             <div style={{flex:1,minWidth:0}}>
               <div style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap',marginBottom:6}}>
                 <h3 className="rake-siding-name">{siding}</h3><RBadge region={region}/>
@@ -4387,6 +4390,9 @@ function RakePredictor({rows}){
               <div style={{fontSize:11,color:rc.txt,opacity:.7,fontFamily:F.h,letterSpacing:'.08em',textTransform:'uppercase'}}>rake{visRakes.length!==1?'s':''}</div>
               <div style={{fontSize:12,color:'var(--dim)',marginTop:6}}>{full} full · {partial} partial</div>
             </div>
+            <span className="rake-stack-preview" aria-hidden="true">
+              {rakes.filter(r=>r.totalBal>0).slice(0,3).map((rk,i)=><span key={i} style={{'--stack-index':i}}><strong>Rake {i+1}</strong><small>{fmt(rk.totalBal)} MT</small></span>)}
+            </span>
           </summary>
 
           {/* Per-rake rows — only show rakes ≥50% capacity in predictor */}
