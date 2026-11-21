@@ -2516,7 +2516,7 @@ function TotalEbtpMap({rows,onClose}){
   const dialogRef=usePlanningDialog(onClose);
   const[actualOnly,setActualOnly]=useState(true),[road,setRoad]=useState(false),[odc,setOdc]=useState(false),[exports,setExports]=useState(false);
   const[city,setCity]=useState(null),[selected,setSelected]=useState(null),[search,setSearch]=useState(''),[page,setPage]=useState(0);
-  const mapRef=useRef(null),map=useRef(null),markers=useRef(new Map()),fittedSource=useRef(null);
+  const mapRef=useRef(null),map=useRef(null),markers=useRef(new Map()),fittedSource=useRef(null),ordersScroll=useRef(null);
   const source=useMemo(()=>rows.filter(r=>{
     const category=RakePlanningRules.mapCategory(r);
     if(category==='export'&&!exports||category==='odc'&&!odc||category==='road'&&!road)return false;
@@ -2538,8 +2538,9 @@ function TotalEbtpMap({rows,onClose}){
     groups.forEach(g=>{
       if(!g.coords||g.coords.some(v=>!Number.isFinite(v)))return;
       const marker=L.circleMarker(g.coords,{radius:6+10*Math.sqrt(g.bal/maxBal),weight:2,color:'#fff',fillColor:'#0284c7',fillOpacity:.85}).addTo(layer);
-      const label=document.createElement('div');label.textContent=`${g.name} · ${fmt(g.bal)} MT · ${g.rows.length} orders`;marker.bindTooltip(label);
-      const choose=()=>{setCity(g.key);setPage(0);setSelected(null);};marker.on('click',choose);
+      const choose=()=>{setCity(g.key);setSearch('');setPage(0);setSelected(null);ordersScroll.current?.scrollTo({top:0});};
+      const label=document.createElement('div');label.textContent=`${g.name} · ${fmt(g.bal)} MT · ${g.rows.length} orders`;marker.bindTooltip(label,{interactive:true});
+      marker.on('click',choose);marker.getTooltip().on('click',choose);
       const el=marker.getElement();el?.setAttribute('tabindex','0');el?.setAttribute('role','button');el?.setAttribute('aria-label',`Show ${g.name} orders, ${fmt(g.bal)} MT`);
       el?.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose();}});
       markers.current.set(g.key,marker);
@@ -2547,7 +2548,7 @@ function TotalEbtpMap({rows,onClose}){
     if(markers.current.size&&fittedSource.current!==source){fitLocations();fittedSource.current=source;}
     return()=>layer.remove();
   },[groups]);
-  useEffect(()=>{const focused=source.find(r=>RakePlanningRules.orderKey(r)===selected),key=focused?orderPlaceKey(focused):city;markers.current.forEach((m,k)=>m.setStyle({fillColor:k===key?'#d97706':'#0284c7',weight:k===key?3:2}));},[selected,city,groups]);
+  useEffect(()=>{const focused=source.find(r=>RakePlanningRules.orderKey(r)===selected),key=focused?orderPlaceKey(focused):city;markers.current.forEach((m,k)=>{m.setStyle({fillColor:k===key?'#d97706':'#0284c7',weight:k===key?4:2,fillOpacity:(!key||k===key)?0.95:0.4});m.getElement()?.setAttribute('aria-pressed',String(k===key));if(k===key)m.bringToFront();});},[selected,city,groups]);
   const focus=r=>{const marker=markers.current.get(orderPlaceKey(r));setSelected(RakePlanningRules.orderKey(r));if(marker){map.current.stop().setView(marker.getLatLng(),9,{animate:false});marker.openTooltip();}};
   return ReactDOM.createPortal(<div className="total-map-backdrop"><section ref={dialogRef} className="total-map" role="dialog" aria-modal="true" aria-label="Total EBTP map">
     <header><div><h3>Total EBTP map</h3><p>{source.length.toLocaleString()} orders · {fmt(source.reduce((sum,r)=>sum+n2(parseFloat(r['Bal to PGI'])),0))} MT balance</p></div><button onClick={onClose}>Close</button></header>
@@ -2555,8 +2556,8 @@ function TotalEbtpMap({rows,onClose}){
     <div className="total-map-body">
       <div className="total-map-canvas"><div ref={mapRef} style={{height:'100%'}}/><button className="total-map-fit" onClick={fitLocations} disabled={!mappedGroups.length}>Fit locations</button><div className="total-map-caption">{mappedGroups.length} mapped destinations · {groups.length-mappedGroups.length} unmapped{!mappedGroups.length&&<small>No mapped locations in this view</small>}</div></div>
       <div className="total-map-orders">
-        <div className="total-map-tools"><div className="total-map-selection"><strong>{activePlace?.name||'All locations'}</strong><span>{tableRows.length.toLocaleString()} orders</span><button onClick={()=>{setCity(null);setSelected(null);setPage(0);fitLocations();}}>All locations</button></div><input aria-label="Search mapped orders" placeholder="Search SO, customer, city or state…" value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}}/></div>
-        <div className="probable-table-scroll" tabIndex={0} aria-label="Mapped orders table"><table><thead><tr>{['SO / Item','Customer','City / State','Plan / Transport','Balance MT','Location'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{tableRows.slice(page*100,page*100+100).map(r=><tr key={RakePlanningRules.orderKey(r)} onClick={()=>focus(r)} data-selected={selected===RakePlanningRules.orderKey(r)}><td><button className="map-order-link" onClick={e=>{e.stopPropagation();focus(r);}}>{r['SO No.']} / {r._LineItem}</button></td><td>{r['Sold To Party Name']}</td><td><strong>{r['Ship To Party City']}</strong><small>{r._State}</small></td><td>{actualSidingForOrder(r)||r._Siding}<small>{r._ODC||r._WagonType}{r._RoutingConflict&&' · Assignment conflict'}</small></td><td className="map-quantity">{fmt(r['Bal to PGI'])}</td><td><span className="map-location-status" data-mapped={!!orderCoords(r)}>{GEO_CACHE[orderPlaceKey(r)]?'Online cached':orderCoords(r)?'Offline fallback':'Unmapped'}</span></td></tr>)}{!tableRows.length&&<tr><td colSpan={6} className="map-empty">No orders match this view. Change the search or map filters.</td></tr>}</tbody></table></div>
+        <div className="total-map-tools"><div className="total-map-selection"><strong aria-live="polite">{activePlace?.name||'All locations'}</strong><span>{tableRows.length.toLocaleString()} orders</span><button onClick={()=>{setCity(null);setSelected(null);setSearch('');setPage(0);ordersScroll.current?.scrollTo({top:0});fitLocations();}}>All locations</button></div><input aria-label="Search mapped orders" placeholder="Search SO, customer, city or state…" value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}}/></div>
+        <div ref={ordersScroll} className="probable-table-scroll" tabIndex={0} aria-label="Mapped orders table"><table><thead><tr>{['SO / Item','Customer','City / State','Plan / Transport','Balance MT','Location'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{tableRows.slice(page*100,page*100+100).map(r=><tr key={RakePlanningRules.orderKey(r)} onClick={()=>focus(r)} data-destination-selected={city===orderPlaceKey(r)} data-selected={selected===RakePlanningRules.orderKey(r)}><td><button className="map-order-link" onClick={e=>{e.stopPropagation();focus(r);}}>{r['SO No.']} / {r._LineItem}</button></td><td>{r['Sold To Party Name']}</td><td><strong>{r['Ship To Party City']}</strong><small>{r._State}</small></td><td>{actualSidingForOrder(r)||r._Siding}<small>{r._ODC||r._WagonType}{r._RoutingConflict&&' · Assignment conflict'}</small></td><td className="map-quantity">{fmt(r['Bal to PGI'])}</td><td><span className="map-location-status" data-mapped={!!orderCoords(r)}>{GEO_CACHE[orderPlaceKey(r)]?'Online cached':orderCoords(r)?'Offline fallback':'Unmapped'}</span></td></tr>)}{!tableRows.length&&<tr><td colSpan={6} className="map-empty">No orders match this view. Change the search or map filters.</td></tr>}</tbody></table></div>
         <footer><span>Page {page+1} / {Math.max(1,Math.ceil(tableRows.length/100))}</span><button disabled={!page} onClick={()=>setPage(p=>p-1)}>Previous</button><button disabled={(page+1)*100>=tableRows.length} onClick={()=>setPage(p=>p+1)}>Next</button></footer>
         <details className="total-map-mapping"><summary>Live destination mapping <span role="status">{live.status}</span></summary>{live.control}</details>
       </div>
