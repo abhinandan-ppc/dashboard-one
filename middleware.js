@@ -90,7 +90,7 @@ export default async function middleware(req) {
     // session. Allow it through so API errors remain JSON rather than HTML.
     if (path === 'api/automation' || path === 'api/rake-geocode') return;
 
-    if (path === 'api/ebtp-proxy' || path === 'api/balance-heat-proxy'
+    if (path === 'api/segment-proxy' || path === 'api/ebtp-proxy' || path === 'api/balance-heat-proxy'
       || path === 'api/zstk-proxy' || path === 'api/autobtr-proxy'
       || path === 'api/truckdb-proxy') {
       // Shared live-data proxies used by Rake-Planner, Order-Status-Report,

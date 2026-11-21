@@ -3185,6 +3185,7 @@ function fetchAndCacheSegment(force){
   if(segmentFetchInFlight && !force) return segmentFetchInFlight;
   var enc = encodeURIComponent(SEGMENT_SHEET_URL);
   var strats = [
+    { n: 'Authenticated Segment', f: function(){ return tryProxyFetch(dashboardApiUrl('/api/segment-proxy'), false); } },
     { n: 'XHR',            f: function(){ return tryXHR(SEGMENT_SHEET_URL); } },
     { n: 'Iframe',         f: function(){ return tryIframeFetch(SEGMENT_SHEET_URL); } },
     { n: 'corsproxy.io',   f: function(){ return tryProxyFetch('https://corsproxy.io/?' + enc, false); } },

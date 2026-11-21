@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <script src="dashboard-api-url.js"></script>
+<script src="rake-planning-rules.js"></script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <script src="theme-boot.js"></script>
@@ -18,6 +19,15 @@
 <link rel="stylesheet" href="rake-map.css"/>
 <script src="jspl-local-api.js"></script>
 <style>
+.rake-probable-backdrop{position:fixed;inset:0;z-index:700;background:#0009;display:grid;place-items:center;padding:16px}
+.rake-probable{width:min(1200px,calc(100vw - 32px));min-width:0;max-height:92dvh;overflow:auto;background:rgb(from var(--s1) r g b / 1);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;color:var(--text);text-transform:none;letter-spacing:normal;font-size:13px;font-weight:400}
+.rake-probable header,.rake-probable footer{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.rake-probable header button{margin-left:auto}
+.probable-table-scroll{overflow:auto;min-height:0;min-width:0}.probable-table-scroll table{width:100%;border-collapse:collapse}.probable-table-scroll th,.probable-table-scroll td{padding:8px;text-align:left;border-bottom:1px solid var(--bdr)}
+.rake-probable .probable-table-scroll{min-height:140px}.rake-probable .probable-table-scroll table{min-width:760px}.rake-probable header,.rake-probable footer,.probable-mapping,.rake-probable p{flex-shrink:0}
+.probable-mapping>div{position:static!important;max-width:none!important}.rake-probable button{padding:8px 12px;cursor:pointer}
+.actual-completion{min-width:70px;margin-top:5px}.actual-completion small{font-size:9px;color:var(--dim);white-space:nowrap}
+.actual-probable-trigger{display:block;margin-top:4px;padding:4px 0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;color:var(--sky)!important;font-size:11px;cursor:pointer}
+.transport-stock{padding:14px;background:var(--component-surface);border-radius:12px}.transport-stock summary{cursor:pointer;font-weight:600}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body,#root{min-height:100%;height:100%}
 
@@ -670,6 +680,7 @@ function getMap(city){
 }
 /* Wagon type based on plate dimensions */
 function wagonType(w,l){
+  if(w>3150||l>14.2)return'ROAD-ODC';
   if(w<=2550&&l<=12.5)return'BOSM/BRN';
   if(w<=3200&&l<=13.5)return'BRN';
   if(w<=3200&&l<=14.2)return'LONG';
@@ -681,10 +692,11 @@ function computeRow(row){
   // ML fallback: if city wasn't mapped, try AI-based siding assignment
   // (only supplements getMap — doesn't override explicit CITY_MAP entries)
   const w=parseFloat(row['Width'])||0,l=parseFloat(row['Length Plan'])||0;
+  const destination=RakePlanningRules.destination(row);
+  state=destination.state||state;
   const m1=String(row['MODE.1']||row['_MODE1_HI']||''),rem=String(row['Remarks']||'');
   let siding;
-  if(w>3200)                   siding='ROAD';
-  else if(l>14.2)              siding='ROAD';
+  if(RakePlanningRules.odc(row)) siding='ROAD-ODC';
   else if(/\bPT\b/.test(m1))  siding='ROAD';
   else if(/POR|CAPTIVE/i.test(rem)) siding='ROAD';
   else if(l>13.6&&l<=14.2)    siding=`${base} (Long)`;
@@ -695,14 +707,25 @@ function computeRow(row){
   const slab =parseFloat(row['Slab Stock'])||0;
   const noPl =parseFloat(row['No Plan'])||0;
   // PICP siding is always Export
-  if(siding==='PICP'){state='Export';region='Export';}
-  else if(FREIGHT_RATES[siding]){const _fr=FREIGHT_RATES[siding];if(_fr.region)region=_fr.region;if(_fr.state)state=_fr.state;}
+  if(siding==='PICP'){region='Export';}
+  else if(FREIGHT_RATES[siding]){const _fr=FREIGHT_RATES[siding];if(_fr.region)region=_fr.region;if(!destination.state&&_fr.state)state=_fr.state;}
   // Orders with no rail siding → Road region for display
   if(region==='Unknown'||!siding||siding==='Unknown'){region='Road';}
   // Yellow Goods segment (per the live Segment table) always routes to Road,
   // overriding any siding/region derived above — these customers don't ship by rail.
+  if(destination.group==='Export Road'){siding='Export Road';region='Export';}
+  if(destination.group!=='Domestic'){region='Export';siding=destination.group;}
   if(isYellowGoodsCust(row['Sold To Party Name'])){siding='ROAD';region='Road';}
+  if(RakePlanningRules.odc(row)){siding='ROAD-ODC';region='Road';}
+  const originalMode=String(row._ModeC||row.MODE||'');
   return{_State:state,_Region:region,_Siding:siding,
+    _City:RakePlanningRules.city(row['Ship To Party City']).toUpperCase(),
+    _Country:destination.country,_ExportGroup:destination.group,
+    _CustomerSegment:SEGMENT_MAP.get(normCustKey(row['Sold To Party Name']))||RakePlanningRules.clean(row.Segment)||'Unmapped',
+    _GradeSegment:GRADE_SEGMENT_MAP.get(normCustKey(row['Int Grade']))||RakePlanningRules.clean(row['Grade Segment'])||'Unmapped',
+    _SupplyCondition:RakePlanningRules.clean(row['Supply Condition']).toUpperCase()||'Unspecified',
+    _ODC:RakePlanningRules.odc(row)?'ROAD-ODC':'',_OriginalMode:originalMode,
+    _RoutingConflict:RakePlanningRules.odc(row)&&/^RAKE[-\s]/i.test(originalMode)?'Assigned to rail in EBTP — ROAD-ODC required':'',
     _WIP:plate-fg,_TotalSlab:slab+noPl,
     _FIStatus:getFIStatus(rem),
     _WagonType:wagonType(w,l),
@@ -971,33 +994,39 @@ function sidingFallbackCoords(cityRaw){
   return null;
 }
 const GEO_CACHE={};
-const PLACE_CACHE_KEY='rake-city-locations-v1';
+const PLACE_CACHE_KEY='rake-city-locations-v2';
 try{Object.assign(GEO_CACHE,JSON.parse(localStorage.getItem(PLACE_CACHE_KEY)||'{}'));}catch(e){}
-const orderPlaceKey=ord=>[ord['Ship To Party City']||'',ord._State||''].map(v=>String(v).trim().toUpperCase()).join('|');
+const orderPlaceKey=ord=>[RakePlanningRules.city(ord['Ship To Party City']),ord._State||'',ord._Country||''].map(v=>RakePlanningRules.key(v)).join('|');
 function orderCoords(ord){
   const saved=GEO_CACHE[orderPlaceKey(ord)];
   if(saved&&Number.isFinite(saved.lat)&&Number.isFinite(saved.lng))return[saved.lat,saved.lng];
   // Preserve the existing offline resolver when live lookup fails or is capped.
-  const city=String(ord['Ship To Party City']||'').trim().toUpperCase();
-  return CITY_COORDS[city]||mlLookupCoords(city)||null;
+  const city=RakePlanningRules.city(ord['Ship To Party City']).toUpperCase();
+  return CITY_COORDS[city]||(RakePlanningRules.isExport(ord)?null:mlLookupCoords(city))||null;
 }
 function useLiveDestinations(orders){
   const[revision,setRevision]=useState(0),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
+  const[availability,setAvailability]=useState('Checking live mapping…'),[ready,setReady]=useState(false),[providerName,setProviderName]=useState('photon');
+  const autoAttempted=useRef(new Set());
   const alive=useRef(true);
-  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
-  const run=async()=>{
+  useEffect(()=>{alive.current=true;const controller=new AbortController();fetch(dashboardApiUrl('/api/rake-geocode'),{signal:controller.signal}).then(async r=>{if(!r.ok||!r.headers.get('content-type')?.includes('json'))throw new Error('Sign in to check live mapping');return r.json();}).then(s=>{if(alive.current){setReady(!!s.ready);setProviderName(s.provider||'photon');setAvailability(s.ready?'Online mapping ready':`Online mapping unavailable: ${!s.cacheConfigured?'shared cache missing':'free provider disabled'}. Offline fallback active.`);}}).catch(e=>{if(alive.current)setAvailability(e.message);});return()=>{alive.current=false;controller.abort();};},[]);
+  const run=async(onlyMissing=false)=>{
     if(busy)return;
     setBusy(true);let mapped=0,unresolved=0;
-    const unique=[...new Map(orders.filter(o=>o['Ship To Party City']).map(o=>[orderPlaceKey(o),o])).values()];
+    const unique=[...new Map(orders.filter(o=>o['Ship To Party City']&&(!onlyMissing||!orderCoords(o)&&!autoAttempted.current.has(orderPlaceKey(o)))).map(o=>[orderPlaceKey(o),o])).values()].sort((a,b)=>Number(!!orderCoords(a))-Number(!!orderCoords(b)));
+    unique.forEach(o=>autoAttempted.current.add(orderPlaceKey(o)));
     try{
       for(const ord of unique){
         if(!alive.current)break;
         const key=orderPlaceKey(ord);
-        if(GEO_CACHE[key])continue;
+        if(Number.isFinite(GEO_CACHE[key]?.lat))continue;
+        if(!ord._Country&&RakePlanningRules.isExport(ord)){unresolved++;continue;}
         setMessage(`Mapping ${mapped+unresolved+1} destinations…`);
-        const response=await fetch(dashboardApiUrl('/api/rake-geocode'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({city:ord['Ship To Party City'],state:ord._State||''})});
+        const response=await fetch(dashboardApiUrl('/api/rake-geocode'),{method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(30000),body:JSON.stringify({city:RakePlanningRules.city(ord['Ship To Party City']),state:ord._State||'',country:ord._Country||'India'})});
+        if(!response.headers.get('content-type')?.includes('json'))throw new Error('Sign in to use live mapping');
         const result=await response.json();
         if(!response.ok)throw new Error(result.error||'Live mapping unavailable');
+        if(result.waitMs)await new Promise(resolve=>setTimeout(resolve,Math.min(5000,result.waitMs)));
         if(result.error){unresolved++;continue;}
         GEO_CACHE[key]=result;mapped++;
         try{localStorage.setItem(PLACE_CACHE_KEY,JSON.stringify(Object.fromEntries(Object.entries(GEO_CACHE).filter(([,v])=>v&&Number.isFinite(v.lat)).slice(-5000))));}catch(e){}
@@ -1007,10 +1036,12 @@ function useLiveDestinations(orders){
     }catch(e){if(alive.current)setMessage(e.message+' · offline mapping remains active');}
     finally{if(alive.current)setBusy(false);}
   };
-  const control=<div style={{position:'absolute',bottom:28,left:12,zIndex:1000,maxWidth:'calc(100% - 24px)',padding:10,background:'var(--s1)',border:'1px solid var(--bdr)',borderRadius:8}}>
-    <button type="button" disabled={busy} onClick={run}>{busy?'Mapping destinations…':'Map live destinations'}</button>
+  useEffect(()=>{if(ready&&!busy&&orders.some(o=>o['Ship To Party City']&&!orderCoords(o)&&!autoAttempted.current.has(orderPlaceKey(o))))run(true);},[ready,busy,orders]);
+  const control=<div className="rake-live-control">
+    <button type="button" disabled={busy} onClick={()=>run()}>{busy?'Mapping destinations…':'Map live destinations'}</button>
+    <div style={{fontSize:12}}>{availability}</div>
     <div role="status" style={{fontSize:12,marginTop:4}}>{message||'Live coordinates take priority; other locations use offline mapping.'}</div>
-    <a href="https://www.geoapify.com/" target="_blank" rel="noreferrer">Powered by Geoapify</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>
+    <div className="rake-map-attribution"><a href={providerName==='geoapify'?'https://www.geoapify.com/':'https://github.com/komoot/photon'} target="_blank" rel="noreferrer">{providerName==='geoapify'?'Geoapify':'Photon'}</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a></div>
   </div>;
   return{revision,control};
 }
@@ -1182,17 +1213,18 @@ function buildPivot(rows,selR,excHold){
 function actualSidingOf(modeC){
   const raw=String(modeC||'').trim().toUpperCase();
   if(!raw)return null;
-  if(raw==='ROAD')return'ROAD';
+  if(['ROAD','ROAD-ODC','EXPORT ROAD'].includes(raw))return raw;
   if(/^RAKE[-\s]+/.test(raw)){
     const sid=raw.replace(/^RAKE[-\s]+/,'').trim();
     return sid||null;
   }
   return null;
 }
+function actualSidingForOrder(r){return actualSidingOf(r._ModeC)?(r._ODC?'ROAD-ODC':r._ExportGroup==='Export Road'?'Export Road':actualSidingOf(r._ModeC)):null;}
 function buildActualPlan(rows){
   const m={};
   for(const r of rows){
-    const sid=actualSidingOf(r._ModeC);
+    const sid=actualSidingForOrder(r);
     if(!sid)continue;
     if(!m[sid])m[sid]={siding:sid,qty:0,bal:0,fg:0,wip:0,btr:0,slab:0,btc:0,issued:0,btp:0,rakeCost:0,truckCost:0,totalCost:0,n:0,items:[]};
     const g=m[sid];
@@ -1212,7 +1244,7 @@ function buildActualPlan(rows){
     if(q>0)g.items.push({ord:r,q});
   }
   return Object.values(m).sort((a,b)=>{
-    const aRoad=a.siding.toUpperCase()==='ROAD',bRoad=b.siding.toUpperCase()==='ROAD';
+    const aRoad=/ROAD/i.test(a.siding),bRoad=/ROAD/i.test(b.siding);
     if(aRoad!==bRoad)return aRoad?1:-1; // Road always sorts last
     return b.bal-a.bal;
   });
@@ -1385,7 +1417,7 @@ function packOrdersIntoRakes(grpOrders,wagType){
 function packRakes(rows){
   const by={};
   for(const r of rows){
-    if(r._Siding==='ROAD'||r._Region==='Road'||!r._Siding)continue;
+    if(/ROAD/i.test(r._Siding)||r._Region==='Road'||r._Region==='Export'||!r._Siding)continue;
     const q=n2(parseFloat(r['Bal to PGI']));
     if(q<=0)continue;
     if(!by[r._Siding])by[r._Siding]={region:r._Region,orders:[]};
@@ -1446,6 +1478,14 @@ const DD=[
   {k:'_HTC',             lbl:'HTC',          t:'s',w:90},
   {k:'Edge Condition',     lbl:'Edge',         t:'s',w:88},
   {k:'_WagonType',          lbl:'Wagon',        t:'s',w:100},
+  {k:'_ODC',lbl:'ODC',t:'s',w:105},
+  {k:'_OriginalMode',lbl:'EBTP Assignment',t:'s',w:150},
+  {k:'_RoutingConflict',lbl:'Routing Conflict',t:'s',w:230},
+  {k:'_State',lbl:'State / STO',t:'s',w:135},
+  {k:'_Country',lbl:'Country',t:'s',w:130},
+  {k:'_ExportGroup',lbl:'Export Group',t:'s',w:150},
+  {k:'_CustomerSegment',lbl:'Customer Segment',t:'s',w:180},
+  {k:'_GradeSegment',lbl:'Grade Segment',t:'s',w:180},
   {k:'_RakeRate', lbl:'Rake ₹/T', t:'n',w:88},{k:'_TruckRate',lbl:'Truck ₹/T',t:'n',w:88},{k:'_TotalRate',lbl:'Tot ₹/T',t:'n',w:88},
   {k:'_RakeCost', lbl:'Rake ₹',   t:'n',w:108},{k:'_TruckCost',lbl:'Truck ₹',  t:'n',w:108},{k:'_TotalCost',lbl:'Total ₹',  t:'n',w:108},
 ];
@@ -1587,7 +1627,8 @@ function exportEBTPWithMapping(rows){
     ?Object.keys(rows[0]).filter(k=>!k.startsWith('_'))
     :[];
   if(!allKeys.length)return;
-  const header=[...allKeys,'_State','_Region','_Siding','_WagonType','_HTC','_Rake_Rate_per_T','_Truck_Rate_per_T','_Total_Rate_per_T','_Rake_Cost_Rs','_Truck_Cost_Rs','_Total_Cost_Rs'];
+  const addedKeys=['_Country','_ExportGroup','_CustomerSegment','_GradeSegment','_ODC','_OriginalMode','_RoutingConflict'];
+  const header=[...allKeys,'_State','_Region','_Siding','_WagonType','_HTC','_Rake_Rate_per_T','_Truck_Rate_per_T','_Total_Rate_per_T','_Rake_Cost_Rs','_Truck_Cost_Rs','_Total_Cost_Rs',...addedKeys];
   const dataRows=rows.map(r=>{
     const fc=freightCost(r);
     return[
@@ -1595,7 +1636,7 @@ function exportEBTPWithMapping(rows){
       r._State||'',r._Region||'',r._Siding||'',
       r._WagonType||'',r._HTC||getHTC(r['Ext Grade'],r['Supply Condition']),
       fc?fc.rakeRate:0, fc?fc.truckRate:0, fc?fc.totalRate:0,
-      fc?fc.rake:0,     fc?fc.truck:0,     fc?fc.total:0
+      fc?fc.rake:0,     fc?fc.truck:0,     fc?fc.total:0,...addedKeys.map(k=>r[k]||'')
     ];
   });
   const wb=XLSX.utils.book_new();
@@ -1849,6 +1890,7 @@ function evaluateCombineCandidates(mergedOrders,wagonType,originalSidings){
    accounts) are routed to Road by default in computeRow() — they are NOT
    deselected from the customer filter; they simply never need a rail siding. */
 let SEGMENT_MAP=new Map(); // normalized "SOLD TO PARTY NAME" -> normalized "SEGMENT"
+let GRADE_SEGMENT_MAP=new Map();
 function normCustKey(name){return String(name||'').trim().toUpperCase();}
 function isYellowGoodsCust(name){
   if(!name)return false;
@@ -1924,7 +1966,7 @@ function RBadge({region}){
   </span>;
 }
 function STag({code}){
-  const road=code==='ROAD',lng=code?.includes('(Long)');
+  const road=/ROAD/i.test(code||''),lng=code?.includes('(Long)');
   return<span style={{fontFamily:F.m,fontSize:12,fontWeight:700,padding:'4px 12px',
     borderRadius:'var(--radius-xs)',
     background:road?C.roseBg:lng?'rgba(234,88,12,.15)':'var(--s3)',
@@ -2123,9 +2165,69 @@ function MultiSel({all,sel,onChange,placeholder='All',accent,searchable=false}){
    Same look as the Order Release Summary table, but flat — grouped only
    by the actual EBTP siding (Column C "Mode", already in execution),
    with no region nesting. Each row also gets its own Map view. */
-function ActualRakePlan({data,onDrill,onMap,activeSiding}){
+function CompletionBar({items}){
+  const total=items.reduce((a,{ord})=>{const c=RakePlanningRules.completion(ord);a.bal+=c.bal;c.stages.forEach((s,i)=>a.values[i]+=s.value);return a;},{bal:0,values:[0,0,0,0]});
+  const colors=['#10b981','#fb923c','#a78bfa','#38bdf8'];
+  const labels=['FG','WIP','Slab','Issued'];
+  const covered=total.values.reduce((a,b)=>a+b,0);
+  return <div className="actual-completion" title={labels.map((l,i)=>`${l}: ${fmt(total.values[i])} MT`).join(' · ')}>
+    <div role="img" aria-label={`Stock coverage ${total.bal?Math.round(covered/total.bal*100):0}%: ${labels.map((l,i)=>`${l} ${fmt(total.values[i])} MT`).join(', ')}`} style={{display:'flex',height:6,borderRadius:4,overflow:'hidden',background:'var(--s3)'}}>{total.values.map((v,i)=><span key={i} style={{width:`${total.bal?v/total.bal*100:0}%`,background:colors[i]}}/>)}</div>
+    <small>{total.bal?Math.round(covered/total.bal*100):0}% stock coverage</small>
+  </div>;
+}
+function usePlanningDialog(onClose){
+  const ref=useRef(null);
+  useEffect(()=>{
+    const previous=document.activeElement,overflow=document.body.style.overflow;
+    document.body.style.overflow='hidden';
+    ref.current?.querySelector('button')?.focus();
+    const key=e=>{
+      if(e.key==='Escape'){e.preventDefault();onClose();return;}
+      if(e.key!=='Tab')return;
+      const nodes=[...(ref.current?.querySelectorAll('button:not(:disabled),input:not(:disabled),a[href]')||[])].filter(n=>n.getClientRects().length);
+      const first=nodes[0],last=nodes.at(-1);
+      if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}
+      else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
+    };
+    document.addEventListener('keydown',key);
+    return()=>{document.removeEventListener('keydown',key);document.body.style.overflow=overflow;previous?.focus?.();};
+  },[]);
+  return ref;
+}
+function ProbableOrders({plan,rows,onClose}){
+  const dialogRef=usePlanningDialog(onClose);
+  const [selected,setSelected]=useState(()=>{try{const drafts=JSON.parse(localStorage.getItem('rake-plan-drafts-v1')||'[]');return new Set(drafts.filter(d=>d.siding===plan.siding).at(-1)?.orders||[]);}catch{return new Set();}});
+  const [notice,setNotice]=useState('');
+  const live=useLiveDestinations(rows);
+  const options=useMemo(()=>RakePlanningRules.nearby(rows,plan,{coords:orderCoords,hub:resolveHub(plan.siding),distance:haversine}),[rows,plan,live.revision]);
+  const picked=options.filter(o=>selected.has(RakePlanningRules.orderKey(o.ord)));
+  const added=picked.reduce((a,{ord})=>a+n2(parseFloat(ord['Bal to PGI'])),0);
+  const limit=RakePlanningRules.shortfall(plan.bal);
+  const remaining=Math.max(0,limit.minimum-plan.bal-added);
+  const save=()=>{
+    const record={siding:plan.siding,createdAt:new Date().toISOString(),orders:picked.map(({ord})=>RakePlanningRules.orderKey(ord)),addedMT:added};
+    try{const drafts=JSON.parse(localStorage.getItem('rake-plan-drafts-v1')||'[]');localStorage.setItem('rake-plan-drafts-v1',JSON.stringify([...drafts.slice(-49),record]));setNotice('Draft saved on this device. EBTP assignments are unchanged.');}catch{setNotice('Local draft storage is unavailable. Use Download draft.');}
+  };
+  const download=()=>{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(picked.map(({ord,release,km})=>({Siding:plan.siding,SO:ord['SO No.'],Item:ord._LineItem,UID:RakePlanningRules.orderKey(ord),City:ord['Ship To Party City'],State:ord._State,Release:release,'Balance MT':ord['Bal to PGI'],'Distance km':km==null?'Unknown':Math.round(km),Status:'DRAFT'}))),'Draft');XLSX.writeFile(wb,`Rake Draft ${plan.siding}.xlsx`);};
+  return ReactDOM.createPortal(<div className="rake-probable-backdrop"><section ref={dialogRef} className="rake-probable" role="dialog" aria-modal="true" aria-label={`Probable orders for ${plan.siding}`}>
+    <header><h3>{plan.siding} · Probable orders</h3><button onClick={onClose}>Close</button></header>
+    <p>Plan {fmt(plan.bal)} MT · Target {fmt(limit.target)} MT · ±3% range {fmt(limit.minimum)}–{fmt(limit.maximum)} MT · Shortfall {fmt(limit.missing)} MT</p>
+    <p>Within 100 km first, then within the state. Whole orders only. Orders already assigned to an actual plan are excluded.</p>
+    <div className="probable-mapping">{live.control}</div>
+    <div className="probable-table-scroll"><table><thead><tr><th>Select</th><th>SO / Item</th><th>Customer</th><th>City / State</th><th>Range</th><th>Wagon</th><th>Balance MT</th></tr></thead><tbody>
+      {!options.length&&<tr><td colSpan={7}>No nearby orders found.</td></tr>}
+      {['Released','Unreleased','Other / review'].map(group=><React.Fragment key={group}>{options.some(o=>o.release===group)&&<tr><th colSpan={7}>{group}</th></tr>}{options.filter(o=>o.release===group).map(({ord,km,band})=>{const id=RakePlanningRules.orderKey(ord);return<tr key={id}><td><input aria-label={`Select order ${id}`} type="checkbox" checked={selected.has(id)} onChange={()=>setSelected(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;})}/></td><td>{ord['SO No.']} / {ord._LineItem}</td><td>{ord['Sold To Party Name']}</td><td>{ord['Ship To Party City']} / {ord._State}</td><td>{band===0?`${Math.round(km)} km`:'Same state'}</td><td>{ord._WagonType}</td><td>{fmt(ord['Bal to PGI'])}</td></tr>;})}</React.Fragment>)}
+    </tbody></table></div>
+    <footer><span>{picked.length} whole orders · {fmt(added)} MT selected · Remaining shortfall {fmt(remaining)} MT {plan.bal+added>limit.maximum?' · Above target tolerance — review draft':''}</span><button disabled={!picked.length} onClick={save}>Save draft</button><button disabled={!picked.length} onClick={download}>Download draft</button><span role="status">{notice}</span></footer>
+  </section></div>,document.body);
+}
+function TransportStockSummary({rows}){
+  const groups=useMemo(()=>{const m=new Map();for(const ord of rows){const sid=actualSidingForOrder(ord);if(!sid)continue;const type=ord._ODC||(/ROAD/i.test(sid)?sid:ord._WagonType==='LONG'?'LONG':'BOSM/BRN+BRN');const id=sid+'|'+type;if(!m.has(id))m.set(id,{sid,type,bal:0,fg:0,wip:0,slab:0,issued:0});const g=m.get(id),c=RakePlanningRules.completion(ord);g.bal+=c.bal;['fg','wip','slab','issued'].forEach((k,i)=>g[k]+=c.stages[i].raw);}return[...m.values()];},[rows]);
+  return <details className="transport-stock"><summary>Rake-wise stock summary · Wagon type / ROAD-ODC</summary><div className="probable-table-scroll"><table><thead><tr>{['Siding','Transport','Bal PGI','FG','WIP','Slab','Issued'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{groups.map(g=><tr key={g.sid+g.type}><td>{g.sid}</td><td>{g.type}</td>{['bal','fg','wip','slab','issued'].map(k=><td key={k}>{fmt(g[k])}</td>)}</tr>)}</tbody></table></div></details>;
+}
+function ActualRakePlan({data,onDrill,onMap,activeSiding,allRows=[]}){
+  const[probable,setProbable]=useState(null);
   const grand=useMemo(()=>data.reduce((a,r)=>({qty:a.qty+r.qty,bal:a.bal+r.bal,fg:a.fg+(r.fg||0),wip:a.wip+(r.wip||0),btr:a.btr+(r.btr||0),slab:a.slab+(r.slab||0),btc:a.btc+(r.btc||0),issued:a.issued+(r.issued||0),btp:a.btp+(r.btp||0),rakeCost:a.rakeCost+(r.rakeCost||0),truckCost:a.truckCost+(r.truckCost||0),totalCost:a.totalCost+(r.totalCost||0),n:a.n+r.n}),{qty:0,bal:0,fg:0,wip:0,btr:0,slab:0,btc:0,issued:0,btp:0,rakeCost:0,truckCost:0,totalCost:0,n:0}),[data]);
-  const maxBal=useMemo(()=>Math.max(...data.map(r=>r.bal),1),[data]);
   const rc=C.region.Actual||C.region.Unknown;
 
   if(!data.length)return(
@@ -2146,6 +2248,7 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding}){
         </div>
         <div style={{fontSize:11,color:'var(--dim)',marginTop:3}}>
           {grand.n.toLocaleString()} orders · {data.length} sidings already in execution (EBTP Mode) · click row → drill-down
+          {probable&&<ProbableOrders plan={probable} rows={allRows} onClose={()=>setProbable(null)}/>}
         </div>
       </div>
       <div style={{flex:1}}/>
@@ -2180,22 +2283,19 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding}){
         <tbody>
           {data.map(r=>{
             const act=activeSiding===r.siding;
-            const pct=Math.min(100,(r.bal/maxBal)*75+8);
             const dc={...tn0,fontSize:13,fontWeight:400,color:'var(--dim)',borderBottom:'1px solid var(--bdr)'};
             return<tr key={r.siding} onClick={()=>onDrill(r.siding)}
               style={{cursor:'pointer',background:act?rc.bgHi:'transparent',
                 transition:'background .1s',borderLeft:act?'3px solid '+rc.bdr:'3px solid transparent'}}
               onMouseEnter={e=>e.currentTarget.style.background=rc.bg}
               onMouseLeave={e=>e.currentTarget.style.background=act?rc.bgHi:'transparent'}>
-              <td style={{...td0,fontSize:13,paddingLeft:12}}><STag code={r.siding}/></td>
+              <td style={{...td0,fontSize:13,paddingLeft:12}}><STag code={r.siding}/>{!(/ROAD/i.test(r.siding))&&<div style={{fontSize:10,color:'var(--dim)'}}>{[...new Set(r.items.map(({ord})=>ord._WagonType==='LONG'?'LONG':'BOSM/BRN+BRN'))].join(' · ')}</div>}{r.items.some(({ord})=>ord._RoutingConflict)&&<div style={{color:C.rose,fontSize:10}}>EBTP rail assignment conflict — ROAD-ODC</div>}{!(/ROAD/i.test(r.siding))&&<button className="actual-probable-trigger" onClick={e=>{e.stopPropagation();setProbable(r);}}>Probable orders</button>}</td>
               <td style={{...dc,fontWeight:600,color:'var(--text)'}}>{fmt(r.qty)}</td>
               <td style={{...tn0,fontSize:13,fontWeight:600,borderBottom:'1px solid var(--bdr)'}}>
                 <div style={{display:'flex',alignItems:'center',gap:6,justifyContent:'flex-end'}}>
-                  <div style={{width:24,height:3,borderRadius:2,background:'var(--s3)',flexShrink:0,overflow:'hidden'}}>
-                    <div style={{height:'100%',width:pct+'%',background:'linear-gradient(90deg,'+C.sky+','+C.amber+')',borderRadius:2}}/>
-                  </div>
                   <span style={{color:r.bal<0?C.rose:'var(--text)'}}>{fmt(r.bal)}</span>
                 </div>
+                <CompletionBar items={r.items}/>
               </td>
               <td style={{...dc,color:C.green}}>{fmt(r.fg)}</td>
               <td style={{...dc,color:'#f97316'}}>{fmt(r.wip||0)}</td>
@@ -2411,6 +2511,29 @@ function PivotTable({data,onDrill,onRegionExport,activeCell,remarksLbl}){
 }
 
 /* ═══════════════════ OVERVIEW MAP MODAL ═══════════════════ */
+function TotalEbtpMap({rows,onClose}){
+  const dialogRef=usePlanningDialog(onClose);
+  const[actualOnly,setActualOnly]=useState(true),[road,setRoad]=useState(false),[odc,setOdc]=useState(false),[exports,setExports]=useState(false);
+  const[city,setCity]=useState(null),[selected,setSelected]=useState(null),[search,setSearch]=useState(''),[page,setPage]=useState(0);
+  const mapRef=useRef(null),map=useRef(null),markers=useRef(new Map());
+  const source=useMemo(()=>rows.filter(r=>{
+    const category=RakePlanningRules.mapCategory(r);
+    if(category==='export'&&!exports||category==='odc'&&!odc||category==='road'&&!road)return false;
+    // Road/ODC/export switches explicitly opt those categories into the total view.
+    if(actualOnly&&category==='rail'&&!actualSidingForOrder(r))return false;
+    return n2(parseFloat(r['Bal to PGI']))>0;
+  }),[rows,actualOnly,road,odc,exports]);
+  const live=useLiveDestinations(source);
+  const groups=useMemo(()=>{const m=new Map();for(const r of source){const k=orderPlaceKey(r);if(!m.has(k))m.set(k,{key:k,name:r['Ship To Party City']||'Unknown city',coords:orderCoords(r),rows:[],bal:0});const g=m.get(k);g.rows.push(r);g.bal+=n2(parseFloat(r['Bal to PGI']));}return[...m.values()];},[source,live.revision]);
+  const tableRows=useMemo(()=>source.filter(r=>(!city||orderPlaceKey(r)===city)&&(!search||[r['SO No.'],r._LineItem,r['Sold To Party Name'],r['Ship To Party City'],r._Siding].join(' ').toLowerCase().includes(search.toLowerCase()))),[source,city,search]);
+  useEffect(()=>{setCity(null);setPage(0);setSelected(null);},[actualOnly,road,odc,exports]);
+  useEffect(()=>{const m=L.map(mapRef.current,{center:[22,80],zoom:5});map.current=m;L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',maxZoom:19}).addTo(m);const resize=new ResizeObserver(()=>m.invalidateSize({animate:false}));resize.observe(mapRef.current);return()=>{resize.disconnect();m.remove();map.current=null;};},[]);
+useEffect(()=>{if(!map.current)return;const layer=L.layerGroup().addTo(map.current);markers.current.clear();const bounds=[];groups.forEach(g=>{if(!g.coords||g.coords.some(v=>!Number.isFinite(v)))return;bounds.push(g.coords);const marker=L.circleMarker(g.coords,{radius:8,color:'#0ea5e9',fillColor:'#0ea5e9',fillOpacity:.8}).addTo(layer);const label=document.createElement('div');label.textContent=`${g.name} · ${fmt(g.bal)} MT · ${g.rows.length} orders`;marker.bindTooltip(label);marker.on('click',()=>{setCity(g.key);setPage(0);setSelected(null);});markers.current.set(g.key,marker);});if(bounds.length)map.current.stop().fitBounds(bounds,{padding:[30,30],maxZoom:8,animate:false});return()=>layer.remove();},[groups]);
+  const focus=r=>{const k=orderPlaceKey(r),marker=markers.current.get(k);setSelected(RakePlanningRules.orderKey(r));markers.current.forEach((m,key)=>m.setStyle({color:key===k?'#f59e0b':'#0ea5e9',fillColor:key===k?'#f59e0b':'#0ea5e9'}));if(marker){map.current.stop().setView(marker.getLatLng(),9,{animate:false});marker.openTooltip();}};
+  return ReactDOM.createPortal(<div className="total-map-backdrop"><section ref={dialogRef} className="total-map" role="dialog" aria-modal="true" aria-label="Total EBTP map"><header><h3>Total EBTP map</h3><label><input type="checkbox" checked={actualOnly} onChange={e=>setActualOnly(e.target.checked)}/> Actual rail plan only</label>{[['Road',road,setRoad],['ROAD-ODC',odc,setOdc],['Exports',exports,setExports]].map(([label,v,set])=><label key={label}><input type="checkbox" checked={v} onChange={e=>set(e.target.checked)}/>{label}</label>)}<button onClick={onClose}>Close</button></header>
+    <div className="total-map-body"><div className="total-map-canvas"><div ref={mapRef} style={{height:'100%',minHeight:280}}/>{live.control}</div><div className="total-map-orders"><div className="total-map-tools"><input aria-label="Search mapped orders" placeholder="Search orders / city…" value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}}/><button onClick={()=>{setCity(null);setPage(0);}}>All locations</button><span>{tableRows.length} orders · {groups.filter(g=>!g.coords).length} unmapped destinations</span></div><div className="probable-table-scroll"><table><thead><tr>{['SO / Item','Customer','City / State','Plan / Transport','Balance MT','Location'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{tableRows.slice(page*100,page*100+100).map(r=><tr key={RakePlanningRules.orderKey(r)} onClick={()=>focus(r)} style={{cursor:'pointer',background:selected===RakePlanningRules.orderKey(r)?'var(--primary-bg)':''}}><td><button onClick={e=>{e.stopPropagation();focus(r);}}>{r['SO No.']} / {r._LineItem}</button></td><td>{r['Sold To Party Name']}</td><td>{r['Ship To Party City']} / {r._State}</td><td>{[actualSidingForOrder(r)||r._Siding,r._ODC||r._WagonType].filter((v,i,a)=>v&&a.indexOf(v)===i).join(' · ')}{r._RoutingConflict&&<small> · Assignment conflict</small>}</td><td>{fmt(r['Bal to PGI'])}</td><td>{GEO_CACHE[orderPlaceKey(r)]?'Online cached':orderCoords(r)?'Offline fallback':'Unmapped'}</td></tr>)}</tbody></table></div><footer><button disabled={!page} onClick={()=>setPage(p=>p-1)}>Previous</button><span>Page {page+1} / {Math.max(1,Math.ceil(tableRows.length/100))}</span><button disabled={(page+1)*100>=tableRows.length} onClick={()=>setPage(p=>p+1)}>Next</button></footer></div></div>
+  </section></div>,document.body);
+}
 function OverviewMapModal({rows,onClose}){
   const livePlaces=useLiveDestinations(rows);
   const mapRef=useRef(null);
@@ -2444,7 +2567,7 @@ function OverviewMapModal({rows,onClose}){
       const coords=orderCoords(ord);
       if(!coords)continue;
       const la=parseFloat(coords[0]),lo=parseFloat(coords[1]);
-      if(isNaN(la)||isNaN(lo)||la<6||la>37||lo<68||lo>98)continue;
+      if(!Number.isFinite(la)||!Number.isFinite(lo)||Math.abs(la)>90||Math.abs(lo)>180)continue;
       if(!cityMap[c])cityMap[c]={name:String(ord['Ship To Party City']||c),lat:la,lng:lo,bal:0,n:0,fgOk:true,ords:[]};
       cityMap[c].bal+=n2(q);cityMap[c].n++;
       if(n2(parseFloat(ord['FG UR Stock']))<n2(q))cityMap[c].fgOk=false;
@@ -2892,7 +3015,7 @@ function RakeMapModal({rakePlan,rakeIdx,onClose}){
       const coords=orderCoords(ord);
       if(!coords)continue;
       const la=parseFloat(coords[0]),lo=parseFloat(coords[1]);
-      if(isNaN(la)||isNaN(lo)||la<6||la>37||lo<68||lo>98)continue; // guard against bad/out-of-India coords crashing Leaflet
+      if(!Number.isFinite(la)||!Number.isFinite(lo)||Math.abs(la)>90||Math.abs(lo)>180)continue;
       if(!cityMap[c])cityMap[c]={name:String(ord['Ship To Party City']||c),lat:la,lng:lo,bal:0,n:0,fgOk:true,ords:[]};
       cityMap[c].bal+=q;cityMap[c].n++;
       if(n2(parseFloat(ord['FG UR Stock']))<q)cityMap[c].fgOk=false;
@@ -4961,7 +5084,7 @@ function ToggleCheck({on,onToggle,label,accent}){
 function FilterPanel({allR,allS,allO,allM,allWagon,allHTC,allRem,allCust,
   selR,selS,selO,custT,selM,selWagon,selHTC,selRem,excHold,excDummy,selCust,
   togR,togS,setO,setCT,setM,setSelWagon,setSelHTC,setRem,setExcHold,setExcDummy,setSelCust,
-  clearAll,actCnt,onClose,mob}){
+  clearAll,actCnt,onClose,mob,extraFilters}){
   const[sq,setSq]=useState('');
   const vs=allS.filter(s=>s.toLowerCase().includes(sq.toLowerCase()));
   const SL=({label})=><div style={{fontSize:9.5,fontFamily:F.h,color:'var(--mute)',letterSpacing:'.14em',textTransform:'uppercase',marginBottom:8,fontWeight:700}}>{label}</div>;
@@ -4985,6 +5108,7 @@ function FilterPanel({allR,allS,allO,allM,allWagon,allHTC,allRem,allCust,
       </div>
     </div>
 
+    {extraFilters&&Object.entries(extraFilters.options).map(([field,values])=><div key={field}><SL label={extraFilters.labels[field]}/><MultiSel all={values} sel={extraFilters.selected[field]||new Set()} onChange={v=>extraFilters.set(field,v)} placeholder={`All ${extraFilters.labels[field]}`} accent={C.sky} searchable/></div>)}
     {/* ── DROPDOWNS FIRST ── */}
     <div>
       <SL label="Remarks"/>
@@ -5073,7 +5197,7 @@ function FilterPanel({allR,allS,allO,allM,allWagon,allHTC,allRem,allCust,
             background:active?`${wc}22`:'transparent',
             color:active?wc:'var(--dim)',
             transition:'all .15s'}}>
-            {wt==='BOSM/BRN'?' BOSM/BRN':wt==='BRN'?' BRN':' LONG'}
+            {wt}
           </button>;
         })}
         {selWagon.size>0&&
@@ -5120,7 +5244,7 @@ function FilterPanel({allR,allS,allO,allM,allWagon,allHTC,allRem,allCust,
       </div>
       <div style={{maxHeight:145,overflowY:'auto',display:'flex',flexDirection:'column',gap:2}}>
         {vs.map(s=>{
-          const act=selS.has(s),road=s==='ROAD';
+          const act=selS.has(s),road=/ROAD/i.test(s);
           return<button key={s} onClick={()=>togS(s)} style={{
             padding:'5px 11px',borderRadius:5,textAlign:'left',cursor:'pointer',
             background:act?(road?C.roseBg:C.s3):'transparent',
@@ -5181,9 +5305,7 @@ function writeHubEbtpCache(csvText,rowCount){
   }).catch(()=>false);
 }
 
-/* Segment cache — same shared IndexedDB (jspl-ebtp-shared-db/cache), different
-   key ('segment'), written by the hub's fetchAndCacheSegment(). Read-only here:
-   this page never fetches the Segment sheet itself, it just consumes the cache. */
+/* Segment cache is the offline fallback for the authenticated sheet proxy. */
 const SEGMENT_DB_KEY='segment';
 function readHubSegmentCache(){
   return openEbtpDb().then(db=>{
@@ -5218,14 +5340,18 @@ function loadSegmentCsvIntoMap(csvText){
   const custIdx=headers.findIndex(h=>h.includes('sold to party name'));
   const segIdx=headers.findIndex(h=>h==='segment'||h.endsWith('segment'));
   if(custIdx===-1||segIdx===-1)return false;
-  const map=new Map();
+  const map=new Map(),gradeMap=new Map();
+  const gradeIdx=headers.findIndex(h=>h==='internal grade');
+  const gradeSegIdx=headers.findIndex((h,i)=>i>gradeIdx&&(h==='segment'||h==='grade segment'));
   for(let i=1;i<lines.length;i++){
     const cols=splitCSV(lines[i]);
     const cust=normCustKey(cols[custIdx]);
     const seg=String(cols[segIdx]||'').trim().toUpperCase();
     if(cust&&seg)map.set(cust,seg);
+    if(gradeIdx>=0&&gradeSegIdx>=0&&cols[gradeIdx]&&cols[gradeSegIdx])gradeMap.set(normCustKey(cols[gradeIdx]),RakePlanningRules.clean(cols[gradeSegIdx]));
   }
   SEGMENT_MAP=map;
+  GRADE_SEGMENT_MAP=gradeMap;
   return true;
 }
 // Best-effort early load, independent of React mount timing, so SEGMENT_MAP
@@ -5389,7 +5515,7 @@ function App(){
       try{ delete window.__hub_handle_reset; }catch(err){ window.__hub_handle_reset = undefined; }
     };
   },[]);
-  const[rows,setRows]         =useState(()=>initialSessionState?.rows||[]);
+  const[rows,setRows]         =useState(()=>(initialSessionState?.rows||[]).map(r=>({...r,...computeRow(r)})));
   const[fileName,setFileName] =useState(()=>initialSessionState?.fileName||'');
   const[fileDate,setFileDate] =useState(()=>initialSessionState?.fileDate||null);
   const[loading,setLoading]   =useState(false);
@@ -5405,6 +5531,9 @@ function App(){
   const[excHold,setExcHold]   =useState(true);
   const[excDummy,setExcDummy] =useState(true);
   const[selCust,setSelCust]   =useState(new Set());
+  const[extraSelection,setExtraSelection]=useState({});
+  const extraLabels={_State:'State / STO',_City:'City',_SupplyCondition:'Supply Condition',_CustomerSegment:'Customer Segment',_GradeSegment:'Grade Segment',_ExportGroup:'Destination Group'};
+  const extraOptions=useMemo(()=>Object.fromEntries(Object.keys(extraLabels).map(k=>[k,[...new Set(rows.map(r=>r[k]).filter(Boolean))].sort()])),[rows]);
   const[drill,setDrill]       =useState(null);
   const[actDrill,setActDrill] =useState(null); // siding string, Actual Rake Plan drill-down
   const[actMap,setActMap]     =useState(null); // siding string, Actual Rake Plan map view
@@ -5420,7 +5549,7 @@ function App(){
     }
     readPlannerStateFromIndexedDb().then(state=>{
       if(!alive||!state||!Array.isArray(state.rows)||!state.rows.length) return;
-      setRows(state.rows);
+      setRows(state.rows.map(r=>({...r,...computeRow(r)})));
       setFileName(typeof state.fileName==='string'?state.fileName:'');
       setFileDate(state.fileDate?new Date(state.fileDate):null);
     }).finally(()=>{
@@ -5490,7 +5619,7 @@ function App(){
           writePlannerSessionState(processed,f.name,loadedAt);
           setRows(processed);
           setFileName(f.name);setFileDate(loadedAt);setDrill(null);
-        setSrch('');setSelR(new Set());setSelS(new Set());setCustT('All');
+        setExtraSelection({});setSrch('');setSelR(new Set());setSelS(new Set());setCustT('All');
         // Apply default filters on load — match actual Remarks values in data
         // Uses regex so "FI Released(2)", "FI Released (2)", "FI Released(2)" all match
         const allRemarks=[...new Set(processed.map(r=>r['Remarks']).filter(Boolean))];
@@ -5527,7 +5656,7 @@ function App(){
   const allS   =useMemo(()=>[...new Set(rows.map(r=>r._Siding).filter(Boolean))].sort(),[rows]);
   const allO   =useMemo(()=>[...new Set(rows.map(r=>r['Sales Office']).filter(Boolean))].sort(),[rows]);
   const allM   =useMemo(()=>[...new Set(rows.map(r=>r['MODE']).filter(Boolean))].sort(),[rows]);
-  const allWagon=useMemo(()=>['BOSM/BRN','BRN','LONG'],[]);
+  const allWagon=useMemo(()=>['BOSM/BRN','BRN','LONG','ROAD-ODC'],[]);
   const allHTC  =useMemo(()=>['Q','FN','NON HTC','Q/T'],[]);
   const allRem =useMemo(()=>[...new Set(rows.map(r=>r['Remarks']).filter(Boolean))].sort(),[rows]);
   const allCust=useMemo(()=>[...new Set(rows.map(r=>r['Sold To Party Name']).filter(Boolean))].sort(),[rows]);
@@ -5537,6 +5666,7 @@ function App(){
     if(!rows.length)return[];
     const s=srch.toLowerCase();
     return rows.filter(r=>{
+      if(Object.entries(extraSelection).some(([k,values])=>values.size&&!values.has(r[k])))return false;
       if(selR.size>0&&!selR.has(r._Region))return false;
       if(selS.size>0&&!selS.has(r._Siding))return false;
       if(selO.size>0&&!selO.has(r['Sales Office']))return false;
@@ -5552,7 +5682,7 @@ function App(){
       }
       return true;
     });
-  },[rows,srch,selR,selS,selO,custT,selM,selWagon,selHTC,excDummy,selCust]);
+  },[rows,srch,selR,selS,selO,custT,selM,selWagon,selHTC,excDummy,selCust,extraSelection]);
 
   const pivotData=useMemo(()=>buildPivot(filtered,selRem,excHold),[filtered,selRem,excHold]);
   const remLbl=useMemo(()=>selRem.size===0?'All':selRem.size<=2?[...selRem].join(', '):`${selRem.size} selected`,[selRem]);
@@ -5575,7 +5705,7 @@ function App(){
       btc   +=n2(parseFloat(r['BTC']));
       issued+=n2(parseFloat(r['ISSUED']));
     }
-    const rn=pivSrc.filter(r=>r._Siding==='ROAD').length;
+    const rn=pivSrc.filter(r=>/ROAD/i.test(r._Siding)).length;
     return{cnt:pivSrc.length,qty,bal,fg,wip,btr,slab,btc,issued,
       rPct:pivSrc.length?((rn/pivSrc.length)*100).toFixed(1):0,rN:rn,
       estRk:bal>0?Math.ceil(bal/RAKE_CAP):0};
@@ -5591,7 +5721,7 @@ function App(){
 
   // ── Actual Rake Plan — grouped by EBTP Column C "Mode" (already in execution), not our computed _Siding ──
   const actualPlanData=useMemo(()=>buildActualPlan(pivSrc),[pivSrc]);
-  const actDrillRows=useMemo(()=>actDrill?pivSrc.filter(r=>actualSidingOf(r._ModeC)===actDrill):[],[actDrill,pivSrc]);
+  const actDrillRows=useMemo(()=>actDrill?pivSrc.filter(r=>actualSidingForOrder(r)===actDrill):[],[actDrill,pivSrc]);
   const actMapPlan=useMemo(()=>{
     if(!actMap)return null;
     const g=actualPlanData.find(r=>r.siding===actMap);
@@ -5603,12 +5733,13 @@ function App(){
   const togR=r=>setSelR(p=>{const n=new Set(p);n.has(r)?n.delete(r):n.add(r);return n;});
   const togS=s=>setSelS(p=>{const n=new Set(p);n.has(s)?n.delete(s):n.add(s);return n;});
   const clearAll=()=>{
+    setExtraSelection({});
     setSrch('');setSelR(new Set());setSelS(new Set());
     setCustT('All');setSelRem(new Set());setExcHold(false);setExcDummy(false);
     setSelO(new Set(allO));setSelM(new Set(allM));setSelCust(new Set(allCust));
   };
   // Count only truly-narrowed filters (deselecting from a full set counts as active)
-  const actCnt=selR.size+selS.size
+  const actCnt=selR.size+selS.size+Object.values(extraSelection).filter(s=>s.size).length
     +(selO.size<allO.length?1:0)
     +(custT!=='All'?1:0)
     +(selM.size<allM.length?1:0)
@@ -5620,6 +5751,7 @@ function App(){
     +(selCust.size<allCust.length?1:0);
 
   const filterProps={allR,allS,allO,allM,allWagon,allHTC,allRem,allCust,
+    extraFilters:{labels:extraLabels,options:extraOptions,selected:extraSelection,set:(k,v)=>setExtraSelection(p=>({...p,[k]:v}))},
     selR,selS,selO,custT,selM,selWagon,selHTC,selRem,excHold,excDummy,selCust,
     togR,togS,setO:setSelO,setCT:setCustT,setM:setSelM,setSelWagon,setSelHTC,setRem:setSelRem,
     setExcHold,setExcDummy,setSelCust,clearAll,actCnt};
@@ -5662,7 +5794,7 @@ function App(){
             const loadedAt=new Date();
             writePlannerSessionState(processed,'Live Google Sheet',loadedAt);
             setRows(processed);setFileName('Live Google Sheet');setFileDate(loadedAt);
-          setSrch('');setSelR(new Set());setSelS(new Set());setCustT('All');
+          setExtraSelection({});setSrch('');setSelR(new Set());setSelS(new Set());setCustT('All');
         const allRemarks=[...new Set(processed.map(r=>r['Remarks']).filter(Boolean))];
         const defaultRemarks=new Set(allRemarks.filter(rem=>{
           const r=String(rem).trim();
@@ -5763,12 +5895,14 @@ function App(){
   useEffect(()=>{
     if(!rows.length)return;
     let alive=true;
-    readHubSegmentCache().then(cached=>{
-      if(!alive||!cached||!cached.csvText)return;
-      if(loadSegmentCsvIntoMap(cached.csvText)){
-        setRows(prev=>prev.map(r=>({...r,...computeRow(r)})));
-      }
-    }).catch(()=>{});
+    (async()=>{
+      const cached=await readHubSegmentCache();
+      if(alive&&cached?.csvText&&loadSegmentCsvIntoMap(cached.csvText))setRows(prev=>prev.map(r=>({...r,...computeRow(r)})));
+      const response=await fetch(dashboardApiUrl('/api/segment-proxy'),{signal:AbortSignal.timeout(15000)});
+      if(!response.ok||!response.headers.get('content-type')?.includes('text/csv'))return;
+      const csv=await response.text();
+      if(alive&&loadSegmentCsvIntoMap(csv))setRows(prev=>prev.map(r=>({...r,...computeRow(r)})));
+    })().catch(()=>{});
     return()=>{alive=false;};
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[rows.length>0]);
@@ -6131,6 +6265,7 @@ function App(){
       <div style={{flex:1,display:'flex',flexDirection:'column',minWidth:0,gap:'var(--space-stack)'}}>
         <ActualRakePlan
           data={actualPlanData}
+          allRows={rows}
           activeSiding={actDrill}
           onDrill={sid=>setActDrill(d=>d===sid?null:sid)}
           onMap={sid=>setActMap(sid)}
@@ -6142,6 +6277,7 @@ function App(){
           onDrill={(region,siding)=>setDrill(d=>d?.region===region&&d?.siding===siding?null:{region,siding})}
         />
         <RakePredictor rows={pivSrc}/>
+        <TransportStockSummary rows={pivSrc}/>
         <div style={{marginTop:8,marginBottom:8,color:'var(--mute)',fontSize:11.5,textAlign:'center',fontFamily:F.m}}>
           Rake Planner · self-contained offline tool
         </div>
@@ -6169,7 +6305,7 @@ function App(){
 
     {/* Overview Map */}
     {ovMap&&ReactDOM.createPortal(
-      <OverviewMapModal rows={filtered} onClose={()=>setOvMap(false)}/>,document.body
+      <TotalEbtpMap rows={rows} onClose={()=>setOvMap(false)}/>,document.body
     )}
 
   </div>;
