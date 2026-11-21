@@ -34,7 +34,9 @@ const path = 'rake-geocode/v1.json';
 const reply = (body, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 async function readStore(token) {
   const id = token.split('_')[3];
-  const r = await fetch(`https://${id}.private.blob.vercel-storage.com/${path}?v=${crypto.randomUUID()}`, {
+  // Private Blob's supported origin-read flag. Random query strings and fetch
+  // no-store do not bypass its CDN; stale ETags break conditional reservations.
+  const r = await fetch(`https://${id}.private.blob.vercel-storage.com/${path}?cache=0`, {
     headers: { authorization: `Bearer ${token}` }, cache: 'no-store', signal: AbortSignal.timeout(8000)
   });
   if (r.status === 404) return { data: { entries: {}, day: '', month: '', daily: 0, monthly: 0 }, etag: null };
