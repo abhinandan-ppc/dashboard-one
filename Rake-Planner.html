@@ -62,46 +62,22 @@ input:focus{outline:none;border-color:var(--amber) !important;box-shadow:var(--s
 .rake-predictor>.rake-region-list{padding:14px!important}
 .rake-siding-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding-top:12px;align-items:start}
 .rake-siding-grid>.rake-siding-card{min-width:0}
-.rake-predictor .rake-siding-grid{grid-auto-rows:1px;row-gap:0;grid-auto-flow:row dense;padding-top:12px}
+.rake-predictor .rake-siding-grid{grid-auto-rows:1px;row-gap:0;grid-auto-flow:row dense;padding-top:8px}
 .rake-siding-card.rake-folder{position:relative;overflow:hidden;margin-top:0}
 .rake-folder-cover{position:relative;list-style:none;cursor:pointer;min-height:132px;border-radius:var(--radius-lg);background:var(--component-surface)}
-.rake-folder-cover::-webkit-details-marker{display:none}
-.rake-folder:not([open])>.rake-folder-cover{padding-bottom:calc(var(--peek-height) + 24px)!important}
-.rake-stack-preview{position:absolute;left:12px;right:12px;bottom:12px;height:var(--peek-height);pointer-events:none}
-.rake-stack-preview>span{position:absolute;inset:0 0 auto;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:10px 12px;height:62px;border:1px solid var(--bdrHi);border-radius:var(--radius-md);background:var(--s1);color:var(--text);box-shadow:var(--shadow-xs);font-size:12px;line-height:18px;transform:translateY(calc(var(--stack-index)*38px));margin-inline:calc((var(--peek-count) - var(--stack-index) - 1)*4px)}
-.rake-stack-preview>span:last-child{background:var(--s2);border-color:var(--bdrHi)}
-.rake-stack-preview>span{background:rgb(from var(--s1) r g b)!important;z-index:var(--stack-index);opacity:1!important}
-.rake-stack-preview>span:last-child{background:rgb(from var(--s2) r g b)!important}
-.rake-stack-preview strong{white-space:nowrap}
-.rake-stack-preview small{color:var(--text);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.rake-folder[open] .rake-stack-preview{display:none}
 .rake-folder{isolation:isolate}
-.rake-folder[open]>.rake-folder-cover{margin-bottom:12px;border-bottom:1px solid var(--bdr);border-radius:var(--radius-lg) var(--radius-lg) 0 0}
 .rake-folder-hint{display:block;margin-top:12px;color:var(--primary);font-size:11px;font-weight:600}
-.rake-folder[open] .rake-folder-hint::after{content:'Collapse rakes ↑'}
-.rake-folder:not([open]) .rake-folder-hint::after{content:'Open rakes ↓'}
-.rake-folder[open]>.rake-list{animation:rakeFolderReveal .25s ease-out}
-@supports (interpolate-size:allow-keywords){
-  .rake-folder{interpolate-size:allow-keywords}
-  .rake-folder::details-content{block-size:0;overflow:clip;opacity:0;transition:block-size .32s ease,opacity .24s ease,content-visibility .32s;transition-behavior:allow-discrete}
-  .rake-folder[open]::details-content{block-size:auto;opacity:1}
-}
-.rake-folder[open] .rake-list>.rake-entry{animation:rakeFolderReveal .32s ease-out both}
-.rake-folder[open] .rake-list>.rake-entry:nth-child(2){animation-delay:40ms}
-.rake-folder[open] .rake-list>.rake-entry:nth-child(n+3){animation-delay:80ms}
-@keyframes rakeFolderReveal{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
-@media(prefers-reduced-motion:reduce){.rake-folder[open]>.rake-list,.rake-folder[open] .rake-list>.rake-entry{animation:none}.rake-folder::details-content{transition:none}}
 @media(max-width:1080px){.rake-siding-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 /* The same opaque cards stay mounted in both states; only their spacing changes. */
 .rake-folder[data-stack-open]>.rake-folder-cover{padding-bottom:16px!important;min-height:0}
 .rake-folder[data-stack-open]>.rake-list{display:flex;flex-direction:column;gap:0;animation:none}
 html body.page-rake .rake-folder[data-stack-open] .rake-entry{position:relative;background:rgb(from var(--s1) r g b / 1)!important;opacity:1!important;animation:none;transition:margin 320ms cubic-bezier(.2,0,0,1),border-color 150ms!important}
-.rake-folder[data-stack-open="false"] .rake-entry{margin-top:-18px}
+.rake-folder[data-stack-open="false"] .rake-entry{margin-top:-8px}
 .rake-folder[data-stack-open="false"] .rake-entry:first-child{margin-top:0}
-.rake-folder[data-stack-open="true"] .rake-entry{margin-top:10px}
+.rake-folder[data-stack-open="true"] .rake-entry{margin-top:6px}
 .rake-folder[data-stack-open="true"] .rake-entry:first-child{margin-top:0}
-.rake-folder[data-stack-open="false"] .rake-entry-heading{min-height:56px;padding:10px 12px 18px;align-items:flex-start}
-.rake-folder[data-stack-open="false"] .rake-entry:last-child .rake-entry-heading{min-height:44px;padding-bottom:10px}
+.rake-folder[data-stack-open="false"] .rake-entry-heading{min-height:46px;padding:10px 12px 12px;align-items:flex-start}
+.rake-folder[data-stack-open="false"] .rake-entry:last-child .rake-entry-heading{min-height:40px;padding-bottom:8px}
 .rake-folder[data-stack-open="false"] :is(.rake-select,.rake-order-count,.rake-entry-caret,.rake-siding-actions){display:none}
 .rake-folder[data-stack-open="true"] .rake-peek-quantity{display:none}
 .rake-peek-quantity{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -109,6 +85,18 @@ html body.page-rake .rake-folder[data-stack-open] .rake-entry{position:relative;
 .rake-folder[data-stack-open="true"] .rake-folder-hint::after{content:'Collapse rakes ↑'}
 .rake-folder[data-stack-open="false"] .rake-folder-hint::after{content:'Open rakes ↓'}
 .rake-folder[data-stack-open] .rake-entry-body{animation:none}
+.rake-folder[data-stack-open]>.rake-folder-cover{padding:10px 12px!important;min-height:0}
+.rake-folder[data-stack-open]>.rake-list{padding:0 8px 8px;gap:0}
+.rake-folder[data-stack-open] .rake-entry{box-shadow:none!important}
+.rake-folder[data-stack-open="true"] .rake-entry-heading{padding:6px 8px;min-height:40px}
+.rake-folder[data-stack-open="true"] .rake-select{min-height:36px}
+.rake-folder[data-stack-open="true"] .rake-name{font-size:18px}
+.rake-folder .rake-capacity{padding:8px}
+.rake-folder .rake-status-row{padding:4px 8px 8px;border-bottom:0}
+.rake-folder .rake-stock-grid{padding:4px 8px 8px}
+.rake-folder .rake-marker{border-color:transparent;box-shadow:none}
+.rake-folder .rake-marker strong{border-left:0;padding-left:2px}
+.rake-folder .rake-details-button{border-top:0!important}
 @media(prefers-reduced-motion:reduce){html body.page-rake .rake-folder[data-stack-open] .rake-entry{transition:none!important}}
 @media(max-width:820px){.rake-siding-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .rake-region-heading{break-after:avoid;page-break-after:avoid}
@@ -186,9 +174,12 @@ html[data-theme-style="neomorph"] .rake-siding-actions{background:var(--neo-bg);
 .rake-drill-panel{background:var(--bg)!important}
 html[data-theme-style="neomorph"] .rake-drill-panel{background:var(--neo-bg)!important}
 .rake-drill-heading .rake-drill-name{font-size:24px;font-weight:750;letter-spacing:-.025em;line-height:1.25;color:var(--text)}
-.rake-drill-summary{display:flex;flex-wrap:wrap;gap:12px 24px;width:100%;padding:12px 0;border-block:1px solid var(--bdr)}
+.rake-drill-summary{display:flex;flex-wrap:wrap;gap:8px 18px;width:auto;padding:0;border:0}
 .rake-drill-summary>span{font-size:16px!important;font-variant-numeric:tabular-nums}
 .rake-drill-summary>span>span{display:block;margin-bottom:4px;font-size:12px!important}
+.rake-drill-panel .rake-drill-heading{display:flex;align-items:center;gap:8px 14px;padding:12px 20px;border-bottom:1px solid var(--bdr);max-height:45dvh}
+.rake-drill-panel .rake-drill-summary>span{font-size:14px!important}
+.rake-drill-panel .rake-drill-summary>span>span{display:inline;margin:0 4px 0 0;font-size:11px!important}
 .rake-drill-panel td{padding:12px 14px!important;font-size:13px!important;line-height:1.5}
 .rake-drill-panel th{padding:12px 14px!important;font-size:12px!important}
 @media(max-width:600px){
@@ -4170,10 +4161,8 @@ function RakeDrillPanel({rakePlan,rakeIdx,onClose,mob}){
         {hasNone?' NO PAY':'~ PART PAY'} · verify
       </span>}
 
-      <div style={{flex:1}}/>
-
       {/* Search */}
-      <div style={{position:'relative',width:mob?'100%':200,flexShrink:0}}>
+      <div style={{position:'relative',width:mob?'100%':200,flexShrink:0,marginLeft:mob?0:'auto'}}>
         <span style={{position:'absolute',left:8,top:'50%',transform:'translateY(-50%)',color:'var(--mute)',fontSize:14,pointerEvents:'none'}}>⌕</span>
         <input style={{...inp,paddingLeft:26,paddingRight:srch?26:11,fontSize:13}}
           placeholder="Search orders…" value={srch} onChange={e=>setSrch(e.target.value)}/>
