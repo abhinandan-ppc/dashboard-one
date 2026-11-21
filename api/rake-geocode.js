@@ -71,7 +71,16 @@ export default async function handler(req) {
     if (!admin && !(user?.status === 'approved' && (user.allPages || user.pages?.includes('Rake-Planner.html')))) return reply({ error: 'Rake Planner access required' }, 403);
     const selectedProvider=provider();
     const providerReady=selectedProvider==='photon'||selectedProvider==='geoapify'&&!!process.env.GEOAPIFY_API_KEY&&process.env.GEOCODING_FREE_PLAN==='1';
-    if(req.method==='GET')return reply({ready:!!process.env.BLOB_READ_WRITE_TOKEN&&providerReady,cacheConfigured:!!process.env.BLOB_READ_WRITE_TOKEN,providerConfigured:providerReady,provider:selectedProvider,dailyLimit:DAILY_LIMIT,monthlyLimit:MONTHLY_LIMIT});
+    if(req.method==='GET'){
+      const status={ready:!!process.env.BLOB_READ_WRITE_TOKEN&&providerReady,cacheConfigured:!!process.env.BLOB_READ_WRITE_TOKEN,providerConfigured:providerReady,provider:selectedProvider,dailyLimit:DAILY_LIMIT,monthlyLimit:MONTHLY_LIMIT};
+      // One shared-cache read per mapping pass, instead of a request per known
+      // destination. Read-only: this never reserves credit or calls a provider.
+      if(new URL(req.url).searchParams.get('cache')==='1'&&process.env.BLOB_READ_WRITE_TOKEN){
+        const {data}=await readStore(process.env.BLOB_READ_WRITE_TOKEN);
+        return reply({...status,entries:data.entries||{}});
+      }
+      return reply(status);
+    }
     const input = await req.json();
     const city = String(input.city || '').trim(), state = String(input.state || '').trim();
     const country=String(input.country||'India').trim();
