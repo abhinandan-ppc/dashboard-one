@@ -66,11 +66,14 @@ input:focus{outline:none;border-color:var(--amber) !important;box-shadow:var(--s
 .rake-siding-card.rake-folder{position:relative;overflow:hidden;margin-top:0}
 .rake-folder-cover{position:relative;list-style:none;cursor:pointer;min-height:132px;border-radius:var(--radius-lg);background:var(--component-surface)}
 .rake-folder-cover::-webkit-details-marker{display:none}
-.rake-folder:not([open])>.rake-folder-cover{padding-bottom:106px!important}
-.rake-stack-preview{position:absolute;left:12px;right:12px;bottom:12px;height:82px;pointer-events:none}
-.rake-stack-preview>span{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:14px;border:1px solid var(--bdrHi);border-radius:var(--radius-md);background:var(--s2);color:var(--text);box-shadow:var(--shadow-xs);font-size:12px;transform:translateY(calc(var(--stack-index)*10px)) scale(calc(.9 + var(--stack-index)*.05));transform-origin:top center}
-.rake-stack-preview>span:last-child{background:var(--component-surface);border-color:var(--primary);height:62px}
-.rake-stack-preview small{color:var(--dim)}
+.rake-folder:not([open])>.rake-folder-cover{padding-bottom:calc(var(--peek-height) + 24px)!important}
+.rake-stack-preview{position:absolute;left:12px;right:12px;bottom:12px;height:var(--peek-height);pointer-events:none}
+.rake-stack-preview>span{position:absolute;inset:0 0 auto;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:10px 12px;height:62px;border:1px solid var(--bdrHi);border-radius:var(--radius-md);background:var(--s1);color:var(--text);box-shadow:var(--shadow-xs);font-size:12px;line-height:18px;transform:translateY(calc(var(--stack-index)*38px));margin-inline:calc((var(--peek-count) - var(--stack-index) - 1)*4px)}
+.rake-stack-preview>span:last-child{background:var(--s2);border-color:var(--bdrHi)}
+.rake-stack-preview>span{background:rgb(from var(--s1) r g b)!important;z-index:var(--stack-index);opacity:1!important}
+.rake-stack-preview>span:last-child{background:rgb(from var(--s2) r g b)!important}
+.rake-stack-preview strong{white-space:nowrap}
+.rake-stack-preview small{color:var(--text);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .rake-folder[open] .rake-stack-preview{display:none}
 .rake-folder{isolation:isolate}
 .rake-folder[open]>.rake-folder-cover{margin-bottom:12px;border-bottom:1px solid var(--bdr);border-radius:var(--radius-lg) var(--radius-lg) 0 0}
@@ -4372,7 +4375,7 @@ function RakePredictor({rows}){
         const partial=visRakes.length-full;
         return<details key={siding} className="rake-siding-card rake-folder">
           {/* Card header */}
-          <summary className="rake-folder-cover" aria-label={`Expand or collapse ${siding} rakes`} style={{padding:'16px 12px',display:'flex',alignItems:'flex-start',gap:8}}>
+          <summary className="rake-folder-cover" aria-label={`Expand or collapse ${siding} rakes`} style={{'--peek-count':rakes.filter(r=>r.totalBal>0).length,'--peek-height':`${Math.max(0,rakes.filter(r=>r.totalBal>0).length-1)*38+62}px`,padding:'16px 12px',display:'flex',alignItems:'flex-start',gap:8}}>
             <div style={{flex:1,minWidth:0}}>
               <div style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap',marginBottom:6}}>
                 <h3 className="rake-siding-name">{siding}</h3><RBadge region={region}/>
@@ -4391,7 +4394,7 @@ function RakePredictor({rows}){
               <div style={{fontSize:12,color:'var(--dim)',marginTop:6}}>{full} full · {partial} partial</div>
             </div>
             <span className="rake-stack-preview" aria-hidden="true">
-              {rakes.filter(r=>r.totalBal>0).slice(0,3).map((rk,i)=><span key={i} style={{'--stack-index':i}}><strong>Rake {i+1}</strong><small>{fmt(rk.totalBal)} MT</small></span>)}
+              {rakes.map((rk,idx)=>({rk,idx})).filter(({rk})=>rk.totalBal>0).map(({rk,idx},i)=><span key={idx} style={{'--stack-index':i}}><strong>Rake {idx+1}</strong><small>{fmt(rk.totalBal)} MT</small></span>)}
             </span>
           </summary>
 
