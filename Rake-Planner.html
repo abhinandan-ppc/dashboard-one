@@ -3,6 +3,7 @@
 <head>
 <script src="dashboard-api-url.js"></script>
 <script src="rake-planning-rules.js"></script>
+<script src="rake-destination-mapping.js"></script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <script src="theme-boot.js"></script>
@@ -1003,46 +1004,32 @@ function orderCoords(ord){
   const city=RakePlanningRules.city(ord['Ship To Party City']).toUpperCase();
   return CITY_COORDS[city]||(RakePlanningRules.isExport(ord)?null:mlLookupCoords(city))||null;
 }
-function useLiveDestinations(orders){
-  const[revision,setRevision]=useState(0),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
-  const[availability,setAvailability]=useState('Checking live mapping…'),[ready,setReady]=useState(false),[providerName,setProviderName]=useState('photon');
-  const autoAttempted=useRef(new Set());
-  const alive=useRef(true);
-  useEffect(()=>{alive.current=true;const controller=new AbortController();fetch(dashboardApiUrl('/api/rake-geocode'),{signal:controller.signal}).then(async r=>{if(!r.ok||!r.headers.get('content-type')?.includes('json'))throw new Error('Sign in to check live mapping');return r.json();}).then(s=>{if(alive.current){setReady(!!s.ready);setProviderName(s.provider||'photon');setAvailability(s.ready?'Online mapping ready':`Online mapping unavailable: ${!s.cacheConfigured?'shared cache missing':'free provider disabled'}. Offline fallback active.`);}}).catch(e=>{if(alive.current)setAvailability(e.message);});return()=>{alive.current=false;controller.abort();};},[]);
-  const run=async(onlyMissing=false)=>{
-    if(busy)return;
-    setBusy(true);let mapped=0,unresolved=0;
-    const unique=[...new Map(orders.filter(o=>o['Ship To Party City']&&(!onlyMissing||!orderCoords(o)&&!autoAttempted.current.has(orderPlaceKey(o)))).map(o=>[orderPlaceKey(o),o])).values()].sort((a,b)=>Number(!!orderCoords(a))-Number(!!orderCoords(b)));
-    unique.forEach(o=>autoAttempted.current.add(orderPlaceKey(o)));
-    try{
-      for(const ord of unique){
-        if(!alive.current)break;
-        const key=orderPlaceKey(ord);
-        if(Number.isFinite(GEO_CACHE[key]?.lat))continue;
-        if(!ord._Country&&RakePlanningRules.isExport(ord)){unresolved++;continue;}
-        setMessage(`Mapping ${mapped+unresolved+1} destinations…`);
-        const response=await fetch(dashboardApiUrl('/api/rake-geocode'),{method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(30000),body:JSON.stringify({city:RakePlanningRules.city(ord['Ship To Party City']),state:ord._State||'',country:ord._Country||'India'})});
-        if(!response.headers.get('content-type')?.includes('json'))throw new Error('Sign in to use live mapping');
-        const result=await response.json();
-        if(!response.ok)throw new Error(result.error||'Live mapping unavailable');
-        if(result.waitMs)await new Promise(resolve=>setTimeout(resolve,Math.min(5000,result.waitMs)));
-        if(result.error){unresolved++;continue;}
-        GEO_CACHE[key]=result;mapped++;
-        try{localStorage.setItem(PLACE_CACHE_KEY,JSON.stringify(Object.fromEntries(Object.entries(GEO_CACHE).filter(([,v])=>v&&Number.isFinite(v.lat)).slice(-5000))));}catch(e){}
-        if(alive.current)setRevision(v=>v+1);
-      }
-      if(alive.current)setMessage(`${mapped} locations mapped · ${unresolved} need review`);
-    }catch(e){if(alive.current)setMessage(e.message+' · offline mapping remains active');}
-    finally{if(alive.current)setBusy(false);}
-  };
-  useEffect(()=>{if(ready&&!busy&&orders.some(o=>o['Ship To Party City']&&!orderCoords(o)&&!autoAttempted.current.has(orderPlaceKey(o))))run(true);},[ready,busy,orders]);
+const destinationMapper=RakeDestinationMapping.create({
+  cache:GEO_CACHE,storage:(()=>{try{return localStorage;}catch{return null;}})(),
+  endpoint:dashboardApiUrl('/api/rake-geocode'),locks:navigator.locks
+});
+window.addEventListener('storage',e=>{if(e.key===RakeDestinationMapping.STATE_KEY)destinationMapper.refresh();});
+function useLiveDestinations(){
+  const[state,setState]=useState(destinationMapper.getSnapshot);
+  useEffect(()=>{const update=()=>setState(destinationMapper.getSnapshot());const unsubscribe=destinationMapper.subscribe(update);update();return unsubscribe;},[]);
   const control=<div className="rake-live-control">
-    <button type="button" disabled={busy} onClick={()=>run()}>{busy?'Mapping destinations…':'Map live destinations'}</button>
-    <div style={{fontSize:12}}>{availability}</div>
-    <div role="status" style={{fontSize:12,marginTop:4}}>{message||'Live coordinates take priority; other locations use offline mapping.'}</div>
-    <div className="rake-map-attribution"><a href={providerName==='geoapify'?'https://www.geoapify.com/':'https://github.com/komoot/photon'} target="_blank" rel="noreferrer">{providerName==='geoapify'?'Geoapify':'Photon'}</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a></div>
+    <div role="status">{state.status}</div>
+    <div>Use Map destinations in the page header. New locations are checked daily; saved locations are reused.</div>
+    <div className="rake-map-attribution"><a href={state.provider==='geoapify'?'https://www.geoapify.com/':'https://github.com/komoot/photon'} target="_blank" rel="noreferrer">{state.provider==='geoapify'?'Geoapify':'Photon'}</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a></div>
   </div>;
-  return{revision,control,status:message||availability,busy};
+  return{...state,control};
+}
+function DestinationMappingButton(){
+  const mapping=useLiveDestinations();
+  const percent=mapping.total?Math.round(mapping.done/mapping.total*100):0;
+  return <div className="rake-mapping-action">
+    <button className="rake-mapping-button" data-state={mapping.phase} data-review={mapping.review>0} type="button" aria-label="Map destinations" aria-describedby="destination-mapping-status" aria-busy={mapping.busy} disabled={mapping.busy} onClick={()=>destinationMapper.run({manual:true})} title={mapping.status}>
+      <span className="rake-mapping-fill" aria-hidden="true" style={{transform:`scaleX(${mapping.busy?percent/100:0})`}}/>
+      <span className="rake-mapping-label">{mapping.busy?(mapping.phase==='cache'?'Checking cache…':`Mapping ${mapping.done} / ${mapping.total}`):'Map destinations'}{!mapping.busy&&['complete','error'].includes(mapping.phase)&&<span className="rake-mapping-result" aria-hidden="true">{mapping.phase==='complete'&&!mapping.review?'✓':'!'}</span>}</span>
+    </button>
+    {mapping.busy&&<span className="sr-only" role="progressbar" aria-label="Destination mapping progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-valuetext={mapping.phase==='cache'?'Checking shared cache':`${mapping.done} of ${mapping.total} destinations checked`}/>}
+    <span id="destination-mapping-status" className="sr-only" role="status">{mapping.status}</span>
+  </div>;
 }
 async function resolveCoords(cityRaw,onlineMode){
   const city=String(cityRaw||'').toUpperCase().trim();
@@ -2209,20 +2196,30 @@ function ProbableOrders({plan,rows,onClose}){
   };
   const download=()=>{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(picked.map(({ord,release,km})=>({Siding:plan.siding,SO:ord['SO No.'],Item:ord._LineItem,UID:RakePlanningRules.orderKey(ord),City:ord['Ship To Party City'],State:ord._State,Release:release,'Balance MT':ord['Bal to PGI'],'Distance km':km==null?'Unknown':Math.round(km),Status:'DRAFT'}))),'Draft');XLSX.writeFile(wb,`Rake Draft ${plan.siding}.xlsx`);};
   return ReactDOM.createPortal(<div className="rake-probable-backdrop"><section ref={dialogRef} className="rake-probable" role="dialog" aria-modal="true" aria-label={`Backup orders for ${plan.siding}`}>
-    <header><h3>{plan.siding} · Backup orders</h3><button onClick={onClose}>Close</button></header>
-    <p>Plan {fmt(plan.bal)} MT · Target {fmt(limit.target)} MT · ±3% range {fmt(limit.minimum)}–{fmt(limit.maximum)} MT · Shortfall {fmt(limit.missing)} MT</p>
-    <p>Within 100 km first, then within the state. Whole orders only. Orders already assigned to an actual plan are excluded.</p>
-    <div className="probable-mapping">{live.control}</div>
-    <div className="probable-table-scroll"><table><thead><tr><th>Select</th><th>SO / Item</th><th>Customer</th><th>City / State</th><th>Range</th><th>Wagon</th><th>Balance MT</th></tr></thead><tbody>
-      {!options.length&&<tr><td colSpan={7}>No nearby orders found.</td></tr>}
-      {['Released','Unreleased','Other / review'].map(group=><React.Fragment key={group}>{options.some(o=>o.release===group)&&<tr><th colSpan={7}>{group}</th></tr>}{options.filter(o=>o.release===group).map(({ord,km,band})=>{const id=RakePlanningRules.orderKey(ord);return<tr key={id}><td><input aria-label={`Select order ${id}`} type="checkbox" checked={selected.has(id)} onChange={()=>setSelected(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;})}/></td><td>{ord['SO No.']} / {ord._LineItem}</td><td>{ord['Sold To Party Name']}</td><td>{ord['Ship To Party City']} / {ord._State}</td><td>{band===0?`${Math.round(km)} km`:'Same state'}</td><td>{ord._WagonType}</td><td>{fmt(ord['Bal to PGI'])}</td></tr>;})}</React.Fragment>)}
-    </tbody></table></div>
-    <footer><span>{picked.length} whole orders · {fmt(added)} MT selected · Remaining shortfall {fmt(remaining)} MT {plan.bal+added>limit.maximum?' · Above target tolerance — review draft':''}</span><button disabled={!picked.length} onClick={save}>Save draft</button><button disabled={!picked.length} onClick={download}>Download draft</button><span role="status">{notice}</span></footer>
+    <header><div><h3>{plan.siding} · Backup orders</h3><p>Select whole orders to prepare a backup draft.</p></div><button onClick={onClose}>Close</button></header>
+    <dl className="backup-summary">
+      <div><dt>Planned</dt><dd>{fmt(plan.bal)} <small>MT</small></dd></div>
+      <div><dt>Target</dt><dd>{fmt(limit.target)} <small>MT</small></dd><small>±3%: {fmt(limit.minimum)}–{fmt(limit.maximum)} MT</small></div>
+      <div data-shortfall={limit.missing>0}><dt>Shortfall</dt><dd>{fmt(limit.missing)} <small>MT</small></dd></div>
+    </dl>
+    <div className="backup-list-heading"><span>Within 100 km, then the same state</span><span>{options.length} available orders</span></div>
+    {live.busy&&<div className="backup-mapping-status" role="status">Updating destinations · {live.total?`${live.done} / ${live.total} checked`:'Checking saved locations'} · Suggestions update automatically</div>}
+    {options.length>0?<div className="probable-table-scroll" tabIndex={0} aria-label="Backup orders table"><table><thead><tr><th>Select</th><th>SO / Item</th><th>Customer</th><th>City / State</th><th>Range</th><th>Wagon</th><th>Balance MT</th></tr></thead><tbody>
+      {['Released','Unreleased','Other / review'].map(group=><React.Fragment key={group}>{options.some(o=>o.release===group)&&<tr className="backup-group"><th colSpan={7}>{group} <span>{options.filter(o=>o.release===group).length}</span></th></tr>}{options.filter(o=>o.release===group).map(({ord,km,band})=>{const id=RakePlanningRules.orderKey(ord);return<tr key={id} data-selected={selected.has(id)}><td><label className="backup-select"><input aria-label={`Select order ${id}`} type="checkbox" checked={selected.has(id)} onChange={()=>setSelected(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;})}/></label></td><td className="backup-order-id">{ord['SO No.']} / {ord._LineItem}</td><td>{ord['Sold To Party Name']}</td><td>{ord['Ship To Party City']}<small>{ord._State}</small></td><td>{band===0?`${Math.round(km)} km`:'Same state'}</td><td>{ord._WagonType}</td><td className="backup-quantity">{fmt(ord['Bal to PGI'])}</td></tr>;})}</React.Fragment>)}
+    </tbody></table></div>:<div className="backup-empty" role="status"><strong>{live.busy?'Checking for nearby orders…':'No nearby orders found.'}</strong><span>{live.busy?'The list will update as new locations are cached.':'New destinations are checked daily. Orders already in an actual plan are excluded.'}</span></div>}
+    <footer><div className="backup-selection"><strong>{picked.length} orders selected · {fmt(added)} MT</strong><span>Remaining shortfall: {fmt(remaining)} MT{plan.bal+added>limit.maximum?' · Above target tolerance — review draft':''}</span></div><button className="backup-save" disabled={!picked.length} onClick={save}>Save draft</button><button disabled={!picked.length} onClick={download}>Download draft</button>{notice&&<span className="backup-notice" role="status">{notice}</span>}</footer>
   </section></div>,document.body);
 }
 function TransportStockSummary({rows}){
   const groups=useMemo(()=>{const m=new Map();for(const ord of rows){const sid=actualSidingForOrder(ord);if(!sid)continue;const type=ord._ODC||(/ROAD/i.test(sid)?sid:ord._WagonType==='LONG'?'LONG':'BOSM/BRN+BRN');const id=sid+'|'+type;if(!m.has(id))m.set(id,{sid,type,bal:0,fg:0,wip:0,slab:0,issued:0});const g=m.get(id),c=RakePlanningRules.completion(ord);g.bal+=c.bal;['fg','wip','slab','issued'].forEach((k,i)=>g[k]+=c.stages[i].raw);}return[...m.values()];},[rows]);
-  return <details className="transport-stock"><summary>Rake-wise stock summary · Wagon type / ROAD-ODC</summary><div className="probable-table-scroll"><table><thead><tr>{['Siding','Transport','Bal PGI','FG','WIP','Slab','Issued'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{groups.map(g=><tr key={g.sid+g.type}><td>{g.sid}</td><td>{g.type}</td>{['bal','fg','wip','slab','issued'].map(k=><td key={k}>{fmt(g[k])}</td>)}</tr>)}</tbody></table></div></details>;
+  return <details className="transport-stock">
+    <summary><span className="stock-summary-title">Rake-wise stock summary <small>By siding and wagon type · includes ROAD-ODC</small></span><span className="stock-summary-unit">All quantities in MT</span></summary>
+    <div className="probable-table-scroll" tabIndex={0} aria-label="Rake-wise stock summary table"><table>
+      <colgroup><col style={{width:'18%'}}/><col style={{width:'23%'}}/>{['bal','fg','wip','slab','issued'].map(k=><col key={k} style={{width:k==='bal'?'15%':'11%'}}/>)}</colgroup>
+      <thead><tr>{['Siding','Wagon / Transport','Balance to PGI','FG stock','WIP stock','Slab stock','Issued'].map(h=><th key={h} scope="col">{h}</th>)}</tr></thead>
+      <tbody>{groups.map(g=><tr key={g.sid+g.type}><th scope="row">{g.sid}</th><td className="stock-transport" data-odc={g.type==='ROAD-ODC'}>{g.type}</td>{['bal','fg','wip','slab','issued'].map(k=><td key={k} className={k==='bal'?'stock-balance':''}>{fmt(g[k])}</td>)}</tr>)}{!groups.length&&<tr><td colSpan={7} className="stock-empty">No planned stock in this view.</td></tr>}</tbody>
+    </table></div>
+  </details>;
 }
 function ActualRakePlan({data,onDrill,onMap,activeSiding,allRows=[]}){
   const[probable,setProbable]=useState(null);
@@ -4437,7 +4434,7 @@ function RakeDrillPanel({rakePlan,rakeIdx,onClose,mob}){
   </div>;
 }
 
-function RakePredictor({rows}){
+function RakePredictor({rows,visible=true}){
   const predictorRef=useRef(null);
   React.useLayoutEffect(()=>{
     const cards=[...predictorRef.current.querySelectorAll('.rake-siding-grid>.rake-siding-card')];
@@ -4757,7 +4754,7 @@ function RakePredictor({rows}){
       document.body
     )}
 
-    {combineSel.length>0&&ReactDOM.createPortal(
+    {visible&&combineSel.length>0&&ReactDOM.createPortal(
       <div data-overlay-surface style={{position:'fixed',left:'50%',bottom:24,transform:'translateX(-50%)',zIndex:250,
         background:'var(--s1)',border:`1px solid ${C.sky}70`,borderRadius:'var(--radius-lg)',
         boxShadow:`var(--shadow-xl),0 0 24px ${C._sky}30`,
@@ -5555,6 +5552,17 @@ function App(){
     };
   },[]);
   const[rows,setRows]         =useState(()=>(initialSessionState?.rows||[]).map(r=>({...r,...computeRow(r)})));
+  useEffect(()=>{
+    const destinations=rows.filter(r=>n2(parseFloat(r['Bal to PGI']))>0&&r._Country).map(r=>({city:RakePlanningRules.city(r['Ship To Party City']),state:r._State||'',country:r._Country,missing:!orderCoords(r)}));
+    destinations.sort((a,b)=>Number(b.missing)-Number(a.missing));
+    destinationMapper.setPlaces(destinations.map(({missing,...place})=>place));
+    if(!rows.length)return;
+    const start=setTimeout(()=>destinationMapper.run(),750);
+    const daily=setInterval(()=>{if(document.visibilityState==='visible')destinationMapper.run();},30*60*1000);
+    const resume=()=>{if(document.visibilityState==='visible')destinationMapper.run();};
+    document.addEventListener('visibilitychange',resume);
+    return()=>{clearTimeout(start);clearInterval(daily);document.removeEventListener('visibilitychange',resume);};
+  },[rows]);
   const[fileName,setFileName] =useState(()=>initialSessionState?.fileName||'');
   const[fileDate,setFileDate] =useState(()=>initialSessionState?.fileDate||null);
   const[loading,setLoading]   =useState(false);
@@ -6116,6 +6124,7 @@ function App(){
           onMouseLeave={e=>e.currentTarget.style.background='rgba(20,184,166,.12)'}>
           {headerMobile?'Map':'Map overview'}
         </button>}
+        <DestinationMappingButton/>
         <button onClick={()=>exportEBTPWithMapping(rows)}
           title="Export full EBTP raw file with _State, _Region, _Siding appended as last 3 columns"
           style={{height:headerMobile?34:34,width:headerMobile?34:'auto',padding:headerMobile?0:'0 16px',borderRadius:'var(--radius-pill)',
@@ -6318,7 +6327,7 @@ function App(){
         <TransportStockSummary rows={pivSrc}/>
         </section>
         <section id="predictor-view" className="rake-view-panel" aria-label="Rake predictor" hidden={planningView!=='predictor'}>
-        <RakePredictor rows={pivSrc}/>
+        <RakePredictor rows={pivSrc} visible={planningView==='predictor'}/>
         <details className="rake-release-summary"><summary>Order release summary</summary>
         <PivotTable
           data={pivotData} remarksLbl={remLbl}

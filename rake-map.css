@@ -205,3 +205,95 @@ html body .rake-map-workspace .rake-map-recenter{background:rgb(from var(--s1) r
   .total-map-filters{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}
   .total-map-filters label{min-width:0;border-radius:var(--radius-sm,8px)}
 }
+
+/* A single mapping action, with real completed-destination progress. */
+.rake-mapping-action{position:relative;flex-shrink:0}
+html body.page-rake .app-header .rake-mapping-button{position:relative;isolation:isolate;overflow:hidden;min-width:156px;width:auto!important;min-height:36px;padding:7px 14px!important;border:1px solid var(--sky)!important;border-radius:var(--radius-pill,999px);background:transparent!important;color:var(--text)!important;box-shadow:none!important;font:inherit;font-size:12px!important;font-weight:600;letter-spacing:0;text-transform:none;cursor:pointer;white-space:nowrap}
+html body.page-rake .app-header .rake-mapping-button:disabled{opacity:1!important;cursor:progress}
+.rake-mapping-fill{position:absolute;inset:0;z-index:-1;pointer-events:none;transform-origin:left;background:color-mix(in srgb,var(--sky) 28%,transparent);transition:transform 180ms linear}
+.rake-mapping-label{position:relative;z-index:1}
+.rake-mapping-result{margin-left:8px;color:var(--green)}
+.rake-mapping-button[data-state=error] .rake-mapping-result,.rake-mapping-button[data-review=true] .rake-mapping-result{color:var(--amber)}
+.rake-mapping-action .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(prefers-reduced-motion:reduce){.rake-mapping-fill{transition:none}}
+
+/* Backup selection: compact summary, scrollable results, stable draft actions. */
+html body .rake-probable{width:min(1080px,calc(100vw - 32px));max-height:calc(100dvh - 40px);padding:0;gap:0;overflow:hidden}
+html[data-theme-style=classic] body .rake-probable{border-radius:0}
+.rake-probable>header{padding:18px 20px;gap:16px;flex-wrap:nowrap;border-bottom:1px solid var(--bdr)}
+.rake-probable>header h3{font-size:18px;text-wrap:pretty}
+.rake-probable>header p{font-size:12px!important;font-weight:400;color:var(--dim)!important;margin:4px 0 0;line-height:1.5}
+.rake-probable>header button{flex-shrink:0}
+.backup-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;padding:18px 20px;flex-shrink:0}
+.backup-summary dt{font-size:11px;color:var(--dim);margin-bottom:4px}
+.backup-summary dd{font-size:22px;font-weight:650;line-height:1.4;font-variant-numeric:tabular-nums}
+.backup-summary dd small{font-size:11px;font-weight:400;color:var(--dim)}
+.backup-summary>div>small{font-size:10px;color:var(--dim);display:block;margin-top:3px}
+.backup-summary [data-shortfall=true] dd{color:var(--amber)}
+.backup-list-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px;font-size:11px;color:var(--dim);border-top:1px solid var(--bdr);flex-shrink:0}
+.backup-list-heading>span:last-child{white-space:nowrap}
+.backup-mapping-status{font-size:11px;color:var(--sky);padding:0 20px 10px;flex-shrink:0}
+.rake-probable>.probable-table-scroll{min-height:0;overflow:auto;max-height:50dvh;flex:1 1 auto;overscroll-behavior:contain}
+.rake-probable .probable-table-scroll table{min-width:820px}
+.rake-probable .probable-table-scroll th{padding:10px 16px;font-size:10px;font-weight:600;letter-spacing:.03em;color:var(--dim);text-transform:uppercase}
+.rake-probable .probable-table-scroll td{padding:8px 16px;font-size:12px;line-height:1.5;font-weight:400!important}
+.rake-probable .probable-table-scroll td small{display:block;color:var(--dim);font-size:10px;margin-top:2px}
+.rake-probable .probable-table-scroll .backup-group th{position:static;padding:8px 16px;background:var(--s2)!important;font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--text)}
+.backup-group span{color:var(--dim);font-weight:400;margin-left:6px}
+.rake-probable .probable-table-scroll th:last-child,.rake-probable .probable-table-scroll .backup-quantity{text-align:right;white-space:nowrap}
+.rake-probable .backup-group th:last-child{text-align:left}
+.backup-order-id{white-space:nowrap}
+.backup-select{display:flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;cursor:pointer}
+.rake-probable tr[data-selected=true] td{background:var(--primary-bg)!important}
+.backup-empty{display:flex;flex-direction:column;align-items:center;gap:6px;padding:24px 20px 28px;text-align:center;line-height:1.5}
+.backup-empty strong{font-size:13px;font-weight:600}
+.backup-empty>span{font-size:11px;color:var(--dim);max-width:430px}
+.rake-probable>footer{padding:14px 20px;gap:8px 10px;border-top:1px solid var(--bdr);flex-shrink:0}
+.backup-selection{margin-right:auto;flex:1 1 300px;display:flex;flex-direction:column;gap:3px;font-size:12px}
+.backup-selection strong{font-weight:600}.backup-selection>span{font-size:11px;color:var(--dim)}
+html body .rake-probable .backup-save:not(:disabled){background:var(--primary-bg)!important;color:var(--sky)!important;border-color:var(--sky)!important}
+.rake-probable footer .backup-notice{flex:1 0 100%!important;font-size:11px;color:var(--dim);margin-top:4px}
+@media(max-width:700px){
+  html body .rake-probable{width:calc(100vw - 20px);max-height:calc(100dvh - 24px)}
+  .rake-probable-backdrop{padding:10px}
+  .rake-probable>header{padding:14px;gap:10px}
+  .rake-probable>header h3{font-size:16px}
+  .backup-summary{padding:14px;gap:12px}
+  .backup-summary dd{font-size:18px}
+  .backup-summary>div>small{font-size:9px}
+  .backup-list-heading{padding:10px 14px;gap:8px;font-size:10px}
+  .backup-mapping-status{padding:0 14px 10px;font-size:10px}
+  .rake-probable>footer{padding:12px 14px}
+  .backup-selection{flex-basis:100%;margin-bottom:4px}
+  .rake-probable>footer button{flex:1;min-height:44px}
+  .backup-select{min-height:40px}
+  html body.page-rake .app-header .rake-mapping-button{min-height:44px;min-width:150px;max-width:180px}
+}
+
+.page-rake .transport-stock>summary{position:relative;display:flex;align-items:center;gap:12px;list-style:none;padding:14px 18px;min-height:64px}
+.transport-stock>summary::-webkit-details-marker{display:none}
+.transport-stock>summary::before{content:'›';font-size:20px;line-height:1;color:var(--dim);transform-origin:center;transition:transform 150ms}
+.transport-stock[open]>summary::before{transform:rotate(90deg)}
+.stock-summary-title{font-size:13px;font-weight:600;line-height:1.5}
+.stock-summary-title small{display:block;margin-top:2px;font-size:10px;font-weight:400;color:var(--dim)}
+.stock-summary-unit{margin-left:auto;color:var(--dim);font-size:10px;font-weight:400;white-space:nowrap}
+.transport-stock>.probable-table-scroll{max-height:440px;overscroll-behavior:contain}
+.transport-stock table{min-width:790px;table-layout:fixed;font-variant-numeric:tabular-nums}
+.page-rake .transport-stock thead th{position:sticky;top:0;z-index:1;background:rgb(from var(--s1) r g b / 1);font-size:10px;letter-spacing:.02em;font-weight:600;color:var(--dim);padding:11px 16px;white-space:nowrap}
+.page-rake .transport-stock tbody th,.page-rake .transport-stock tbody td{padding:11px 16px;font-size:12px;line-height:1.5;border-bottom:1px solid var(--bdr);font-weight:400!important;vertical-align:middle}
+.page-rake .transport-stock tbody th{position:static;background:transparent;text-align:left!important;font-weight:600!important;color:var(--text);letter-spacing:0;text-transform:none}
+.page-rake .transport-stock tbody th{position:sticky;left:0;z-index:1;background:rgb(from var(--s1) r g b / 1)}
+.page-rake .transport-stock thead th:first-child{left:0;z-index:2}
+html[data-theme-style=neomorph] body .transport-stock tbody th{background:var(--neo-bg)!important}
+.page-rake .transport-stock tbody td.stock-balance{font-weight:600!important;color:var(--text)}
+.stock-transport{color:var(--dim);font-size:11px!important}
+.stock-transport[data-odc=true]{color:var(--amber)}
+.transport-stock tbody tr:last-child :is(th,td){border-bottom:0}
+.transport-stock .stock-empty{text-align:center!important;padding:24px!important;color:var(--dim)}
+.transport-stock>summary:focus-visible{outline:2px solid var(--sky);outline-offset:-3px}
+@media(max-width:700px){
+  .page-rake .transport-stock>summary{padding:12px 14px;gap:10px}
+  .stock-summary-unit{font-size:9px;white-space:normal;text-align:right;max-width:64px}
+  .stock-summary-title small{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){.transport-stock>summary::before{transition:none}}
