@@ -1197,14 +1197,7 @@ function buildPivot(rows,selR,excHold){
    road-dispatched loads, or "HOLD-..."/other for not-yet-actual — only the first two
    represent an actual, already-in-execution plan. Returns the siding code, or null. */
 function actualSidingOf(modeC){
-  const raw=String(modeC||'').trim().toUpperCase();
-  if(!raw)return null;
-  if(['ROAD','ROAD-ODC','EXPORT ROAD'].includes(raw))return raw;
-  if(/^RAKE[-\s]+/.test(raw)){
-    const sid=raw.replace(/^RAKE[-\s]+/,'').trim();
-    return sid||null;
-  }
-  return null;
+  return RakePlanningRules.actualSiding(modeC);
 }
 function actualSidingForOrder(r){return actualSidingOf(r._ModeC)?(r._ODC?'ROAD-ODC':r._ExportGroup==='Export Road'?'Export Road':actualSidingOf(r._ModeC)):null;}
 function buildActualPlan(rows){
@@ -5451,6 +5444,373 @@ function ThemeToggle({pref,setThemeConcrete}){
   </div>;
 }
 
+const SIMULATOR_RAKE_MODES=[
+  {id:'BNHT',label:'BNHT'},
+  {id:'KAV',label:'KAV'},
+  {id:'BNHT (LONG)',label:'BNHT (Long)'},
+  {id:'CCJS',label:'CCJS'},
+];
+const simulatorValue=(row,key)=>String(key==='_HTC'
+  ?row._HTC||getHTC(row['Ext Grade'],row['Supply Condition'])
+  :row[key]??'').trim();
+const simulatorStateValue=row=>simulatorValue(row,'STO')||simulatorValue(row,'_State');
+const simulatorCustomerKey=row=>`${orderPlaceKey(row)}|${RakePlanningRules.key(row['Sold To Party Name']||'UNKNOWN CUSTOMER')}`;
+
+function SimulatorIndiaMap({rows,hub,selectedCustomers,onToggleCustomer,onClearSelection}){
+  const mapRef=useRef(null);
+  const mapInst=useRef(null);
+  const markersRef=useRef(new Map());
+  const popupCheckboxesRef=useRef(new Map());
+  const fitKeyRef=useRef('');
+  const onToggleRef=useRef(onToggleCustomer);
+  const selectedRef=useRef(selectedCustomers);
+  onToggleRef.current=onToggleCustomer;
+  selectedRef.current=selectedCustomers;
+  const live=useLiveDestinations(rows);
+  const[reverseKm,setReverseKm]=useState(100);
+  const destinations=useMemo(()=>{
+    const grouped=new Map();
+    for(const row of rows){
+      const key=orderPlaceKey(row);
+      const name=RakePlanningRules.city(row['Ship To Party City'])||'Unknown city';
+      let city=grouped.get(key);
+      if(!city){
+        const coords=orderCoords(row);
+        const lat=Number(coords?.[0]),lng=Number(coords?.[1]);
+        city={key,name,coords:coords&&Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180?[lat,lng]:null,
+          balance:0,orders:0,customers:new Map()};
+        grouped.set(key,city);
+      }
+      city.balance+=Math.max(0,Number(row['Bal to PGI'])||0);
+      city.orders++;
+      const customerKey=simulatorCustomerKey(row);
+      let customer=city.customers.get(customerKey);
+      if(!customer){
+        customer={key:customerKey,name:RakePlanningRules.clean(row['Sold To Party Name'])||'Unknown customer',balance:0,rows:[]};
+        city.customers.set(customerKey,customer);
+      }
+      customer.balance+=Math.max(0,Number(row['Bal to PGI'])||0);
+      customer.rows.push(row);
+    }
+    return[...grouped.values()].map(city=>{
+      const distance=city.coords&&hub
+        ?Math.round(haversine(hub.lat,hub.lng,city.coords[0],city.coords[1]))
+        :null;
+      const forward=city.coords&&hub
+        ?forwardDistance(ANGUL.lat,ANGUL.lng,hub.lat,hub.lng,city.coords[0],city.coords[1])>=0
+        :null;
+      const direction=forward===null?'unknown':forward?'forward':'reverse';
+      return{...city,distance,direction,included:direction!=='reverse'||distance<=reverseKm,
+        customers:[...city.customers.values()].sort((a,b)=>a.name.localeCompare(b.name))};
+    }).sort((a,b)=>a.name.localeCompare(b.name));
+  },[rows,live.revision,hub,reverseKm]);
+  const fwdCount=destinations.filter(city=>city.direction==='forward').length;
+  const revIncluded=destinations.filter(city=>city.direction==='reverse'&&city.included).length;
+  const revExcluded=destinations.filter(city=>city.direction==='reverse'&&!city.included).length;
+  useEffect(()=>{
+    popupCheckboxesRef.current.forEach((checkboxes,key)=>checkboxes.forEach(checkbox=>{
+      checkbox.checked=selectedCustomers.has(key);
+    }));
+  },[selectedCustomers]);
+
+  useEffect(()=>{
+    if(!mapRef.current||!window.L)return undefined;
+    const map=window.L.map(mapRef.current,{center:[22.8,80],zoom:4,scrollWheelZoom:false});
+    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom:19,
+    }).addTo(map);
+    mapInst.current=map;
+    const resizeTimer=window.setTimeout(()=>map.invalidateSize({animate:false}),80);
+    return()=>{
+      window.clearTimeout(resizeTimer);
+      map.remove();
+      if(mapInst.current===map)mapInst.current=null;
+      markersRef.current.clear();
+    };
+  },[]);
+
+  useEffect(()=>{
+    const map=mapInst.current;
+    if(!map||!window.L)return undefined;
+    const L=window.L,layer=L.layerGroup().addTo(map),markers=new Map(),bounds=[];
+    const popupCheckboxes=new Map();
+    if(hub){
+      L.polyline(mapRoutePoints(ANGUL.lat,ANGUL.lng,hub.lat,hub.lng),{color:C.amber,weight:2,opacity:.75,dashArray:'6 7'}).addTo(layer);
+      L.circleMarker([hub.lat,hub.lng],{radius:8,color:'#fff',weight:2,fillColor:C.amber,fillOpacity:1})
+        .addTo(layer).bindTooltip(`${hub.name} siding`,{direction:'top'});
+      bounds.push([hub.lat,hub.lng]);
+      L.circleMarker([ANGUL.lat,ANGUL.lng],{radius:6,color:'#fff',weight:2,fillColor:'#f97316',fillOpacity:1})
+        .addTo(layer).bindTooltip('Angul PlateMill',{direction:'top'});
+      bounds.push([ANGUL.lat,ANGUL.lng]);
+    }
+    for(const city of destinations){
+      if(!city.coords)continue;
+      const[lat,lng]=city.coords;
+      bounds.push([lat,lng]);
+      const color=city.direction==='reverse'&&!city.included?'#64748b'
+        :city.direction==='reverse'?'#f59e0b':'#22a06b';
+      const marker=L.circleMarker([lat,lng],{radius:7,color:'#fff',weight:2,fillColor:color,fillOpacity:.95})
+        .addTo(layer);
+      const routeLabel=city.direction==='forward'?'Fwd'
+        :city.direction==='reverse'&&!city.included?'Excluded'
+          :city.direction==='reverse'?'Rev':'';
+      marker.bindTooltip(`${city.name}${city.distance===null?'':` · ${city.distance} km`}${routeLabel?` · ${routeLabel}`:''}`,
+        {permanent:true,direction:'right',offset:[8,0],className:'rake-simulator-map-label'});
+      const popup=document.createElement('div');
+      popup.className='rake-simulator-map-popup';
+      const title=document.createElement('strong');
+      title.textContent=city.name;
+      popup.appendChild(title);
+      const distance=document.createElement('small');
+      distance.textContent=!city.coords?'No mapped coordinates for this city.'
+        :city.distance===null?'Select a rake to calculate distance.'
+        :`${city.distance} km from ${hub?.name||'siding'} · ${routeLabel}`;
+      popup.appendChild(distance);
+      const customers=document.createElement('div');
+      customers.className='rake-simulator-popup-customers';
+      city.customers.forEach(customer=>{
+        const label=document.createElement('label');
+        const checkbox=document.createElement('input');
+        checkbox.type='checkbox';
+        checkbox.checked=selectedRef.current.has(customer.key);
+        checkbox.disabled=city.direction==='reverse'&&!city.included;
+        checkbox.addEventListener('change',()=>onToggleRef.current(customer.key));
+        if(!popupCheckboxes.has(customer.key))popupCheckboxes.set(customer.key,[]);
+        popupCheckboxes.get(customer.key).push(checkbox);
+        const name=document.createElement('span');
+        name.textContent=`${customer.name} · ${customer.rows.length} items · ${fmt(customer.balance)} MT`;
+        label.append(checkbox,name);
+        customers.appendChild(label);
+      });
+      popup.appendChild(customers);
+      marker.bindPopup(popup,{maxWidth:320});
+      markers.set(city.key,marker);
+    }
+    markersRef.current=markers;
+    popupCheckboxesRef.current=popupCheckboxes;
+    const coordinateKey=destinations.filter(city=>city.coords)
+      .map(city=>city.key+':'+city.coords.join(',')).join(';');
+    const fitKey=(hub?.name||'')+'|'+coordinateKey;
+    if(bounds.length&&fitKeyRef.current!==fitKey){
+      map.fitBounds(L.latLngBounds(bounds),{padding:[35,35],maxZoom:7,animate:false});
+      fitKeyRef.current=fitKey;
+    }
+    return()=>{
+      layer.remove();
+      if(popupCheckboxesRef.current===popupCheckboxes)popupCheckboxesRef.current=new Map();
+    };
+  },[destinations,hub]);
+
+  const showCity=city=>{
+    if(!city.coords)return;
+    const marker=markersRef.current.get(city.key),map=mapInst.current;
+    if(marker&&map){
+      map.setView(city.coords,Math.max(map.getZoom(),7),{animate:false});
+      marker.openPopup();
+    }
+  };
+  const changeReverseLimit=value=>{
+    const next=Math.min(800,Math.max(0,Number(value)||0));
+    setReverseKm(next);
+    onClearSelection();
+  };
+  return <div className="rake-simulator-map-panel">
+    <div className="rake-simulator-map-wrap">
+      <div ref={mapRef} className="rake-simulator-map" role="region" aria-label="Filtered order destinations and selected siding"/>
+      {live.control}
+      {!hub&&<span className="rake-simulator-map-note">Select a rake to calculate siding distances and reverse limits.</span>}
+      {hub&&<span className="rake-simulator-map-note">Straight-line distances · road distances may vary.</span>}
+    </div>
+    <div className="rake-simulator-map-controls">
+      <label>Reverse limit
+        <input type="number" min={0} max={800} value={reverseKm}
+          onChange={event=>changeReverseLimit(event.target.value)} aria-label="Reverse limit in kilometers" disabled={!hub}/>
+        <span>km</span>
+      </label>
+      <input type="range" min={0} max={600} step={10} value={Math.min(reverseKm,600)}
+        onChange={event=>changeReverseLimit(event.target.value)} aria-label="Adjust reverse limit" disabled={!hub}/>
+      {hub?<>
+        <span className="rake-simulator-route-count rake-simulator-route-forward">→ {fwdCount} Fwd</span>
+        <span className="rake-simulator-route-count rake-simulator-route-reverse">← {revIncluded} Rev (≤{reverseKm}km)</span>
+        <span className="rake-simulator-route-count rake-simulator-route-excluded">× {revExcluded} Excl</span>
+      </>:<span className="rake-simulator-map-select-rake">Choose a rake to calculate directions.</span>}
+    </div>
+    <div className="rake-simulator-delivery-cities">
+      <strong>Delivery cities</strong>
+      {destinations.map(city=><div className="rake-simulator-delivery-city" key={city.key}>
+        <button type="button" className="rake-simulator-city-button" onClick={()=>showCity(city)} disabled={!city.coords}>
+          <span>{city.name}<small>{!city.coords?'Unmapped':city.distance===null?'Select a rake for distance':`${city.distance} km from siding · ${city.direction==='forward'?'Fwd':city.direction==='reverse'&&!city.included?'Excluded':'Rev'}`}</small></span>
+          <span>{fmt(city.balance)}<small>MT balance</small></span>
+        </button>
+        <details>
+          <summary>{city.customers.length} customer{city.customers.length===1?'':'s'}</summary>
+          <div className="rake-simulator-city-customer-list">
+            {city.customers.map(customer=><label key={customer.key}>
+              <input type="checkbox" checked={selectedCustomers.has(customer.key)}
+                disabled={city.direction==='reverse'&&!city.included}
+                onChange={()=>onToggleCustomer(customer.key)}/>
+              <span>{customer.name}</span>
+            </label>)}
+          </div>
+        </details>
+      </div>)}
+      {!destinations.length&&<p>No delivery cities match the current filters.</p>}
+    </div>
+  </div>;
+}
+
+function SimulatorMultiFilter({label,options,selected,onChange,blurred,allLabel,noun,searchable=false}){
+  const[query,setQuery]=useState('');
+  const visibleOptions=useMemo(()=>options.filter(option=>option.toLowerCase().includes(query.trim().toLowerCase())),[options,query]);
+  return <fieldset className={`rake-simulator-multi-filter${blurred?' is-blurred':''}`}>
+    <legend>
+      <span className={blurred?'rake-simulator-region-blurred':''}>{label}</span>
+      <small>{selected.size?`${selected.size} selected`:allLabel}</small>
+    </legend>
+    {searchable&&<input className="rake-simulator-option-search" type="search" aria-label={`Search ${label.toLowerCase()}`}
+      placeholder={`Search ${label.toLowerCase()}…`} value={query} onChange={event=>setQuery(event.target.value)}/>}
+    <div className={`rake-simulator-filter-options${blurred?' rake-simulator-region-blurred':''}`}>
+      {visibleOptions.length?visibleOptions.map(option=><label key={option}>
+        <input type="checkbox" checked={selected.has(option)} onChange={event=>onChange(option,event.target.checked)}/>
+        <span>{option}</span>
+      </label>):<small className="rake-simulator-no-options">No matching {noun}</small>}
+    </div>
+  </fieldset>;
+}
+
+function RakeSimulator({rows,active}){
+  const[scope,setScope]=useState('ALL_RAKES');
+  const[regions,setRegions]=useState(new Set());
+  const[states,setStates]=useState(new Set());
+  const[cities,setCities]=useState(new Set());
+  const[htc,setHtc]=useState('');
+  const[selectedCustomers,setSelectedCustomers]=useState(new Set());
+  const selectedMode=SIMULATOR_RAKE_MODES.find(mode=>mode.id===scope);
+  const peerRakes=useMemo(()=>selectedMode?SIMULATOR_RAKE_MODES.filter(mode=>mode.id!==scope).map(mode=>mode.id):[],[scope,selectedMode]);
+  const candidates=useMemo(()=>RakePlanningRules.simulatorCandidates(rows,scope,peerRakes),[rows,scope,peerRakes]);
+  const regionOptions=useMemo(()=>[...new Set(candidates.map(row=>simulatorValue(row,'_Region')).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[candidates]);
+  const regionRows=useMemo(()=>regions.size?candidates.filter(row=>regions.has(simulatorValue(row,'_Region'))):candidates,[candidates,regions]);
+  const stateOptions=useMemo(()=>[...new Set(regionRows.map(simulatorStateValue).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[regionRows]);
+  const stateRows=useMemo(()=>states.size?regionRows.filter(row=>states.has(simulatorStateValue(row))):regionRows,[regionRows,states]);
+  const cityOptions=useMemo(()=>[...new Set(stateRows.map(row=>simulatorValue(row,'Ship To Party City')).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[stateRows]);
+  const htcOptions=useMemo(()=>[...new Set(candidates.map(row=>simulatorValue(row,'_HTC')).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[candidates]);
+  const visibleRows=useMemo(()=>stateRows.filter(row=>
+    (!cities.size||cities.has(simulatorValue(row,'Ship To Party City')))&&
+    (!htc||simulatorValue(row,'_HTC')===htc)
+  ),[stateRows,cities,htc]);
+  const selectedRows=useMemo(()=>selectedCustomers.size
+    ?visibleRows.filter(row=>selectedCustomers.has(simulatorCustomerKey(row)))
+    :visibleRows,[visibleRows,selectedCustomers]);
+  const toggleValue=(setter,value,checked)=>setter(previous=>{
+    const next=new Set(previous);
+    if(checked)next.add(value);else next.delete(value);
+    return next;
+  });
+  const toggleRegion=(value,checked)=>{
+    toggleValue(setRegions,value,checked);
+    setStates(new Set());setCities(new Set());setSelectedCustomers(new Set());
+  };
+  const toggleState=(value,checked)=>{
+    toggleValue(setStates,value,checked);
+    setCities(new Set());setSelectedCustomers(new Set());
+  };
+  const clearLocations=()=>{setRegions(new Set());setStates(new Set());setCities(new Set());setSelectedCustomers(new Set());};
+  const regionBlurred=states.size>0||cities.size>0;
+  const stateBlurred=cities.size>0;
+  const selectScope=nextScope=>{
+    setScope(nextScope);
+    clearLocations();setHtc('');
+  };
+  const toggleCustomer=key=>setSelectedCustomers(previous=>{
+    const next=new Set(previous);
+    if(next.has(key))next.delete(key);else next.add(key);
+    return next;
+  });
+  const sidingHub=selectedMode?resolveHub(selectedMode.id):null;
+  const scopeDescription=selectedMode
+    ?`Showing available order-book items except those already planned for ${selectedMode.label}.`
+    :scope==='ALL_RAKES'
+      ?'Showing positive-balance items assigned to any rake.'
+      :'Showing all positive-balance orders except export.';
+  if(!active)return null;
+  return <section className="rake-simulator rake-simulator-tab">
+    <div className="rake-simulator-page-heading">
+      <strong>Simulator</strong>
+      <small>Select a rake to explore eligible customers, cities, and distances.</small>
+    </div>
+    <div className="rake-simulator-content">
+      <div className="rake-simulator-mode">
+        <div>
+          <strong>Select a view or rake</strong>
+          <small>{scopeDescription}</small>
+        </div>
+        <div className="rake-simulator-mode-options" role="group" aria-label="Order view and rake mode">
+          <button type="button" className={scope==='ALL_RAKES'?'is-selected':''} aria-pressed={scope==='ALL_RAKES'} onClick={()=>selectScope('ALL_RAKES')}>All rakes</button>
+          <button type="button" className={scope==='ALL'?'is-selected':''} aria-pressed={scope==='ALL'} onClick={()=>selectScope('ALL')}>All</button>
+          {SIMULATOR_RAKE_MODES.map(mode=><button key={mode.id} type="button"
+            className={scope===mode.id?'is-selected':''} aria-pressed={scope===mode.id}
+            onClick={()=>selectScope(mode.id)}>{mode.label}</button>)}
+        </div>
+      </div>
+      <div className="rake-simulator-overview">
+        <SimulatorIndiaMap rows={visibleRows} hub={sidingHub} selectedCustomers={selectedCustomers}
+          onToggleCustomer={toggleCustomer} onClearSelection={()=>setSelectedCustomers(new Set())}/>
+        <div className="rake-simulator-filters">
+          <h3>Filter available orders</h3>
+          <div className="rake-simulator-location-hierarchy">
+            <div className="rake-simulator-location-heading">
+              <strong>Location hierarchy</strong>
+            </div>
+            <SimulatorMultiFilter label="Region" allLabel="All regions" noun="regions" options={regionOptions} selected={regions} onChange={toggleRegion}
+              blurred={regionBlurred}/>
+            <SimulatorMultiFilter label="State (STO)" allLabel="All states" noun="states" options={stateOptions} selected={states} onChange={toggleState}
+              blurred={stateBlurred}/>
+            <SimulatorMultiFilter label="Ship to city" allLabel="All cities" noun="cities" options={cityOptions} selected={cities}
+              onChange={(value,checked)=>{toggleValue(setCities,value,checked);setSelectedCustomers(new Set());}} searchable/>
+          </div>
+          <label className="rake-simulator-filter">
+            <span>_HTC</span>
+            <select aria-label="_HTC" value={htc} onChange={event=>{setHtc(event.target.value);setSelectedCustomers(new Set());}}>
+              <option value="">All _HTC categories</option>
+              {htcOptions.map(option=><option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <button className="rake-simulator-clear-filters" type="button" onClick={()=>{clearLocations();setHtc('');}}>Clear filters</button>
+        </div>
+      </div>
+      <div className="rake-simulator-results">
+        <div className="rake-simulator-results-heading">
+          <h3>{selectedCustomers.size?'Selected customer orders':'Available SO + line items'}</h3>
+          <span>{selectedRows.length.toLocaleString()} of {visibleRows.length.toLocaleString()} filtered</span>
+          {selectedCustomers.size>0&&<button type="button" onClick={()=>setSelectedCustomers(new Set())}>Clear customer selection</button>}
+        </div>
+        <div className="rake-simulator-table-wrap">
+          <table>
+            <thead><tr>{['SO / Item','Customer','City','State','Region','_HTC','BTC (MT)','BTP (MT)'].map(label=><th key={label}>{label}</th>)}</tr></thead>
+            <tbody>
+              {selectedRows.slice(0,200).map(row=><tr key={RakePlanningRules.orderKey(row)}>
+                <td>{row['SO No.']||'—'} / {row._LineItem||row.SOItm||'—'}</td>
+                <td>{row['Sold To Party Name']||'—'}</td>
+                <td>{row['Ship To Party City']||'Unmapped'}</td>
+                <td>{row.STO||'—'}</td>
+                <td>{row._Region||'Unmapped'}</td>
+                <td>{simulatorValue(row,'_HTC')||'—'}</td>
+                <td>{fmt(row.BTC)}</td>
+                <td>{fmt(row.BTP)}</td>
+              </tr>)}
+              {!selectedRows.length&&<tr><td colSpan={8} className="rake-simulator-empty">
+                {rows.length?(selectedCustomers.size?'No selected customers match these filters.':'No available SO + line items match these filters.'):'Load an order book to see available SO + line items.'}
+              </td></tr>}
+            </tbody>
+          </table>
+          {selectedRows.length>200&&<div className="rake-simulator-table-note">Showing the first 200 items. Use filters to narrow the list.</div>}
+        </div>
+      </div>
+    </div>
+  </section>;
+}
+
 function App(){
   const{mob,tab}=useBreakpoint();
   const{pref,setPref,effective,setThemeConcrete}=useThemeManager();
@@ -5586,6 +5946,10 @@ function App(){
   const[ovMap,setOvMap]       =useState(false);
   const[planningView,setPlanningView]=useState('actual');
   const[sideOpen,setSideOpen] =useState(false);
+  const choosePlanningView=view=>{
+    setPlanningView(view);
+    setSideOpen(false);
+  };
   const fileRef=useRef();
 
   useEffect(()=>{
@@ -6097,7 +6461,7 @@ function App(){
 
       <div className="app-header-filter-actions mobile-header-controls" style={{display:'flex',alignItems:'center',gap:8}}>
       {/* Hamburger on narrow */}
-      {isNarrow&&<button onClick={()=>setSideOpen(o=>!o)} style={{
+      {isNarrow&&planningView!=='simulator'&&<button onClick={()=>setSideOpen(o=>!o)} style={{
         background:'transparent',border:'1px solid var(--bdr)',borderRadius:'var(--radius-sm)',
         color:actCnt>0?C.amber:'var(--dim)',padding:'8px 10px',cursor:'pointer',
         display:'flex',flexDirection:'column',gap:4,alignItems:'center',justifyContent:'center',
@@ -6263,7 +6627,7 @@ function App(){
           overflowY:auto inert. --rake-header-clearance is the height the fixed
           header actually occupies (published by the ResizeObserver in App), so
           the panel stays clear of it and scrolls within the remaining viewport. */}
-      {!isNarrow&&<div className="app-side-panel" style={{width:248,flexShrink:0,alignSelf:'flex-start',
+      {planningView!=='simulator'&&!isNarrow&&<div className="app-side-panel" style={{width:248,flexShrink:0,alignSelf:'flex-start',
         position:'sticky',top:'calc(var(--rake-header-clearance, 100px) + 8px)',
         maxHeight:'calc(100dvh - var(--rake-header-clearance, 100px) - 24px)',
         display:'flex',flexDirection:'column',overflowY:'auto',padding:'14px 12px 4px',boxSizing:'border-box'}}>
@@ -6274,7 +6638,7 @@ function App(){
           Both layers must stack ABOVE the shared sticky header bar
           (.app-header-shell, z-index:320 !important in theme.css) — see the
           comment on the scrim below. */}
-      {isNarrow&&sideOpen&&<>
+      {planningView!=='simulator'&&isNarrow&&sideOpen&&<>
         {/* Scrim sits just above the header so the drawer is never overlapped
             by it. The shared theme pins .app-header-shell to z-index:320
             !important, and on mobile that shell is position:sticky, so it is
@@ -6312,8 +6676,9 @@ function App(){
       {/* Main content */}
       <div style={{flex:1,display:'flex',flexDirection:'column',minWidth:0,gap:'var(--space-stack)'}}>
         <div className="rake-view-switch" role="group" aria-label="Planning view">
-          <button aria-pressed={planningView==='actual'} aria-controls="actual-plan-view" onClick={()=>setPlanningView('actual')}>Actual plan</button>
-          <button aria-pressed={planningView==='predictor'} aria-controls="predictor-view" onClick={()=>setPlanningView('predictor')}>Rake predictor</button>
+          <button aria-pressed={planningView==='actual'} aria-controls="actual-plan-view" onClick={()=>choosePlanningView('actual')}>Actual plan</button>
+          <button aria-pressed={planningView==='predictor'} aria-controls="predictor-view" onClick={()=>choosePlanningView('predictor')}>Rake predictor</button>
+          <button aria-pressed={planningView==='simulator'} aria-controls="simulator-view" onClick={()=>choosePlanningView('simulator')}>Simulator</button>
         </div>
         <section id="actual-plan-view" className="rake-view-panel" aria-label="Actual plan" hidden={planningView!=='actual'}>
         <ActualRakePlan
@@ -6336,6 +6701,12 @@ function App(){
         />
         </details>
         </section>
+        <section id="simulator-view" className="rake-view-panel" aria-label="Simulator" hidden={planningView!=='simulator'}>
+          <RakeSimulator rows={rows} active={planningView==='simulator'}/>
+        </section>
+        <div style={{marginTop:8,marginBottom:8,color:'var(--mute)',fontSize:11.5,textAlign:'center',fontFamily:F.m}}>
+          Rake Planner · self-contained offline tool
+        </div>
       </div>
     </div>
 
