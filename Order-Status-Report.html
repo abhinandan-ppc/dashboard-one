@@ -1551,27 +1551,28 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
     return latestDate||'—';
   },[fileName,latestDate]);
 
+  const headerMobile=window.innerWidth<=768;
   return<div style={{padding:'0 var(--page-gutter) 60px',width:'100%',maxWidth:'none',boxSizing:'border-box'}}>
     {/* ═══ HEADER (fixed on desktop — floats in place regardless of ancestor scroll containers.
         On mobile it switches to sticky: sticky occupies real space in the flex flow, so the header's
         own footprint is exactly the spacer's job, structurally, without needing a matching pixel
         height guess for the taller wrapped/column mobile layout — see the spacer below.) ═══ */}
-    <div className="app-header-shell" ref={shellRef} style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,padding:mob?'10px 0 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
-    <div className="glass-card header-enter app-header" style={{position:'relative',padding:mob?'12px 12px':'12px 20px',display:'flex',
-      flexDirection:mob?'column':'row',flexWrap:mob?'nowrap':'wrap',
-      alignItems:mob?'stretch':'center',gap:mob?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
-      minHeight:mob?'auto':64,boxSizing:'border-box'}}>
-      <div style={{display:'flex',alignItems:'center',gap:mob?8:14,justifyContent:'flex-start',flexWrap:mob?'wrap':'wrap',width:mob?'100%':'auto'}}>
-        <div style={{display:'flex',alignItems:'center',gap:mob?8:14,flexWrap:'nowrap',minWidth:0,flex:mob?'1 1 200px':'0 0 auto'}}>
-        <JSPLBadge compact={mob}/>
-        <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0,display:mob?'none':'block'}}/>
-        <div className="app-header-title" style={{flexShrink:mob?1:0,minWidth:0,flex:mob?'1 1 auto':'0 0 auto'}}>
+    <div className="app-header-shell" ref={shellRef} style={{position:headerMobile?'sticky':'fixed',top:0,left:0,right:0,padding:headerMobile?'10px 0 0':'20px 24px 0',zIndex:50,boxSizing:'border-box'}}>
+    <div className="glass-card header-enter app-header mobile-header" style={{position:'relative',padding:headerMobile?'12px 12px':'12px 20px',display:'flex',
+      flexDirection:headerMobile?'column':'row',flexWrap:headerMobile?'nowrap':'wrap',
+      alignItems:headerMobile?'stretch':'center',gap:headerMobile?12:14,borderRadius:'var(--radius-lg)',boxShadow:'var(--shadow-md)',
+      minHeight:headerMobile?'auto':64,boxSizing:'border-box'}}>
+      <div className="mobile-header-group" style={{display:'flex',alignItems:'center',gap:headerMobile?8:14,justifyContent:'flex-start',flexWrap:headerMobile?'wrap':'wrap',width:headerMobile?'100%':'auto'}}>
+        <div className="mobile-header-identity" style={{display:'flex',alignItems:'center',gap:headerMobile?8:14,flexWrap:'nowrap',minWidth:0,flex:headerMobile?'1 1 200px':'0 0 auto'}}>
+        <JSPLBadge compact={headerMobile}/>
+        <div style={{width:1,height:28,background:'var(--bdr)',flexShrink:0,display:headerMobile?'none':'block'}}/>
+        <div className="app-header-title" style={{flexShrink:headerMobile?1:0,minWidth:0,flex:headerMobile?'1 1 auto':'0 0 auto'}}>
           <div style={{fontFamily:F.h,fontSize:10,letterSpacing:'.14em',textTransform:'uppercase',color:'var(--mute)',fontWeight:700,textAlign:'left'}}>Order Status</div>
-          <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:'left',overflow:mob?'hidden':'visible',textOverflow:mob?'ellipsis':'clip'}}>Order Status Report</div>
+          <div style={{fontFamily:F.h,fontWeight:800,fontSize:17,letterSpacing:'-.01em',color:'var(--text)',whiteSpace:'nowrap',lineHeight:1.2,textAlign:'left',overflow:headerMobile?'hidden':'visible',textOverflow:headerMobile?'ellipsis':'clip'}}>Order Status Report</div>
         </div>
         </div>
 
-        {mob&&<div className="app-header-filter-actions" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,marginLeft:'auto'}}>
+        {headerMobile&&<div className="app-header-filter-actions mobile-header-controls" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,marginLeft:'auto'}}>
         <button onClick={()=>setReleasedOnly(v=>!v)} title="Released Orders" style={{height:34,width:releasedOnly?40:34,padding:0,borderRadius:'var(--radius-pill)',
           border:`1.5px solid ${releasedOnly?C.sky:'var(--bdrHi)'}`,background:releasedOnly?'var(--sky-bg)':'var(--s2)',
           color:releasedOnly?C.sky:'var(--dim)',fontFamily:F.h,fontSize:13,fontWeight:700,cursor:'pointer',
@@ -1588,7 +1589,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         </button>
         </div>}
 
-        {mob&&<div style={{width:'100%',fontSize:11,fontFamily:F.m,color:'var(--mute)',textAlign:'left',lineHeight:1.5,
+        {headerMobile&&<div className="mobile-header-details" style={{width:'100%',fontSize:11,fontFamily:F.m,color:'var(--mute)',textAlign:'left',lineHeight:1.5,
           maxHeight:scrolled?0:50,opacity:scrolled?0:1,overflow:'hidden',
           transition:'max-height .2s ease,opacity .2s ease'}}>
           <div style={{color:'var(--dim)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{fileName}</div>
@@ -1597,9 +1598,9 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         </div>}
       </div>
 
-      {!mob&&<div style={{flex:1}}/>}
+      {!headerMobile&&<div style={{flex:1}}/>}
 
-      {!mob&&<div style={{fontSize:11,fontFamily:F.m,color:'var(--mute)',textAlign:'right',lineHeight:1.6,flexShrink:0}}>
+      {!headerMobile&&<div style={{fontSize:11,fontFamily:F.m,color:'var(--mute)',textAlign:'right',lineHeight:1.6,flexShrink:0}}>
         <div style={{color:'var(--dim)',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{fileName}</div>
         <div>EBTP loaded: <b style={{color:'var(--text)'}}>{ebtpDateLabel}</b></div>
         {/* Row count lives with the EBTP status rather than at the end of the filter
@@ -1607,7 +1608,7 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
         <div>{fmt(filtered.length,0)} / {fmt(rows.length,0)} rows</div>
       </div>}
 
-      {!mob&&<div className="app-header-filter-actions" style={{display:'flex',gap:10,flexWrap:'wrap',justifyContent:'flex-start',
+      {!headerMobile&&<div className="app-header-filter-actions mobile-header-controls" style={{display:'flex',gap:10,flexWrap:'wrap',justifyContent:'flex-start',
         alignItems:'center',width:'auto'}}>
       <button onClick={()=>setReleasedOnly(v=>!v)} style={{height:34,padding:'0 16px',borderRadius:'var(--radius-pill)',
         border:`1.5px solid ${releasedOnly?C.sky:'var(--bdrHi)'}`,background:releasedOnly?'var(--sky-bg)':'var(--s2)',
@@ -1623,13 +1624,13 @@ function Dashboard({rawRows,rawArr,headers,fileName}){
       </button>
       </div>}
 
-      <div className="app-header-actions" style={{display:'flex',gap:mob?12:10,flexWrap:'wrap',justifyContent:mob?'center':'flex-start',
-        alignItems:'center',width:mob?'100%':'auto',paddingTop:mob?8:0,borderTop:mob?'1px solid var(--bdr)':'none'}}>
+      <div className="app-header-actions mobile-header-navigation" style={{display:'flex',gap:headerMobile?12:10,flexWrap:'wrap',justifyContent:headerMobile?'center':'flex-start',
+        alignItems:'center',width:headerMobile?'100%':'auto',paddingTop:headerMobile?8:0,borderTop:headerMobile?'1px solid var(--bdr)':'none'}}>
       {/* id="hubFrameHeaderSlot" is the mount point the hub (index.html / findFrameHeaderMount) looks
           for first; without it, the hub falls back to floating its Home/Refresh/Theme/User controls
           fixed at top-right. Left unstyled (no pill/background) so the hub's own 40x40 circular
           buttons render at their native uniform size instead of inheriting a wrapper's chrome. */}
-      <div id="hubFrameHeaderSlot" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,justifyContent:mob?'center':'flex-start'}}/>
+      <div id="hubFrameHeaderSlot" style={{display:'flex',gap:8,alignItems:'center',flexShrink:0,justifyContent:headerMobile?'center':'flex-start'}}/>
       </div>
     </div>
     </div>
@@ -2060,8 +2061,8 @@ function App(){
   const placeholderHeaderBar=
     <>
       <div className="app-header-shell" ref={ph.shellRef} style={{position:mob?'sticky':'fixed',top:0,left:0,right:0,zIndex:50,boxSizing:'border-box'}}>
-        <div className="glass-card header-enter app-header">
-          <div className="top-l">
+        <div className="glass-card header-enter app-header mobile-header">
+          <div className="top-l mobile-header-identity">
             <JSPLBadge compact={mob}/>
             <div className="jspl-divider" style={{display:mob?'none':'block'}}/>
             <div className="app-header-title">

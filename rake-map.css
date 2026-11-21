@@ -1,0 +1,61 @@
+/* Map workspace: independent of shared dashboard component themes. */
+html body .rake-map-workspace {
+  width:calc(100vw - 32px)!important;height:calc(100dvh - 32px)!important;
+  max-width:1600px;display:grid!important;
+  grid-template-columns:340px minmax(0,1fr);
+  grid-template-rows:auto auto auto minmax(80px,1fr) auto;
+  border-radius:20px!important;background:var(--s1)!important;
+  box-shadow:0 12px 48px #0005!important;position:relative;
+}
+.rake-map-workspace>div:not(.rake-map-canvas){grid-column:1;min-width:0;background:var(--s1)!important}
+.rake-map-workspace>div:first-child{grid-row:1;padding:18px!important;gap:8px!important}
+.rake-map-workspace>div:first-child>span:first-child{display:none}
+.rake-map-workspace>div:first-child>div:nth-child(2){width:100%;flex:1 0 100%}
+.rake-map-workspace>div:first-child>div:nth-child(2)>div:first-child{
+  text-transform:none!important;letter-spacing:0!important;font-size:18px!important;line-height:1.4;
+}
+.rake-map-workspace>div:nth-child(2){
+  grid-row:2;margin:8px 12px 12px;padding:12px!important;
+  border:1px solid var(--bdr)!important;border-radius:24px;
+  box-shadow:0 2px 8px #0002;gap:8px!important;
+}
+.rake-map-workspace>div:nth-child(2)>span:first-child{display:none}
+.rake-map-workspace>div:nth-child(2)>input{border:0!important;background:transparent!important;min-width:0!important;font-size:14px!important}
+.rake-map-workspace>div:nth-child(2)>span{white-space:normal;overflow-wrap:anywhere;flex-shrink:1!important}
+.rake-map-workspace>div:nth-child(3){grid-row:3;padding:12px 18px!important;gap:8px!important}
+.rake-map-workspace>div:last-child{grid-row:5;padding:12px 18px!important;gap:8px!important;font-size:12px}
+.rake-map-workspace .rake-map-canvas{grid-column:2;grid-row:1 / -1;isolation:isolate;overflow:hidden}
+.rake-map-workspace .leaflet-container{background:#e7ece8;font-family:var(--font-body,system-ui)}
+.rake-map-workspace .leaflet-top.leaflet-left{left:auto;right:16px;top:16px}
+.rake-map-workspace .leaflet-control-zoom{border:0!important;box-shadow:0 2px 8px #0003!important;border-radius:12px;overflow:hidden;margin:0}
+.rake-map-workspace .leaflet-control-zoom a{width:42px;height:42px;line-height:42px;background:var(--s1);color:var(--text)}
+.rake-map-workspace .leaflet-tooltip,.rake-map-workspace .leaflet-popup-content-wrapper{border-radius:12px;box-shadow:0 3px 12px #0003}
+html body .rake-map-workspace button{min-height:40px;text-transform:none;letter-spacing:0}
+html body .rake-map-workspace button:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+.rake-map-destinations{grid-row:4;overflow:auto;padding:12px;overscroll-behavior:contain;border-top:1px solid var(--bdr)}
+.rake-map-destinations>strong{display:block;font-size:13px;color:var(--dim);padding:0 8px 10px}
+html body .rake-map-destinations>button{
+  display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 12px;margin-bottom:6px;text-align:left;border:1px solid transparent;
+  border-radius:12px;background:transparent;color:var(--text);box-shadow:none;cursor:pointer;
+}
+html body .rake-map-destinations>button:hover{background:var(--s2)}
+html body .rake-map-destinations>button[aria-pressed=true]{background:var(--primary-bg);border-color:var(--primary)}
+.rake-map-destinations>button>span:first-child{min-width:0;overflow-wrap:anywhere}
+.rake-map-destinations>button>span:last-child{text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums}
+.rake-map-destinations small{display:block;font-size:11px;color:var(--dim);margin-top:5px}
+html body .rake-map-recenter{position:absolute;right:16px;top:112px;z-index:1000;width:42px;height:42px;border:0;border-radius:50%;background:var(--s1);color:var(--text);font-size:25px;box-shadow:0 2px 8px #0003;cursor:pointer}
+@media(max-width:700px){
+  html body .rake-map-workspace{width:100vw!important;height:100dvh!important;border:0!important;border-radius:0!important;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(180px,1fr) auto minmax(72px,18dvh)}
+  .rake-map-workspace>div:first-child{padding:10px 14px!important;flex-wrap:nowrap!important}
+  .rake-map-workspace>div:first-child>div:nth-child(2){flex:1 1 auto;min-width:0;width:auto}
+  .rake-map-workspace>div:first-child>div:nth-child(2)>div:first-child{font-size:14px!important}
+  .rake-map-workspace>div:first-child>div:nth-child(2)>div:last-child{display:none}
+  .rake-map-workspace>div:nth-child(2){margin:0 10px 8px;padding:8px 12px!important}
+  .rake-map-workspace .rake-map-canvas{grid-column:1;grid-row:3}
+  .rake-map-workspace>div:nth-child(3){grid-row:4;padding:8px 12px!important;max-height:15dvh;overflow:auto}
+  .rake-map-workspace .rake-map-destinations{grid-row:5;border-radius:18px 18px 0 0;padding:10px}
+  .rake-map-workspace>div:last-child{display:none!important}
+  .rake-map-canvas>div:nth-child(2){max-width:calc(100% - 80px)!important;padding:6px!important;font-size:10px;bottom:22px!important}
+  .rake-map-canvas>div:nth-child(2)>div{max-height:34px;overflow:auto}
+}

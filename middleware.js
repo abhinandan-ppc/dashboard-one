@@ -88,7 +88,7 @@ export default async function middleware(req) {
 
     // The automation handler requires an explicit page grant and rechecks the
     // session. Allow it through so API errors remain JSON rather than HTML.
-    if (path === 'api/automation') return;
+    if (path === 'api/automation' || path === 'api/rake-geocode') return;
 
     if (path === 'api/ebtp-proxy' || path === 'api/balance-heat-proxy'
       || path === 'api/zstk-proxy' || path === 'api/autobtr-proxy'
