@@ -358,9 +358,9 @@ html body .rake-simulator .rake-simulator-mode-options button.is-selected{border
 .rake-simulator-planned-customer-row>strong{flex:0 0 auto;color:var(--text);font-size:10px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .rake-simulator-planned-customer-row>strong small{display:block;color:var(--dim);font-size:9px;font-weight:400}
 .rake-simulator-planned-location-list>p{padding:10px 3px;color:var(--dim);font-size:10px}
-.rake-simulator-unplanned-summary{display:grid;flex:0 0 auto;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;padding:5px 0;border-top:1px solid #fff;box-shadow:0 -1px 0 rgb(15 23 42 / .14)}
+.rake-simulator-unplanned-summary{display:grid;flex:0 0 auto;grid-template-columns:minmax(0,1fr) auto 24px;align-items:center;gap:8px;padding:5px 0;border-top:1px solid #fff;box-shadow:0 -1px 0 rgb(15 23 42 / .14)}
 .rake-simulator-unplanned-heading{color:var(--dim);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
-.rake-simulator-unplanned-picker-button{justify-self:start;display:inline-flex;align-items:center;gap:4px;min-height:24px;padding:2px 6px;border:1px solid var(--bdr);border-radius:var(--radius-sm);background:var(--s2);color:var(--text);font:600 9px var(--font-body,system-ui);white-space:nowrap;cursor:pointer}
+.rake-simulator-unplanned-picker-button{grid-column:3;justify-self:end;display:grid;width:24px;min-height:24px;place-items:center;padding:0;border:1px solid var(--bdr);border-radius:50%;background:var(--s2);color:var(--text);font:600 16px/1 var(--font-body,system-ui);cursor:pointer}
 .rake-simulator-unplanned-picker-button:hover{border-color:var(--sky);color:var(--sky)}
 .rake-simulator-unplanned-picker-button:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
 .rake-simulator-unplanned-total{color:var(--text);font-size:11px;font-variant-numeric:tabular-nums}
@@ -417,7 +417,7 @@ html body .rake-simulator .rake-simulator-city-button>span:last-child{text-align
 .rake-unplanned-picker .rake-unplanned-confirm{border-color:var(--sky);background:var(--primary-bg);color:var(--sky)}
 @media(max-width:700px){
   .rake-simulator-unplanned-summary{gap:4px}
-  .rake-simulator-unplanned-picker-button{font-size:8px}
+  .rake-simulator-unplanned-picker-button{width:26px;min-height:26px;font-size:17px}
   .rake-unplanned-backdrop{padding:10px}
   .rake-unplanned-picker{width:calc(100vw - 20px);max-height:calc(100dvh - 20px)}
   .rake-unplanned-picker>header,.rake-unplanned-picker>footer{padding:12px}
