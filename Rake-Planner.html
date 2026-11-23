@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <script src="dashboard-api-url.js"></script>
-<script src="rake-planning-rules.js?v=3"></script>
+<script src="rake-planning-rules.js?v=8"></script>
 <script src="rake-destination-mapping.js"></script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
@@ -17,13 +17,27 @@
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="theme.css"/>
-<link rel="stylesheet" href="rake-map.css"/>
+<link rel="stylesheet" href="rake-map.css?v=16"/>
 <script src="jspl-local-api.js"></script>
 <style>
 .rake-probable-backdrop{position:fixed;inset:0;z-index:700;background:#0009;display:grid;place-items:center;padding:16px}
 .rake-probable{width:min(1200px,calc(100vw - 32px));min-width:0;max-height:92dvh;overflow:auto;background:rgb(from var(--s1) r g b / 1);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;color:var(--text);text-transform:none;letter-spacing:normal;font-size:13px;font-weight:400}
 .rake-probable header,.rake-probable footer{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.rake-probable header button{margin-left:auto}
 .probable-table-scroll{overflow:auto;min-height:0;min-width:0}.probable-table-scroll table{width:100%;border-collapse:collapse}.probable-table-scroll th,.probable-table-scroll td{padding:8px;text-align:left;border-bottom:1px solid var(--bdr)}
+.backup-column-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;white-space:nowrap}
+.rake-probable .backup-column-filter-trigger{display:inline-grid;place-items:center;flex:0 0 22px;width:22px;min-height:22px;padding:0;border:1px solid transparent;border-radius:4px;background:transparent;color:var(--dim);font-size:12px;line-height:1}
+.rake-probable .backup-column-filter-trigger:hover,.rake-probable .backup-column-filter-trigger[data-active=true]{border-color:var(--bdrHi);background:var(--s2);color:var(--sky)}
+.backup-column-filter-menu{position:fixed;z-index:1200;display:flex;flex-direction:column;gap:8px;max-height:min(320px,calc(100dvh - 24px));overflow:hidden;padding:10px;border:1px solid var(--bdrHi);border-radius:10px;background:rgb(from var(--s1) r g b / 1);box-shadow:var(--shadow-lg,0 8px 24px #0005);color:var(--text);font-size:12px;text-transform:none;letter-spacing:normal}
+.backup-column-filter-search{width:100%;min-height:34px;padding:6px 8px;border:1px solid var(--bdr);border-radius:6px;background:var(--s2);color:var(--text);font:12px var(--font-body,system-ui)}
+.backup-column-filter-list{display:grid;gap:2px;min-height:0;max-height:190px;overflow:auto;overscroll-behavior:contain}
+.backup-column-filter-list label{display:flex;align-items:flex-start;gap:7px;padding:4px 2px;color:var(--text);font-size:11px;line-height:1.35;cursor:pointer}
+.backup-column-filter-list label span{min-width:0;overflow-wrap:anywhere}
+.backup-column-filter-list input{flex:0 0 auto;accent-color:var(--sky)}
+.backup-column-filter-select-all{border-bottom:1px solid var(--bdr);padding-bottom:7px!important;font-weight:700!important}
+.backup-column-filter-empty,.backup-column-filter-count{color:var(--dim);font-size:10px}
+.rake-probable .probable-table-scroll .backup-filter-empty-row{padding:24px 12px;color:var(--dim);text-align:center}
+.rake-probable .backup-column-filter-clear{align-self:flex-end;min-height:30px;padding:4px 8px;border:1px solid var(--bdr);border-radius:6px;background:var(--s2);color:var(--text);font-size:11px}
+.rake-probable .backup-column-filter-clear:disabled{opacity:.55;cursor:default}
 .rake-probable .probable-table-scroll{min-height:140px}.rake-probable .probable-table-scroll table{min-width:760px}.rake-probable header,.rake-probable footer,.probable-mapping,.rake-probable p{flex-shrink:0}
 .probable-mapping>div{position:static!important;max-width:none!important}.rake-probable button{padding:8px 12px;cursor:pointer}
 .actual-completion{min-width:70px;margin-top:5px}.actual-completion small{font-size:9px;color:var(--dim);white-space:nowrap}
@@ -2174,13 +2188,102 @@ function usePlanningDialog(onClose){
   },[]);
   return ref;
 }
+const backupOrderSupplyCategory=ord=>RakePlanningRules.htcLabel(ord._HTC||getHTC(ord['Ext Grade'],ord['Supply Condition']));
+const BACKUP_ORDER_FILTER_COLUMNS=[
+  {key:'order',label:'SO / Item',value:ord=>`${ord['SO No.']||'—'} / ${ord._LineItem||ord.SOItm||'—'}`},
+  {key:'customer',label:'Customer',value:ord=>ord['Sold To Party Name']||'—'},
+  {key:'city',label:'City',value:ord=>ord['Ship To Party City']||'—'},
+  {key:'state',label:'State',value:ord=>ord._State||ord.STO||'—'},
+  {key:'supply',label:'Supply condition',value:backupOrderSupplyCategory},
+  {key:'wagon',label:'Wagon type',value:ord=>ord._WagonType||'—'},
+  {key:'mode',label:'Planned mode',value:ord=>ord._ModeC||ord.MODE||'—'},
+];
+function BackupOrderColumnFilter({column,values,selected,onChange}){
+  const[open,setOpen]=useState(false),[query,setQuery]=useState(''),[position,setPosition]=useState(null);
+  const triggerRef=useRef(null),menuRef=useRef(null);
+  const active=selected!==undefined;
+  const selectedValues=selected||new Set(values);
+  const visibleValues=useMemo(()=>values.filter(value=>value.toLowerCase().includes(query.trim().toLowerCase())),[values,query]);
+  const allVisibleSelected=visibleValues.length>0&&visibleValues.every(value=>selectedValues.has(value));
+  const close=()=>{setOpen(false);setQuery('');};
+  const toggleOpen=()=>{
+    if(open){close();return;}
+    const rect=triggerRef.current.getBoundingClientRect();
+    const width=Math.min(280,window.innerWidth-24);
+    const menuHeight=Math.min(320,window.innerHeight-24);
+    const top=rect.bottom+menuHeight+8<=window.innerHeight?rect.bottom+4:Math.max(12,rect.top-menuHeight-4);
+    const left=Math.max(12,Math.min(rect.left,window.innerWidth-width-12));
+    setPosition({top,left,width});
+    setOpen(true);
+  };
+  useEffect(()=>{
+    if(!open)return undefined;
+    const closeOnOutside=event=>{
+      if(triggerRef.current?.contains(event.target)||menuRef.current?.contains(event.target))return;
+      close();
+    };
+    const closeOnScroll=()=>close();
+    document.addEventListener('pointerdown',closeOnOutside);
+    window.addEventListener('resize',closeOnScroll);
+    const tableScroll=triggerRef.current?.closest('.probable-table-scroll');
+    tableScroll?.addEventListener('scroll',closeOnScroll,{passive:true});
+    return()=>{
+      document.removeEventListener('pointerdown',closeOnOutside);
+      window.removeEventListener('resize',closeOnScroll);
+      tableScroll?.removeEventListener('scroll',closeOnScroll);
+    };
+  },[open]);
+  const toggleValue=value=>{
+    const next=new Set(selectedValues);
+    if(next.has(value))next.delete(value);else next.add(value);
+    onChange(next.size===values.length?null:next);
+  };
+  const toggleVisibleValues=()=>{
+    const next=new Set(selectedValues);
+    visibleValues.forEach(value=>allVisibleSelected?next.delete(value):next.add(value));
+    onChange(next.size===values.length?null:next);
+  };
+  return <>
+    <button ref={triggerRef} type="button" className="backup-column-filter-trigger"
+      data-active={active?'true':'false'} aria-label={`Filter ${column.label}`} aria-expanded={open}
+      aria-controls={`backup-filter-${column.key}`} onClick={toggleOpen}>▾</button>
+    {open&&position&&ReactDOM.createPortal(<div ref={menuRef} id={`backup-filter-${column.key}`}
+      className="backup-column-filter-menu" role="group" aria-label={`${column.label} filter`}
+      style={{top:position.top,left:position.left,width:position.width}}>
+      <input className="backup-column-filter-search" type="search" value={query}
+        aria-label={`Search ${column.label} values`} placeholder={`Search ${column.label.toLowerCase()}…`}
+        onChange={event=>setQuery(event.target.value)}/>
+      <div className="backup-column-filter-list">
+        {!!visibleValues.length&&<label className="backup-column-filter-select-all">
+          <input type="checkbox" checked={allVisibleSelected} onChange={toggleVisibleValues}/>
+          <span>Select all</span>
+        </label>}
+        {visibleValues.length?visibleValues.map(value=><label key={value}>
+          <input type="checkbox" checked={selectedValues.has(value)} onChange={()=>toggleValue(value)}/>
+          <span>{value}</span>
+        </label>):<small className="backup-column-filter-empty">No matching values.</small>}
+      </div>
+      <small className="backup-column-filter-count">{selectedValues.size} of {values.length} selected</small>
+      <button type="button" className="backup-column-filter-clear" disabled={!active}
+        onClick={()=>{onChange(null);close();}}>Clear filter</button>
+    </div>,document.body)}
+  </>;
+}
 function ProbableOrders({plan,predictedData,onClose}){
   const dialogRef=usePlanningDialog(onClose);
   const [selected,setSelected]=useState(()=>{try{const drafts=JSON.parse(localStorage.getItem('rake-plan-drafts-v1')||'[]');return new Set(drafts.filter(d=>d.siding===plan.siding).at(-1)?.orders||[]);}catch{return new Set();}});
   const [notice,setNotice]=useState('');
+  const[columnFilters,setColumnFilters]=useState({});
   const options=useMemo(()=>RakePlanningRules.predictedOrdersMissingFromActual(predictedData,plan)
     .map(ord=>({ord,release:RakePlanningRules.release(ord)})),
   [plan,predictedData]);
+  const filterValues=useMemo(()=>Object.fromEntries(BACKUP_ORDER_FILTER_COLUMNS.map(column=>[
+    column.key,[...new Set(options.map(({ord})=>column.value(ord)))].sort((a,b)=>a.localeCompare(b)),
+  ])),[options]);
+  const filteredOptions=useMemo(()=>options.filter(({ord})=>BACKUP_ORDER_FILTER_COLUMNS.every(column=>{
+    const allowed=columnFilters[column.key];
+    return !allowed||allowed.has(column.value(ord));
+  })),[options,columnFilters]);
   const picked=options.filter(o=>selected.has(RakePlanningRules.orderKey(o.ord)));
   const added=picked.reduce((a,{ord})=>a+n2(parseFloat(ord['Bal to PGI'])),0);
   const limit=RakePlanningRules.shortfall(plan.bal);
@@ -2189,8 +2292,11 @@ function ProbableOrders({plan,predictedData,onClose}){
     const record={siding:plan.siding,createdAt:new Date().toISOString(),orders:picked.map(({ord})=>RakePlanningRules.orderKey(ord)),addedMT:added};
     try{const drafts=JSON.parse(localStorage.getItem('rake-plan-drafts-v1')||'[]');localStorage.setItem('rake-plan-drafts-v1',JSON.stringify([...drafts.slice(-49),record]));setNotice('Draft saved on this device. EBTP assignments are unchanged.');}catch{setNotice('Local draft storage is unavailable. Use Download draft.');}
   };
-  const supplyCategory=ord=>RakePlanningRules.htcLabel(ord._HTC||getHTC(ord['Ext Grade'],ord['Supply Condition']));
-  const download=()=>{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(picked.map(({ord,release})=>({Siding:plan.siding,SO:ord['SO No.'],Item:ord._LineItem||ord.SOItm,Customer:ord['Sold To Party Name'],City:ord['Ship To Party City'],State:ord._State,'Supply condition':supplyCategory(ord),'Planned mode':ord._ModeC||ord.MODE,Release:release,'Balance MT':ord['Bal to PGI'],Status:'DRAFT'}))),'Draft');XLSX.writeFile(wb,`Rake Draft ${plan.siding}.xlsx`);};
+  const updateColumnFilter=(key,values)=>setColumnFilters(previous=>{
+    if(values!==null)return{...previous,[key]:values};
+    const next={...previous};delete next[key];return next;
+  });
+  const download=()=>{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(picked.map(({ord,release})=>({Siding:plan.siding,SO:ord['SO No.'],Item:ord._LineItem||ord.SOItm,Customer:ord['Sold To Party Name'],City:ord['Ship To Party City'],State:ord._State,'Supply condition':backupOrderSupplyCategory(ord),'Wagon type':ord._WagonType||'—','Planned mode':ord._ModeC||ord.MODE,Release:release,'Balance MT':ord['Bal to PGI'],Status:'DRAFT'}))),'Draft');XLSX.writeFile(wb,`Rake Draft ${plan.siding}.xlsx`);};
   return ReactDOM.createPortal(<div className="rake-probable-backdrop"><section ref={dialogRef} className="rake-probable" role="dialog" aria-modal="true" aria-label={`Backup orders for ${plan.siding}`}>
     <header><div><h3>{plan.siding} · Backup orders</h3><p>Select whole orders to prepare a backup draft.</p></div><button onClick={onClose}>Close</button></header>
     <dl className="backup-summary">
@@ -2200,25 +2306,30 @@ function ProbableOrders({plan,predictedData,onClose}){
     </dl>
     <div className="backup-list-heading">
       <span>Predicted {plan.siding} orders not in the {plan.siding} actual plan</span>
-      <span>{options.length} available orders</span>
+      <span>{filteredOptions.length===options.length?`${options.length} available orders`:`${filteredOptions.length} of ${options.length} available orders`}</span>
     </div>
     {options.length>0?<div className="probable-table-scroll" tabIndex={0} aria-label="Backup orders table"><table>
       <thead><tr>
-        <th>Select</th><th>SO / Item</th><th>Customer</th>
-        <th>City</th><th>State</th><th>Supply condition</th><th>Planned mode</th>
+        <th>Select</th>{BACKUP_ORDER_FILTER_COLUMNS.map(column=><th key={column.key}><div className="backup-column-heading">
+          <span>{column.label}</span>
+          <BackupOrderColumnFilter column={column} values={filterValues[column.key]} selected={columnFilters[column.key]}
+            onChange={values=>updateColumnFilter(column.key,values)}/>
+        </div></th>)}
       </tr></thead>
       <tbody>
-        {['Released','Unreleased','Other / review'].map(group=><React.Fragment key={group}>
-          {options.some(option=>option.release===group)&&<tr className="backup-group"><th colSpan={7}>{group} <span>{options.filter(option=>option.release===group).length}</span></th></tr>}
-          {options.filter(option=>option.release===group).map(({ord,km,band})=>{
+        {!filteredOptions.length?<tr><td className="backup-filter-empty-row" colSpan={8}>No orders match the selected filters. Clear one or more column filters to show backup orders.</td></tr>
+          :['Released','Unreleased','Other / review'].map(group=><React.Fragment key={group}>
+          {filteredOptions.some(option=>option.release===group)&&<tr className="backup-group"><th colSpan={8}>{group} <span>{filteredOptions.filter(option=>option.release===group).length}</span></th></tr>}
+          {filteredOptions.filter(option=>option.release===group).map(({ord,km,band})=>{
             const id=RakePlanningRules.orderKey(ord);
             return<tr key={id} data-selected={selected.has(id)}>
               <td><label className="backup-select"><input aria-label={`Select order ${id}`} type="checkbox" checked={selected.has(id)} onChange={()=>setSelected(previous=>{const next=new Set(previous);next.has(id)?next.delete(id):next.add(id);return next;})}/></label></td>
-              <td className="backup-order-id">{ord['SO No.']} / {ord._LineItem||ord.SOItm}</td>
-              <td>{ord['Sold To Party Name']}</td>
+              <td className="backup-order-id">{BACKUP_ORDER_FILTER_COLUMNS[0].value(ord)}</td>
+              <td>{ord['Sold To Party Name']||'—'}</td>
               <td>{ord['Ship To Party City']||'—'}</td>
               <td>{ord._State||ord.STO||'—'}</td>
-              <td>{supplyCategory(ord)||'—'}</td>
+              <td>{backupOrderSupplyCategory(ord)||'—'}</td>
+              <td>{ord._WagonType||'—'}</td>
               <td>{ord._ModeC||ord.MODE||'—'}</td>
             </tr>;
           })}
@@ -5485,7 +5596,112 @@ const simulatorValue=(row,key)=>String(key==='_HTC'
 const simulatorStateValue=row=>simulatorValue(row,'STO')||simulatorValue(row,'_State');
 const simulatorCustomerKey=row=>`${orderPlaceKey(row)}|${RakePlanningRules.key(row['Sold To Party Name']||'UNKNOWN CUSTOMER')}`;
 
-function SimulatorIndiaMap({rows,hub,selectedCustomers,onToggleCustomer,onClearSelection,isDark}){
+function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply}){
+  const dialogRef=usePlanningDialog(onClose);
+  const orderGroups=useMemo(()=>{
+    const states=new Map();
+    for(const line of orderLines){
+      const row=line.row;
+      const state=simulatorStateValue(row)||'—';
+      const city=RakePlanningRules.clean(row['Ship To Party City'])||'—';
+      const customer=RakePlanningRules.clean(row['Sold To Party Name'])||'Unknown customer';
+      const stateKey=RakePlanningRules.key(state);
+      const cityKey=RakePlanningRules.key(city);
+      const customerNameKey=RakePlanningRules.key(customer);
+      let stateGroup=states.get(stateKey);
+      if(!stateGroup){stateGroup={key:stateKey,name:state,cities:new Map()};states.set(stateKey,stateGroup);}
+      let cityGroup=stateGroup.cities.get(cityKey);
+      if(!cityGroup){cityGroup={key:cityKey,name:city,customers:new Map()};stateGroup.cities.set(cityKey,cityGroup);}
+      let customerGroup=cityGroup.customers.get(customerNameKey);
+      if(!customerGroup){customerGroup={key:customerNameKey,name:customer,customerKeys:new Set(),orders:new Map()};cityGroup.customers.set(customerNameKey,customerGroup);}
+      customerGroup.customerKeys.add(line.customerKey);
+      const soNo=RakePlanningRules.clean(row['SO No.'])||'—';
+      const soKey=soNo==='—'?line.id:RakePlanningRules.key(soNo);
+      let order=customerGroup.orders.get(soKey);
+      if(!order){
+        order={id:JSON.stringify([stateKey,cityKey,customerNameKey,soKey]),soNo,customerKeys:new Set(),balance:0,selectable:true};
+        customerGroup.orders.set(soKey,order);
+      }
+      order.customerKeys.add(line.customerKey);
+      order.balance+=Math.max(0,Number(row['Bal to PGI'])||0);
+      order.selectable=order.selectable&&line.selectable;
+    }
+    return[...states.values()]
+      .sort((a,b)=>a.name.localeCompare(b.name))
+      .map(stateGroup=>{
+        const cities=[...stateGroup.cities.values()]
+          .sort((a,b)=>a.name.localeCompare(b.name))
+          .map(cityGroup=>{
+            const customers=[...cityGroup.customers.values()]
+              .sort((a,b)=>a.name.localeCompare(b.name))
+              .map(customerGroup=>({...customerGroup,
+                orders:[...customerGroup.orders.values()].sort((a,b)=>a.soNo.localeCompare(b.soNo,undefined,{numeric:true,sensitivity:'base'})),
+              }));
+            return{...cityGroup,customers,rowSpan:customers.reduce((total,customer)=>total+customer.orders.length,0)};
+          });
+        return{...stateGroup,cities,rowSpan:cities.reduce((total,city)=>total+city.rowSpan,0)};
+      });
+  },[orderLines]);
+  const orders=orderGroups.flatMap(stateGroup=>stateGroup.cities.flatMap(cityGroup=>
+    cityGroup.customers.flatMap(customerGroup=>customerGroup.orders)));
+  const[selectedOrderKeys,setSelectedOrderKeys]=useState(()=>new Set(orders
+    .filter(order=>order.selectable&&[...order.customerKeys].some(key=>selectedCustomers.has(key))).map(order=>order.id)));
+  const selectedOrders=orders.filter(order=>selectedOrderKeys.has(order.id));
+  const selectedCustomerKeys=new Set(selectedOrders.filter(order=>order.selectable).flatMap(order=>[...order.customerKeys]));
+  const selectedBalance=selectedOrders.reduce((total,order)=>total+order.balance,0);
+  const apply=()=>{onApply(selectedCustomerKeys);onClose();};
+  return ReactDOM.createPortal(<div className="rake-unplanned-backdrop">
+    <section ref={dialogRef} className="rake-unplanned-picker" role="dialog" aria-modal="true"
+      aria-labelledby="rake-unplanned-picker-title">
+      <header>
+        <div><h3 id="rake-unplanned-picker-title">Select unplanned sales orders</h3>
+          <p>Balances are summed by SO No. Confirming selects the customers for the checked sales orders.</p>
+        </div>
+        <button type="button" onClick={onClose}>Close</button>
+      </header>
+      <div className="rake-unplanned-picker-count">{orders.length.toLocaleString()} sales orders available</div>
+      <div className="rake-unplanned-lines" tabIndex={0} aria-label="Unplanned sales orders">
+        <table>
+          <thead><tr>
+            <th scope="col">STO</th><th scope="col">Party City</th>
+            <th scope="col">Sold To Party Name</th><th scope="col">SO No</th><th scope="col">Bal to PGI</th>
+          </tr></thead>
+          <tbody>
+            {orderGroups.map(stateGroup=><React.Fragment key={stateGroup.key}>
+              {stateGroup.cities.map((cityGroup,cityIndex)=><React.Fragment key={cityGroup.key}>
+                {cityGroup.customers.map((customerGroup,customerIndex)=><React.Fragment key={customerGroup.key}>
+                  {customerGroup.orders.map((order,orderIndex)=><tr key={order.id} data-selected={selectedOrderKeys.has(order.id)}>
+                    {cityIndex===0&&customerIndex===0&&orderIndex===0&&<td rowSpan={stateGroup.rowSpan}>{stateGroup.name}</td>}
+                    {customerIndex===0&&orderIndex===0&&<td rowSpan={cityGroup.rowSpan}>{cityGroup.name}</td>}
+                    {orderIndex===0&&<td rowSpan={customerGroup.orders.length}>{customerGroup.name}</td>}
+                    <td className="rake-unplanned-so-cell">
+                      <label><input type="checkbox" aria-label={`Select SO ${order.soNo}`}
+                        checked={selectedOrderKeys.has(order.id)} disabled={!order.selectable}
+                        onChange={()=>setSelectedOrderKeys(previous=>{
+                          const next=new Set(previous);
+                          if(next.has(order.id))next.delete(order.id);else next.add(order.id);
+                          return next;
+                        })}/><span>{order.soNo}</span></label>
+                    </td>
+                    <td className="rake-unplanned-balance">{fmt(order.balance)}</td>
+                  </tr>)}
+                </React.Fragment>)}
+              </React.Fragment>)}
+            </React.Fragment>)}
+            {!orders.length&&<tr><td colSpan={5} className="rake-unplanned-empty">No unplanned sales orders match the current filters.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      <footer>
+        <span><strong>{fmt(selectedBalance)} MT</strong> Bal to PGI for {selectedOrders.length} selected SOs · {selectedCustomerKeys.size} customers</span>
+        <button type="button" onClick={onClose}>Cancel</button>
+        <button type="button" className="rake-unplanned-confirm" onClick={apply}>OK</button>
+      </footer>
+    </section>
+  </div>,document.body);
+}
+
+function SimulatorIndiaMap({rows,plannedRows,hub,selectedCustomers,onToggleCustomer,onApplyCustomerSelection,onClearSelection,isDark,plannedBalance=0}){
   const mapRef=useRef(null);
   const mapInst=useRef(null);
   const markersRef=useRef(new Map());
@@ -5493,6 +5709,7 @@ function SimulatorIndiaMap({rows,hub,selectedCustomers,onToggleCustomer,onClearS
   const fitKeyRef=useRef('');
   const onToggleRef=useRef(onToggleCustomer);
   const selectedRef=useRef(selectedCustomers);
+  const[orderPickerOpen,setOrderPickerOpen]=useState(false);
   onToggleRef.current=onToggleCustomer;
   selectedRef.current=selectedCustomers;
   const live=useLiveDestinations(rows);
@@ -5506,7 +5723,8 @@ function SimulatorIndiaMap({rows,hub,selectedCustomers,onToggleCustomer,onClearS
       if(!city){
         const coords=orderCoords(row);
         const lat=Number(coords?.[0]),lng=Number(coords?.[1]);
-        city={key,name,coords:coords&&Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180?[lat,lng]:null,
+        city={key,name,state:simulatorStateValue(row)||'—',
+          coords:coords&&Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180?[lat,lng]:null,
           balance:0,orders:0,customers:new Map()};
         grouped.set(key,city);
       }
@@ -5533,6 +5751,50 @@ function SimulatorIndiaMap({rows,hub,selectedCustomers,onToggleCustomer,onClearS
         customers:[...city.customers.values()].sort((a,b)=>a.name.localeCompare(b.name))};
     }).sort((a,b)=>a.name.localeCompare(b.name));
   },[rows,live.revision,hub,reverseKm]);
+  const orderLines=useMemo(()=>{
+    const cityIncluded=new Map(destinations.map(city=>[city.key,city.included]));
+    return rows.map((row,index)=>({
+        id:RakePlanningRules.orderKey(row)||`unplanned-${index}`,
+        row,
+        customerKey:simulatorCustomerKey(row),
+        selectable:cityIncluded.get(orderPlaceKey(row))!==false,
+    })).sort((a,b)=>
+        simulatorStateValue(a.row).localeCompare(simulatorStateValue(b.row))||
+        String(a.row['Ship To Party City']||'').localeCompare(String(b.row['Ship To Party City']||''))||
+        String(a.row['Sold To Party Name']||'').localeCompare(String(b.row['Sold To Party Name']||''))||
+        String(a.row['SO No.']||'').localeCompare(String(b.row['SO No.']||''))||
+        String(a.row._LineItem||a.row.SOItm||'').localeCompare(String(b.row._LineItem||b.row.SOItm||'')));
+  },[rows,destinations]);
+  const plannedLocations=useMemo(()=>{
+    const grouped=new Map();
+    for(const row of plannedRows){
+      const key=orderPlaceKey(row);
+      let location=grouped.get(key);
+      if(!location){
+        location={key,name:RakePlanningRules.city(row['Ship To Party City'])||'Unknown city',
+          state:simulatorStateValue(row)||'—',balance:0,customers:new Map()};
+        grouped.set(key,location);
+      }
+      const balance=Math.max(0,Number(row['Bal to PGI'])||0);
+      location.balance+=balance;
+      const customerName=RakePlanningRules.clean(row['Sold To Party Name'])||'Unknown customer';
+      const customerKey=RakePlanningRules.key(customerName);
+      let customer=location.customers.get(customerKey);
+      if(!customer){
+        customer={key:customerKey,name:customerName,balance:0};
+        location.customers.set(customerKey,customer);
+      }
+      customer.balance+=balance;
+    }
+    return[...grouped.values()]
+      .map(location=>({...location,customers:[...location.customers.values()].sort((a,b)=>a.name.localeCompare(b.name))}))
+      .sort((a,b)=>a.name.localeCompare(b.name));
+  },[plannedRows]);
+  const unplannedBalance=useMemo(()=>{
+    if(!selectedCustomers.size)return null;
+    return destinations.reduce((total,city)=>total+city.customers.reduce((cityTotal,customer)=>
+      cityTotal+(selectedCustomers.has(customer.key)?customer.balance:0),0),0);
+  },[destinations,selectedCustomers]);
   const fwdCount=destinations.filter(city=>city.direction==='forward').length;
   const revIncluded=destinations.filter(city=>city.direction==='reverse'&&city.included).length;
   const revExcluded=destinations.filter(city=>city.direction==='reverse'&&!city.included).length;
@@ -5656,6 +5918,59 @@ function SimulatorIndiaMap({rows,hub,selectedCustomers,onToggleCustomer,onClearS
       <div ref={mapRef} className="rake-simulator-map" role="region" aria-label="Filtered order destinations and selected siding"/>
       {!hub&&<span className="rake-simulator-map-note">Select a rake to calculate siding distances and reverse limits.</span>}
       {hub&&<span className="rake-simulator-map-note">Straight-line distances · road distances may vary.</span>}
+      <div className="rake-simulator-delivery-cities" aria-label="Planned and unplanned orders">
+        <div className="rake-simulator-planned-card">
+          <div className="rake-simulator-planned-summary" title="Sum of Bal to PGI for orders assigned to the selected rake"><span>Planned</span><strong>{fmt(plannedBalance)} <small>MT</small></strong></div>
+          <div className="rake-simulator-planned-location-list">
+            {plannedLocations.map(location=><div className="rake-simulator-planned-location" key={location.key}>
+              <div className="rake-simulator-planned-location-heading">
+                <span>{location.name}</span>
+                <span className="rake-simulator-city-state">{location.state}</span>
+                <span>{fmt(location.balance)}<small>MT Bal to PGI</small></span>
+              </div>
+              <details>
+                <summary>{location.customers.length} customer{location.customers.length===1?'':'s'}</summary>
+                <div className="rake-simulator-planned-customer-list">
+                  {location.customers.map(customer=><div className="rake-simulator-planned-customer-row" key={customer.key}>
+                    <span>{customer.name}</span><strong>{fmt(customer.balance)}<small>MT Bal to PGI</small></strong>
+                  </div>)}
+                </div>
+              </details>
+            </div>)}
+            {!plannedLocations.length&&<p>No planned orders for this view.</p>}
+          </div>
+        </div>
+        <div className="rake-simulator-unplanned-card">
+          <div className="rake-simulator-unplanned-summary" title={selectedCustomers.size?'Sum of Bal to PGI for selected customers':'Select customers to show their total Bal to PGI'}>
+            <strong className="rake-simulator-unplanned-heading">Unplanned</strong>
+            <button type="button" className="rake-simulator-unplanned-picker-button"
+              aria-haspopup="dialog" aria-expanded={orderPickerOpen}
+              onClick={()=>setOrderPickerOpen(true)}>Select orders <span aria-hidden="true">▾</span></button>
+            {selectedCustomers.size>0&&<strong className="rake-simulator-unplanned-total">{fmt(unplannedBalance)} <small>MT</small></strong>}
+          </div>
+        <div className="rake-simulator-delivery-city-list">
+          {destinations.map(city=><div className="rake-simulator-delivery-city" key={city.key}>
+            <button type="button" className="rake-simulator-city-button" onClick={()=>showCity(city)} disabled={!city.coords}>
+              <span>{city.name}<small>{!city.coords?'Unmapped':city.distance===null?'Select a rake for distance':`${city.distance} km from siding · ${city.direction==='forward'?'Fwd':city.direction==='reverse'&&!city.included?'Excluded':'Rev'}`}</small></span>
+              <span className="rake-simulator-city-state">{city.state}</span>
+              <span>{fmt(city.balance)}<small>MT Bal to PGI</small></span>
+            </button>
+            <details>
+              <summary>{city.customers.length} customer{city.customers.length===1?'':'s'}</summary>
+              <div className="rake-simulator-city-customer-list">
+                {city.customers.map(customer=><label key={customer.key}>
+                  <input type="checkbox" checked={selectedCustomers.has(customer.key)}
+                    disabled={city.direction==='reverse'&&!city.included}
+                    onChange={()=>onToggleCustomer(customer.key)}/>
+                  <span>{customer.name}</span>
+                </label>)}
+              </div>
+            </details>
+          </div>)}
+          {!destinations.length&&<p>No unplanned locations match the current filters.</p>}
+        </div>
+        </div>
+      </div>
     </div>
     <div className="rake-simulator-map-controls">
       <label>Reverse limit
@@ -5671,34 +5986,24 @@ function SimulatorIndiaMap({rows,hub,selectedCustomers,onToggleCustomer,onClearS
         <span className="rake-simulator-route-count rake-simulator-route-excluded">× {revExcluded} Excl</span>
       </>:<span className="rake-simulator-map-select-rake">Choose a rake to calculate directions.</span>}
     </div>
-    <div className="rake-simulator-delivery-cities">
-      <strong>Delivery cities</strong>
-      {destinations.map(city=><div className="rake-simulator-delivery-city" key={city.key}>
-        <button type="button" className="rake-simulator-city-button" onClick={()=>showCity(city)} disabled={!city.coords}>
-          <span>{city.name}<small>{!city.coords?'Unmapped':city.distance===null?'Select a rake for distance':`${city.distance} km from siding · ${city.direction==='forward'?'Fwd':city.direction==='reverse'&&!city.included?'Excluded':'Rev'}`}</small></span>
-          <span>{fmt(city.balance)}<small>MT balance</small></span>
-        </button>
-        <details>
-          <summary>{city.customers.length} customer{city.customers.length===1?'':'s'}</summary>
-          <div className="rake-simulator-city-customer-list">
-            {city.customers.map(customer=><label key={customer.key}>
-              <input type="checkbox" checked={selectedCustomers.has(customer.key)}
-                disabled={city.direction==='reverse'&&!city.included}
-                onChange={()=>onToggleCustomer(customer.key)}/>
-              <span>{customer.name}</span>
-            </label>)}
-          </div>
-        </details>
-      </div>)}
-      {!destinations.length&&<p>No delivery cities match the current filters.</p>}
-    </div>
+    {orderPickerOpen&&<UnplannedOrderPicker orderLines={orderLines} selectedCustomers={selectedCustomers}
+      onClose={()=>setOrderPickerOpen(false)} onApply={onApplyCustomerSelection}/>}
   </div>;
 }
 
 function SimulatorMultiFilter({label,options,selected,onChange,onSelectAll,noun,searchable=false}){
   const[query,setQuery]=useState('');
+  const filterRef=useRef(null);
   const visibleOptions=useMemo(()=>options.filter(option=>option.toLowerCase().includes(query.trim().toLowerCase())),[options,query]);
-  return <details className="rake-simulator-multi-filter" name="rake-simulator-filters"
+  useEffect(()=>{
+    const closeOnOutside=event=>{
+      const filter=filterRef.current;
+      if(filter?.open&&!filter.contains(event.target))filter.open=false;
+    };
+    document.addEventListener('pointerdown',closeOnOutside);
+    return()=>document.removeEventListener('pointerdown',closeOnOutside);
+  },[]);
+  return <details ref={filterRef} className="rake-simulator-multi-filter" name="rake-simulator-filters"
     data-selected={selected.size?'true':'false'}>
     <summary>
       <span>{label}</span>
@@ -5728,7 +6033,24 @@ function RakeSimulator({rows,active}){
   const[cities,setCities]=useState(new Set());
   const[supplyConditions,setSupplyConditions]=useState(new Set());
   const[selectedCustomers,setSelectedCustomers]=useState(new Set());
+  const tableScrollRef=useRef(null),tableRef=useRef(null),totalScrollRef=useRef(null),totalTableRef=useRef(null);
   const selectedMode=SIMULATOR_RAKE_MODES.find(mode=>mode.id===scope);
+  const plannedRows=useMemo(()=>{
+    const target=selectedMode?RakePlanningRules.sidingKey(selectedMode.id):null;
+    const seen=new Set();
+    return rows.filter(row=>{
+      const actual=RakePlanningRules.actualSiding(row._ModeC);
+      if(!actual||['ROAD','ROAD-ODC','EXPORT ROAD'].includes(actual)||
+        (target&&RakePlanningRules.sidingKey(actual)!==target)||
+        Math.max(0,Number(row['Bal to PGI'])||0)<=0)return false;
+      const key=RakePlanningRules.orderKey(row);
+      if(seen.has(key))return false;
+      seen.add(key);
+      return true;
+    });
+  },[rows,selectedMode]);
+  const plannedBalance=useMemo(()=>plannedRows.reduce((total,row)=>
+    total+Math.max(0,Number(row['Bal to PGI'])||0),0),[plannedRows]);
   const peerRakes=useMemo(()=>selectedMode?SIMULATOR_RAKE_MODES.filter(mode=>mode.id!==scope).map(mode=>mode.id):[],[scope,selectedMode]);
   const candidates=useMemo(()=>RakePlanningRules.simulatorCandidates(rows,scope,peerRakes),[rows,scope,peerRakes]);
   const regionOptions=useMemo(()=>[...new Set(candidates.map(row=>simulatorValue(row,'_Region')).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[candidates]);
@@ -5744,6 +6066,35 @@ function RakeSimulator({rows,active}){
   const selectedRows=useMemo(()=>selectedCustomers.size
     ?visibleRows.filter(row=>selectedCustomers.has(simulatorCustomerKey(row)))
     :visibleRows,[visibleRows,selectedCustomers]);
+  React.useLayoutEffect(()=>{
+    if(!active)return undefined;
+    const scroll=tableScrollRef.current,table=tableRef.current,totalScroll=totalScrollRef.current,totalTable=totalTableRef.current;
+    if(!scroll||!table||!totalScroll||!totalTable)return undefined;
+    const updateColumns=()=>{
+      const bodyRow=[...table.querySelectorAll('tbody tr')].find(row=>row.cells.length===13);
+      const widths=bodyRow
+        ?[...bodyRow.cells].map(cell=>cell.getBoundingClientRect().width)
+        :[...table.querySelector('thead tr').cells].flatMap(cell=>Array(cell.colSpan||1).fill(cell.getBoundingClientRect().width/(cell.colSpan||1)));
+      const columns=totalTable.querySelectorAll('col');
+      widths.forEach((width,index)=>{if(columns[index])columns[index].style.width=`${width}px`;});
+      totalTable.style.width=`${table.getBoundingClientRect().width}px`;
+      totalScroll.scrollLeft=scroll.scrollLeft;
+    };
+    const syncScroll=()=>{totalScroll.scrollLeft=scroll.scrollLeft;};
+    updateColumns();
+    const observer=window.ResizeObserver?new ResizeObserver(updateColumns):null;
+    observer?.observe(scroll);observer?.observe(table);
+    scroll.addEventListener('scroll',syncScroll,{passive:true});
+    window.addEventListener('resize',updateColumns);
+    return()=>{observer?.disconnect();scroll.removeEventListener('scroll',syncScroll);window.removeEventListener('resize',updateColumns);};
+  },[active,selectedRows]);
+  const totals=useMemo(()=>selectedRows.reduce((sum,row)=>{
+    const[fg,wip,slab,issued]=RakePlanningRules.completion(row).stages;
+    sum.fg+=fg.raw;sum.wip+=wip.raw;sum.btr+=n2(parseFloat(row.BTR));
+    sum.slab+=slab.raw;sum.btc+=n2(parseFloat(row.BTC));sum.issued+=issued.raw;
+    sum.btp+=n2(parseFloat(row.BTP));
+    return sum;
+  },{fg:0,wip:0,btr:0,slab:0,btc:0,issued:0,btp:0}),[selectedRows]);
   const toggleValue=(setter,value,checked)=>setter(previous=>{
     const next=new Set(previous);
     if(checked)next.add(value);else next.delete(value);
@@ -5841,8 +6192,8 @@ function RakeSimulator({rows,active}){
           </div>}
           <button className="rake-simulator-clear-filters" type="button" onClick={()=>{clearLocations();setSupplyConditions(new Set());}}>Clear filters</button>
       </div>
-      <SimulatorIndiaMap rows={visibleRows} hub={sidingHub} isDark={C.isDark} selectedCustomers={selectedCustomers}
-        onToggleCustomer={toggleCustomer} onClearSelection={()=>setSelectedCustomers(new Set())}/>
+      <SimulatorIndiaMap rows={visibleRows} plannedRows={plannedRows} hub={sidingHub} isDark={C.isDark} selectedCustomers={selectedCustomers} plannedBalance={plannedBalance}
+        onToggleCustomer={toggleCustomer} onApplyCustomerSelection={setSelectedCustomers} onClearSelection={()=>setSelectedCustomers(new Set())}/>
       <div className="rake-simulator-results">
         <div className="rake-simulator-results-heading">
           <h3>{selectedCustomers.size?'Selected customer orders':'Available SO + line items'}</h3>
@@ -5850,7 +6201,8 @@ function RakeSimulator({rows,active}){
           {selectedCustomers.size>0&&<button type="button" onClick={()=>setSelectedCustomers(new Set())}>Clear customer selection</button>}
         </div>
         <div className="rake-simulator-table-wrap">
-          <table>
+          <div className="rake-simulator-table-scroll" ref={tableScrollRef}>
+          <table ref={tableRef}>
             <thead>
               <tr>
                 {['SO / Item','Customer','City','State','Region','Supply condition'].map(label=><th key={label} scope="col" rowSpan={2}>{label}</th>)}
@@ -5859,7 +6211,7 @@ function RakeSimulator({rows,active}){
               </tr>
               <tr>
                 <th scope="col" title="FG UR Stock from EBTP">FG</th>
-                <th scope="col" title="Plate stock minus FG UR stock">WIP</th>
+                <th scope="col" title="Plate stock minus FG UR stock" style={{textAlign:'left'}}>WIP</th>
               </tr>
             </thead>
             <tbody>
@@ -5878,7 +6230,7 @@ function RakeSimulator({rows,active}){
                   <td>{fmt(slab.raw)}</td>
                   <td>{fmt(row.BTC)}</td>
                   <td>{fmt(issued.raw)}</td>
-                  <td>{fmt(row.BTP)}</td>
+                  <td>{n2(parseFloat(row.BTP)).toLocaleString('en-IN',{minimumFractionDigits:3,maximumFractionDigits:3})}</td>
                 </tr>;
               })}
               {!selectedRows.length&&<tr><td colSpan={13} className="rake-simulator-empty">
@@ -5887,6 +6239,22 @@ function RakeSimulator({rows,active}){
             </tbody>
           </table>
           {selectedRows.length>200&&<div className="rake-simulator-table-note">Showing the first 200 items. Use filters to narrow the list.</div>}
+          </div>
+          <div className="rake-simulator-total-scroll" ref={totalScrollRef} aria-label="Filtered totals">
+            <table className="rake-simulator-total-table" ref={totalTableRef}>
+              <colgroup>{Array.from({length:13},(_,index)=><col key={index}/>)}</colgroup>
+              <tbody><tr className="rake-simulator-total-row">
+                <td colSpan={6}>TOTAL</td>
+                <td>{fmt(totals.fg)}</td>
+                <td>{fmt(totals.wip)}</td>
+                <td>{fmt(totals.btr)}</td>
+                <td>{fmt(totals.slab)}</td>
+                <td>{fmt(totals.btc)}</td>
+                <td>{fmt(totals.issued)}</td>
+                <td>{totals.btp.toLocaleString('en-IN',{minimumFractionDigits:3,maximumFractionDigits:3})}</td>
+              </tr></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

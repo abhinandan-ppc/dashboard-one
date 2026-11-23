@@ -4,6 +4,11 @@ import '../rake-planning-rules.js';
 
 const rules=globalThis.RakePlanningRules;
 
+test('actualSiding parses underscore-separated rake modes',()=>{
+  assert.equal(rules.actualSiding('RAKE_BNHT'),'BNHT');
+  assert.equal(rules.sidingKey(rules.actualSiding('RAKE_BNHT_LONG')),'BNHT(LONG)');
+});
+
 test('simulatorCandidates excludes the selected rake and keeps domestic peer-rake orders',()=>{
   const rows=[
     {'SO No.':'100','_LineItem':'10','_ModeC':'RAKE-CCJS','Bal to PGI':'25',_Country:'India'},
@@ -74,29 +79,44 @@ test('simulatorCandidates distinguishes BNHT from BNHT Long assignments',()=>{
   );
 });
 
-test('predicted backup orders use each siding and exclude its actual assignments',()=>{
-  const order=(UID,SO,Siding,Mode)=>({UID,'SO No.':SO,_LineItem:'10',_Siding:Siding,_ModeC:Mode});
+test('predicted backup orders match siding and wagon type',()=>{
+  const order=(UID,SO,Siding,Mode,WagonType)=>({UID,'SO No.':SO,_LineItem:'10',_Siding:Siding,_ModeC:Mode,_WagonType:WagonType});
   const predictedPlans={
     BNHT:{siding:'BNHT',rakes:[{items:[
-      {ord:order('actual-bnht','100','BNHT','RAKE-BNHT')},
-      {ord:order('backup-bnht','101','BNHT','HOLD')},
-      {ord:order('wrong-siding','102','CCJS','HOLD')},
-      {ord:order('duplicate-bnht','103','BNHT','HOLD')},
+      {ord:order('actual-bnht','100','BNHT','RAKE-BNHT','BOSM/BRN')},
+      {ord:order('backup-bnht','101','BNHT','HOLD','BOSM')},
+      {ord:order('backup-bnht-brn','104','BNHT','HOLD','BRN')},
+      {ord:order('wrong-siding','102','CCJS','HOLD','BRN')},
+      {ord:order('wrong-wagon-bnht','105','BNHT','HOLD','LONG')},
+      {ord:order('bnht-long-mode-brn-type','106','BNHT','RAKE-BNHT(Long)','BRN')},
+      {ord:order('duplicate-bnht','103','BNHT','HOLD','BRN')},
     ]},{items:[
-      {ord:order('duplicate-bnht','103','BNHT','HOLD')},
+      {ord:order('duplicate-bnht','103','BNHT','HOLD','BRN')},
+    ]}]},
+    'BNHT (Long)':{siding:'BNHT (Long)',rakes:[{items:[
+      {ord:order('actual-bnht-long','110','BNHT (Long)','RAKE-BNHT-LONG','LONG')},
+      {ord:order('backup-bnht-long','111','BNHT (Long)','HOLD','LONG')},
+      {ord:order('wrong-wagon-bnht-long','112','BNHT (Long)','HOLD','BRN')},
+      {ord:order('wrong-siding-bnht-long','113','BNHT','HOLD','LONG')},
     ]}]},
     'KAV (Long)':{siding:'KAV (Long)',rakes:[{items:[
-      {ord:order('actual-kav','200','KAV (Long)','RAKE-KAV (LONG)')},
-      {ord:order('backup-kav','201','KAV (Long)','HOLD')},
-      {ord:order('wrong-kav','202','KAV','HOLD')},
+      {ord:order('actual-kav','200','KAV (Long)','RAKE-KAV (LONG)','LONG')},
+      {ord:order('backup-kav','201','KAV (Long)','HOLD','LONG')},
+      {ord:order('wrong-wagon-kav','203','KAV (Long)','HOLD','BRN')},
+      {ord:order('wrong-kav','202','KAV','HOLD','LONG')},
     ]}]},
   };
-  const actualBnht={siding:'BNHT',items:[{ord:order('actual-bnht','100','BNHT','RAKE-BNHT')}]};
-  const actualKav={siding:'KAV(LONG)',items:[{ord:order('actual-kav','200','KAV (Long)','RAKE-KAV (LONG)')}]};
+  const actualBnht={siding:'BNHT',items:[{ord:order('actual-bnht','100','BNHT','RAKE-BNHT','BOSM/BRN')}]};
+  const actualBnhtLong={siding:'BNHT- LONG',items:[{ord:order('actual-bnht-long','110','BNHT (Long)','RAKE-BNHT-LONG','LONG')}]};
+  const actualKav={siding:'KAV(LONG)',items:[{ord:order('actual-kav','200','KAV (Long)','RAKE-KAV (LONG)','LONG')}]};
 
   assert.deepEqual(
     rules.predictedOrdersMissingFromActual(predictedPlans,actualBnht).map(row=>row.UID),
-    ['backup-bnht','duplicate-bnht'],
+    ['backup-bnht','backup-bnht-brn','bnht-long-mode-brn-type','duplicate-bnht'],
+  );
+  assert.deepEqual(
+    rules.predictedOrdersMissingFromActual(predictedPlans,actualBnhtLong).map(row=>row.UID),
+    ['backup-bnht-long'],
   );
   assert.deepEqual(
     rules.predictedOrdersMissingFromActual(predictedPlans,actualKav).map(row=>row.UID),

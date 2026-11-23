@@ -2,7 +2,7 @@
 globalThis.RakePlanningRules=(()=>{
   const clean=v=>String(v??'').trim().replace(/\s+/g,' ');
   const key=v=>clean(v).toUpperCase();
-  const sidingKey=v=>key(v).replace(/\s*\(/g,'(');
+  const sidingKey=v=>key(v).replace(/\s*\(/g,'(').replace(/\s*(?:[-_]\s*|\s+)LONG$/,'(LONG)');
   const htcLabel=v=>key(v)==='Q/T'?'Q&T':key(v)==='NON HTC'?'Non HTC':clean(v);
   const qty=v=>Math.max(0,Number(v)||0);
   const orderKey=r=>clean(r.UID)||`${clean(r['SO No.'])}|${clean(r._LineItem??r.SOItm)}`;
@@ -10,7 +10,7 @@ globalThis.RakePlanningRules=(()=>{
     const raw=key(modeC);
     if(!raw)return null;
     if(['ROAD','ROAD-ODC','EXPORT ROAD'].includes(raw))return raw;
-    if(/^RAKE[-\s]+/.test(raw))return raw.replace(/^RAKE[-\s]+/,'').trim()||null;
+    if(/^RAKE[-\s_]+/.test(raw))return raw.replace(/^RAKE[-\s_]+/,'').trim()||null;
     return null;
   }
   function simulatorCandidates(rows,scope='ALL',peerRakes=[]){
@@ -86,13 +86,19 @@ globalThis.RakePlanningRules=(()=>{
   function predictedOrdersMissingFromActual(predictedPlans,actualPlan){
     const target=sidingKey(actualPlan?.siding);
     if(!target)return[];
+    const longSiding=target.endsWith('(LONG)');
     const predictedPlan=Object.values(predictedPlans||{}).find(plan=>sidingKey(plan?.siding)===target);
     if(!predictedPlan)return[];
     const assigned=new Set((actualPlan?.items||[]).map(({ord})=>orderKey(ord)));
     const seen=new Set();
     return(predictedPlan?.rakes||[]).flatMap(rake=>rake.items||[]).map(({ord})=>ord).filter(ord=>{
       const id=orderKey(ord);
-      if(sidingKey(ord._Siding)!==target||sidingKey(actualSiding(ord._ModeC))===target||assigned.has(id)||seen.has(id))return false;
+      const wagonType=key(ord._WagonType??ord.wagonType??ord['Wagon Type']);
+      const matchingWagonType=longSiding
+        ?wagonType==='LONG'
+        :['BOSM','BOSM/BRN','BRN'].includes(wagonType);
+      if(sidingKey(ord._Siding)!==target||sidingKey(actualSiding(ord._ModeC))===target||assigned.has(id)||seen.has(id)||
+        !matchingWagonType)return false;
       seen.add(id);
       return true;
     });
@@ -107,5 +113,5 @@ globalThis.RakePlanningRules=(()=>{
       return{ord,km,band:km!==null&&km<=100?0:states.has(key(state(ord._State)))?1:2,release:release(ord)};
     }).filter(r=>r.band<2).sort((a,b)=>a.band-b.band||(a.km??Infinity)-(b.km??Infinity)||orderKey(a.ord).localeCompare(orderKey(b.ord)));
   }
-  return{clean,key,qty,orderKey,actualSiding,simulatorCandidates,odc,release,completion,state,city,isExport,mapCategory,destination,countryGroup,shortfall,htcLabel,predictedOrdersMissingFromActual,nearby};
+  return{clean,key,qty,orderKey,actualSiding,sidingKey,simulatorCandidates,odc,release,completion,state,city,isExport,mapCategory,destination,countryGroup,shortfall,htcLabel,predictedOrdersMissingFromActual,nearby};
 })();
