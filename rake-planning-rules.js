@@ -2,6 +2,8 @@
 globalThis.RakePlanningRules=(()=>{
   const clean=v=>String(v??'').trim().replace(/\s+/g,' ');
   const key=v=>clean(v).toUpperCase();
+  const sidingKey=v=>key(v).replace(/\s*\(/g,'(');
+  const htcLabel=v=>key(v)==='Q/T'?'Q&T':key(v)==='NON HTC'?'Non HTC':clean(v);
   const qty=v=>Math.max(0,Number(v)||0);
   const orderKey=r=>clean(r.UID)||`${clean(r['SO No.'])}|${clean(r._LineItem??r.SOItm)}`;
   function actualSiding(modeC){
@@ -81,6 +83,20 @@ globalThis.RakePlanningRules=(()=>{
     const b=qty(balance),target=Math.max(1,Math.ceil(b/(capacity*(1+tolerance))))*capacity;
     return{target,minimum:target*(1-tolerance),maximum:target*(1+tolerance),missing:Math.max(0,target*(1-tolerance)-b)};
   }
+  function predictedOrdersMissingFromActual(predictedPlans,actualPlan){
+    const target=sidingKey(actualPlan?.siding);
+    if(!target)return[];
+    const predictedPlan=Object.values(predictedPlans||{}).find(plan=>sidingKey(plan?.siding)===target);
+    if(!predictedPlan)return[];
+    const assigned=new Set((actualPlan?.items||[]).map(({ord})=>orderKey(ord)));
+    const seen=new Set();
+    return(predictedPlan?.rakes||[]).flatMap(rake=>rake.items||[]).map(({ord})=>ord).filter(ord=>{
+      const id=orderKey(ord);
+      if(sidingKey(ord._Siding)!==target||sidingKey(actualSiding(ord._ModeC))===target||assigned.has(id)||seen.has(id))return false;
+      seen.add(id);
+      return true;
+    });
+  }
   function nearby(rows,plan,{coords,hub,distance}){
     const assigned=new Set(plan.items.map(({ord})=>orderKey(ord)));
     const states=new Set(plan.items.map(({ord})=>key(state(ord._State))).filter(s=>s&&!['UNKNOWN','UNMAPPED','UNSPECIFIED','—','N/A'].includes(s)));
@@ -91,5 +107,5 @@ globalThis.RakePlanningRules=(()=>{
       return{ord,km,band:km!==null&&km<=100?0:states.has(key(state(ord._State)))?1:2,release:release(ord)};
     }).filter(r=>r.band<2).sort((a,b)=>a.band-b.band||(a.km??Infinity)-(b.km??Infinity)||orderKey(a.ord).localeCompare(orderKey(b.ord)));
   }
-  return{clean,key,qty,orderKey,actualSiding,simulatorCandidates,odc,release,completion,state,city,isExport,mapCategory,destination,countryGroup,shortfall,nearby};
+  return{clean,key,qty,orderKey,actualSiding,simulatorCandidates,odc,release,completion,state,city,isExport,mapCategory,destination,countryGroup,shortfall,htcLabel,predictedOrdersMissingFromActual,nearby};
 })();

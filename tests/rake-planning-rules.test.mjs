@@ -73,3 +73,40 @@ test('simulatorCandidates distinguishes BNHT from BNHT Long assignments',()=>{
     ['101'],
   );
 });
+
+test('predicted backup orders use each siding and exclude its actual assignments',()=>{
+  const order=(UID,SO,Siding,Mode)=>({UID,'SO No.':SO,_LineItem:'10',_Siding:Siding,_ModeC:Mode});
+  const predictedPlans={
+    BNHT:{siding:'BNHT',rakes:[{items:[
+      {ord:order('actual-bnht','100','BNHT','RAKE-BNHT')},
+      {ord:order('backup-bnht','101','BNHT','HOLD')},
+      {ord:order('wrong-siding','102','CCJS','HOLD')},
+      {ord:order('duplicate-bnht','103','BNHT','HOLD')},
+    ]},{items:[
+      {ord:order('duplicate-bnht','103','BNHT','HOLD')},
+    ]}]},
+    'KAV (Long)':{siding:'KAV (Long)',rakes:[{items:[
+      {ord:order('actual-kav','200','KAV (Long)','RAKE-KAV (LONG)')},
+      {ord:order('backup-kav','201','KAV (Long)','HOLD')},
+      {ord:order('wrong-kav','202','KAV','HOLD')},
+    ]}]},
+  };
+  const actualBnht={siding:'BNHT',items:[{ord:order('actual-bnht','100','BNHT','RAKE-BNHT')}]};
+  const actualKav={siding:'KAV(LONG)',items:[{ord:order('actual-kav','200','KAV (Long)','RAKE-KAV (LONG)')}]};
+
+  assert.deepEqual(
+    rules.predictedOrdersMissingFromActual(predictedPlans,actualBnht).map(row=>row.UID),
+    ['backup-bnht','duplicate-bnht'],
+  );
+  assert.deepEqual(
+    rules.predictedOrdersMissingFromActual(predictedPlans,actualKav).map(row=>row.UID),
+    ['backup-kav'],
+  );
+});
+
+test('HTC labels use the backup-order category labels',()=>{
+  assert.deepEqual(
+    ['FN','Q','Q/T','NON HTC'].map(value=>rules.htcLabel(value)),
+    ['FN','Q','Q&T','Non HTC'],
+  );
+});

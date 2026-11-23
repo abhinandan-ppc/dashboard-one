@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <script src="dashboard-api-url.js"></script>
-<script src="rake-planning-rules.js"></script>
+<script src="rake-planning-rules.js?v=3"></script>
 <script src="rake-destination-mapping.js"></script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
@@ -2174,12 +2174,13 @@ function usePlanningDialog(onClose){
   },[]);
   return ref;
 }
-function ProbableOrders({plan,rows,onClose}){
+function ProbableOrders({plan,predictedData,onClose}){
   const dialogRef=usePlanningDialog(onClose);
   const [selected,setSelected]=useState(()=>{try{const drafts=JSON.parse(localStorage.getItem('rake-plan-drafts-v1')||'[]');return new Set(drafts.filter(d=>d.siding===plan.siding).at(-1)?.orders||[]);}catch{return new Set();}});
   const [notice,setNotice]=useState('');
-  const live=useLiveDestinations(rows);
-  const options=useMemo(()=>RakePlanningRules.nearby(rows,plan,{coords:orderCoords,hub:resolveHub(plan.siding),distance:haversine}),[rows,plan,live.revision]);
+  const options=useMemo(()=>RakePlanningRules.predictedOrdersMissingFromActual(predictedData,plan)
+    .map(ord=>({ord,release:RakePlanningRules.release(ord)})),
+  [plan,predictedData]);
   const picked=options.filter(o=>selected.has(RakePlanningRules.orderKey(o.ord)));
   const added=picked.reduce((a,{ord})=>a+n2(parseFloat(ord['Bal to PGI'])),0);
   const limit=RakePlanningRules.shortfall(plan.bal);
@@ -2188,7 +2189,8 @@ function ProbableOrders({plan,rows,onClose}){
     const record={siding:plan.siding,createdAt:new Date().toISOString(),orders:picked.map(({ord})=>RakePlanningRules.orderKey(ord)),addedMT:added};
     try{const drafts=JSON.parse(localStorage.getItem('rake-plan-drafts-v1')||'[]');localStorage.setItem('rake-plan-drafts-v1',JSON.stringify([...drafts.slice(-49),record]));setNotice('Draft saved on this device. EBTP assignments are unchanged.');}catch{setNotice('Local draft storage is unavailable. Use Download draft.');}
   };
-  const download=()=>{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(picked.map(({ord,release,km})=>({Siding:plan.siding,SO:ord['SO No.'],Item:ord._LineItem,UID:RakePlanningRules.orderKey(ord),City:ord['Ship To Party City'],State:ord._State,Release:release,'Balance MT':ord['Bal to PGI'],'Distance km':km==null?'Unknown':Math.round(km),Status:'DRAFT'}))),'Draft');XLSX.writeFile(wb,`Rake Draft ${plan.siding}.xlsx`);};
+  const supplyCategory=ord=>RakePlanningRules.htcLabel(ord._HTC||getHTC(ord['Ext Grade'],ord['Supply Condition']));
+  const download=()=>{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(picked.map(({ord,release})=>({Siding:plan.siding,SO:ord['SO No.'],Item:ord._LineItem||ord.SOItm,Customer:ord['Sold To Party Name'],City:ord['Ship To Party City'],State:ord._State,'Supply condition':supplyCategory(ord),'Planned mode':ord._ModeC||ord.MODE,Release:release,'Balance MT':ord['Bal to PGI'],Status:'DRAFT'}))),'Draft');XLSX.writeFile(wb,`Rake Draft ${plan.siding}.xlsx`);};
   return ReactDOM.createPortal(<div className="rake-probable-backdrop"><section ref={dialogRef} className="rake-probable" role="dialog" aria-modal="true" aria-label={`Backup orders for ${plan.siding}`}>
     <header><div><h3>{plan.siding} · Backup orders</h3><p>Select whole orders to prepare a backup draft.</p></div><button onClick={onClose}>Close</button></header>
     <dl className="backup-summary">
@@ -2196,12 +2198,37 @@ function ProbableOrders({plan,rows,onClose}){
       <div><dt>Target</dt><dd>{fmt(limit.target)} <small>MT</small></dd><small>±3%: {fmt(limit.minimum)}–{fmt(limit.maximum)} MT</small></div>
       <div data-shortfall={limit.missing>0}><dt>Shortfall</dt><dd>{fmt(limit.missing)} <small>MT</small></dd></div>
     </dl>
-    <div className="backup-list-heading"><span>Within 100 km, then the same state</span><span>{options.length} available orders</span></div>
-    {live.busy&&<div className="backup-mapping-status" role="status">Updating destinations · {live.total?`${live.done} / ${live.total} checked`:'Checking saved locations'} · Suggestions update automatically</div>}
-    {options.length>0?<div className="probable-table-scroll" tabIndex={0} aria-label="Backup orders table"><table><thead><tr><th>Select</th><th>SO / Item</th><th>Customer</th><th>City / State</th><th>Range</th><th>Wagon</th><th>Balance MT</th></tr></thead><tbody>
-      {['Released','Unreleased','Other / review'].map(group=><React.Fragment key={group}>{options.some(o=>o.release===group)&&<tr className="backup-group"><th colSpan={7}>{group} <span>{options.filter(o=>o.release===group).length}</span></th></tr>}{options.filter(o=>o.release===group).map(({ord,km,band})=>{const id=RakePlanningRules.orderKey(ord);return<tr key={id} data-selected={selected.has(id)}><td><label className="backup-select"><input aria-label={`Select order ${id}`} type="checkbox" checked={selected.has(id)} onChange={()=>setSelected(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;})}/></label></td><td className="backup-order-id">{ord['SO No.']} / {ord._LineItem}</td><td>{ord['Sold To Party Name']}</td><td>{ord['Ship To Party City']}<small>{ord._State}</small></td><td>{band===0?`${Math.round(km)} km`:'Same state'}</td><td>{ord._WagonType}</td><td className="backup-quantity">{fmt(ord['Bal to PGI'])}</td></tr>;})}</React.Fragment>)}
-    </tbody></table></div>:<div className="backup-empty" role="status"><strong>{live.busy?'Checking for nearby orders…':'No nearby orders found.'}</strong><span>{live.busy?'The list will update as new locations are cached.':'New destinations are checked daily. Orders already in an actual plan are excluded.'}</span></div>}
-    <footer><div className="backup-selection"><strong>{picked.length} orders selected · {fmt(added)} MT</strong><span>Remaining shortfall: {fmt(remaining)} MT{plan.bal+added>limit.maximum?' · Above target tolerance — review draft':''}</span></div><button className="backup-save" disabled={!picked.length} onClick={save}>Save draft</button><button disabled={!picked.length} onClick={download}>Download draft</button>{notice&&<span className="backup-notice" role="status">{notice}</span>}<span className="backup-notice rake-map-attribution">Locations: <a href="https://www.geoapify.com/" target="_blank" rel="noreferrer">Powered by Geoapify</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a></span></footer>
+    <div className="backup-list-heading">
+      <span>Predicted {plan.siding} orders not in the {plan.siding} actual plan</span>
+      <span>{options.length} available orders</span>
+    </div>
+    {options.length>0?<div className="probable-table-scroll" tabIndex={0} aria-label="Backup orders table"><table>
+      <thead><tr>
+        <th>Select</th><th>SO / Item</th><th>Customer</th>
+        <th>City</th><th>State</th><th>Supply condition</th><th>Planned mode</th>
+      </tr></thead>
+      <tbody>
+        {['Released','Unreleased','Other / review'].map(group=><React.Fragment key={group}>
+          {options.some(option=>option.release===group)&&<tr className="backup-group"><th colSpan={7}>{group} <span>{options.filter(option=>option.release===group).length}</span></th></tr>}
+          {options.filter(option=>option.release===group).map(({ord,km,band})=>{
+            const id=RakePlanningRules.orderKey(ord);
+            return<tr key={id} data-selected={selected.has(id)}>
+              <td><label className="backup-select"><input aria-label={`Select order ${id}`} type="checkbox" checked={selected.has(id)} onChange={()=>setSelected(previous=>{const next=new Set(previous);next.has(id)?next.delete(id):next.add(id);return next;})}/></label></td>
+              <td className="backup-order-id">{ord['SO No.']} / {ord._LineItem||ord.SOItm}</td>
+              <td>{ord['Sold To Party Name']}</td>
+              <td>{ord['Ship To Party City']||'—'}</td>
+              <td>{ord._State||ord.STO||'—'}</td>
+              <td>{supplyCategory(ord)||'—'}</td>
+              <td>{ord._ModeC||ord.MODE||'—'}</td>
+            </tr>;
+          })}
+        </React.Fragment>)}
+      </tbody>
+    </table></div>:<div className="backup-empty" role="status">
+      <strong>No {plan.siding} predictor orders remain outside the {plan.siding} actual plan.</strong>
+      <span>All predicted {plan.siding} orders are already present in the {plan.siding} actual plan, or none match this siding.</span>
+    </div>}
+    <footer><div className="backup-selection"><strong>{picked.length} orders selected · {fmt(added)} MT</strong><span>Remaining shortfall: {fmt(remaining)} MT{plan.bal+added>limit.maximum?' · Above target tolerance — review draft':''}</span></div><button className="backup-save" disabled={!picked.length} onClick={save}>Save draft</button><button disabled={!picked.length} onClick={download}>Download draft</button>{notice&&<span className="backup-notice" role="status">{notice}</span>}</footer>
   </section></div>,document.body);
 }
 function TransportStockSummary({rows}){
@@ -2215,7 +2242,7 @@ function TransportStockSummary({rows}){
     </table></div>
   </details>;
 }
-function ActualRakePlan({data,onDrill,onMap,activeSiding,allRows=[]}){
+function ActualRakePlan({data,predictedData,onDrill,onMap,activeSiding}){
   const[probable,setProbable]=useState(null);
   const grand=useMemo(()=>data.reduce((a,r)=>({qty:a.qty+r.qty,bal:a.bal+r.bal,fg:a.fg+(r.fg||0),wip:a.wip+(r.wip||0),btr:a.btr+(r.btr||0),slab:a.slab+(r.slab||0),btc:a.btc+(r.btc||0),issued:a.issued+(r.issued||0),btp:a.btp+(r.btp||0),rakeCost:a.rakeCost+(r.rakeCost||0),truckCost:a.truckCost+(r.truckCost||0),totalCost:a.totalCost+(r.totalCost||0),n:a.n+r.n}),{qty:0,bal:0,fg:0,wip:0,btr:0,slab:0,btc:0,issued:0,btp:0,rakeCost:0,truckCost:0,totalCost:0,n:0}),[data]);
   const rc=C.region.Actual||C.region.Unknown;
@@ -2238,7 +2265,7 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding,allRows=[]}){
         </div>
         <div style={{fontSize:11,color:'var(--dim)',marginTop:3}}>
           {grand.n.toLocaleString()} orders · {data.length} sidings in execution · Select a siding to view orders
-          {probable&&<ProbableOrders plan={probable} rows={allRows} onClose={()=>setProbable(null)}/>}
+          {probable&&<ProbableOrders plan={probable} predictedData={predictedData} onClose={()=>setProbable(null)}/>}
         </div>
       </div>
       <div style={{flex:1}}/>
@@ -4428,7 +4455,7 @@ function RakeDrillPanel({rakePlan,rakeIdx,onClose,mob}){
   </div>;
 }
 
-function RakePredictor({rows,visible=true}){
+function RakePredictor({rows,visible=true,plannedData}){
   const predictorRef=useRef(null);
   React.useLayoutEffect(()=>{
     const cards=[...predictorRef.current.querySelectorAll('.rake-siding-grid>.rake-siding-card')];
@@ -4449,7 +4476,7 @@ function RakePredictor({rows,visible=true}){
   const[combineSel,setCombineSel]=useState([]); // up to 2 {sid,idx} refs
   const[rkCombine,setRkCombine]=useState(null); // {selA,selB} once "Combine →" clicked
   const{mob}=useBreakpoint();
-  const data=useMemo(()=>packRakes(rows),[rows]);
+  const data=useMemo(()=>plannedData||packRakes(rows),[rows,plannedData]);
   const toggleCombineSel=(sid,idx,wagonType)=>{
     setCombineSel(sel=>{
       const already=sel.find(s=>s.sid===sid&&s.idx===idx);
@@ -5458,7 +5485,7 @@ const simulatorValue=(row,key)=>String(key==='_HTC'
 const simulatorStateValue=row=>simulatorValue(row,'STO')||simulatorValue(row,'_State');
 const simulatorCustomerKey=row=>`${orderPlaceKey(row)}|${RakePlanningRules.key(row['Sold To Party Name']||'UNKNOWN CUSTOMER')}`;
 
-function SimulatorIndiaMap({rows,hub,selectedCustomers,onToggleCustomer,onClearSelection}){
+function SimulatorIndiaMap({rows,hub,selectedCustomers,onToggleCustomer,onClearSelection,isDark}){
   const mapRef=useRef(null);
   const mapInst=useRef(null);
   const markersRef=useRef(new Map());
@@ -5518,10 +5545,6 @@ function SimulatorIndiaMap({rows,hub,selectedCustomers,onToggleCustomer,onClearS
   useEffect(()=>{
     if(!mapRef.current||!window.L)return undefined;
     const map=window.L.map(mapRef.current,{center:[22.8,80],zoom:4,scrollWheelZoom:false});
-    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-      attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom:19,
-    }).addTo(map);
     mapInst.current=map;
     const resizeTimer=window.setTimeout(()=>map.invalidateSize({animate:false}),80);
     return()=>{
@@ -5531,6 +5554,17 @@ function SimulatorIndiaMap({rows,hub,selectedCustomers,onToggleCustomer,onClearS
       markersRef.current.clear();
     };
   },[]);
+
+  useEffect(()=>{
+    const map=mapInst.current;
+    if(!map||!window.L)return undefined;
+    const style=isDark?'World_Dark_Gray_Base':'World_Light_Gray_Base';
+    const baseLayer=window.L.tileLayer(`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${style}/MapServer/tile/{z}/{y}/{x}`,{
+      attribution:'Tiles © <a href="https://www.esri.com/">Esri</a>, HERE, Garmin, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community · Powered by <a href="https://www.geoapify.com/">Geoapify</a>',
+      maxZoom:16,keepBuffer:3,updateWhenZooming:false,updateWhenIdle:true,
+    }).addTo(map);
+    return()=>baseLayer.remove();
+  },[isDark]);
 
   useEffect(()=>{
     const map=mapInst.current;
@@ -5620,7 +5654,6 @@ function SimulatorIndiaMap({rows,hub,selectedCustomers,onToggleCustomer,onClearS
   return <div className="rake-simulator-map-panel">
     <div className="rake-simulator-map-wrap">
       <div ref={mapRef} className="rake-simulator-map" role="region" aria-label="Filtered order destinations and selected siding"/>
-      {live.control}
       {!hub&&<span className="rake-simulator-map-note">Select a rake to calculate siding distances and reverse limits.</span>}
       {hub&&<span className="rake-simulator-map-note">Straight-line distances · road distances may vary.</span>}
     </div>
@@ -5662,23 +5695,25 @@ function SimulatorIndiaMap({rows,hub,selectedCustomers,onToggleCustomer,onClearS
   </div>;
 }
 
-function SimulatorMultiFilter({label,options,selected,onChange,blurred,allLabel,noun,searchable=false}){
+function SimulatorMultiFilter({label,options,selected,onChange,noun,searchable=false}){
   const[query,setQuery]=useState('');
   const visibleOptions=useMemo(()=>options.filter(option=>option.toLowerCase().includes(query.trim().toLowerCase())),[options,query]);
-  return <fieldset className={`rake-simulator-multi-filter${blurred?' is-blurred':''}`}>
-    <legend>
-      <span className={blurred?'rake-simulator-region-blurred':''}>{label}</span>
-      <small>{selected.size?`${selected.size} selected`:allLabel}</small>
-    </legend>
-    {searchable&&<input className="rake-simulator-option-search" type="search" aria-label={`Search ${label.toLowerCase()}`}
-      placeholder={`Search ${label.toLowerCase()}…`} value={query} onChange={event=>setQuery(event.target.value)}/>}
-    <div className={`rake-simulator-filter-options${blurred?' rake-simulator-region-blurred':''}`}>
-      {visibleOptions.length?visibleOptions.map(option=><label key={option}>
-        <input type="checkbox" checked={selected.has(option)} onChange={event=>onChange(option,event.target.checked)}/>
-        <span>{option}</span>
-      </label>):<small className="rake-simulator-no-options">No matching {noun}</small>}
+  return <details className="rake-simulator-multi-filter" name="rake-simulator-filters"
+    data-selected={selected.size?'true':'false'}>
+    <summary>
+      <span>{label}</span>
+    </summary>
+    <div className="rake-simulator-filter-menu">
+      {searchable&&<input className="rake-simulator-option-search" type="search" aria-label={`Search ${label.toLowerCase()}`}
+        placeholder={`Search ${label.toLowerCase()}…`} value={query} onChange={event=>setQuery(event.target.value)}/>}
+      <div className="rake-simulator-filter-options">
+        {visibleOptions.length?visibleOptions.map(option=><label key={option}>
+          <input type="checkbox" checked={selected.has(option)} onChange={event=>onChange(option,event.target.checked)}/>
+          <span>{option}</span>
+        </label>):<small className="rake-simulator-no-options">No matching {noun}</small>}
+      </div>
     </div>
-  </fieldset>;
+  </details>;
 }
 
 function RakeSimulator({rows,active}){
@@ -5686,7 +5721,7 @@ function RakeSimulator({rows,active}){
   const[regions,setRegions]=useState(new Set());
   const[states,setStates]=useState(new Set());
   const[cities,setCities]=useState(new Set());
-  const[htc,setHtc]=useState('');
+  const[supplyConditions,setSupplyConditions]=useState(new Set());
   const[selectedCustomers,setSelectedCustomers]=useState(new Set());
   const selectedMode=SIMULATOR_RAKE_MODES.find(mode=>mode.id===scope);
   const peerRakes=useMemo(()=>selectedMode?SIMULATOR_RAKE_MODES.filter(mode=>mode.id!==scope).map(mode=>mode.id):[],[scope,selectedMode]);
@@ -5699,8 +5734,8 @@ function RakeSimulator({rows,active}){
   const htcOptions=useMemo(()=>[...new Set(candidates.map(row=>simulatorValue(row,'_HTC')).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[candidates]);
   const visibleRows=useMemo(()=>stateRows.filter(row=>
     (!cities.size||cities.has(simulatorValue(row,'Ship To Party City')))&&
-    (!htc||simulatorValue(row,'_HTC')===htc)
-  ),[stateRows,cities,htc]);
+    (!supplyConditions.size||supplyConditions.has(simulatorValue(row,'_HTC')))
+  ),[stateRows,cities,supplyConditions]);
   const selectedRows=useMemo(()=>selectedCustomers.size
     ?visibleRows.filter(row=>selectedCustomers.has(simulatorCustomerKey(row)))
     :visibleRows,[visibleRows,selectedCustomers]);
@@ -5718,11 +5753,15 @@ function RakeSimulator({rows,active}){
     setCities(new Set());setSelectedCustomers(new Set());
   };
   const clearLocations=()=>{setRegions(new Set());setStates(new Set());setCities(new Set());setSelectedCustomers(new Set());};
-  const regionBlurred=states.size>0||cities.size>0;
-  const stateBlurred=cities.size>0;
+  const selectedFilters=[
+    ...Array.from(regions,value=>({id:`region:${value}`,label:`Region: ${value}`,remove:()=>toggleRegion(value,false)})),
+    ...Array.from(states,value=>({id:`state:${value}`,label:`State (STO): ${value}`,remove:()=>toggleState(value,false)})),
+    ...Array.from(cities,value=>({id:`city:${value}`,label:`Ship to city: ${value}`,remove:()=>{toggleValue(setCities,value,false);setSelectedCustomers(new Set());}})),
+    ...Array.from(supplyConditions,value=>({id:`supply:${value}`,label:`Supply conditions: ${value}`,remove:()=>{toggleValue(setSupplyConditions,value,false);setSelectedCustomers(new Set());}})),
+  ];
   const selectScope=nextScope=>{
     setScope(nextScope);
-    clearLocations();setHtc('');
+    clearLocations();setSupplyConditions(new Set());
   };
   const toggleCustomer=key=>setSelectedCustomers(previous=>{
     const next=new Set(previous);
@@ -5755,32 +5794,27 @@ function RakeSimulator({rows,active}){
             onClick={()=>selectScope(mode.id)}>{mode.label}</button>)}
         </div>
       </div>
-      <div className="rake-simulator-overview">
-        <SimulatorIndiaMap rows={visibleRows} hub={sidingHub} selectedCustomers={selectedCustomers}
-          onToggleCustomer={toggleCustomer} onClearSelection={()=>setSelectedCustomers(new Set())}/>
-        <div className="rake-simulator-filters">
+      <div className="rake-simulator-filters">
           <h3>Filter available orders</h3>
-          <div className="rake-simulator-location-hierarchy">
-            <div className="rake-simulator-location-heading">
-              <strong>Location hierarchy</strong>
-            </div>
-            <SimulatorMultiFilter label="Region" allLabel="All regions" noun="regions" options={regionOptions} selected={regions} onChange={toggleRegion}
-              blurred={regionBlurred}/>
-            <SimulatorMultiFilter label="State (STO)" allLabel="All states" noun="states" options={stateOptions} selected={states} onChange={toggleState}
-              blurred={stateBlurred}/>
-            <SimulatorMultiFilter label="Ship to city" allLabel="All cities" noun="cities" options={cityOptions} selected={cities}
+          <div className="rake-simulator-filter-row">
+            <SimulatorMultiFilter label="Region" noun="regions" options={regionOptions} selected={regions} onChange={toggleRegion}/>
+            <SimulatorMultiFilter label="State (STO)" noun="states" options={stateOptions} selected={states} onChange={toggleState}/>
+            <SimulatorMultiFilter label="Ship to city" noun="cities" options={cityOptions} selected={cities}
               onChange={(value,checked)=>{toggleValue(setCities,value,checked);setSelectedCustomers(new Set());}} searchable/>
+            <SimulatorMultiFilter label="Supply conditions" noun="supply conditions" options={htcOptions}
+              selected={supplyConditions} onChange={(value,checked)=>{toggleValue(setSupplyConditions,value,checked);setSelectedCustomers(new Set());}}/>
           </div>
-          <label className="rake-simulator-filter">
-            <span>_HTC</span>
-            <select aria-label="_HTC" value={htc} onChange={event=>{setHtc(event.target.value);setSelectedCustomers(new Set());}}>
-              <option value="">All _HTC categories</option>
-              {htcOptions.map(option=><option key={option} value={option}>{option}</option>)}
-            </select>
-          </label>
-          <button className="rake-simulator-clear-filters" type="button" onClick={()=>{clearLocations();setHtc('');}}>Clear filters</button>
-        </div>
+          {!!selectedFilters.length&&<div className="rake-simulator-selected-filters" role="group" aria-label="Selected filters">
+            <strong>Selected:</strong>
+            {selectedFilters.map(filter=><span className="rake-simulator-selected-filter" key={filter.id}>
+              <span>{filter.label}</span>
+              <button type="button" aria-label={`Remove ${filter.label} filter`} onClick={filter.remove}>×</button>
+            </span>)}
+          </div>}
+          <button className="rake-simulator-clear-filters" type="button" onClick={()=>{clearLocations();setSupplyConditions(new Set());}}>Clear filters</button>
       </div>
+      <SimulatorIndiaMap rows={visibleRows} hub={sidingHub} isDark={C.isDark} selectedCustomers={selectedCustomers}
+        onToggleCustomer={toggleCustomer} onClearSelection={()=>setSelectedCustomers(new Set())}/>
       <div className="rake-simulator-results">
         <div className="rake-simulator-results-heading">
           <h3>{selectedCustomers.size?'Selected customer orders':'Available SO + line items'}</h3>
@@ -5789,19 +5823,37 @@ function RakeSimulator({rows,active}){
         </div>
         <div className="rake-simulator-table-wrap">
           <table>
-            <thead><tr>{['SO / Item','Customer','City','State','Region','_HTC','BTC (MT)','BTP (MT)'].map(label=><th key={label}>{label}</th>)}</tr></thead>
+            <thead>
+              <tr>
+                {['SO / Item','Customer','City','State','Region','Supply condition'].map(label=><th key={label} scope="col" rowSpan={2}>{label}</th>)}
+                <th scope="colgroup" colSpan={2}>Plate stock (MT)</th>
+                {['BTR (MT)','Slab stock (MT)','BTC (MT)','Issued (MT)','BTP (MT)'].map(label=><th key={label} scope="col" rowSpan={2}>{label}</th>)}
+              </tr>
+              <tr>
+                <th scope="col" title="FG UR Stock from EBTP">FG</th>
+                <th scope="col" title="Plate stock minus FG UR stock">WIP</th>
+              </tr>
+            </thead>
             <tbody>
-              {selectedRows.slice(0,200).map(row=><tr key={RakePlanningRules.orderKey(row)}>
-                <td>{row['SO No.']||'—'} / {row._LineItem||row.SOItm||'—'}</td>
-                <td>{row['Sold To Party Name']||'—'}</td>
-                <td>{row['Ship To Party City']||'Unmapped'}</td>
-                <td>{row.STO||'—'}</td>
-                <td>{row._Region||'Unmapped'}</td>
-                <td>{simulatorValue(row,'_HTC')||'—'}</td>
-                <td>{fmt(row.BTC)}</td>
-                <td>{fmt(row.BTP)}</td>
-              </tr>)}
-              {!selectedRows.length&&<tr><td colSpan={8} className="rake-simulator-empty">
+              {selectedRows.slice(0,200).map(row=>{
+                const[fg,wip,slab,issued]=RakePlanningRules.completion(row).stages;
+                return<tr key={RakePlanningRules.orderKey(row)}>
+                  <td>{row['SO No.']||'—'} / {row._LineItem||row.SOItm||'—'}</td>
+                  <td>{row['Sold To Party Name']||'—'}</td>
+                  <td>{row['Ship To Party City']||'Unmapped'}</td>
+                  <td>{row.STO||'—'}</td>
+                  <td>{row._Region||'Unmapped'}</td>
+                  <td>{simulatorValue(row,'_HTC')||'—'}</td>
+                  <td>{fmt(fg.raw)}</td>
+                  <td>{fmt(wip.raw)}</td>
+                  <td>{fmt(row.BTR)}</td>
+                  <td>{fmt(slab.raw)}</td>
+                  <td>{fmt(row.BTC)}</td>
+                  <td>{fmt(issued.raw)}</td>
+                  <td>{fmt(row.BTP)}</td>
+                </tr>;
+              })}
+              {!selectedRows.length&&<tr><td colSpan={13} className="rake-simulator-empty">
                 {rows.length?(selectedCustomers.size?'No selected customers match these filters.':'No available SO + line items match these filters.'):'Load an order book to see available SO + line items.'}
               </td></tr>}
             </tbody>
@@ -5940,7 +5992,7 @@ function App(){
   const[excDummy,setExcDummy] =useState(true);
   const[selCust,setSelCust]   =useState(new Set());
   const[extraSelection,setExtraSelection]=useState({});
-  const extraLabels={_State:'State / STO',_City:'City',_SupplyCondition:'Supply Condition',_CustomerSegment:'Customer Segment',_GradeSegment:'Grade Segment',_ExportGroup:'Destination Group'};
+  const extraLabels={_State:'State / STO',_City:'City',_CustomerSegment:'Customer Segment',_GradeSegment:'Grade Segment',_ExportGroup:'Destination Group'};
   const extraOptions=useMemo(()=>Object.fromEntries(Object.keys(extraLabels).map(k=>[k,[...new Set(rows.map(r=>r[k]).filter(Boolean))].sort()])),[rows]);
   const[drill,setDrill]       =useState(null);
   const[actDrill,setActDrill] =useState(null); // siding string, Actual Rake Plan drill-down
@@ -6104,6 +6156,7 @@ function App(){
     if(excHold)s=s.filter(r=>!String(r['MODE']||'').toUpperCase().startsWith('HOLD'));
     return s;
   },[filtered,selRem,excHold]);
+  const predictedData=useMemo(()=>packRakes(pivSrc),[pivSrc]);
 
   const kpis=useMemo(()=>{
     let qty=0,bal=0,fg=0,wip=0,btr=0,slab=0,btc=0,issued=0;
@@ -6685,7 +6738,7 @@ function App(){
         <section id="actual-plan-view" className="rake-view-panel" aria-label="Actual plan" hidden={planningView!=='actual'}>
         <ActualRakePlan
           data={actualPlanData}
-          allRows={rows}
+          predictedData={predictedData}
           activeSiding={actDrill}
           onDrill={sid=>setActDrill(d=>d===sid?null:sid)}
           onMap={sid=>setActMap(sid)}
@@ -6693,7 +6746,7 @@ function App(){
         <TransportStockSummary rows={pivSrc}/>
         </section>
         <section id="predictor-view" className="rake-view-panel" aria-label="Rake predictor" hidden={planningView!=='predictor'}>
-        <RakePredictor rows={pivSrc} visible={planningView==='predictor'}/>
+        <RakePredictor rows={pivSrc} visible={planningView==='predictor'} plannedData={predictedData}/>
         <details className="rake-release-summary"><summary>Order release summary</summary>
         <PivotTable
           data={pivotData} remarksLbl={remLbl}
