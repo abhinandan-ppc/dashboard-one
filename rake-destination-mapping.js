@@ -6,7 +6,12 @@ globalThis.RakeDestinationMapping=(()=>{
   function create({cache={},storage,fetch:request=globalThis.fetch.bind(globalThis),endpoint='/api/rake-geocode',now=Date.now,sleep=ms=>new Promise(r=>setTimeout(r,ms)),locks}={}){
     const listeners=new Set();let places=[],running=null,entries={},lastAutoCheck=0;
     let state={busy:false,phase:'idle',done:0,total:0,mapped:0,review:0,revision:0,status:'Cached destinations · checked daily',provider:'photon',providers:['photon'],lastChecked:0};
-    const emit=patch=>{state={...state,...patch};listeners.forEach(fn=>fn());};
+    const emit=patch=>{
+      state={...state,...patch};
+      const allCached=places.length>0&&places.every(p=>valid(entries[key([p.city,p.state,p.country])]));
+      state={...state,result:state.busy?null:allCached?'success':state.phase==='quota'?'quota':state.phase==='error'||state.review>0?'warning':null};
+      listeners.forEach(fn=>fn());
+    };
     const restore=()=>{
       try{const saved=JSON.parse(storage?.getItem(STATE_KEY)||'{}');lastAutoCheck=Number(saved.lastAutoCheck)||lastAutoCheck;entries={...entries,...saved.entries};state={...state,lastChecked:Number(saved.lastChecked)||state.lastChecked};}catch{}
       for(const[k,v]of Object.entries(entries))if(valid(v))cache[k]=v;
@@ -16,7 +21,7 @@ globalThis.RakeDestinationMapping=(()=>{
     const json=async(url,options)=>{
       const r=await request(url,{...options,signal:AbortSignal.timeout(90000)});
       if(!r.headers.get('content-type')?.includes('json'))throw new Error('Sign in to map destinations');
-      const body=await r.json();if(!r.ok)throw new Error(body.error||'Mapping unavailable');return body;
+      const body=await r.json();if(!r.ok)throw Object.assign(new Error(body.error||'Mapping unavailable'),{code:body.code});return body;
     };
     async function perform(manual){
       restore();
@@ -49,7 +54,7 @@ globalThis.RakeDestinationMapping=(()=>{
         }
         const review=unique.filter(([k])=>!valid(entries[k])).length;
         emit({lastChecked:now(),phase:'complete',review,status:pending.length?`${state.mapped} locations cached${review?` · ${review} need review`:''}`:review?`${unique.length-review} locations cached · ${review} need review`:'Destinations are up to date'});persist();
-      }catch(e){emit({phase:'error',status:`${e.message}. Offline mapping remains active.`});}
+      }catch(e){emit({phase:e.code==='quota_exceeded'?'quota':'error',status:`${e.message}. Offline mapping remains active.`});}
       finally{emit({busy:false});}
     }
     function run({manual=false}={}){
@@ -64,7 +69,7 @@ globalThis.RakeDestinationMapping=(()=>{
     }
     return{
       getSnapshot:()=>state,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn);},
-      setPlaces:next=>{places=next.filter(p=>p.city&&p.country);},run,
+      setPlaces:next=>{places=next.filter(p=>p.city&&p.country);restore();emit({review:places.filter(p=>{const entry=entries[key([p.city,p.state,p.country])];return entry&&!valid(entry);}).length});},run,
       refresh:()=>{restore();emit({revision:state.revision+1});},
     };
   }
