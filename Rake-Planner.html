@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="theme.css"/>
-<link rel="stylesheet" href="rake-map.css?v=20"/>
+<link rel="stylesheet" href="rake-map.css?v=22"/>
 <script src="jspl-local-api.js"></script>
 <style>
 .rake-probable-backdrop{position:fixed;inset:0;z-index:700;background:#0009;display:grid;place-items:center;padding:16px}
@@ -1070,7 +1070,8 @@ const CITY_COORDS={
   "AHEMEDABAD":[23.0225,72.5714],"AHMEDABAD":[23.0225,72.5714],"AHMEDNAGAR":[19.0948,74.7480],
   "ALWAR":[27.5530,76.6346],"AMBALA":[30.3782,76.7767],"AMRAVATI":[20.9374,77.7796],
   "ANGUL":[20.8461,84.9973],"ASANSOL":[23.6889,86.9661],"AURANGABAD":[19.8762,75.3433],
-  "BANGALORE":[12.9716,77.5946],"BENGALURU":[12.9716,77.5946],"BENGALURU RURAL":[13.1986,77.7066],
+  "BANGALORE":[12.9716,77.5946],"BAPATLA":[15.90422,80.46743],
+  "BENGALURU":[12.9716,77.5946],"BENGALURU RURAL":[13.1986,77.7066],
   "BARBIL":[22.1037,85.3855],"BARDHAMAN":[23.2324,87.8615],"BARNALA":[30.3789,75.5452],
   "BARODA":[22.3072,73.1812],"VADODARA":[22.3072,73.1812],"BARWANI":[22.0305,74.8995],
   "BASTER":[19.0748,81.9520],"BATALA":[31.8194,75.2060],"BAWAL":[28.0556,76.5789],
@@ -1115,7 +1116,8 @@ const CITY_COORDS={
   "KRISHNANAGAR":[23.4013,88.5010],"KURNOOL":[15.8281,78.0373],"KUMARDHUBI":[23.8690,86.3440],
   "KUTCH":[23.7337,69.8597],
   "LOWER BHALUKPONG":[27.0148,92.5550],"LUCKNOW":[26.8467,80.9462],"LUDHIANA":[30.9010,75.8573],
-  "MADDIPADU":[15.8700,80.2900],"MADURAI":[9.9252,78.1198],"MALUR":[13.0036,77.9399],
+  "MADDIPADU":[15.8700,80.2900],"MADURAI":[9.9252,78.1198],
+  "MAHABUBNAGAR":[16.7375,78.0081],"MALUR":[13.0036,77.9399],
   "MANCHERIAL":[18.8689,79.4485],"MANDIDEEP BHOPAL":[23.1060,77.5080],
   "MANGAMPETA":[14.7600,79.5400],"MANGAON":[18.2391,73.2484],"MASINAGUDI":[11.5667,76.6500],
   "MATHURA":[27.4924,77.6737],"MEDAK":[17.9986,78.2517],"MEERUT":[28.9845,77.7064],
@@ -5842,8 +5844,12 @@ function SimulatorIndiaMap({rows,plannedRows,hub,selectedCustomers,onToggleCusto
       const key=orderPlaceKey(row);
       let location=grouped.get(key);
       if(!location){
+        const coords=orderCoords(row);
+        const lat=Number(coords?.[0]),lng=Number(coords?.[1]);
         location={key,name:RakePlanningRules.city(row['Ship To Party City'])||'Unknown city',
-          state:simulatorStateValue(row)||'—',balance:0,customers:new Map()};
+          state:simulatorStateValue(row)||'—',
+          coords:coords&&Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180?[lat,lng]:null,
+          balance:0,customers:new Map()};
         grouped.set(key,location);
       }
       const balance=Math.max(0,Number(row['Bal to PGI'])||0);
@@ -5861,6 +5867,35 @@ function SimulatorIndiaMap({rows,plannedRows,hub,selectedCustomers,onToggleCusto
       .map(location=>({...location,customers:[...location.customers.values()].sort((a,b)=>a.name.localeCompare(b.name))}))
       .sort((a,b)=>a.name.localeCompare(b.name));
   },[plannedRows]);
+  const mapLocations=useMemo(()=>{
+    const grouped=new Map();
+    for(const city of destinations){
+      const customers=city.customers.filter(customer=>selectedCustomers.has(customer.key));
+      if(!customers.length)continue;
+      grouped.set(city.key,{...city,customers,
+        unplannedBalance:customers.reduce((total,customer)=>total+customer.balance,0),
+        plannedBalance:0,plannedCustomers:[],isUnplanned:true,isPlanned:false});
+    }
+    for(const location of plannedLocations){
+      let city=grouped.get(location.key);
+      if(!city){
+        const distance=location.coords&&hub
+          ?Math.round(haversine(hub.lat,hub.lng,location.coords[0],location.coords[1]))
+          :null;
+        const forward=location.coords&&hub
+          ?forwardDistance(ANGUL.lat,ANGUL.lng,hub.lat,hub.lng,location.coords[0],location.coords[1])>=0
+          :null;
+        const direction=forward===null?'unknown':forward?'forward':'reverse';
+        city={key:location.key,name:location.name,state:location.state,coords:location.coords,
+          distance,direction,included:direction!=='reverse'||distance<=reverseKm,
+          customers:[],unplannedBalance:0,isUnplanned:false,plannedBalance:0,plannedCustomers:[]};
+      }
+      city={...city,coords:city.coords||location.coords,
+        plannedBalance:location.balance,plannedCustomers:location.customers,isPlanned:true};
+      grouped.set(location.key,city);
+    }
+    return[...grouped.values()].sort((a,b)=>a.name.localeCompare(b.name));
+  },[destinations,plannedLocations,selectedCustomers,hub,reverseKm]);
   const unplannedBalance=useMemo(()=>{
     if(!selectedCustomers.size)return null;
     return destinations.reduce((total,city)=>total+city.customers.reduce((cityTotal,customer)=>
@@ -5913,18 +5948,22 @@ function SimulatorIndiaMap({rows,plannedRows,hub,selectedCustomers,onToggleCusto
         .addTo(layer).bindTooltip('Angul PlateMill',{direction:'top'});
       bounds.push([ANGUL.lat,ANGUL.lng]);
     }
-    for(const city of destinations){
+    for(const city of mapLocations){
       if(!city.coords)continue;
       const[lat,lng]=city.coords;
       bounds.push([lat,lng]);
-      const color=city.direction==='reverse'&&!city.included?'#64748b'
-        :city.direction==='reverse'?'#f59e0b':'#22a06b';
-      const marker=L.circleMarker([lat,lng],{radius:7,color:'#fff',weight:2,fillColor:color,fillOpacity:.95})
-        .addTo(layer);
+      const kind=city.isPlanned&&city.isUnplanned?'mixed':city.isPlanned?'planned':'unplanned';
+      const icon=L.divIcon({
+        className:'rake-simulator-map-marker-icon',
+        html:`<span class="rake-simulator-map-marker" data-kind="${kind}"></span>`,
+        iconSize:[18,18],iconAnchor:[9,9],
+      });
+      const marker=L.marker([lat,lng],{icon,keyboard:true}).addTo(layer);
       const routeLabel=city.direction==='forward'?'Fwd'
         :city.direction==='reverse'&&!city.included?'Excluded'
           :city.direction==='reverse'?'Rev':'';
-      marker.bindTooltip(`${city.name}${city.distance===null?'':` · ${city.distance} km`}${routeLabel?` · ${routeLabel}`:''}`,
+      const typeLabel=kind==='mixed'?'Planned + Unplanned':kind==='planned'?'Planned':'Unplanned';
+      marker.bindTooltip(`${city.name} · ${typeLabel}${city.distance===null?'':` · ${city.distance} km`}${routeLabel?` · ${routeLabel}`:''}`,
         {permanent:true,direction:'right',offset:[8,0],className:'rake-simulator-map-label'});
       const popup=document.createElement('div');
       popup.className='rake-simulator-map-popup';
@@ -5936,6 +5975,26 @@ function SimulatorIndiaMap({rows,plannedRows,hub,selectedCustomers,onToggleCusto
         :city.distance===null?'Select a rake to calculate distance.'
         :`${city.distance} km from ${hub?.name||'siding'} · ${routeLabel}`;
       popup.appendChild(distance);
+      if(city.isPlanned){
+        const plannedTitle=document.createElement('small');
+        plannedTitle.className='rake-simulator-map-popup-planned';
+        plannedTitle.textContent=`Planned · ${fmt(city.plannedBalance)} MT Bal to PGI`;
+        popup.appendChild(plannedTitle);
+        const plannedCustomers=document.createElement('div');
+        plannedCustomers.className='rake-simulator-popup-planned-customers';
+        city.plannedCustomers.forEach(customer=>{
+          const item=document.createElement('span');
+          item.textContent=`${customer.name} · ${fmt(customer.balance)} MT`;
+          plannedCustomers.appendChild(item);
+        });
+        popup.appendChild(plannedCustomers);
+      }
+      if(city.isUnplanned){
+        const unplannedTitle=document.createElement('small');
+        unplannedTitle.className='rake-simulator-map-popup-unplanned';
+        unplannedTitle.textContent=`Selected unplanned · ${fmt(city.unplannedBalance)} MT Bal to PGI`;
+        popup.appendChild(unplannedTitle);
+      }
       const customers=document.createElement('div');
       customers.className='rake-simulator-popup-customers';
       city.customers.forEach(customer=>{
@@ -5959,7 +6018,8 @@ function SimulatorIndiaMap({rows,plannedRows,hub,selectedCustomers,onToggleCusto
     markersRef.current=markers;
     popupCheckboxesRef.current=popupCheckboxes;
     const coordinateKey=destinations.filter(city=>city.coords)
-      .map(city=>city.key+':'+city.coords.join(',')).join(';');
+    .concat(plannedLocations.filter(location=>location.coords))
+    .map(city=>city.key+':'+city.coords.join(',')).join(';');
     const fitKey=(hub?.name||'')+'|'+coordinateKey;
     if(bounds.length&&fitKeyRef.current!==fitKey){
       map.fitBounds(L.latLngBounds(bounds),{padding:[35,35],maxZoom:7,animate:false});
@@ -5969,7 +6029,7 @@ function SimulatorIndiaMap({rows,plannedRows,hub,selectedCustomers,onToggleCusto
       layer.remove();
       if(popupCheckboxesRef.current===popupCheckboxes)popupCheckboxesRef.current=new Map();
     };
-  },[destinations,hub]);
+  },[mapLocations,destinations,plannedLocations,hub]);
 
   const showCity=city=>{
     if(!city.coords)return;
@@ -5987,6 +6047,10 @@ function SimulatorIndiaMap({rows,plannedRows,hub,selectedCustomers,onToggleCusto
   return <div className="rake-simulator-map-panel">
     <div className="rake-simulator-map-wrap">
       <div ref={mapRef} className="rake-simulator-map" role="region" aria-label="Filtered order destinations and selected siding"/>
+      <div className="rake-simulator-map-legend" aria-label="Map marker legend">
+        <span><i data-kind="planned"/>Planned</span>
+        <span><i data-kind="unplanned"/>Selected unplanned</span>
+      </div>
       {!hub&&<span className="rake-simulator-map-note">Select a rake to calculate siding distances and reverse limits.</span>}
       {hub&&<span className="rake-simulator-map-note">Straight-line distances · road distances may vary.</span>}
       <div className="rake-simulator-delivery-cities" aria-label="Planned and unplanned orders">
@@ -6143,7 +6207,7 @@ function RakeSimulator({rows,active}){
     const scroll=tableScrollRef.current,table=tableRef.current,totalScroll=totalScrollRef.current,totalTable=totalTableRef.current;
     if(!scroll||!table||!totalScroll||!totalTable)return undefined;
     const updateColumns=()=>{
-      const bodyRow=[...table.querySelectorAll('tbody tr')].find(row=>row.cells.length===13);
+      const bodyRow=[...table.querySelectorAll('tbody tr')].find(row=>row.cells.length===14);
       const widths=bodyRow
         ?[...bodyRow.cells].map(cell=>cell.getBoundingClientRect().width)
         :[...table.querySelector('thead tr').cells].flatMap(cell=>Array(cell.colSpan||1).fill(cell.getBoundingClientRect().width/(cell.colSpan||1)));
@@ -6165,8 +6229,9 @@ function RakeSimulator({rows,active}){
     sum.fg+=fg.raw;sum.wip+=wip.raw;sum.btr+=n2(parseFloat(row.BTR));
     sum.slab+=slab.raw;sum.btc+=n2(parseFloat(row.BTC));sum.issued+=issued.raw;
     sum.btp+=n2(parseFloat(row.BTP));
+    sum.balToPgi+=Math.max(0,Number(row['Bal to PGI'])||0);
     return sum;
-  },{fg:0,wip:0,btr:0,slab:0,btc:0,issued:0,btp:0}),[selectedRows]);
+  },{fg:0,wip:0,btr:0,slab:0,btc:0,issued:0,btp:0,balToPgi:0}),[selectedRows]);
   const toggleValue=(setter,value,checked)=>setter(previous=>{
     const next=new Set(previous);
     if(checked)next.add(value);else next.delete(value);
@@ -6279,7 +6344,7 @@ function RakeSimulator({rows,active}){
               <tr>
                 {['SO / Item','Customer','City','State','Region','Supply condition'].map(label=><th key={label} scope="col" rowSpan={2}>{label}</th>)}
                 <th scope="colgroup" colSpan={2}>Plate stock (MT)</th>
-                {['BTR (MT)','Slab stock (MT)','BTC (MT)','Issued (MT)','BTP (MT)'].map(label=><th key={label} scope="col" rowSpan={2}>{label}</th>)}
+                {['BTR (MT)','Slab stock (MT)','BTC (MT)','Issued (MT)','BTP (MT)','Bal to PGI (MT)'].map(label=><th key={label} scope="col" rowSpan={2}>{label}</th>)}
               </tr>
               <tr>
                 <th scope="col" title="FG UR Stock from EBTP">FG</th>
@@ -6303,9 +6368,10 @@ function RakeSimulator({rows,active}){
                   <td>{fmt(row.BTC)}</td>
                   <td>{fmt(issued.raw)}</td>
                   <td>{n2(parseFloat(row.BTP)).toLocaleString('en-IN',{minimumFractionDigits:3,maximumFractionDigits:3})}</td>
+                  <td>{fmt(row['Bal to PGI'])}</td>
                 </tr>;
               })}
-              {!selectedRows.length&&<tr><td colSpan={13} className="rake-simulator-empty">
+              {!selectedRows.length&&<tr><td colSpan={14} className="rake-simulator-empty">
                 {rows.length?(selectedCustomers.size?'No selected customers match these filters.':'No available SO + line items match these filters.'):'Load an order book to see available SO + line items.'}
               </td></tr>}
             </tbody>
@@ -6314,7 +6380,7 @@ function RakeSimulator({rows,active}){
           </div>
           <div className="rake-simulator-total-scroll" ref={totalScrollRef} aria-label="Filtered totals">
             <table className="rake-simulator-total-table" ref={totalTableRef}>
-              <colgroup>{Array.from({length:13},(_,index)=><col key={index}/>)}</colgroup>
+              <colgroup>{Array.from({length:14},(_,index)=><col key={index}/>)}</colgroup>
               <tbody><tr className="rake-simulator-total-row">
                 <td colSpan={6}>TOTAL</td>
                 <td>{fmt(totals.fg)}</td>
@@ -6324,6 +6390,7 @@ function RakeSimulator({rows,active}){
                 <td>{fmt(totals.btc)}</td>
                 <td>{fmt(totals.issued)}</td>
                 <td>{totals.btp.toLocaleString('en-IN',{minimumFractionDigits:3,maximumFractionDigits:3})}</td>
+                <td>{fmt(totals.balToPgi)}</td>
               </tr></tbody>
             </table>
           </div>
