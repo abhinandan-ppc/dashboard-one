@@ -171,6 +171,13 @@ export default async function handler(req) {
       ({data,etag}=await readStore(token));
     }
     if(reserved){data.busyUntil=0;await writeStore(token,data,etag);}
-    return reply({error:missingProviders.length?'Available mapping providers have reached their limits or are unavailable; fallback API keys still need configuration':'All mapping providers have reached their limits or are temporarily unavailable; cached destinations remain available',missingProviders},429);
+    const date=new Date().toISOString(),usage=initializeUsage(data);
+    const quotaExceeded=providers.length>0&&providers.every(p=>{
+      const ledger=usage[p]||{};
+      return ledger.blockedUntil>Date.now()&&[402,429].includes(ledger.lastStatus)
+        ||ledger.day===date.slice(0,10)&&ledger.daily>=DAILY_LIMIT
+        ||ledger.month===date.slice(0,7)&&ledger.monthly>=MONTHLY_LIMIT;
+    });
+    return reply({error:missingProviders.length?'Available mapping providers have reached their limits or are unavailable; fallback API keys still need configuration':'All mapping providers have reached their limits or are temporarily unavailable; cached destinations remain available',code:quotaExceeded?'quota_exceeded':'provider_unavailable',missingProviders},429);
   } catch { return reply({ error: 'Shared mapping unavailable; existing map remains usable' }, 503); }
 }
