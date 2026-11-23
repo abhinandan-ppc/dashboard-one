@@ -81,6 +81,15 @@ async function lookup(selectedProvider,place){
 export function placeKey(city, state = '', country='India') {
   return [city, state, country].map(v => String(v).trim().replace(/\s+/g, ' ').toLowerCase()).join('|');
 }
+function hasExhaustedQuota(data,providers){
+  const date=new Date().toISOString(),usage=initializeUsage(data);
+  return providers.some(p=>{
+      const ledger=usage[p]||{};
+      return ledger.blockedUntil>Date.now()&&[402,429].includes(ledger.lastStatus)
+        ||ledger.day===date.slice(0,10)&&ledger.daily>=DAILY_LIMIT
+        ||ledger.month===date.slice(0,7)&&ledger.monthly>=MONTHLY_LIMIT;
+    });
+}
 const path = 'rake-geocode/v1.json';
 const reply = (body, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 async function readStore(token) {
@@ -130,7 +139,7 @@ export default async function handler(req) {
       // destination. Read-only: this never reserves credit or calls a provider.
       if(new URL(req.url).searchParams.get('cache')==='1'&&process.env.BLOB_READ_WRITE_TOKEN){
         const {data}=await readStore(process.env.BLOB_READ_WRITE_TOKEN);
-        return reply({...status,entries:data.entries||{},usage:initializeUsage(data)});
+        return reply({...status,entries:data.entries||{},usage:initializeUsage(data),quotaExceeded:hasExhaustedQuota(data,providers)});
       }
       return reply(status);
     }
@@ -171,13 +180,7 @@ export default async function handler(req) {
       ({data,etag}=await readStore(token));
     }
     if(reserved){data.busyUntil=0;await writeStore(token,data,etag);}
-    const date=new Date().toISOString(),usage=initializeUsage(data);
-    const quotaExceeded=providers.length>0&&providers.every(p=>{
-      const ledger=usage[p]||{};
-      return ledger.blockedUntil>Date.now()&&[402,429].includes(ledger.lastStatus)
-        ||ledger.day===date.slice(0,10)&&ledger.daily>=DAILY_LIMIT
-        ||ledger.month===date.slice(0,7)&&ledger.monthly>=MONTHLY_LIMIT;
-    });
+    const quotaExceeded=hasExhaustedQuota(data,providers);
     return reply({error:missingProviders.length?'Available mapping providers have reached their limits or are unavailable; fallback API keys still need configuration':'All mapping providers have reached their limits or are temporarily unavailable; cached destinations remain available',code:quotaExceeded?'quota_exceeded':'provider_unavailable',missingProviders},429);
   } catch { return reply({ error: 'Shared mapping unavailable; existing map remains usable' }, 503); }
 }

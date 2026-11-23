@@ -489,3 +489,28 @@ html body .rake-simulator .rake-simulator-selected-filter>button:hover{backgroun
 @media(max-width:800px){.rake-simulator-map-panel{grid-template-rows:460px auto}.rake-simulator-map-wrap,.rake-simulator-map{min-height:460px}.rake-simulator-delivery-cities{right:8px;bottom:8px;width:min(300px,52%);height:220px;max-height:calc(100% - 16px)}.rake-simulator-planned-location-heading>.rake-simulator-city-state{flex-basis:54px;font-size:9px}.rake-simulator-city-button{gap:5px!important}.rake-simulator-city-button>.rake-simulator-city-state{flex-basis:54px!important;font-size:9px!important}.rake-simulator-content{padding:0 12px 12px}.rake-simulator-page-heading{padding:14px}}
 @media(max-width:600px){.rake-simulator-multi-filter:nth-of-type(n) .rake-simulator-filter-menu{right:auto;left:0;width:min(360px,calc(100vw - 64px))}}
 @media(max-width:420px){.rake-simulator-results-heading{align-items:flex-start}}
+
+/* Map order ledger: quiet rows, bounded columns, aligned quantities. */
+html body.page-rake .total-map-orders .map-orders-table{width:100%;min-width:720px;border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums}
+html body.page-rake .total-map-orders .map-orders-table th{padding:10px 12px;border-bottom:1px solid var(--bdrHi);background:color-mix(in srgb,var(--s1) 94%,var(--sky));font-size:10px;letter-spacing:.04em;vertical-align:middle;box-shadow:0 1px 0 var(--bdr)}
+html body.page-rake .total-map-orders .map-orders-table td{height:62px;padding:10px 12px;border:0;border-bottom:1px solid color-mix(in srgb,var(--bdr) 65%,transparent);font-size:11px;line-height:1.45;color:var(--text);vertical-align:middle;background:transparent}
+html body.page-rake .total-map-orders .map-orders-table tbody tr:nth-child(even){background:color-mix(in srgb,var(--s2) 38%,transparent)}
+html body.page-rake .total-map-orders .map-orders-table tbody tr:hover td{background:color-mix(in srgb,var(--sky) 7%,var(--s1))!important}
+html body.page-rake .total-map-orders .map-orders-table tr[data-selected=true] td{background:color-mix(in srgb,var(--sky) 13%,var(--s1))!important}
+html body.page-rake .total-map-orders .map-orders-table td:nth-child(2){min-width:145px;max-width:210px;overflow-wrap:anywhere}
+html body.page-rake .total-map-orders .map-orders-table td:nth-child(3){min-width:130px;max-width:170px;overflow-wrap:anywhere}
+html body.page-rake .total-map-orders .map-orders-table td:nth-child(4){min-width:105px}
+html body.page-rake .total-map-orders .map-orders-table td small{font-size:10px;color:var(--dim);line-height:1.4;margin-top:3px}
+.map-balance-progress{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:100px}
+.map-balance-number{font-size:12px;font-weight:600;letter-spacing:.01em}
+.map-stock-track{display:flex;width:100px;height:5px;overflow:hidden;border-radius:999px;background:color-mix(in srgb,var(--dim) 18%,transparent)}
+.map-stock-track > span{display:block;height:100%;flex-shrink:0}
+.map-stock-track [data-stage="0"]{background:var(--green)}
+.map-stock-track [data-stage="1"]{background:#a78bfa}
+.map-stock-track [data-stage="2"]{background:var(--sky)}
+
+.map-stock-legend{display:flex;align-items:center;gap:12px;flex-wrap:wrap;color:var(--dim);font-size:10px}
+.map-stock-legend span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.map-stock-legend span::before{content:'';width:6px;height:6px;border-radius:2px;background:var(--green)}
+.map-stock-legend [data-stage="1"]::before{background:#a78bfa}
+.map-stock-legend [data-stage="2"]::before{background:var(--sky)}

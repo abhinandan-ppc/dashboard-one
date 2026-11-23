@@ -104,6 +104,8 @@
   }
 
   function initGlow(el) {
+    // Keep the header's perimeter feedback; its controls share that surface.
+    if (el.closest('.app-header') && !el.matches('.app-header')) return;
     if (el.dataset.glowReady) return;
     el.dataset.glowReady = 'true';
 

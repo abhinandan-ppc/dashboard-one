@@ -3669,3 +3669,12 @@ html body .year-options label:hover {background:var(--primary-bg)}
   html body.page-sms-shell .mobile-header > .hdr-r:has(> button:only-child[style*="display: none"]),
   html body.page-grade .mobile-header > .top-right {display:none!important}
 }
+
+/* Header effects belong to the navigation surface, not its controls. */
+html body .app-header :not(.app-header) > :is(.glow-edge,.glow-sheen,.glow-ripple),
+html body .app-header > :is(.glow-sheen,.glow-ripple){display:none!important}
+html[data-theme-style] body .app-header{
+  background:color-mix(in srgb,var(--s1) 82%,transparent)!important;
+  backdrop-filter:blur(22px) saturate(135%)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(135%)!important;
+}
