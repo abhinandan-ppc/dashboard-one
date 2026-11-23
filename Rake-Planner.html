@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="theme.css"/>
-<link rel="stylesheet" href="rake-map.css?v=19"/>
+<link rel="stylesheet" href="rake-map.css?v=20"/>
 <script src="jspl-local-api.js"></script>
 <style>
 .backup-column-filter-menu{position:fixed;z-index:1200;display:flex;flex-direction:column;gap:8px;max-height:min(320px,calc(100dvh - 24px));overflow:hidden;padding:10px;border:1px solid var(--bdrHi);border-radius:10px;background:rgb(from var(--s1) r g b / 1);box-shadow:var(--shadow-lg,0 8px 24px #0005);color:var(--text);font-size:12px;text-transform:none;letter-spacing:normal}
@@ -2606,12 +2606,27 @@ function MapLocationIcon({order}){
   const label=online?'Online cached':mapped?'Offline fallback':'Unmapped';
   return <span className="map-location-icon" data-source={online?'online':mapped?'offline':'unmapped'} title={label} role="img" aria-label={label}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{online?<><path d="M6 18a4 4 0 0 1-.8-7.9 7 7 0 0 1 13.5-1A4.5 4.5 0 0 1 18 18"/><path d="m9 16 2 2 4-4"/></>:mapped?<><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></>:<><path d="M12 4a7 7 0 0 0-7 7c0 5 7 10 7 10s7-5 7-10a7 7 0 0 0-7-7Z"/><path d="M12 8v4m0 3h.01"/></>}</svg></span>;
 }
+function MapBalanceProgress({order}){
+  const balance=Math.max(0,n2(parseFloat(order['Bal to PGI'])));
+  const values=[order['Plate Stock'],order['Slab Stock'],order.ISSUED].map(value=>Math.max(0,n2(parseFloat(value))));
+  const labels=['Plate stock','Slab stock','Issued'];
+  let remaining=balance;
+  const widths=values.map(value=>{const used=Math.min(value,remaining);remaining-=used;return balance?used/balance*100:0;});
+  const covered=values.reduce((sum,value)=>sum+value,0),percentage=balance?Math.min(100,covered/balance*100):0;
+  const description=labels.map((label,i)=>label+': '+fmt(values[i])+' MT').join(' · ');
+  return <div className="map-balance-progress" title={description}><span className="map-balance-number">{fmt(balance)}</span><div className="map-stock-track" role="progressbar" aria-label="Plate, slab and issued stock coverage" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(percentage)} aria-valuetext={description+'; '+Math.round(percentage)+'% of balance covered'}>{widths.map((width,i)=><span key={labels[i]} data-stage={i} style={{width:width+'%'}}/>)}</div></div>;
+}
+const mapOrderSidingKey=order=>{
+  if(RakePlanningRules.mapCategory(order)!=='rail')return null;
+  const hub=resolveHub(actualSidingForOrder(order)||order._Siding);
+  return hub?hub.lat+'|'+hub.lng:null;
+};
 function TotalEbtpMap({rows,onClose}){
   const dialogRef=usePlanningDialog(onClose);
   const[actualOnly,setActualOnly]=useState(true),[road,setRoad]=useState(false),[odc,setOdc]=useState(false),[exports,setExports]=useState(false);
   const[city,setCity]=useState(null),[selected,setSelected]=useState(null),[search,setSearch]=useState(''),[page,setPage]=useState(0);
-  const[columnFilters,setColumnFilters]=useState({}),[sort,setSort]=useState({key:null,direction:'asc'});
-  const mapRef=useRef(null),map=useRef(null),markers=useRef(new Map()),routes=useRef([]),fittedSource=useRef(null),ordersScroll=useRef(null);
+  const[columnFilters,setColumnFilters]=useState({}),[sort,setSort]=useState({key:null,direction:'asc'}),[siding,setSiding]=useState(null);
+  const mapRef=useRef(null),map=useRef(null),markers=useRef(new Map()),routes=useRef([]),sidingMarkers=useRef(new Map()),fittedSource=useRef(null),ordersScroll=useRef(null);
   const source=useMemo(()=>rows.filter(r=>{
     const category=RakePlanningRules.mapCategory(r);
     if(category==='export'&&!exports||category==='odc'&&!odc||category==='road'&&!road)return false;
@@ -2628,7 +2643,7 @@ function TotalEbtpMap({rows,onClose}){
       const siding=actualSidingForOrder(order)||order._Siding,hub=resolveHub(siding);
       if(!hub)continue;
       const key=`${hub.lat}|${hub.lng}`;
-      if(!hubs.has(key))hubs.set(key,{...hub,names:new Set(),destinations:new Map()});
+      if(!hubs.has(key))hubs.set(key,{...hub,key,names:new Set(),destinations:new Map()});
       const entry=hubs.get(key);entry.names.add(siding);
       if(group.coords)entry.destinations.set(group.key,group);
     }
@@ -2636,33 +2651,33 @@ function TotalEbtpMap({rows,onClose}){
   },[groups]);
   const filterValues=useMemo(()=>Object.fromEntries(MAP_ORDER_COLUMNS.map(c=>[c.key,[...new Set(source.map(c.value))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}))])),[source]);
   const tableRows=useMemo(()=>{
-    const filtered=source.filter(r=>(!city||orderPlaceKey(r)===city)&&(!search||[r['SO No.'],r._LineItem,r['Sold To Party Name'],r['Ship To Party City'],r._State,r._Siding,r._ODC].join(' ').toLowerCase().includes(search.toLowerCase()))&&MAP_ORDER_COLUMNS.every(c=>!columnFilters[c.key]||columnFilters[c.key].has(c.value(r))));
+    const filtered=source.filter(r=>(!city||orderPlaceKey(r)===city)&&(!siding||mapOrderSidingKey(r)===siding)&&(!search||[r['SO No.'],r._LineItem,r['Sold To Party Name'],r['Ship To Party City'],r._State,r._Siding,r._ODC].join(' ').toLowerCase().includes(search.toLowerCase()))&&MAP_ORDER_COLUMNS.every(c=>!columnFilters[c.key]||columnFilters[c.key].has(c.value(r))));
     const column=MAP_ORDER_COLUMNS.find(c=>c.key===sort.key);
     return column?filtered.sort((a,b)=>(sort.direction==='asc'?1:-1)*(column.key==='balance'?Number(column.value(a))-Number(column.value(b)):column.value(a).localeCompare(column.value(b),undefined,{numeric:true,sensitivity:'base'}))):filtered;
-  },[source,city,search,columnFilters,sort]);
+  },[source,city,siding,search,columnFilters,sort]);
   useEffect(()=>{setPage(0);ordersScroll.current?.scrollTo({top:0});},[columnFilters,sort]);
   useEffect(()=>{setPage(p=>Math.min(p,Math.max(0,Math.ceil(tableRows.length/100)-1)));},[tableRows.length]);
-  const mappedGroups=groups.filter(g=>g.coords),activePlace=groups.find(g=>g.key===city);
+  const mappedGroups=groups.filter(g=>g.coords),activePlace=groups.find(g=>g.key===city),activeSiding=sidings.find(h=>h.key===siding);
   const fitLocations=()=>{const points=[[ANGUL.lat,ANGUL.lng],...sidings.map(h=>[h.lat,h.lng]),...groups.filter(g=>g.coords).map(g=>g.coords)];map.current?.stop().fitBounds(points,{padding:[40,40],maxZoom:8,animate:false});};
-  useEffect(()=>{setCity(null);setPage(0);setSelected(null);},[actualOnly,road,odc,exports]);
+  useEffect(()=>{setCity(null);setSiding(null);setPage(0);setSelected(null);},[actualOnly,road,odc,exports]);
   useEffect(()=>{const m=L.map(mapRef.current,{center:[22,80],zoom:5});map.current=m;L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · Powered by <a href="https://www.geoapify.com/">Geoapify</a>',maxZoom:19}).addTo(m);const resize=new ResizeObserver(()=>m.invalidateSize({animate:false}));resize.observe(mapRef.current);return()=>{resize.disconnect();m.remove();map.current=null;};},[]);
   useEffect(()=>{
     if(!map.current)return;
-    const layer=L.layerGroup().addTo(map.current);markers.current.clear();routes.current=[];
+    const layer=L.layerGroup().addTo(map.current);markers.current.clear();sidingMarkers.current.clear();routes.current=[];
     for(const hub of sidings){
       const destinations=new Set(hub.destinations.keys());
       const trunk=L.polyline(mapRoutePoints(ANGUL.lat,ANGUL.lng,hub.lat,hub.lng),{color:'#7c3aed',weight:2.5,opacity:.65,interactive:false,smoothFactor:1}).addTo(layer);
-      routes.current.push({line:trunk,destinations});
+      routes.current.push({line:trunk,destinations,siding:hub.key});
       for(const group of hub.destinations.values()){
         const line=L.polyline(mapRoutePoints(hub.lat,hub.lng,...group.coords),{color:'#0891b2',weight:1.8,opacity:.55,interactive:false,smoothFactor:1}).addTo(layer);
-        routes.current.push({line,destinations:new Set([group.key])});
+        routes.current.push({line,destinations:new Set([group.key]),siding:hub.key});
       }
     }
     const maxBal=Math.max(1,...groups.map(g=>g.bal));
     groups.forEach(g=>{
       if(!g.coords||g.coords.some(v=>!Number.isFinite(v)))return;
       const marker=L.circleMarker(g.coords,{radius:6+10*Math.sqrt(g.bal/maxBal),weight:2,color:'#fff',fillColor:'#0284c7',fillOpacity:.85}).addTo(layer);
-      const choose=()=>{setCity(current=>current===g.key?null:g.key);setSearch('');setColumnFilters({});setPage(0);setSelected(null);ordersScroll.current?.scrollTo({top:0});};
+      const choose=()=>{setCity(current=>current===g.key?null:g.key);setSiding(null);setSearch('');setColumnFilters({});setPage(0);setSelected(null);ordersScroll.current?.scrollTo({top:0});};
       const label=document.createElement('div');label.textContent=`${g.name} · ${fmt(g.bal)} MT · ${g.rows.length} orders`;marker.bindTooltip(label,{interactive:true});
       marker.on('click',choose);marker.getTooltip().on('click',choose);
       const el=marker.getElement();el?.setAttribute('tabindex','0');el?.setAttribute('role','button');el?.setAttribute('aria-label',`Show ${g.name} orders, ${fmt(g.bal)} MT`);
@@ -2672,14 +2687,19 @@ function TotalEbtpMap({rows,onClose}){
     for(const hub of sidings){
       const marker=L.circleMarker([hub.lat,hub.lng],{radius:9,weight:3,color:'#fff',fillColor:'#c026d3',fillOpacity:1}).addTo(layer);
       const label=document.createElement('div');label.textContent=`Siding · ${[...hub.names].join(' / ')} · ${hub.name||''}`;
-      marker.bindTooltip(label,{direction:'top'});
+      marker.bindTooltip(label,{direction:'top',interactive:true});
+      const chooseSiding=()=>{setSiding(current=>current===hub.key?null:hub.key);setCity(null);setSelected(null);setSearch('');setColumnFilters({});setPage(0);ordersScroll.current?.scrollTo({top:0});};
+      marker.on('click',chooseSiding);marker.getTooltip().on('click',chooseSiding);
+      const element=marker.getElement();element?.setAttribute('tabindex','0');element?.setAttribute('role','button');element?.setAttribute('aria-label','Filter orders for siding '+[...hub.names].join(' / '));
+      element?.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();chooseSiding();}});
+      sidingMarkers.current.set(hub.key,marker);
     }
     const plantLabel=document.createElement('div');plantLabel.textContent='Jindal Steel Angul Plant';
     L.marker([ANGUL.lat,ANGUL.lng],{icon:plantPinIcon(L,'#7c3aed'),zIndexOffset:200}).addTo(layer).bindTooltip(plantLabel);
     if(markers.current.size&&fittedSource.current!==source){fitLocations();fittedSource.current=source;}
     return()=>layer.remove();
   },[groups,sidings]);
-  useEffect(()=>{const focused=source.find(r=>RakePlanningRules.orderKey(r)===selected),key=focused?orderPlaceKey(focused):city;markers.current.forEach((m,k)=>{m.setStyle({fillColor:k===key?'#d97706':'#0284c7',weight:k===key?4:2,fillOpacity:(!key||k===key)?0.95:0.4});m.getElement()?.setAttribute('aria-pressed',String(k===key));if(k===key)m.bringToFront();});routes.current.forEach(({line,destinations})=>line.setStyle({opacity:!key||destinations.has(key)?0.65:0.1}));},[selected,city,groups,sidings]);
+  useEffect(()=>{const focused=source.find(r=>RakePlanningRules.orderKey(r)===selected),key=focused?orderPlaceKey(focused):city;markers.current.forEach((m,k)=>{m.setStyle({fillColor:k===key?'#d97706':'#0284c7',weight:k===key?4:2,fillOpacity:(siding?activeSiding?.destinations.has(k):!key||k===key)?0.95:0.35});m.getElement()?.setAttribute('aria-pressed',String(k===key));if(k===key)m.bringToFront();});sidingMarkers.current.forEach((marker,k)=>{marker.setStyle({weight:k===siding?5:3,color:k===siding?'#f59e0b':'#fff',fillOpacity:!siding||k===siding?1:0.35});marker.getElement()?.setAttribute('aria-pressed',String(k===siding));});routes.current.forEach(({line,destinations,siding:routeSiding})=>line.setStyle({opacity:(siding?routeSiding===siding:!key||destinations.has(key))?0.65:0.1}));},[selected,city,siding,groups,sidings]);
   const focus=r=>{const marker=markers.current.get(orderPlaceKey(r));setSelected(RakePlanningRules.orderKey(r));if(marker){map.current.stop().setView(marker.getLatLng(),9,{animate:false});marker.openTooltip();}};
   return ReactDOM.createPortal(<div className="total-map-backdrop"><section ref={dialogRef} className="total-map" role="dialog" aria-modal="true" aria-label="Total EBTP map">
     <header><div><h3>Total EBTP map</h3><p>{source.length.toLocaleString()} orders · {fmt(source.reduce((sum,r)=>sum+n2(parseFloat(r['Bal to PGI'])),0))} MT balance</p></div><button onClick={onClose}>Close</button></header>
@@ -2687,8 +2707,8 @@ function TotalEbtpMap({rows,onClose}){
     <div className="total-map-body">
       <div className="total-map-canvas"><div ref={mapRef} style={{height:'100%'}}/><button className="total-map-fit" onClick={fitLocations} disabled={!mappedGroups.length}>Fit locations</button><div className="total-map-caption">{mappedGroups.length} mapped destinations · {groups.length-mappedGroups.length} unmapped{!mappedGroups.length&&<small>No mapped locations in this view</small>}</div></div>
       <div className="total-map-orders">
-        <div className="total-map-tools"><div className="total-map-selection"><strong aria-live="polite">{activePlace?.name||'All locations'}</strong><span>{tableRows.length.toLocaleString()} orders</span><button onClick={()=>{setCity(null);setSelected(null);setSearch('');setColumnFilters({});setPage(0);ordersScroll.current?.scrollTo({top:0});fitLocations();}}>All locations</button></div><input aria-label="Search mapped orders" placeholder="Search SO, customer, city or state…" value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}}/></div>
-        <div ref={ordersScroll} className="probable-table-scroll" tabIndex={0} aria-label="Mapped orders table"><table><thead><tr>{MAP_ORDER_COLUMNS.map(column=><th key={column.key} scope="col" aria-sort={sort.key===column.key?(sort.direction==='asc'?'ascending':'descending'):'none'}><div className="map-column-heading"><button type="button" className="map-column-sort" aria-label={`Sort by ${column.label}`} onClick={()=>setSort(current=>({key:column.key,direction:current.key===column.key&&current.direction==='asc'?'desc':'asc'}))}>{column.label}<span aria-hidden="true">{sort.key===column.key?(sort.direction==='asc'?'↑':'↓'):'↕'}</span></button><BackupOrderColumnFilter column={column} values={filterValues[column.key]} selected={columnFilters[column.key]} onChange={values=>setColumnFilters(current=>{const next={...current};if(values===null)delete next[column.key];else next[column.key]=values;return next;})}/></div></th>)}</tr></thead><tbody>{tableRows.slice(page*100,page*100+100).map(r=><tr key={RakePlanningRules.orderKey(r)} onClick={()=>focus(r)} data-destination-selected={city===orderPlaceKey(r)} data-selected={selected===RakePlanningRules.orderKey(r)}><td><div className="map-order-identity"><button className="map-order-link" onClick={e=>{e.stopPropagation();focus(r);}}>{r['SO No.']} / {r._LineItem}</button><MapLocationIcon order={r}/></div></td><td>{r['Sold To Party Name']}</td><td><strong>{r['Ship To Party City']}</strong><small>{r._State}</small></td><td>{actualSidingForOrder(r)||r._Siding}<small>{r._ODC||r._WagonType}{r._RoutingConflict&&' · Assignment conflict'}</small></td><td className="map-quantity">{fmt(r['Bal to PGI'])}</td></tr>)}{!tableRows.length&&<tr><td colSpan={5} className="map-empty">No orders match this view. Change the search or map filters.</td></tr>}</tbody></table></div>
+        <div className="total-map-tools"><div className="total-map-selection"><strong aria-live="polite">{activeSiding?'Siding · '+[...activeSiding.names].join(' / '):activePlace?.name||'All locations'}</strong><span>{tableRows.length.toLocaleString()} orders</span><button onClick={()=>{setCity(null);setSiding(null);setSelected(null);setSearch('');setColumnFilters({});setPage(0);ordersScroll.current?.scrollTo({top:0});fitLocations();}}>All locations</button></div><div className="map-stock-legend" aria-label="Stock progress legend"><span data-stage="0">Plate stock</span><span data-stage="1">Slab stock</span><span data-stage="2">Issued</span></div><input aria-label="Search mapped orders" placeholder="Search SO, customer, city or state…" value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}}/></div>
+        <div ref={ordersScroll} className="probable-table-scroll" tabIndex={0} aria-label="Mapped orders table"><table className="map-orders-table"><thead><tr>{MAP_ORDER_COLUMNS.map(column=><th key={column.key} scope="col" aria-sort={sort.key===column.key?(sort.direction==='asc'?'ascending':'descending'):'none'}><div className="map-column-heading"><button type="button" className="map-column-sort" aria-label={`Sort by ${column.label}`} onClick={()=>setSort(current=>({key:column.key,direction:current.key===column.key&&current.direction==='asc'?'desc':'asc'}))}>{column.label}<span aria-hidden="true">{sort.key===column.key?(sort.direction==='asc'?'↑':'↓'):'↕'}</span></button><BackupOrderColumnFilter column={column} values={filterValues[column.key]} selected={columnFilters[column.key]} onChange={values=>setColumnFilters(current=>{const next={...current};if(values===null)delete next[column.key];else next[column.key]=values;return next;})}/></div></th>)}</tr></thead><tbody>{tableRows.slice(page*100,page*100+100).map(r=><tr key={RakePlanningRules.orderKey(r)} onClick={()=>focus(r)} data-destination-selected={city===orderPlaceKey(r)} data-selected={selected===RakePlanningRules.orderKey(r)}><td><div className="map-order-identity"><button className="map-order-link" onClick={e=>{e.stopPropagation();focus(r);}}>{r['SO No.']} / {r._LineItem}</button><MapLocationIcon order={r}/></div></td><td>{r['Sold To Party Name']}</td><td><strong>{r['Ship To Party City']}</strong><small>{r._State}</small></td><td>{actualSidingForOrder(r)||r._Siding}<small>{r._ODC||r._WagonType}{r._RoutingConflict&&' · Assignment conflict'}</small></td><td className="map-quantity"><MapBalanceProgress order={r}/></td></tr>)}{!tableRows.length&&<tr><td colSpan={5} className="map-empty">No orders match this view. Change the search or map filters.</td></tr>}</tbody></table></div>
         <footer><span>Page {page+1} / {Math.max(1,Math.ceil(tableRows.length/100))}</span><button disabled={!page} onClick={()=>setPage(p=>p-1)}>Previous</button><button disabled={(page+1)*100>=tableRows.length} onClick={()=>setPage(p=>p+1)}>Next</button></footer>
         <details className="total-map-mapping"><summary>Live destination mapping <span role="status">{live.status}</span></summary>{live.control}</details>
       </div>
