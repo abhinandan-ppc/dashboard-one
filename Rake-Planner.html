@@ -5695,7 +5695,7 @@ function SimulatorIndiaMap({rows,hub,selectedCustomers,onToggleCustomer,onClearS
   </div>;
 }
 
-function SimulatorMultiFilter({label,options,selected,onChange,noun,searchable=false}){
+function SimulatorMultiFilter({label,options,selected,onChange,onSelectAll,noun,searchable=false}){
   const[query,setQuery]=useState('');
   const visibleOptions=useMemo(()=>options.filter(option=>option.toLowerCase().includes(query.trim().toLowerCase())),[options,query]);
   return <details className="rake-simulator-multi-filter" name="rake-simulator-filters"
@@ -5707,6 +5707,11 @@ function SimulatorMultiFilter({label,options,selected,onChange,noun,searchable=f
       {searchable&&<input className="rake-simulator-option-search" type="search" aria-label={`Search ${label.toLowerCase()}`}
         placeholder={`Search ${label.toLowerCase()}…`} value={query} onChange={event=>setQuery(event.target.value)}/>}
       <div className="rake-simulator-filter-options">
+        {visibleOptions.length>0&&<label className="rake-simulator-select-all">
+          <input type="checkbox" aria-label={`Select all ${noun}`} checked={visibleOptions.every(option=>selected.has(option))}
+            onChange={event=>onSelectAll(visibleOptions,event.target.checked)}/>
+          <span>Select all</span>
+        </label>}
         {visibleOptions.length?visibleOptions.map(option=><label key={option}>
           <input type="checkbox" checked={selected.has(option)} onChange={event=>onChange(option,event.target.checked)}/>
           <span>{option}</span>
@@ -5744,13 +5749,34 @@ function RakeSimulator({rows,active}){
     if(checked)next.add(value);else next.delete(value);
     return next;
   });
+  const toggleValues=(setter,values,checked)=>setter(previous=>{
+    const next=new Set(previous);
+    values.forEach(value=>checked?next.add(value):next.delete(value));
+    return next;
+  });
   const toggleRegion=(value,checked)=>{
     toggleValue(setRegions,value,checked);
+    setStates(new Set());setCities(new Set());setSelectedCustomers(new Set());
+  };
+  const toggleAllRegions=(values,checked)=>{
+    toggleValues(setRegions,values,checked);
     setStates(new Set());setCities(new Set());setSelectedCustomers(new Set());
   };
   const toggleState=(value,checked)=>{
     toggleValue(setStates,value,checked);
     setCities(new Set());setSelectedCustomers(new Set());
+  };
+  const toggleAllStates=(values,checked)=>{
+    toggleValues(setStates,values,checked);
+    setCities(new Set());setSelectedCustomers(new Set());
+  };
+  const toggleAllCities=(values,checked)=>{
+    toggleValues(setCities,values,checked);
+    setSelectedCustomers(new Set());
+  };
+  const toggleAllSupplyConditions=(values,checked)=>{
+    toggleValues(setSupplyConditions,values,checked);
+    setSelectedCustomers(new Set());
   };
   const clearLocations=()=>{setRegions(new Set());setStates(new Set());setCities(new Set());setSelectedCustomers(new Set());};
   const selectedFilters=[
@@ -5797,12 +5823,14 @@ function RakeSimulator({rows,active}){
       <div className="rake-simulator-filters">
           <h3>Filter available orders</h3>
           <div className="rake-simulator-filter-row">
-            <SimulatorMultiFilter label="Region" noun="regions" options={regionOptions} selected={regions} onChange={toggleRegion}/>
-            <SimulatorMultiFilter label="State (STO)" noun="states" options={stateOptions} selected={states} onChange={toggleState}/>
+            <SimulatorMultiFilter label="Region" noun="regions" options={regionOptions} selected={regions} onChange={toggleRegion} onSelectAll={toggleAllRegions}/>
+            <SimulatorMultiFilter label="State (STO)" noun="states" options={stateOptions} selected={states} onChange={toggleState} onSelectAll={toggleAllStates}/>
             <SimulatorMultiFilter label="Ship to city" noun="cities" options={cityOptions} selected={cities}
-              onChange={(value,checked)=>{toggleValue(setCities,value,checked);setSelectedCustomers(new Set());}} searchable/>
+              onChange={(value,checked)=>{toggleValue(setCities,value,checked);setSelectedCustomers(new Set());}}
+              onSelectAll={toggleAllCities} searchable/>
             <SimulatorMultiFilter label="Supply conditions" noun="supply conditions" options={htcOptions}
-              selected={supplyConditions} onChange={(value,checked)=>{toggleValue(setSupplyConditions,value,checked);setSelectedCustomers(new Set());}}/>
+              selected={supplyConditions} onChange={(value,checked)=>{toggleValue(setSupplyConditions,value,checked);setSelectedCustomers(new Set());}}
+              onSelectAll={toggleAllSupplyConditions}/>
           </div>
           {!!selectedFilters.length&&<div className="rake-simulator-selected-filters" role="group" aria-label="Selected filters">
             <strong>Selected:</strong>
