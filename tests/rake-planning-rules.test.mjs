@@ -23,65 +23,35 @@ test('simulatorCandidates excludes the selected rake and keeps domestic peer-rak
     rules.simulatorCandidates(rows,'CCJS',['BNHT','KAV']).map(row=>row['SO No.']),
     ['101','104'],
   );
-  assert.deepEqual(
-    rules.simulatorCandidates(rows,'ALL').map(row=>row['SO No.']),
-    ['100','101','102','104'],
-  );
 });
 
-test('simulatorCandidates separates all rake assignments from all non-export orders',()=>{
+test('simulatorCandidates for all rakes returns only road-assigned orders',()=>{
   const rows=[
     {'SO No.':'100','_LineItem':'10','_ModeC':'RAKE-CCJS','Bal to PGI':'25',_Country:'India'},
-    {'SO No.':'101','_LineItem':'20','_ModeC':'RAKE-OTHER','Bal to PGI':'50',_Country:'India'},
-    {'SO No.':'102','_LineItem':'30','_ModeC':'ROAD','Bal to PGI':'15',_Country:'India'},
+    {'SO No.':'101','_LineItem':'20','_ModeC':'ROAD','Bal to PGI':'50',_Country:'India'},
+    {'SO No.':'102','_LineItem':'30','_ModeC':'ROAD-ODC','_ODC':'ROAD-ODC','Bal to PGI':'15',_Country:'India'},
     {'SO No.':'103','_LineItem':'40','_ModeC':'HOLD','Bal to PGI':'10',_Country:'India'},
-    {'SO No.':'104','_LineItem':'50','_ModeC':'RAKE-CCJS','Bal to PGI':'35',_Country:'Germany','Customer TYPE':'EXPORT'},
-    {'SO No.':'105','_LineItem':'60','_ModeC':'HOLD','Bal to PGI':'10',_Country:'India',_ExportGroup:'EURO',_Region:'Export'},
-    {'SO No.':'106','_LineItem':'70','_ModeC':'HOLD','Bal to PGI':'10',_Country:'india',_ExportGroup:'Domestic'},
+    {'SO No.':'104','_LineItem':'50','_ModeC':'EXPORT ROAD','Bal to PGI':'35',_Country:'Germany'},
+    {'SO No.':'105','_LineItem':'60','_ModeC':'ROAD','Bal to PGI':'0',_Country:'India'},
+    {'SO No.':'101','_LineItem':'20','_ModeC':'ROAD','Bal to PGI':'5',_Country:'India'},
   ];
 
   assert.deepEqual(
     rules.simulatorCandidates(rows,'ALL_RAKES').map(row=>row['SO No.']),
-    ['100','101','104'],
-  );
-  assert.deepEqual(
-    rules.simulatorCandidates(rows,'ALL').map(row=>row['SO No.']),
-    ['100','101','102','103','106'],
+    ['101','102','104'],
   );
 });
 
-test('simulatorCandidates deduplicates available rows by SO and line item',()=>{
-  const rows=[
-    {UID:'row-1','SO No.':'100','_LineItem':'10','_ModeC':'HOLD','Bal to PGI':'25'},
-    {UID:'row-2','SO No.':'100','_LineItem':'10','_ModeC':'HOLD','Bal to PGI':'20'},
-    {'SO No.':'100','_LineItem':'20','_ModeC':'HOLD','Bal to PGI':'10'},
-  ];
-
-  assert.deepEqual(
-    rules.simulatorCandidates(rows,'ALL').map(row=>row._LineItem),
-    ['10','20'],
-  );
-});
-
-test('simulatorCandidates excludes road_odc wagon type in all scopes',()=>{
+test('simulatorCandidates excludes road_odc wagon type for individual rakes',()=>{
   const rows=[
     {'SO No.':'100','_LineItem':'10','_ModeC':'RAKE-CCJS','_WagonType':'BOSM/BRN','Bal to PGI':'25',_Country:'India'},
     {'SO No.':'101','_LineItem':'20','_ModeC':'RAKE-BNHT','_WagonType':'ROAD-ODC','Bal to PGI':'50',_Country:'India'},
-    {'SO No.':'102','_LineItem':'30','_ModeC':'HOLD','_WagonType':'ROAD-ODC','Bal to PGI':'15',_Country:'India'},
     {'SO No.':'103','_LineItem':'40','_ModeC':'RAKE-KAV','_WagonType':'BOSM/BRN','Bal to PGI':'40',_Country:'India'},
   ];
 
   assert.deepEqual(
     rules.simulatorCandidates(rows,'CCJS',['BNHT','KAV']).map(row=>row['SO No.']),
     ['103'],
-  );
-  assert.deepEqual(
-    rules.simulatorCandidates(rows,'ALL').map(row=>row['SO No.']),
-    ['100','103'],
-  );
-  assert.deepEqual(
-    rules.simulatorCandidates(rows,'ALL_RAKES').map(row=>row['SO No.']),
-    ['100','103'],
   );
 });
 

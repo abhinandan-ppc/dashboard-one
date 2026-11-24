@@ -5683,23 +5683,30 @@ function ThemeToggle({pref,setThemeConcrete}){
   </div>;
 }
 
-const SIMULATOR_RAKE_MODES=[
-  {id:'BNHT',label:'BNHT'},
-  {id:'KAV',label:'KAV'},
-  {id:'BNHT (LONG)',label:'BNHT (Long)'},
-  {id:'CCJS',label:'CCJS'},
-];
+/* Rakes are derived from the rake modes (RAKE-<siding>) actually present in the order book. */
+const ROAD_ACTUAL_MODES=['ROAD','ROAD-ODC','EXPORT ROAD'];
+function simulatorRakeModes(rows){
+  const ids=new Set();
+  for(const row of rows){
+    const actual=RakePlanningRules.actualSiding(row._ModeC);
+    if(actual&&!ROAD_ACTUAL_MODES.includes(actual))ids.add(RakePlanningRules.sidingKey(actual));
+  }
+  return[...ids].sort((a,b)=>a.localeCompare(b)).map(id=>({id,label:id.replace(/\(LONG\)$/,' (Long)')}));
+}
 const simulatorValue=(row,key)=>String(key==='_HTC'
   ?row._HTC||getHTC(row['Ext Grade'],row['Supply Condition'])
   :row[key]??'').trim();
 const simulatorStateValue=row=>simulatorValue(row,'STO')||simulatorValue(row,'_State');
 const simulatorCustomerKey=row=>`${orderPlaceKey(row)}|${RakePlanningRules.key(row['Sold To Party Name']||'UNKNOWN CUSTOMER')}`;
 
-function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply}){
+function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply,showOdcFilter=false}){
   const dialogRef=usePlanningDialog(onClose);
+  const[odcFilter,setOdcFilter]=useState('all');
+  const filteredLines=useMemo(()=>!showOdcFilter||odcFilter==='all'?orderLines
+    :orderLines.filter(line=>(!!line.row._ODC)===(odcFilter==='odc')),[orderLines,showOdcFilter,odcFilter]);
   const orderGroups=useMemo(()=>{
     const states=new Map();
-    for(const line of orderLines){
+    for(const line of filteredLines){
       const row=line.row;
       const state=simulatorStateValue(row)||'—';
       const city=RakePlanningRules.clean(row['Ship To Party City'])||'—';
@@ -5740,7 +5747,7 @@ function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply}){
           });
         return{...stateGroup,cities,rowSpan:cities.reduce((total,city)=>total+city.rowSpan,0)};
       });
-  },[orderLines]);
+  },[filteredLines]);
   const orders=orderGroups.flatMap(stateGroup=>stateGroup.cities.flatMap(cityGroup=>
     cityGroup.customers.flatMap(customerGroup=>customerGroup.orders)));
   const[selectedOrderKeys,setSelectedOrderKeys]=useState(()=>new Set(orders
@@ -5758,6 +5765,10 @@ function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply}){
         </div>
         <button type="button" onClick={onClose}>Close</button>
       </header>
+      {showOdcFilter&&<div className="rake-unplanned-odc-filter" role="group" aria-label="ODC filter">
+        {[['all','All'],['odc','ODC'],['non-odc','Non-ODC']].map(([id,label])=><button key={id} type="button"
+          className={odcFilter===id?'is-selected':''} aria-pressed={odcFilter===id} onClick={()=>setOdcFilter(id)}>{label}</button>)}
+      </div>}
       <div className="rake-unplanned-picker-count">{orders.length.toLocaleString()} sales orders available</div>
       <div className="rake-unplanned-lines" tabIndex={0} aria-label="Unplanned sales orders">
         <table>
@@ -5782,7 +5793,7 @@ function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply}){
                           return next;
                         })}/><span>{order.soNo}</span></label>
                     </td>
-                    <td className="rake-unplanned-balance">{fmt(order.balance)}</td>
+                    <td className="rake-unplanned-balance">{fmt(order.balance,2)}</td>
                   </tr>)}
                 </React.Fragment>)}
               </React.Fragment>)}
@@ -5792,7 +5803,7 @@ function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply}){
         </table>
       </div>
       <footer>
-        <span><strong>{fmt(selectedBalance)} MT</strong> Bal to PGI for {selectedOrders.length} selected SOs · {selectedCustomerKeys.size} customers</span>
+        <span><strong>{fmt(selectedBalance,2)} MT</strong> Bal to PGI for {selectedOrders.length} selected SOs · {selectedCustomerKeys.size} customers</span>
         <button type="button" onClick={onClose}>Cancel</button>
         <button type="button" className="rake-unplanned-confirm" onClick={apply}>OK</button>
       </footer>
@@ -5849,21 +5860,21 @@ function PlannedOrderSummary({plannedRows,onClose}){
               {ui===0&&oi===0&&<td rowSpan={c.rowSpan}>{c.name}</td>}
               {oi===0&&<td rowSpan={u.orders.length}>{u.name}</td>}
               <td className="rake-unplanned-so-cell"><span>{o.soNo}</span></td>
-              <td className="rake-unplanned-balance">{fmt(o.balance)}</td>
+              <td className="rake-unplanned-balance">{fmt(o.balance,2)}</td>
             </tr>))))}
             {!count&&<tr><td colSpan={5} className="rake-unplanned-empty">No planned orders for this view.</td></tr>}
           </tbody>
         </table>
       </div>
       <footer>
-        <span><strong>{fmt(total)} MT</strong> Bal to PGI for {count} planned SOs</span>
+        <span><strong>{fmt(total,2)} MT</strong> Bal to PGI for {count} planned SOs</span>
         <button type="button" className="rake-unplanned-confirm" onClick={onClose}>Close</button>
       </footer>
     </section>
   </div>,document.body);
 }
 
-function SimulatorIndiaMap({rows,plannedRows,hub,selectedCustomers,onToggleCustomer,onApplyCustomerSelection,onClearSelection,isDark,plannedBalance=0}){
+function SimulatorIndiaMap({rows,plannedRows,showOdcFilter=false,hub,selectedCustomers,onToggleCustomer,onApplyCustomerSelection,onClearSelection,isDark,plannedBalance=0}){
   const mapRef=useRef(null);
   const mapInst=useRef(null);
   const markersRef=useRef(new Map());
@@ -6215,7 +6226,7 @@ function SimulatorIndiaMap({rows,plannedRows,hub,selectedCustomers,onToggleCusto
       </>:<span className="rake-simulator-map-select-rake">Choose a rake to calculate directions.</span>}
     </div>
     {plannedSummaryOpen&&<PlannedOrderSummary plannedRows={plannedRows} onClose={()=>setPlannedSummaryOpen(false)}/>}
-    {orderPickerOpen&&<UnplannedOrderPicker orderLines={orderLines} selectedCustomers={selectedCustomers}
+    {orderPickerOpen&&<UnplannedOrderPicker orderLines={orderLines} selectedCustomers={selectedCustomers} showOdcFilter={showOdcFilter}
       onClose={()=>setOrderPickerOpen(false)} onApply={onApplyCustomerSelection}/>}
   </div>;
 }
@@ -6263,7 +6274,9 @@ function RakeSimulator({rows,active}){
   const[supplyConditions,setSupplyConditions]=useState(new Set());
   const[selectedCustomers,setSelectedCustomers]=useState(new Set());
   const tableScrollRef=useRef(null),tableRef=useRef(null),totalScrollRef=useRef(null),totalTableRef=useRef(null);
-  const selectedMode=SIMULATOR_RAKE_MODES.find(mode=>mode.id===scope);
+  const rakeModes=useMemo(()=>simulatorRakeModes(rows),[rows]);
+  const selectedMode=rakeModes.find(mode=>mode.id===scope);
+  useEffect(()=>{if(scope!=='ALL_RAKES'&&!selectedMode)setScope('ALL_RAKES');},[scope,selectedMode]);
   const plannedRows=useMemo(()=>{
     const target=selectedMode?RakePlanningRules.sidingKey(selectedMode.id):null;
     const seen=new Set();
@@ -6280,7 +6293,7 @@ function RakeSimulator({rows,active}){
   },[rows,selectedMode]);
   const plannedBalance=useMemo(()=>plannedRows.reduce((total,row)=>
     total+Math.max(0,Number(row['Bal to PGI'])||0),0),[plannedRows]);
-  const peerRakes=useMemo(()=>selectedMode?SIMULATOR_RAKE_MODES.filter(mode=>mode.id!==scope).map(mode=>mode.id):[],[scope,selectedMode]);
+  const peerRakes=useMemo(()=>selectedMode?rakeModes.filter(mode=>mode.id!==scope).map(mode=>mode.id):[],[scope,selectedMode,rakeModes]);
   const candidates=useMemo(()=>RakePlanningRules.simulatorCandidates(rows,scope,peerRakes),[rows,scope,peerRakes]);
   const regionOptions=useMemo(()=>[...new Set(candidates.map(row=>simulatorValue(row,'_Region')).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[candidates]);
   const regionRows=useMemo(()=>regions.size?candidates.filter(row=>regions.has(simulatorValue(row,'_Region'))):candidates,[candidates,regions]);
@@ -6378,9 +6391,7 @@ function RakeSimulator({rows,active}){
   const sidingHub=selectedMode?resolveHub(selectedMode.id):null;
   const scopeDescription=selectedMode
     ?`Showing available order-book items except those already planned for ${selectedMode.label}.`
-    :scope==='ALL_RAKES'
-      ?'Showing positive-balance items assigned to any rake.'
-      :'Showing all positive-balance orders except export.';
+    :'Planned: items assigned to any rake. Unplanned: items assigned to road (ODC and non-ODC).';
   if(!active)return null;
   return <section className="rake-simulator rake-simulator-tab">
     <div className="rake-simulator-page-heading">
@@ -6395,8 +6406,7 @@ function RakeSimulator({rows,active}){
         </div>
         <div className="rake-simulator-mode-options" role="group" aria-label="Order view and rake mode">
           <button type="button" className={scope==='ALL_RAKES'?'is-selected':''} aria-pressed={scope==='ALL_RAKES'} onClick={()=>selectScope('ALL_RAKES')}>All rakes</button>
-          <button type="button" className={scope==='ALL'?'is-selected':''} aria-pressed={scope==='ALL'} onClick={()=>selectScope('ALL')}>All</button>
-          {SIMULATOR_RAKE_MODES.map(mode=><button key={mode.id} type="button"
+          {rakeModes.map(mode=><button key={mode.id} type="button"
             className={scope===mode.id?'is-selected':''} aria-pressed={scope===mode.id}
             onClick={()=>selectScope(mode.id)}>{mode.label}</button>)}
         </div>
@@ -6422,7 +6432,7 @@ function RakeSimulator({rows,active}){
           </div>}
           <button className="rake-simulator-clear-filters" type="button" onClick={()=>{clearLocations();setSupplyConditions(new Set());}}>Clear filters</button>
       </div>
-      <SimulatorIndiaMap rows={visibleRows} plannedRows={plannedRows} hub={sidingHub} isDark={C.isDark} selectedCustomers={selectedCustomers} plannedBalance={plannedBalance}
+      <SimulatorIndiaMap rows={visibleRows} plannedRows={plannedRows} showOdcFilter={scope==='ALL_RAKES'} hub={sidingHub} isDark={C.isDark} selectedCustomers={selectedCustomers} plannedBalance={plannedBalance}
         onToggleCustomer={toggleCustomer} onApplyCustomerSelection={setSelectedCustomers} onClearSelection={()=>setSelectedCustomers(new Set())}/>
       <div className="rake-simulator-results">
         <div className="rake-simulator-results-heading">

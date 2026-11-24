@@ -13,18 +13,17 @@ globalThis.RakePlanningRules=(()=>{
     if(/^RAKE[-\s_]+/.test(raw))return raw.replace(/^RAKE[-\s_]+/,'').trim()||null;
     return null;
   }
-  function simulatorCandidates(rows,scope='ALL',peerRakes=[]){
-    const selected=key(scope),peers=new Set(peerRakes.map(key)),seen=new Set(),candidates=[];
+  function simulatorCandidates(rows,scope='ALL_RAKES',peerRakes=[]){
+    const selected=sidingKey(scope),peers=new Set(peerRakes.map(sidingKey)),seen=new Set(),candidates=[];
     for(const row of rows){
       if(qty(row['Bal to PGI'])<=0)continue;
-      if(key(row._WagonType)==='ROAD-ODC')continue;
       if(selected==='ALL_RAKES'){
+        // Unplanned for "All rakes" = every order assigned to road (incl. ODC and export road).
         const assigned=actualSiding(row._ModeC);
-        if(!assigned||['ROAD','ROAD-ODC','EXPORT ROAD'].includes(assigned))continue;
-      }else if(selected==='ALL'){
-        if(isExport(row))continue;
-      }else if(selected){
-        const assigned=actualSiding(row._ModeC);
+        if(!assigned||!['ROAD','ROAD-ODC','EXPORT ROAD'].includes(assigned))continue;
+      }else if(key(row._WagonType)==='ROAD-ODC')continue;
+      else if(selected){
+        const assigned=sidingKey(actualSiding(row._ModeC));
         if(assigned===selected||!peers.has(assigned)||key(row._Country)!=='INDIA')continue;
         // Long modes only pair with LONG wagon type; non-long modes exclude LONG wagon type.
         // Long rakes carry only long plates; standard rakes never carry long plates.
