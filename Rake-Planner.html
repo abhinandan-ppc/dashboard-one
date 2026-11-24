@@ -2677,7 +2677,7 @@ const mapOrderSidingKey=order=>{
 function TotalEbtpMap({rows,onClose}){
   const dialogRef=usePlanningDialog(onClose);
   const[actualOnly,setActualOnly]=useState(true),[road,setRoad]=useState(false),[odc,setOdc]=useState(false),[exports,setExports]=useState(false);
-  const[city,setCity]=useState(null),[selected,setSelected]=useState(null),[search,setSearch]=useState(''),[page,setPage]=useState(0);
+  const[city,setCity]=useState(null),[selected,setSelected]=useState(null),[search,setSearch]=useState(''),[page,setPage]=useState(0),[detailsCity,setDetailsCity]=useState(null);
   const[columnFilters,setColumnFilters]=useState({}),[sort,setSort]=useState({key:null,direction:'asc'}),[siding,setSiding]=useState(null);
   const mapRef=useRef(null),map=useRef(null),markers=useRef(new Map()),routes=useRef([]),sidingMarkers=useRef(new Map()),fittedSource=useRef(null),ordersScroll=useRef(null);
   const source=useMemo(()=>rows.filter(r=>{
@@ -2689,6 +2689,7 @@ function TotalEbtpMap({rows,onClose}){
   }),[rows,actualOnly,road,odc,exports]);
   const live=useLiveDestinations(source);
   const groups=useMemo(()=>{const m=new Map();for(const r of source){const k=orderPlaceKey(r);if(!m.has(k))m.set(k,{key:k,name:r['Ship To Party City']||'Unknown city',coords:orderCoords(r),rows:[],bal:0});const g=m.get(k);g.rows.push(r);g.bal+=n2(parseFloat(r['Bal to PGI']));}return[...m.values()];},[source,live.revision]);
+  const detailsGroup=useMemo(()=>groups.find(g=>g.key===detailsCity),[groups,detailsCity]);
   const sidings=useMemo(()=>{
     const hubs=new Map();
     for(const group of groups)for(const order of group.rows){
@@ -2712,7 +2713,7 @@ function TotalEbtpMap({rows,onClose}){
   useEffect(()=>{setPage(p=>Math.min(p,Math.max(0,Math.ceil(tableRows.length/100)-1)));},[tableRows.length]);
   const mappedGroups=groups.filter(g=>g.coords),activePlace=groups.find(g=>g.key===city),activeSiding=sidings.find(h=>h.key===siding);
   const fitLocations=()=>{const points=[[ANGUL.lat,ANGUL.lng],...sidings.map(h=>[h.lat,h.lng]),...groups.filter(g=>g.coords).map(g=>g.coords)];map.current?.stop().fitBounds(points,{padding:[40,40],maxZoom:8,animate:false});};
-  useEffect(()=>{setCity(null);setSiding(null);setPage(0);setSelected(null);},[actualOnly,road,odc,exports]);
+  useEffect(()=>{setCity(null);setSiding(null);setPage(0);setSelected(null);setDetailsCity(null);},[actualOnly,road,odc,exports]);
   useEffect(()=>{const m=L.map(mapRef.current,{center:[22,80],zoom:5});map.current=m;L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · Powered by <a href="https://www.geoapify.com/">Geoapify</a>',maxZoom:19}).addTo(m);const resize=new ResizeObserver(()=>m.invalidateSize({animate:false}));resize.observe(mapRef.current);return()=>{resize.disconnect();m.remove();map.current=null;};},[]);
   useEffect(()=>{
     if(!map.current)return;
@@ -2730,8 +2731,8 @@ function TotalEbtpMap({rows,onClose}){
     groups.forEach(g=>{
       if(!g.coords||g.coords.some(v=>!Number.isFinite(v)))return;
       const marker=L.circleMarker(g.coords,{radius:6+10*Math.sqrt(g.bal/maxBal),weight:2,color:'#fff',fillColor:'#0284c7',fillOpacity:.85}).addTo(layer);
-      const choose=()=>{setCity(current=>current===g.key?null:g.key);setSiding(null);setSearch('');setColumnFilters({});setPage(0);setSelected(null);ordersScroll.current?.scrollTo({top:0});};
-      const label=document.createElement('div');label.textContent=`${g.name} · ${fmt(g.bal)} MT · ${g.rows.length} orders`;marker.bindTooltip(label,{interactive:true});
+      const choose=()=>{const off=city===g.key;setCity(off?null:g.key);setDetailsCity(off?null:g.key);setSiding(null);setSearch('');setColumnFilters({});setPage(0);setSelected(null);ordersScroll.current?.scrollTo({top:0});};
+      const label=document.createElement('div');label.className='total-map-label';label.textContent=`${g.name} · ${fmt(g.bal)} MT · ${g.rows.length} orders`;marker.bindTooltip(label,{permanent:true,direction:'top',offset:[0,11],className:'total-map-label',interactive:true,opacity:0.9});
       marker.on('click',choose);marker.getTooltip().on('click',choose);
       const el=marker.getElement();el?.setAttribute('tabindex','0');el?.setAttribute('role','button');el?.setAttribute('aria-label',`Show ${g.name} orders, ${fmt(g.bal)} MT`);
       el?.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose();}});
@@ -2739,20 +2740,20 @@ function TotalEbtpMap({rows,onClose}){
     });
     for(const hub of sidings){
       const marker=L.circleMarker([hub.lat,hub.lng],{radius:9,weight:3,color:'#fff',fillColor:'#c026d3',fillOpacity:1}).addTo(layer);
-      const label=document.createElement('div');label.textContent=`Siding · ${[...hub.names].join(' / ')} · ${hub.name||''}`;
-      marker.bindTooltip(label,{direction:'top',interactive:true});
+      const label=document.createElement('div');label.className='total-map-label';label.textContent=`Siding · ${[...hub.names].join(' / ')} · ${hub.name||''}`;
+      marker.bindTooltip(label,{permanent:true,direction:'top',offset:[0,11],className:'total-map-label',interactive:true,opacity:0.95});
       const chooseSiding=()=>{setSiding(current=>current===hub.key?null:hub.key);setCity(null);setSelected(null);setSearch('');setColumnFilters({});setPage(0);ordersScroll.current?.scrollTo({top:0});};
       marker.on('click',chooseSiding);marker.getTooltip().on('click',chooseSiding);
       const element=marker.getElement();element?.setAttribute('tabindex','0');element?.setAttribute('role','button');element?.setAttribute('aria-label','Filter orders for siding '+[...hub.names].join(' / '));
       element?.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();chooseSiding();}});
       sidingMarkers.current.set(hub.key,marker);
     }
-    const plantLabel=document.createElement('div');plantLabel.textContent='Jindal Steel Angul Plant';
-    L.marker([ANGUL.lat,ANGUL.lng],{icon:plantPinIcon(L,'#7c3aed'),zIndexOffset:200}).addTo(layer).bindTooltip(plantLabel);
+    const plantLabel=document.createElement('div');plantLabel.className='total-map-label';plantLabel.textContent='Jindal Steel Angul Plant';
+    L.marker([ANGUL.lat,ANGUL.lng],{icon:plantPinIcon(L,'#7c3aed'),zIndexOffset:200}).addTo(layer).bindTooltip(plantLabel,{permanent:true,direction:'top',offset:[0,11],className:'total-map-label',opacity:0.95});
     if(markers.current.size&&fittedSource.current!==source){fitLocations();fittedSource.current=source;}
     return()=>layer.remove();
   },[groups,sidings]);
-  useEffect(()=>{const focused=source.find(r=>RakePlanningRules.orderKey(r)===selected),key=focused?orderPlaceKey(focused):city;markers.current.forEach((m,k)=>{m.setStyle({fillColor:k===key?'#d97706':'#0284c7',weight:k===key?4:2,fillOpacity:(siding?activeSiding?.destinations.has(k):!key||k===key)?0.95:0.35});m.getElement()?.setAttribute('aria-pressed',String(k===key));if(k===key)m.bringToFront();});sidingMarkers.current.forEach((marker,k)=>{marker.setStyle({weight:k===siding?5:3,color:k===siding?'#f59e0b':'#fff',fillOpacity:!siding||k===siding?1:0.35});marker.getElement()?.setAttribute('aria-pressed',String(k===siding));});routes.current.forEach(({line,destinations,siding:routeSiding})=>line.setStyle({opacity:(siding?routeSiding===siding:!key||destinations.has(key))?0.65:0.1}));},[selected,city,siding,groups,sidings]);
+  useEffect(()=>{const focused=source.find(r=>RakePlanningRules.orderKey(r)===selected),key=focused?orderPlaceKey(focused):city;markers.current.forEach((m,k)=>{const show=k===key||(!key&&!siding);m.setStyle({fillColor:k===key?'#d97706':'#0284c7',weight:k===key?4:2,fillOpacity:show?0.95:0.35});m.getTooltip()?.setOpacity(show?0.95:0.25);m.getElement()?.setAttribute('aria-pressed',String(k===key));if(k===key)m.bringToFront();});sidingMarkers.current.forEach((marker,k)=>{const show=!siding||k===siding;marker.setStyle({weight:k===siding?5:3,color:k===siding?'#f59e0b':'#fff',fillOpacity:show?1:0.35});marker.getTooltip()?.setOpacity(show?0.95:0.2);marker.getElement()?.setAttribute('aria-pressed',String(k===siding));});routes.current.forEach(({line,destinations,siding:routeSiding})=>line.setStyle({opacity:(siding?routeSiding===siding:!key||destinations.has(key))?0.65:0.1}));},[selected,city,siding,groups,sidings]);
   const focus=r=>{const marker=markers.current.get(orderPlaceKey(r));setSelected(RakePlanningRules.orderKey(r));if(marker){map.current.stop().setView(marker.getLatLng(),9,{animate:false});marker.openTooltip();}};
   return ReactDOM.createPortal(<div className="total-map-backdrop"><section ref={dialogRef} className="total-map" role="dialog" aria-modal="true" aria-label="Total EBTP map">
     <header><div><h3>Total EBTP map</h3><p>{source.length.toLocaleString()} orders · {fmt(source.reduce((sum,r)=>sum+n2(parseFloat(r['Bal to PGI'])),0))} MT balance</p></div><button onClick={onClose}>Close</button></header>
@@ -2760,8 +2761,33 @@ function TotalEbtpMap({rows,onClose}){
     <div className="total-map-body">
       <div className="total-map-canvas"><div ref={mapRef} style={{height:'100%'}}/><button className="total-map-fit" onClick={fitLocations} disabled={!mappedGroups.length}>Fit locations</button><div className="total-map-caption">{mappedGroups.length} mapped destinations · {groups.length-mappedGroups.length} unmapped{!mappedGroups.length&&<small>No mapped locations in this view</small>}</div></div>
       <div className="total-map-orders">
-        <div className="total-map-tools"><div className="total-map-selection"><strong aria-live="polite">{activeSiding?'Siding · '+[...activeSiding.names].join(' / '):activePlace?.name||'All locations'}</strong><span>{tableRows.length.toLocaleString()} orders</span><button onClick={()=>{setCity(null);setSiding(null);setSelected(null);setSearch('');setColumnFilters({});setPage(0);ordersScroll.current?.scrollTo({top:0});fitLocations();}}>All locations</button></div><div className="map-stock-legend" aria-label="Stock progress legend"><span data-stage="0">Plate stock</span><span data-stage="1">Slab stock</span><span data-stage="2">Issued</span></div><input aria-label="Search mapped orders" placeholder="Search SO, customer, city or state…" value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}}/></div>
+        <div className="total-map-tools"><div className="total-map-selection"><strong aria-live="polite">{activeSiding?'Siding · '+[...activeSiding.names].join(' / '):activePlace?.name||'All locations'}</strong><span>{tableRows.length.toLocaleString()} orders</span><button onClick={()=>{setCity(null);setSiding(null);setSelected(null);setDetailsCity(null);setSearch('');setColumnFilters({});setPage(0);ordersScroll.current?.scrollTo({top:0});fitLocations();}}>All locations</button></div><div className="map-stock-legend" aria-label="Stock progress legend"><span data-stage="0">Plate stock</span><span data-stage="1">Slab stock</span><span data-stage="2">Issued</span></div><input aria-label="Search mapped orders" placeholder="Search SO, customer, city or state…" value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}}/></div>
         <div ref={ordersScroll} className="probable-table-scroll" tabIndex={0} aria-label="Mapped orders table"><table className="map-orders-table"><thead><tr>{MAP_ORDER_COLUMNS.map(column=><th key={column.key} scope="col" aria-sort={sort.key===column.key?(sort.direction==='asc'?'ascending':'descending'):'none'}><div className="map-column-heading"><button type="button" className="map-column-sort" aria-label={`Sort by ${column.label}`} onClick={()=>setSort(current=>({key:column.key,direction:current.key===column.key&&current.direction==='asc'?'desc':'asc'}))}>{column.label}<span aria-hidden="true">{sort.key===column.key?(sort.direction==='asc'?'↑':'↓'):'↕'}</span></button><BackupOrderColumnFilter column={column} values={filterValues[column.key]} selected={columnFilters[column.key]} onChange={values=>setColumnFilters(current=>{const next={...current};if(values===null)delete next[column.key];else next[column.key]=values;return next;})}/></div></th>)}</tr></thead><tbody>{tableRows.slice(page*100,page*100+100).map(r=><tr key={RakePlanningRules.orderKey(r)} onClick={()=>focus(r)} data-destination-selected={city===orderPlaceKey(r)} data-selected={selected===RakePlanningRules.orderKey(r)}><td><div className="map-order-identity"><button className="map-order-link" onClick={e=>{e.stopPropagation();focus(r);}}>{r['SO No.']} / {r._LineItem}</button><MapLocationIcon order={r}/></div></td><td>{r['Sold To Party Name']}</td><td><strong>{r['Ship To Party City']}</strong><small>{r._State}</small></td><td>{actualSidingForOrder(r)||r._Siding}<small>{r._ODC||r._WagonType}{r._RoutingConflict&&' · Assignment conflict'}</small></td><td className="map-quantity"><MapBalanceProgress order={r}/></td></tr>)}{!tableRows.length&&<tr><td colSpan={5} className="map-empty">No orders match this view. Change the search or map filters.</td></tr>}</tbody></table></div>
+        {detailsCity && detailsGroup && (
+          <div className="total-map-customer-details">
+            <div className="total-map-details-header"><h3>Customer Details · {detailsGroup.name}</h3><button onClick={()=>setDetailsCity(null)}>Close</button></div>
+            <table className="map-customer-details-table">
+              <thead><tr><th>SO / Item</th><th>Customer</th><th>City / State</th><th>Balance MT</th><th>Mode</th><th>Wagon</th><th className="details-select-col">Select</th></tr></thead>
+              <tbody>
+                {detailsGroup.rows.map(r=>{
+                  const id=RakePlanningRules.orderKey(r);
+                  const planned=!!actualSidingForOrder(r);
+                  return (
+                    <tr key={id}>
+                      <td>{r['SO No.']} / {r._LineItem}</td>
+                      <td>{r['Sold To Party Name']}</td>
+                      <td>{[r['Ship To Party City'],r._State].filter(Boolean).join(' / ')||'—'}</td>
+                      <td>{fmt(n2(parseFloat(r['Bal to PGI'])))}</td>
+                      <td>{r._ModeC||r.MODE||'—'}</td>
+                      <td>{r._WagonType||'—'}</td>
+                      <td className="details-select-col">{!planned && <input type="checkbox" checked={true} readOnly aria-label={`Select ${id}`}/>}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
         <footer><span>Page {page+1} / {Math.max(1,Math.ceil(tableRows.length/100))}</span><button disabled={!page} onClick={()=>setPage(p=>p-1)}>Previous</button><button disabled={(page+1)*100>=tableRows.length} onClick={()=>setPage(p=>p+1)}>Next</button></footer>
         <details className="total-map-mapping"><summary>Live destination mapping <span role="status">{live.status}</span></summary>{live.control}</details>
       </div>
@@ -5774,6 +5800,69 @@ function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply}){
   </div>,document.body);
 }
 
+function PlannedOrderSummary({plannedRows,onClose}){
+  const dialogRef=usePlanningDialog(onClose);
+  const{groups,count,total}=useMemo(()=>{
+    const states=new Map();let count=0,total=0;
+    for(const row of plannedRows){
+      const state=simulatorStateValue(row)||'—';
+      const city=RakePlanningRules.clean(row['Ship To Party City'])||'—';
+      const customer=RakePlanningRules.clean(row['Sold To Party Name'])||'Unknown customer';
+      const soNo=RakePlanningRules.clean(row['SO No.'])||'—';
+      const bal=Math.max(0,Number(row['Bal to PGI'])||0);
+      const sk=RakePlanningRules.key(state),ck=RakePlanningRules.key(city),nk=RakePlanningRules.key(customer);
+      let s=states.get(sk);if(!s){s={key:sk,name:state,cities:new Map()};states.set(sk,s);}
+      let c=s.cities.get(ck);if(!c){c={key:ck,name:city,customers:new Map()};s.cities.set(ck,c);}
+      let u=c.customers.get(nk);if(!u){u={key:nk,name:customer,orders:new Map()};c.customers.set(nk,u);}
+      let o=u.orders.get(soNo);if(!o){o={soNo,balance:0};u.orders.set(soNo,o);count++;}
+      o.balance+=bal;total+=bal;
+    }
+    const groups=[...states.values()].sort((a,b)=>a.name.localeCompare(b.name)).map(s=>{
+      const cities=[...s.cities.values()].sort((a,b)=>a.name.localeCompare(b.name)).map(c=>{
+        const customers=[...c.customers.values()].sort((a,b)=>a.name.localeCompare(b.name)).map(u=>({...u,
+          orders:[...u.orders.values()].sort((a,b)=>a.soNo.localeCompare(b.soNo,undefined,{numeric:true,sensitivity:'base'}))}));
+        return{...c,customers,rowSpan:customers.reduce((n,u)=>n+u.orders.length,0)};
+      });
+      return{...s,cities,rowSpan:cities.reduce((n,c)=>n+c.rowSpan,0)};
+    });
+    return{groups,count,total};
+  },[plannedRows]);
+  return ReactDOM.createPortal(<div className="rake-unplanned-backdrop">
+    <section ref={dialogRef} className="rake-unplanned-picker" role="dialog" aria-modal="true"
+      aria-labelledby="rake-planned-summary-title">
+      <header>
+        <div><h3 id="rake-planned-summary-title">Planned sales orders</h3>
+          <p>Balances are summed by SO No. for orders assigned to the selected rake.</p>
+        </div>
+        <button type="button" onClick={onClose}>Close</button>
+      </header>
+      <div className="rake-unplanned-picker-count">{count.toLocaleString()} sales orders planned</div>
+      <div className="rake-unplanned-lines" tabIndex={0} aria-label="Planned sales orders">
+        <table>
+          <thead><tr>
+            <th scope="col">STO</th><th scope="col">Party City</th>
+            <th scope="col">Sold To Party Name</th><th scope="col">SO No</th><th scope="col">Bal to PGI</th>
+          </tr></thead>
+          <tbody>
+            {groups.map(s=>s.cities.map((c,ci)=>c.customers.map((u,ui)=>u.orders.map((o,oi)=><tr key={s.key+c.key+u.key+o.soNo}>
+              {ci===0&&ui===0&&oi===0&&<td rowSpan={s.rowSpan}>{s.name}</td>}
+              {ui===0&&oi===0&&<td rowSpan={c.rowSpan}>{c.name}</td>}
+              {oi===0&&<td rowSpan={u.orders.length}>{u.name}</td>}
+              <td className="rake-unplanned-so-cell"><span>{o.soNo}</span></td>
+              <td className="rake-unplanned-balance">{fmt(o.balance)}</td>
+            </tr>))))}
+            {!count&&<tr><td colSpan={5} className="rake-unplanned-empty">No planned orders for this view.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      <footer>
+        <span><strong>{fmt(total)} MT</strong> Bal to PGI for {count} planned SOs</span>
+        <button type="button" className="rake-unplanned-confirm" onClick={onClose}>Close</button>
+      </footer>
+    </section>
+  </div>,document.body);
+}
+
 function SimulatorIndiaMap({rows,plannedRows,hub,selectedCustomers,onToggleCustomer,onApplyCustomerSelection,onClearSelection,isDark,plannedBalance=0}){
   const mapRef=useRef(null);
   const mapInst=useRef(null);
@@ -5783,6 +5872,7 @@ function SimulatorIndiaMap({rows,plannedRows,hub,selectedCustomers,onToggleCusto
   const onToggleRef=useRef(onToggleCustomer);
   const selectedRef=useRef(selectedCustomers);
   const[orderPickerOpen,setOrderPickerOpen]=useState(false);
+  const[plannedSummaryOpen,setPlannedSummaryOpen]=useState(false);
   onToggleRef.current=onToggleCustomer;
   selectedRef.current=selectedCustomers;
   const live=useLiveDestinations(rows);
@@ -5958,13 +6048,11 @@ function SimulatorIndiaMap({rows,plannedRows,hub,selectedCustomers,onToggleCusto
         html:`<span class="rake-simulator-map-marker" data-kind="${kind}"></span>`,
         iconSize:[18,18],iconAnchor:[9,9],
       });
-      const marker=L.marker([lat,lng],{icon,keyboard:true}).addTo(layer);
-      const routeLabel=city.direction==='forward'?'Fwd'
-        :city.direction==='reverse'&&!city.included?'Excluded'
-          :city.direction==='reverse'?'Rev':'';
-      const typeLabel=kind==='mixed'?'Planned + Unplanned':kind==='planned'?'Planned':'Unplanned';
-      marker.bindTooltip(`${city.name} · ${typeLabel}${city.distance===null?'':` · ${city.distance} km`}${routeLabel?` · ${routeLabel}`:''}`,
-        {permanent:true,direction:'right',offset:[8,0],className:'rake-simulator-map-label'});
+      const marker=L.marker([lat,lng],{icon,keyboard:true,title:city.name}).addTo(layer);
+      marker.on('click',()=>{marker.openPopup();});
+      const labelText=city.distance!=null&&hub?`${city.name} · ${city.distance} km`:`${city.name}`;
+      marker.bindTooltip(labelText,
+        {permanent:true,direction:'top',offset:[0,-12],className:'rake-simulator-map-label',opacity:0.95});
       const popup=document.createElement('div');
       popup.className='rake-simulator-map-popup';
       const title=document.createElement('strong');
@@ -5973,7 +6061,7 @@ function SimulatorIndiaMap({rows,plannedRows,hub,selectedCustomers,onToggleCusto
       const distance=document.createElement('small');
       distance.textContent=!city.coords?'No mapped coordinates for this city.'
         :city.distance===null?'Select a rake to calculate distance.'
-        :`${city.distance} km from ${hub?.name||'siding'} · ${routeLabel}`;
+        :`${city.distance} km from ${hub?.name||'siding'}`;
       popup.appendChild(distance);
       if(city.isPlanned){
         const plannedTitle=document.createElement('small');
@@ -6055,7 +6143,11 @@ function SimulatorIndiaMap({rows,plannedRows,hub,selectedCustomers,onToggleCusto
       {hub&&<span className="rake-simulator-map-note">Straight-line distances · road distances may vary.</span>}
       <div className="rake-simulator-delivery-cities" aria-label="Planned and unplanned orders">
         <div className="rake-simulator-planned-card">
-          <div className="rake-simulator-planned-summary" title="Sum of Bal to PGI for orders assigned to the selected rake"><span>Planned</span><strong>{fmt(plannedBalance)} <small>MT</small></strong></div>
+          <div className="rake-simulator-planned-summary" title="Sum of Bal to PGI for orders assigned to the selected rake"><span>Planned</span><strong>{fmt(plannedBalance)} <small>MT</small></strong>
+            <button type="button" className="rake-simulator-unplanned-picker-button"
+              aria-label="Open planned sales orders" title="Open planned sales orders"
+              aria-haspopup="dialog" aria-expanded={plannedSummaryOpen}
+              onClick={()=>setPlannedSummaryOpen(true)}>↗</button></div>
           <div className="rake-simulator-planned-location-list">
             {plannedLocations.map(location=><div className="rake-simulator-planned-location" key={location.key}>
               <div className="rake-simulator-planned-location-heading">
@@ -6122,6 +6214,7 @@ function SimulatorIndiaMap({rows,plannedRows,hub,selectedCustomers,onToggleCusto
         <span className="rake-simulator-route-count rake-simulator-route-excluded">× {revExcluded} Excl</span>
       </>:<span className="rake-simulator-map-select-rake">Choose a rake to calculate directions.</span>}
     </div>
+    {plannedSummaryOpen&&<PlannedOrderSummary plannedRows={plannedRows} onClose={()=>setPlannedSummaryOpen(false)}/>}
     {orderPickerOpen&&<UnplannedOrderPicker orderLines={orderLines} selectedCustomers={selectedCustomers}
       onClose={()=>setOrderPickerOpen(false)} onApply={onApplyCustomerSelection}/>}
   </div>;
@@ -7375,3 +7468,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 <script src="card-tilt.js"></script>
 </body>
 </html>
+

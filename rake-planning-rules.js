@@ -17,6 +17,7 @@ globalThis.RakePlanningRules=(()=>{
     const selected=key(scope),peers=new Set(peerRakes.map(key)),seen=new Set(),candidates=[];
     for(const row of rows){
       if(qty(row['Bal to PGI'])<=0)continue;
+      if(key(row._WagonType)==='ROAD-ODC')continue;
       if(selected==='ALL_RAKES'){
         const assigned=actualSiding(row._ModeC);
         if(!assigned||['ROAD','ROAD-ODC','EXPORT ROAD'].includes(assigned))continue;
@@ -25,6 +26,11 @@ globalThis.RakePlanningRules=(()=>{
       }else if(selected){
         const assigned=actualSiding(row._ModeC);
         if(assigned===selected||!peers.has(assigned)||key(row._Country)!=='INDIA')continue;
+        // Long modes only pair with LONG wagon type; non-long modes exclude LONG wagon type.
+        // Long rakes carry only long plates; standard rakes never carry long plates.
+        const isLongScope=selected.endsWith('(LONG)');
+        const rowWagonType=key(row._WagonType);
+        if(isLongScope?rowWagonType!=='LONG':rowWagonType==='LONG')continue;
       }
       const soItem=`${clean(row['SO No.'])}|${clean(row._LineItem??row.SOItm)}`;
       const id=soItem==='|'?orderKey(row):soItem;

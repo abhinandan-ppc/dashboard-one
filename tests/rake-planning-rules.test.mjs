@@ -63,19 +63,74 @@ test('simulatorCandidates deduplicates available rows by SO and line item',()=>{
   );
 });
 
-test('simulatorCandidates distinguishes BNHT from BNHT Long assignments',()=>{
+test('simulatorCandidates excludes road_odc wagon type in all scopes',()=>{
   const rows=[
-    {'SO No.':'100','_LineItem':'10','_ModeC':'RAKE-BNHT','Bal to PGI':'25',_Country:'India'},
-    {'SO No.':'101','_LineItem':'20','_ModeC':'RAKE-BNHT (Long)','Bal to PGI':'30',_Country:'India'},
+    {'SO No.':'100','_LineItem':'10','_ModeC':'RAKE-CCJS','_WagonType':'BOSM/BRN','Bal to PGI':'25',_Country:'India'},
+    {'SO No.':'101','_LineItem':'20','_ModeC':'RAKE-BNHT','_WagonType':'ROAD-ODC','Bal to PGI':'50',_Country:'India'},
+    {'SO No.':'102','_LineItem':'30','_ModeC':'HOLD','_WagonType':'ROAD-ODC','Bal to PGI':'15',_Country:'India'},
+    {'SO No.':'103','_LineItem':'40','_ModeC':'RAKE-KAV','_WagonType':'BOSM/BRN','Bal to PGI':'40',_Country:'India'},
   ];
 
   assert.deepEqual(
-    rules.simulatorCandidates(rows,'BNHT (Long)',['BNHT']).map(row=>row['SO No.']),
-    ['100'],
+    rules.simulatorCandidates(rows,'CCJS',['BNHT','KAV']).map(row=>row['SO No.']),
+    ['103'],
   );
   assert.deepEqual(
-    rules.simulatorCandidates(rows,'BNHT',['BNHT (Long)']).map(row=>row['SO No.']),
+    rules.simulatorCandidates(rows,'ALL').map(row=>row['SO No.']),
+    ['100','103'],
+  );
+  assert.deepEqual(
+    rules.simulatorCandidates(rows,'ALL_RAKES').map(row=>row['SO No.']),
+    ['100','103'],
+  );
+});
+
+test('simulatorCandidates long mode shows only LONG wagon type',()=>{
+  const rows=[
+    {'SO No.':'100','_LineItem':'10','_ModeC':'RAKE-BNHT','_WagonType':'BOSM/BRN','Bal to PGI':'25',_Country:'India'},
+    {'SO No.':'101','_LineItem':'20','_ModeC':'RAKE-BNHT','_WagonType':'LONG','Bal to PGI':'50',_Country:'India'},
+    {'SO No.':'102','_LineItem':'30','_ModeC':'RAKE-KAV','_WagonType':'LONG','Bal to PGI':'15',_Country:'India'},
+  ];
+
+  // Selecting BNHT-LONG with peer BNHT: only LONG wagon type from BNHT (101), BOSM/BRN (100) excluded, KAV (102) not a peer
+  assert.deepEqual(
+    rules.simulatorCandidates(rows,'BNHT (Long)',['BNHT']).map(row=>row['SO No.']),
     ['101'],
+  );
+});
+
+test('simulatorCandidates non-long mode excludes LONG wagon type',()=>{
+  const rows=[
+    {'SO No.':'100','_LineItem':'10','_ModeC':'RAKE-KAV','_WagonType':'BOSM/BRN','Bal to PGI':'25',_Country:'India'},
+    {'SO No.':'101','_LineItem':'20','_ModeC':'RAKE-KAV','_WagonType':'LONG','Bal to PGI':'50',_Country:'India'},
+    {'SO No.':'102','_LineItem':'30','_ModeC':'RAKE-BNHT','_WagonType':'BOSM/BRN','Bal to PGI':'15',_Country:'India'},
+    {'SO No.':'103','_LineItem':'40','_ModeC':'RAKE-BNHT','_WagonType':'LONG','Bal to PGI':'40',_Country:'India'},
+  ];
+
+  // Selecting KAV: row 100 is the selected mode itself (excluded), row 101 is LONG (excluded), row 102 is peer non-LONG (included), row 103 is LONG (excluded)
+  assert.deepEqual(
+    rules.simulatorCandidates(rows,'KAV',['BNHT']).map(row=>row['SO No.']),
+    ['102'],
+  );
+});
+
+test('simulatorCandidates distinguishes BNHT from BNHT Long assignments',()=>{
+  const rows=[
+    {'SO No.':'100','_LineItem':'10','_ModeC':'RAKE-BNHT','_WagonType':'BOSM/BRN','Bal to PGI':'25',_Country:'India'},
+    {'SO No.':'101','_LineItem':'20','_ModeC':'RAKE-BNHT','_WagonType':'LONG','Bal to PGI':'30',_Country:'India'},
+    {'SO No.':'102','_LineItem':'30','_ModeC':'RAKE-KAV','_WagonType':'BOSM/BRN','Bal to PGI':'40',_Country:'India'},
+    {'SO No.':'103','_LineItem':'40','_ModeC':'RAKE-KAV','_WagonType':'LONG','Bal to PGI':'50',_Country:'India'},
+  ];
+
+  // BNHT-Long scope with peer BNHT: only LONG wagon type from BNHT (101), BOSM/BRN (100) excluded, KAV rows not peers
+  assert.deepEqual(
+    rules.simulatorCandidates(rows,'BNHT (Long)',['BNHT']).map(row=>row['SO No.']),
+    ['101'],
+  );
+  // BNHT scope with peer KAV: LONG wagon type excluded (103), KAV BOSM/BRN (102) included; BNHT rows are selected mode itself (excluded)
+  assert.deepEqual(
+    rules.simulatorCandidates(rows,'BNHT',['KAV']).map(row=>row['SO No.']),
+    ['102'],
   );
 });
 
