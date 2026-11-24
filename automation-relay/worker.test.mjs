@@ -68,3 +68,39 @@ test('banner clear targets original run and exposes pending confirmation',async(
 
 test('expected start rejection does not escape the concurrency callback or reset relay',async()=>{const f=fixture();let reset=false;const original=f.pool.ctx.blockConcurrencyWhile;f.pool.ctx.blockConcurrencyWhile=fn=>original(async()=>{try{return await fn()}catch(e){reset=true;throw e}});const r=await f.pool.fetch(control({action:'run',...req('no-host')}));assert.equal(r.status,409);assert.match((await r.json()).error,/No compatible/);assert.equal(reset,false);assert.equal(f.data.has('run'),false)});
 test('new host may run its installed scripts without matching an unrelated PC hash',async()=>{const f=fixture();for(const [id,version] of [['old','older-scripts'],['new','updated-scripts']]){await f.storage.put('pc:'+id,{id,version,ready:true,seen:Date.now(),accounts:['test'],lastRun:0});f.socket('agent',id)}const run=await f.pool.start({...req('new-host-run'),pcId:'new'});assert.equal(run.pcId,'new')});
+
+test('scheduled failure resumes three times then starts fresh on the next PC',async()=>{
+ const f=fixture();for(const id of ['one','two']){await f.storage.put('pc:'+id,{id,ready:true,seen:Date.now(),accounts:['11103144'],lastRun:0});f.socket('agent',id)}
+ await f.storage.put('schedules',[{id:'s',time:'08:00',enabled:true,pcs:['one','two'],nextAt:Date.now()-1}]);
+ await f.pool.alarm();let run=f.data.get('run');assert.equal(run.pcId,'one');assert.equal(run.abandon,true);
+ for(let n=0;n<3;n++){
+  await f.pool.webSocketMessage(f.pool.sockets('agent','one')[0],JSON.stringify({type:'status',runId:run.id,status:'failed',checkpoint:true}));
+  await f.pool.alarm();run=f.data.get('run');assert.equal(run.pcId,'one');assert.equal(run.resume,true);
+ }
+ await f.pool.webSocketMessage(f.pool.sockets('agent','one')[0],JSON.stringify({type:'status',runId:run.id,status:'failed',checkpoint:true}));
+ await f.pool.alarm();run=f.data.get('run');assert.equal(run.pcId,'two');assert.equal(run.abandon,true);assert.equal(run.resume,false);
+});
+test('an active manual run causes a missed schedule without stopping it',async()=>{
+ const f=fixture(),run={id:'manual',pcId:'p',status:'running'};await f.storage.put('run',run);
+ await f.storage.put('schedules',[{id:'s',time:'08:00',enabled:true,pcs:['p'],nextAt:Date.now()-1}]);await f.pool.alarm();
+ assert.deepEqual(f.data.get('run'),run);assert.ok([...f.data.values()].some(v=>v?.status==='missed'));
+});
+test('disconnected scheduled PC times out after five minutes and next PC starts fresh',async()=>{
+ const f=fixture();for(const id of ['one','two']){await f.storage.put('pc:'+id,{id,ready:true,seen:Date.now(),accounts:['11103144'],lastRun:0});f.socket('agent',id)}
+ await f.storage.put('schedules',[{id:'s',time:'08:00',enabled:true,pcs:['one','two'],nextAt:Date.now()-1}]);await f.pool.alarm();
+ const old=f.data.get('run');await f.storage.put('pc:one',{...f.data.get('pc:one'),seen:Date.now()-300001});await f.pool.alarm();
+ assert.equal(f.data.get('run').pcId,'two');assert.equal(f.data.get('run').abandon,true);assert.match(f.data.get('history:'+old.createdAt).error,/may still be running/);
+});
+test('schedule settings validate PCs and create independent India-time alarms',async()=>{
+ const f=fixture();await f.storage.put('pc:p',{id:'p'});
+ const schedules=[{id:'a',time:'08:00',enabled:true,pcs:['p']},{id:'b',time:'15:00',enabled:false,pcs:['p']}];
+ assert.equal((await f.pool.fetch(control({action:'schedules',schedules}))).status,200);
+ assert.equal(f.data.get('schedules').length,2);assert.ok(f.data.get('schedules')[0].nextAt>Date.now());
+ assert.equal((await f.pool.fetch(control({action:'schedules',schedules:[{...schedules[0],pcs:['missing']}]}))).status,409);
+ assert.equal(f.data.get('schedules').length,2);
+});
+test('schedule records a miss when no listed PC can run',async()=>{
+ const f=fixture();await f.storage.put('pc:p',{id:'p',ready:false,seen:Date.now(),accounts:['11103144']});f.socket('agent','p');
+ await f.storage.put('schedules',[{id:'s',time:'08:00',enabled:true,pcs:['p'],nextAt:Date.now()-1}]);await f.pool.alarm();
+ assert.equal(f.data.get('run'),undefined);assert.ok([...f.data.values()].some(v=>v?.status==='missed'));
+});
