@@ -6999,12 +6999,18 @@ function App(){
     if(cacheBooting||!rows.length||fileName!=='Live Google Sheet')return;
     let alive=true;
     if(window.parent!==window){try{window.parent.postMessage({type:'request-ebtp-fetch'},'*');}catch(e){}}
-    readHubEbtpCache().then(cached=>{
+    readHubEbtpCache().then(async cached=>{
       const displayedAt=fileDate?new Date(fileDate).getTime():0;
-      if(alive&&cached?.csvText&&Number(cached.fetchedAt)>displayedAt)parseCSV(cached.csvText,cached.fetchedAt);
+      const cacheAt=Number(cached?.fetchedAt)||0;
+      if(alive&&cached?.csvText&&cacheAt>displayedAt)parseCSV(cached.csvText,cacheAt);
+      const day=t=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(t));
+      if(window.parent===window&&day(Math.max(displayedAt,cacheAt))!==day(Date.now())){
+        const csv=await fetchEbtpDirectly(logStep);
+        if(alive)parseCSV(csv,Date.now());
+      }
     }).catch(()=>{});
     return()=>{alive=false;};
-  },[cacheBooting,rows.length>0,fileName,fileDate,parseCSV]);
+  },[cacheBooting,rows.length>0,fileName,fileDate,parseCSV,logStep]);
 
   // If the segment map arrives (or was already cached) after rows are already
   // loaded — e.g. this page was opened before the hub finished the segment
