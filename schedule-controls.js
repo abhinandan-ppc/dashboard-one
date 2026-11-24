@@ -1,6 +1,7 @@
 export function setupScheduleControls({getState, save}) {
   const $ = id => document.getElementById(id);
   let draft = [];
+  const timeEdits = new WeakMap();
   const dialog = $('scheduleDialog'), list = $('scheduleList');
   const button = (text, action, disabled = false) => {
     const el = document.createElement('button'); el.type='button'; el.textContent=text; el.disabled=disabled; el.onclick=action; return el;
@@ -24,8 +25,22 @@ export function setupScheduleControls({getState, save}) {
       const heading=document.createElement('h3'); heading.textContent=`Schedule ${index+1}`;
       const remove=button('Remove schedule',()=>{draft.splice(index,1);draw()});remove.className='schedule-remove';header.append(heading,remove);
       const settings=document.createElement('div'); settings.className='schedule-settings';
-      const label=document.createElement('label'); label.className='schedule-time'; label.textContent='Time (India)';
-      const time=document.createElement('input'); time.type='time'; time.value=s.time; time.onchange=()=>{s.time=time.value}; label.append(time);
+      const label=document.createElement('div'); label.className='schedule-time';
+      const caption=document.createElement('span');caption.className='schedule-time-label';caption.textContent='Time (India)';
+      const time=document.createElement('div');time.className='schedule-time-controls';time.setAttribute('role','group');time.setAttribute('aria-label',`Schedule ${index+1} time in India`);
+      const parts=/^(\d{2}):(\d{2})$/.exec(s.time||'');const initialHour=parts?Number(parts[1]):8;
+      const savedEdit=timeEdits.get(s);let period=savedEdit?.period||(initialHour>=12?'PM':'AM');
+      const hour=document.createElement('input');hour.type='number';hour.min='1';hour.max='12';hour.inputMode='numeric';hour.value=savedEdit?savedEdit.hour:String(initialHour%12||12).padStart(2,'0');hour.setAttribute('aria-label','Hour');
+      const separator=document.createElement('span');separator.className='schedule-time-separator';separator.setAttribute('aria-hidden','true');separator.textContent=':';
+      const minute=document.createElement('input');minute.type='number';minute.min='0';minute.max='59';minute.inputMode='numeric';minute.value=savedEdit?savedEdit.minute:(parts?parts[2]:'00');minute.setAttribute('aria-label','Minute');
+      const periodGroup=document.createElement('div');periodGroup.className='schedule-period';periodGroup.setAttribute('role','group');periodGroup.setAttribute('aria-label','AM or PM');
+      const am=button('AM',()=>setPeriod('AM')),pm=button('PM',()=>setPeriod('PM'));
+      function updateTime(){timeEdits.set(s,{hour:hour.value,minute:minute.value,period});const h=Number(hour.value),m=Number(minute.value);if(hour.value===''||minute.value===''||!Number.isInteger(h)||!Number.isInteger(m)||h<1||h>12||m<0||m>59){s.time='';return}s.time=String((h%12)+(period==='PM'?12:0)).padStart(2,'0')+':'+String(m).padStart(2,'0')}
+      function setPeriod(value){period=value;am.setAttribute('aria-pressed',String(value==='AM'));pm.setAttribute('aria-pressed',String(value==='PM'));updateTime()}
+      hour.oninput=minute.oninput=updateTime;
+      hour.onblur=()=>{if(hour.value!==''&&Number(hour.value)>=1&&Number(hour.value)<=12)hour.value=String(Number(hour.value)).padStart(2,'0')};
+      minute.onblur=()=>{if(minute.value!==''&&Number(minute.value)>=0&&Number(minute.value)<=59)minute.value=String(Number(minute.value)).padStart(2,'0')};
+      periodGroup.append(am,pm);setPeriod(period);time.append(hour,separator,minute,periodGroup);label.append(caption,time);
       const enabled=document.createElement('label'); enabled.className='schedule-enabled'; const check=document.createElement('input'); check.type='checkbox'; check.checked=s.enabled; check.onchange=()=>{s.enabled=check.checked}; enabled.append(check,document.createTextNode('Enabled'));
       settings.append(label,enabled);section.append(header,settings);
       const help=document.createElement('p'); help.className='schedule-pc-label'; help.textContent='PC priority'; section.append(help);
@@ -50,6 +65,6 @@ export function setupScheduleControls({getState, save}) {
   $('editSchedules').onclick=()=>{const state=getState();draft=structuredClone(state.schedules||[]);if(!draft.length&&state.legacySchedule?.time)draft.push({id:crypto.randomUUID(),time:state.legacySchedule.time,enabled:true,pcs:[]});$('scheduleFeedback').textContent='';draw();dialog.showModal()};
   $('closeSchedules').onclick=()=>dialog.close();
   $('addSchedule').onclick=()=>{draft.push({id:crypto.randomUUID(),time:'08:00',enabled:true,pcs:[]});draw()};
-  $('saveSchedules').onclick=async()=>{const btn=$('saveSchedules');btn.disabled=true;try{if(draft.some(s=>!s.time||!s.pcs.length))throw Error('Choose a time and at least one PC for each schedule.');await save(draft);dialog.close()}catch(e){$('scheduleFeedback').textContent=e.message}finally{btn.disabled=false}};
+  $('saveSchedules').onclick=async()=>{const btn=$('saveSchedules');btn.disabled=true;try{if(draft.some(s=>!s.time||!s.pcs.length))throw Error('Enter a valid time and choose at least one PC for each schedule.');await save(draft);dialog.close()}catch(e){$('scheduleFeedback').textContent=e.message}finally{btn.disabled=false}};
   return {render};
 }
