@@ -3658,6 +3658,19 @@ function fetchAndCacheSegment(force){
   [['zstk', 300], ['autobtr', 900], ['ebtp', 1500], ['heats', 2100]].forEach(function(pair){
     setTimeout(function(){ syncSheet(pair[0], false); }, pair[1]);
   });
+  // Tabs can stay open across midnight. Re-check freshness when returning to
+  // the hub and periodically while visible; syncSheet skips today's cache.
+  function indiaDay(){ return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); }
+  var lastDailyCheck=indiaDay();
+  function refreshOutdatedSources(){
+    if(document.visibilityState !== 'visible') return;
+    var today=indiaDay();
+    if(today===lastDailyCheck) return;
+    lastDailyCheck=today;
+    SRC_ORDER.forEach(function(src){ syncSheet(src, false); });
+  }
+  document.addEventListener('visibilitychange', refreshOutdatedSources);
+  setInterval(refreshOutdatedSources, 60000);
 })();
 </script>
 
