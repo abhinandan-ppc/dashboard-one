@@ -273,8 +273,37 @@ html[data-theme="light"][data-theme-style="neomorph"] body.auto-btp{--bg:var(--n
  .auto-btp .run-panel > .controls > #refresh {grid-column:1 / -1}
  .auto-btp .output-controls > label {min-width:0;max-width:100%;width:100%}
 }
-.auto-btp .schedule-editor{padding:16px 0;border-top:1px solid var(--bdr)}
-.auto-btp .schedule-editor>label{display:inline-flex;align-items:center;gap:8px;margin:8px 16px 8px 0}
-.auto-btp .schedule-pc-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0}
-.auto-btp .schedule-pc-row span{flex:1 1 140px}
-.auto-btp #scheduleDialog{max-height:85vh;overflow:auto;width:min(650px,calc(100vw - 32px))}
+.auto-btp #scheduleDialog{width:min(680px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:28px;overflow:auto}
+.auto-btp #scheduleDialog .schedule-dialog-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:nowrap}
+.auto-btp #scheduleDialog .schedule-dialog-header>div{min-width:0}
+.auto-btp #scheduleDialog h2{font-size:20px;line-height:1.25;margin:0}
+.auto-btp #scheduleDialog .schedule-dialog-header p{margin:7px 0 0;line-height:1.5}
+.auto-btp #scheduleDialog .schedule-warning{margin:20px 0 0;padding:12px 14px;border-left:3px solid var(--primary);border-radius:var(--radius-sm);background:var(--s1);font-size:13px;line-height:1.5}
+.auto-btp #scheduleList{display:grid;gap:14px;margin-top:20px}
+.auto-btp #scheduleDialog .schedule-editor{min-width:0;margin:0;padding:20px;border:1px solid var(--bdr);border-radius:var(--radius-md);background:var(--s1);box-shadow:none;backdrop-filter:none}
+.auto-btp #scheduleDialog .schedule-editor-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.auto-btp #scheduleDialog .schedule-editor h3{font-size:15px;margin:0;color:var(--text)}
+.auto-btp #scheduleDialog .schedule-remove{font-size:13px;min-height:40px}
+.auto-btp #scheduleDialog .schedule-settings{display:flex;align-items:end;gap:24px;flex-wrap:wrap;margin-top:18px}
+.auto-btp #scheduleDialog .schedule-time{display:grid;gap:6px;font-size:12px;font-weight:600}
+.auto-btp #scheduleDialog .schedule-time input{width:152px;font-size:14px;font-variant-numeric:tabular-nums}
+.auto-btp #scheduleDialog .schedule-enabled{display:flex;align-items:center;gap:9px;min-height:40px;font-size:14px;color:var(--text)}
+.auto-btp #scheduleDialog .schedule-enabled input{width:17px;height:17px;min-height:0;margin:0;padding:0;accent-color:var(--primary)}
+.auto-btp #scheduleDialog .schedule-pc-label{margin:22px 0 10px;font-size:12px;font-weight:600;color:var(--dim)}
+.auto-btp #scheduleDialog .schedule-pc-empty{margin:0 0 12px;color:var(--dim);font-size:13px}
+.auto-btp #scheduleDialog .schedule-pc-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;margin:0 0 8px;border:1px solid var(--bdr);border-radius:var(--radius-sm);background:var(--s0)}
+.auto-btp #scheduleDialog .schedule-pc-row>span{flex:1 1 140px;min-width:0;overflow-wrap:anywhere;color:var(--text)}
+.auto-btp #scheduleDialog .schedule-pc-actions{display:flex;gap:6px;flex-wrap:wrap}
+.auto-btp #scheduleDialog .schedule-pc-actions button{font-size:12px;min-height:40px;padding:7px 10px}
+.auto-btp #scheduleDialog .schedule-add-pc{display:flex;gap:10px;align-items:center}
+.auto-btp #scheduleDialog .schedule-add-pc select{flex:1 1 auto;min-width:0}
+.auto-btp #scheduleDialog .schedule-add-pc button{flex:none}
+.auto-btp #scheduleDialog .schedule-empty{padding:24px;text-align:center;border:1px dashed var(--bdrHi);border-radius:var(--radius-md);background:var(--s1)}
+.auto-btp #scheduleDialog .schedule-empty strong{color:var(--text)}
+.auto-btp #scheduleDialog .schedule-empty p{margin:6px 0 0;font-size:13px;line-height:1.5}
+.auto-btp #scheduleDialog #scheduleFeedback{margin:0;font-size:13px;color:var(--danger)}
+.auto-btp #scheduleDialog #scheduleFeedback:not(:empty){margin-top:14px}
+.auto-btp #scheduleDialog .schedule-dialog-actions{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:22px;padding-top:18px;border-top:1px solid var(--bdr)}
+html[data-theme-style="neomorph"] .auto-btp #scheduleDialog .schedule-editor{background:var(--neo-bg);border-color:transparent;box-shadow:var(--shadow-sm)}
+html[data-theme-style="neomorph"] .auto-btp #scheduleDialog .schedule-pc-row,html[data-theme-style="neomorph"] .auto-btp #scheduleDialog .schedule-empty{background:var(--neo-bg)}
+@media(max-width:520px){.auto-btp #scheduleDialog{padding:20px}.auto-btp #scheduleDialog .schedule-editor{padding:16px}.auto-btp #scheduleDialog .schedule-add-pc{flex-wrap:wrap}.auto-btp #scheduleDialog .schedule-add-pc select{flex-basis:100%}.auto-btp #scheduleDialog .schedule-dialog-actions button{flex:1 1 140px}}

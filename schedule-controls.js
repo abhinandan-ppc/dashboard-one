@@ -20,24 +20,32 @@ export function setupScheduleControls({getState, save}) {
     const machines=getState().machines.filter(p=>!p.revoked);
     for (const [index,s] of draft.entries()) {
       const section=document.createElement('section'); section.className='schedule-editor';
+      const header=document.createElement('div'); header.className='schedule-editor-header';
       const heading=document.createElement('h3'); heading.textContent=`Schedule ${index+1}`;
-      const label=document.createElement('label'); label.textContent='Time (India) ';
+      const remove=button('Remove schedule',()=>{draft.splice(index,1);draw()});remove.className='schedule-remove';header.append(heading,remove);
+      const settings=document.createElement('div'); settings.className='schedule-settings';
+      const label=document.createElement('label'); label.className='schedule-time'; label.textContent='Time (India)';
       const time=document.createElement('input'); time.type='time'; time.value=s.time; time.onchange=()=>{s.time=time.value}; label.append(time);
-      const enabled=document.createElement('label'); const check=document.createElement('input'); check.type='checkbox'; check.checked=s.enabled; check.onchange=()=>{s.enabled=check.checked}; enabled.append(check,document.createTextNode(' Enabled'));
-      section.append(heading,label,enabled,button('Remove schedule',()=>{draft.splice(index,1);draw()}));
-      const help=document.createElement('p'); help.textContent='Selected PCs, in order:'; section.append(help);
+      const enabled=document.createElement('label'); enabled.className='schedule-enabled'; const check=document.createElement('input'); check.type='checkbox'; check.checked=s.enabled; check.onchange=()=>{s.enabled=check.checked}; enabled.append(check,document.createTextNode('Enabled'));
+      settings.append(label,enabled);section.append(header,settings);
+      const help=document.createElement('p'); help.className='schedule-pc-label'; help.textContent='PC priority'; section.append(help);
+      if(!s.pcs.length){const empty=document.createElement('p');empty.className='schedule-pc-empty';empty.textContent='No PCs added yet. Add a PC to set the run order.';section.append(empty)}
       for (const [i,id] of s.pcs.entries()) {
         const pc=machines.find(p=>p.id===id), row=document.createElement('div'); row.className='schedule-pc-row';
         const name=document.createElement('span'); name.textContent=`${i+1}. ${pc?.name||'Removed PC'}`;
-        row.append(name,button('Up',()=>{[s.pcs[i-1],s.pcs[i]]=[s.pcs[i],s.pcs[i-1]];draw()},i===0),button('Down',()=>{[s.pcs[i+1],s.pcs[i]]=[s.pcs[i],s.pcs[i+1]];draw()},i===s.pcs.length-1),button('Remove',()=>{s.pcs.splice(i,1);draw()})); section.append(row);
+        const actions=document.createElement('div'); actions.className='schedule-pc-actions';
+        const up=button('Up',()=>{[s.pcs[i-1],s.pcs[i]]=[s.pcs[i],s.pcs[i-1]];draw()},i===0),down=button('Down',()=>{[s.pcs[i+1],s.pcs[i]]=[s.pcs[i],s.pcs[i+1]];draw()},i===s.pcs.length-1),removePC=button('Remove',()=>{s.pcs.splice(i,1);draw()});
+        up.setAttribute('aria-label',`Move ${pc?.name||'PC'} up`);down.setAttribute('aria-label',`Move ${pc?.name||'PC'} down`);removePC.setAttribute('aria-label',`Remove ${pc?.name||'PC'}`);
+        actions.append(up,down,removePC);row.append(name,actions); section.append(row);
       }
       const available=machines.filter(p=>!s.pcs.includes(p.id));
       const select=document.createElement('select'); select.setAttribute('aria-label','Add PC to schedule');
       for(const pc of available) select.add(new Option(pc.name,pc.id));
-      section.append(select,button('Add PC',()=>{if(select.value){s.pcs.push(select.value);draw()}},!available.length));
+      if(!available.length){select.add(new Option('No more PCs available',''));select.disabled=true}
+      const addRow=document.createElement('div');addRow.className='schedule-add-pc';addRow.append(select,button('Add PC',()=>{if(select.value){s.pcs.push(select.value);draw()}},!available.length));section.append(addRow);
       list.append(section);
     }
-    if (!draft.length) list.textContent='Add a schedule to begin.';
+    if (!draft.length){const empty=document.createElement('div');empty.className='schedule-empty';const title=document.createElement('strong');title.textContent='No schedules yet';const description=document.createElement('p');description.textContent='Add a schedule to choose a time and prioritize your PCs.';empty.append(title,description);list.append(empty)}
   }
   $('editSchedules').onclick=()=>{const state=getState();draft=structuredClone(state.schedules||[]);if(!draft.length&&state.legacySchedule?.time)draft.push({id:crypto.randomUUID(),time:state.legacySchedule.time,enabled:true,pcs:[]});$('scheduleFeedback').textContent='';draw();dialog.showModal()};
   $('closeSchedules').onclick=()=>dialog.close();
