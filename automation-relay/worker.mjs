@@ -1,5 +1,6 @@
 import {reserve} from './coordinator.mjs';
 import {digest,token,terminal} from './auth.mjs';
+import {saveSchedules,scheduleAlarm,scheduledAlarm} from './scheduled-runs.mjs';
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 export default {fetch(r,e){return e.POOL.get(e.POOL.idFromName(e.POOL_NAME||'production')).fetch(r)}};
 export class Pool {
@@ -12,7 +13,7 @@ export class Pool {
  }
  sockets(role,id){return this.ctx.getWebSockets().filter(s=>{const a=s.deserializeAttachment();return a.role===role&&(!id||a.id===id)});}
  send(role,id,data){for(const s of this.sockets(role,id))try{const a=s.deserializeAttachment();if(role==='browser'&&a.expires<Date.now()){s.close(1008,'Renew authorization');continue;}s.send(JSON.stringify(data))}catch{}}
- async state(){return {liveRunRequests:true,run:await this.ctx.storage.get('run')||null,machines:[...(await this.ctx.storage.list({prefix:'pc:'})).values()].map(({secret,...p})=>({...p,connected:!!this.sockets('agent',p.id).length})),history:[...(await this.ctx.storage.list({prefix:'history:',reverse:true,limit:100})).values()],schedule:await this.ctx.storage.get('schedule')||null};}
+ async state(){return {liveRunRequests:true,run:await this.ctx.storage.get('run')||null,machines:[...(await this.ctx.storage.list({prefix:'pc:'})).values()].map(({secret,...p})=>({...p,connected:!!this.sockets('agent',p.id).length})),history:[...(await this.ctx.storage.list({prefix:'history:',reverse:true,limit:100})).values()],schedules:await this.ctx.storage.get('schedules')||[],legacySchedule:await this.ctx.storage.get('schedule')||null,scheduledJob:await this.ctx.storage.get('scheduledJob')||null};}
  async broadcast(){this.send('browser',null,{type:'state',...await this.state()});}
  async fetch(request){try{
   const url=new URL(request.url);
@@ -28,7 +29,7 @@ export class Pool {
   if(action==='rename'){const name=String(b.name||'').trim();if(!name||name.length>80)throw Error('Enter a valid PC name');return await this.locked(async()=>{const pc=await this.ctx.storage.get('pc:'+b.pcId);if(!pc||pc.revoked)throw Error('PC not found');await this.ctx.storage.put('pc:'+b.pcId,{...pc,name});await this.broadcast();return json({ok:true});});}
   if(action==='remove'){return await this.locked(async()=>{const run=await this.ctx.storage.get('run');if(run?.pcId===b.pcId&&!terminal(run))throw Error('Stop and confirm this PC’s workflow before removing it');if(!b.pcId)throw Error('Select a PC');await this.clearCheckpoint(b.pcId);await this.ctx.storage.delete('pc:'+b.pcId);await this.ctx.storage.delete('command:'+b.pcId);for(const ws of this.sockets('agent',b.pcId))ws.close(1008,'Removed');await this.broadcast();return json({ok:true});});}
   if(action==='revoke'){const pc=await this.ctx.storage.get('pc:'+b.pcId);if(pc){await this.ctx.storage.put('pc:'+b.pcId,{...pc,revoked:true});for(const s of this.sockets('agent',b.pcId))s.close(1008,'Revoked');}return json({ok:true});}
-  if(action==='schedule'){if(b.time&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(b.time))throw Error('Invalid time');await this.ctx.storage.put('schedule',{time:b.time||null,account:b.account});await this.nextAlarm();return json({ok:true});}
+  if(action==='schedules'){await saveSchedules(this,b.schedules);return json({ok:true});}
   if(action==='run'){const run=await this.start(b);await this.broadcast();return json(run);}
   if(action==='stop'){const run=await this.ctx.storage.get('run');if(!terminal(run)){await this.ctx.storage.put('run',{...run,status:'stopping'});this.send('agent',run.pcId,{type:'command',action:'stop',runId:run.id});}return json({ok:true});}
   if(action==='resolve'){const run=await this.ctx.storage.get('run');if(!b.confirmStopped)throw Error('Confirm workflow is stopped');if(run)await this.ctx.storage.put('run',{...run,status:'stopped',checkpoint:true});await this.broadcast();return json({ok:true});}
@@ -86,6 +87,6 @@ export class Pool {
  }catch(e){ws.send(JSON.stringify({type:'error',error:e.message}));}}
  webSocketClose(ws,code){try{ws.close(code===1006?1000:code)}catch{}}
  webSocketError(ws){try{ws.close(1011)}catch{}}
- async nextAlarm(){const s=await this.ctx.storage.get('schedule');if(!s?.time){await this.ctx.storage.deleteAlarm();return;}const [h,m]=s.time.split(':').map(Number),now=Date.now(),day=Math.floor((now+19800000)/86400000);let target=day*86400000+h*3600000+m*60000-19800000;if(target<=now)target+=86400000;await this.ctx.storage.setAlarm(target);}
- async alarm(){const now=Date.now(),s=await this.ctx.storage.get('schedule');try{await this.start({id:'scheduled-'+Math.floor((now+19800000)/86400000),scope:'all',account:s.account,years:[new Date(now+19800000).getUTCFullYear()],requestedBy:'schedule'});}catch(e){await this.ctx.storage.put('history:'+now,{id:crypto.randomUUID(),createdAt:now,status:'missed',error:e.message});}for(const [k,v] of await this.ctx.storage.list({prefix:'history:'}))if(v.createdAt<now-604800000)await this.ctx.storage.delete(k);await this.nextAlarm();}
+ async nextAlarm(){await scheduleAlarm(this);}
+ async alarm(){await scheduledAlarm(this);}
 }

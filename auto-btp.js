@@ -3,6 +3,7 @@ import {readAutomationResponse} from './automation-response.js';
 import {outputGroups} from './automation-outputs.js';
 
 import {availability,selectedHostAvailability,hostStatus,statusLabel} from './automation-status.js';
+import {setupScheduleControls} from './schedule-controls.js';
 
 const $=s=>document.querySelector(s);
 
@@ -14,6 +15,7 @@ let pendingAccountUpdate=null;
 let noticeUntil=0,acknowledgedFailure=null,refreshingPC=false,launchPending=false;
 
 const notice=text=>{noticeUntil=Date.now()+8000;$('#notice').textContent=text;};
+const scheduleControls=setupScheduleControls({getState:()=>state,save:async schedules=>{await api({action:'schedules',schedules});render(await api());}});
 
 const readyButton=document.createElement('button');
 readyButton.textContent='Make System Ready';
@@ -82,7 +84,7 @@ async function verifyCleanupOutcome(run){
  finally{verifyingCleanup.delete(run.id)}
 }
 
-function render(data){const previousRunId=state.run?.id,previousSelectedId=selected?.id;stateLoaded=true;state=data;const run=state.run;const revealOutputs=run&&finished(run)&&observedRuns.has(run.id)&&!revealedOutputs.has(run.id);renderAvailability();$('#run').textContent=finished(run)?'Start':'Stop';$('#run').classList.toggle('stop',!finished(run));$('#run').classList.toggle('primary',finished(run));if(run&&!finished(run))observedRuns.add(run.id);
+function render(data){const previousRunId=state.run?.id,previousSelectedId=selected?.id;stateLoaded=true;state=data;scheduleControls.render();const run=state.run;const revealOutputs=run&&finished(run)&&observedRuns.has(run.id)&&!revealedOutputs.has(run.id);renderAvailability();$('#run').textContent=finished(run)?'Start':'Stop';$('#run').classList.toggle('stop',!finished(run));$('#run').classList.toggle('primary',finished(run));if(run&&!finished(run))observedRuns.add(run.id);
 
  const accounts=$('#accounts'),previous=accounts.value;accounts.replaceChildren();for(const uid of new Set(state.machines.filter(p=>!p.revoked&&(!$('#pc').value||p.id===$('#pc').value)).flatMap(p=>p.accounts||[]).filter(uid=>typeof uid==='string'&&uid.trim()&&!/"|&\s*UID\d/i.test(uid))))option(accounts,uid,uid);accounts.value=[...accounts.options].some(o=>o.value===previous)?previous:accounts.options[0]?.value||'';
 

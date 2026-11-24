@@ -273,3 +273,8 @@ html[data-theme="light"][data-theme-style="neomorph"] body.auto-btp{--bg:var(--n
  .auto-btp .run-panel > .controls > #refresh {grid-column:1 / -1}
  .auto-btp .output-controls > label {min-width:0;max-width:100%;width:100%}
 }
+.auto-btp .schedule-editor{padding:16px 0;border-top:1px solid var(--bdr)}
+.auto-btp .schedule-editor>label{display:inline-flex;align-items:center;gap:8px;margin:8px 16px 8px 0}
+.auto-btp .schedule-pc-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0}
+.auto-btp .schedule-pc-row span{flex:1 1 140px}
+.auto-btp #scheduleDialog{max-height:85vh;overflow:auto;width:min(650px,calc(100vw - 32px))}
