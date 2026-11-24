@@ -534,6 +534,22 @@ function useBreakpoint(){
 
 /* ═══════════════════ CITY MAP ═══════════════════ */
 const CITY_MAP={
+  /* Added after unmapped-destination review (siding follows the nearest mapped city's convention) */
+  'JODHPUR':['Rajasthan','North','BVH'],'AJMER':['Rajasthan','North','BVH'],'ROHTAK':['Haryana','North','BVH'],
+  'JATUSANA':['Haryana','North','BVH'],'BHIWADI':['Rajasthan','North','BVH'],
+  'CHITTOOR':['Andhra Pradesh','South','CJ'],'GUNTUR':['Andhra Pradesh','South','NDM'],'BAPATLA':['Andhra Pradesh','South','NDM'],
+  'KAKINADA':['Andhra Pradesh','South','CCJS'],
+  'RANGAREDDY':['Telangana','South','BNHT'],'VIKARABAD':['Telangana','South','BNHT'],
+  'MAHABUBNAGAR':['Telangana','South','BNHT'],'BALANAGAR':['Telangana','South','BNHT'],
+  'BAIL HONGAL':['Karnataka','South','BNHT'],'KOLAR GOLD FIELDS':['Karnataka','South','SGWF'],
+  'CUDDALORE':['Tamil Nadu','South','CJ'],'SANOORAPATTY':['Tamil Nadu','South','TPGY'],
+  'JEJURI, PUNE':['Maharashtra','West','KLMG'],'JEJURI':['Maharashtra','West','KLMG'],
+  'CHAKAN, PUNE':['Maharashtra','West','KLMG'],'CHAKAN':['Maharashtra','West','KLMG'],
+  'RASAYANI':['Maharashtra','West','KLMG'],'AMBERNATH':['Maharashtra','West','KLMG'],
+  'CHANDRAPUR':['Maharashtra','West','KAV'],'BINA':['Madhya Pradesh','West','KAV'],
+  'JAMESHEDPUR':['Jharkhand','East','JSPP'],'BANKURA':['West Bengal','East','HDCG'],
+  'DURGAPUR':['West Bengal','East','HDCG'],'PASCHIM MEDINIPUR':['West Bengal','East','HDCG'],
+  'NABINAGAR':['Bihar','East','RXL'],
   '24 PARGANAS (SOUTH)':['West Bengal','East','HDCG'],'ADITYAPUR JAMSHEDPUR':['Jharkhand','East','JSPP'],
   'BALASORE':['Odisha','East','HDCG'],'BARDHAMAN':['West Bengal','East','HDCG'],
   'BARBIL':['Odisha','East','JSPP'],'BEMETARA':['Chhattisgarh','East','RSD'],
@@ -690,7 +706,15 @@ function getFIStatus(rem){
 }
 function getMap(city){
   if(!city)return['Unknown','Unknown','Unknown'];
-  return CITY_MAP[String(city).trim().toUpperCase()]||['Unknown','Unknown','Unknown'];
+  const key=String(city).trim().toUpperCase().replace(/\s+/g,' ');
+  return CITY_MAP[key]||CITY_MAP[key.split(',')[0].trim()]||compactCityMap()[compactCityKey(key)]||['Unknown','Unknown','Unknown'];
+}
+/* Spelling-tolerant fallback: ignore spaces/punctuation (e.g. "NaviMumbai" = "NAVI MUMBAI") */
+const compactCityKey=k=>k.replace(/[^A-Z0-9]/g,'');
+let _compactCityMap=null;
+function compactCityMap(){
+  if(!_compactCityMap){_compactCityMap={};for(const[k,v]of Object.entries(CITY_MAP)){const c=compactCityKey(k);if(!_compactCityMap[c])_compactCityMap[c]=v;}}
+  return _compactCityMap;
 }
 /* Wagon type based on plate dimensions */
 function wagonType(w,l){
@@ -1066,6 +1090,13 @@ async function resolveCoords(cityRaw,onlineMode){
 
 const CITY_COORDS={
   // ── India ──
+  "JODHPUR":[26.2389,73.0243],"AJMER":[26.4499,74.6399],"CHITTOOR":[13.2172,79.1003],"RANGAREDDY":[17.3,78.2],
+  "JAMESHEDPUR":[22.8046,86.2029],"BANKURA":[23.2324,87.075],"VIKARABAD":[17.3381,77.9043],"BINA":[24.1833,78.1833],
+  "KAKINADA":[16.9891,82.2475],"CHANDRAPUR":[19.9615,79.2961],"RASAYANI":[18.8997,73.1747],"AMBERNATH":[19.1863,73.1913],
+  "BAIL HONGAL":[15.8167,74.8667],"GUNTUR":[16.3067,80.4365],"JATUSANA":[28.2,76.58],"CUDDALORE":[11.748,79.7714],
+  "BALANAGAR":[17.4733,78.4372],"KOLAR GOLD FIELDS":[12.956,78.275],"NABINAGAR":[24.619,84.128],
+  "PASCHIM MEDINIPUR":[22.4257,87.3199],"JEJURI":[18.2745,74.162],"JEJURI, PUNE":[18.2745,74.162],
+  "CHAKAN":[18.7603,73.863],"CHAKAN, PUNE":[18.7603,73.863],"BHIWADI":[28.2108,76.8603],"NAVIMUMBAI":[19.033,73.0297],
   "24 PARGANAS (SOUTH)":[22.2922,88.3639],"ADITYAPUR JAMSHEDPUR":[22.7917,86.2009],
   "AHEMEDABAD":[23.0225,72.5714],"AHMEDABAD":[23.0225,72.5714],"AHMEDNAGAR":[19.0948,74.7480],
   "ALWAR":[27.5530,76.6346],"AMBALA":[30.3782,76.7767],"AMRAVATI":[20.9374,77.7796],
@@ -5689,7 +5720,7 @@ function simulatorRakeModes(rows){
   const ids=new Set();
   for(const row of rows){
     const actual=RakePlanningRules.actualSiding(row._ModeC);
-    if(actual&&!ROAD_ACTUAL_MODES.includes(actual))ids.add(RakePlanningRules.sidingKey(actual));
+    if(!RakePlanningRules.isHold(row)&&actual&&!ROAD_ACTUAL_MODES.includes(actual))ids.add(RakePlanningRules.sidingKey(actual));
   }
   return[...ids].sort((a,b)=>a.localeCompare(b)).map(id=>({id,label:id.replace(/\(LONG\)$/,' (Long)')}));
 }
@@ -5697,16 +5728,14 @@ const simulatorValue=(row,key)=>String(key==='_HTC'
   ?row._HTC||getHTC(row['Ext Grade'],row['Supply Condition'])
   :row[key]??'').trim();
 const simulatorStateValue=row=>simulatorValue(row,'STO')||simulatorValue(row,'_State');
+const isYellowGoodsRow=row=>[row._GradeSegment,row._CustomerSegment].some(value=>/yellow\s*goods?/i.test(String(value||'')));
 const simulatorCustomerKey=row=>`${orderPlaceKey(row)}|${RakePlanningRules.key(row['Sold To Party Name']||'UNKNOWN CUSTOMER')}`;
 
-function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply,showOdcFilter=false}){
+function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply,includeYellow,onToggleYellow}){
   const dialogRef=usePlanningDialog(onClose);
-  const[odcFilter,setOdcFilter]=useState('all');
-  const filteredLines=useMemo(()=>!showOdcFilter||odcFilter==='all'?orderLines
-    :orderLines.filter(line=>(!!line.row._ODC)===(odcFilter==='odc')),[orderLines,showOdcFilter,odcFilter]);
   const orderGroups=useMemo(()=>{
     const states=new Map();
-    for(const line of filteredLines){
+    for(const line of orderLines){
       const row=line.row;
       const state=simulatorStateValue(row)||'—';
       const city=RakePlanningRules.clean(row['Ship To Party City'])||'—';
@@ -5725,12 +5754,13 @@ function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply,show
       const soKey=soNo==='—'?line.id:RakePlanningRules.key(soNo);
       let order=customerGroup.orders.get(soKey);
       if(!order){
-        order={id:JSON.stringify([stateKey,cityKey,customerNameKey,soKey]),soNo,customerKeys:new Set(),balance:0,selectable:true};
+        order={id:JSON.stringify([stateKey,cityKey,customerNameKey,soKey]),soNo,customerKeys:new Set(),balance:0,selectable:true,yellow:false};
         customerGroup.orders.set(soKey,order);
       }
       order.customerKeys.add(line.customerKey);
       order.balance+=Math.max(0,Number(row['Bal to PGI'])||0);
       order.selectable=order.selectable&&line.selectable;
+      order.yellow=order.yellow||line.yellow;
     }
     return[...states.values()]
       .sort((a,b)=>a.name.localeCompare(b.name))
@@ -5747,7 +5777,7 @@ function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply,show
           });
         return{...stateGroup,cities,rowSpan:cities.reduce((total,city)=>total+city.rowSpan,0)};
       });
-  },[filteredLines]);
+  },[orderLines]);
   const orders=orderGroups.flatMap(stateGroup=>stateGroup.cities.flatMap(cityGroup=>
     cityGroup.customers.flatMap(customerGroup=>customerGroup.orders)));
   const[selectedOrderKeys,setSelectedOrderKeys]=useState(()=>new Set(orders
@@ -5765,10 +5795,13 @@ function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply,show
         </div>
         <button type="button" onClick={onClose}>Close</button>
       </header>
-      {showOdcFilter&&<div className="rake-unplanned-odc-filter" role="group" aria-label="ODC filter">
-        {[['all','All'],['odc','ODC'],['non-odc','Non-ODC']].map(([id,label])=><button key={id} type="button"
-          className={odcFilter===id?'is-selected':''} aria-pressed={odcFilter===id} onClick={()=>setOdcFilter(id)}>{label}</button>)}
-      </div>}
+      <div className="rake-unplanned-yellow-filter">
+        <button type="button" className="rake-simulator-yellow-toggle" role="switch" aria-checked={includeYellow}
+          title="Yellow goods cannot normally go by rake. Off = excluded from unplanned orders."
+          onClick={onToggleYellow}>
+          <span className="rake-simulator-yellow-track"><span/></span>Yellow goods: {includeYellow?'Included':'Not included'}
+        </button>
+      </div>
       <div className="rake-unplanned-picker-count">{orders.length.toLocaleString()} sales orders available</div>
       <div className="rake-unplanned-lines" tabIndex={0} aria-label="Unplanned sales orders">
         <table>
@@ -5791,7 +5824,7 @@ function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply,show
                           const next=new Set(previous);
                           if(next.has(order.id))next.delete(order.id);else next.add(order.id);
                           return next;
-                        })}/><span>{order.soNo}</span></label>
+                        })}/><span>{order.soNo}</span>{order.yellow&&<small className="rake-unplanned-yellow-tag">(Yellow goods)</small>}</label>
                     </td>
                     <td className="rake-unplanned-balance">{fmt(order.balance,2)}</td>
                   </tr>)}
@@ -5874,7 +5907,7 @@ function PlannedOrderSummary({plannedRows,onClose}){
   </div>,document.body);
 }
 
-function SimulatorIndiaMap({rows,plannedRows,showOdcFilter=false,hub,selectedCustomers,onToggleCustomer,onApplyCustomerSelection,onClearSelection,isDark,plannedBalance=0}){
+function SimulatorIndiaMap({rows,dialogRows,plannedRows,includeYellow=false,onToggleYellow=()=>{},hub,selectedCustomers,onToggleCustomer,onApplyCustomerSelection,onClearSelection,isDark,plannedBalance=0}){
   const mapRef=useRef(null);
   const mapInst=useRef(null);
   const markersRef=useRef(new Map());
@@ -5927,18 +5960,22 @@ function SimulatorIndiaMap({rows,plannedRows,showOdcFilter=false,hub,selectedCus
   },[rows,live.revision,hub,reverseKm]);
   const orderLines=useMemo(()=>{
     const cityIncluded=new Map(destinations.map(city=>[city.key,city.included]));
-    return rows.map((row,index)=>({
+    return(dialogRows||rows).map((row,index)=>{
+      const yellow=isYellowGoodsRow(row);
+      return{
         id:RakePlanningRules.orderKey(row)||`unplanned-${index}`,
         row,
         customerKey:simulatorCustomerKey(row),
-        selectable:cityIncluded.get(orderPlaceKey(row))!==false,
-    })).sort((a,b)=>
+        yellow,
+        selectable:cityIncluded.get(orderPlaceKey(row))!==false&&!(yellow&&!includeYellow),
+      };
+    }).sort((a,b)=>
         simulatorStateValue(a.row).localeCompare(simulatorStateValue(b.row))||
         String(a.row['Ship To Party City']||'').localeCompare(String(b.row['Ship To Party City']||''))||
         String(a.row['Sold To Party Name']||'').localeCompare(String(b.row['Sold To Party Name']||''))||
         String(a.row['SO No.']||'').localeCompare(String(b.row['SO No.']||''))||
         String(a.row._LineItem||a.row.SOItm||'').localeCompare(String(b.row._LineItem||b.row.SOItm||'')));
-  },[rows,destinations]);
+  },[rows,dialogRows,destinations,includeYellow]);
   const plannedLocations=useMemo(()=>{
     const grouped=new Map();
     for(const row of plannedRows){
@@ -6226,7 +6263,7 @@ function SimulatorIndiaMap({rows,plannedRows,showOdcFilter=false,hub,selectedCus
       </>:<span className="rake-simulator-map-select-rake">Choose a rake to calculate directions.</span>}
     </div>
     {plannedSummaryOpen&&<PlannedOrderSummary plannedRows={plannedRows} onClose={()=>setPlannedSummaryOpen(false)}/>}
-    {orderPickerOpen&&<UnplannedOrderPicker orderLines={orderLines} selectedCustomers={selectedCustomers} showOdcFilter={showOdcFilter}
+    {orderPickerOpen&&<UnplannedOrderPicker orderLines={orderLines} selectedCustomers={selectedCustomers} includeYellow={includeYellow} onToggleYellow={onToggleYellow}
       onClose={()=>setOrderPickerOpen(false)} onApply={onApplyCustomerSelection}/>}
   </div>;
 }
@@ -6272,6 +6309,7 @@ function RakeSimulator({rows,active}){
   const[states,setStates]=useState(new Set());
   const[cities,setCities]=useState(new Set());
   const[supplyConditions,setSupplyConditions]=useState(new Set());
+  const[includeYellow,setIncludeYellow]=useState(false);
   const[selectedCustomers,setSelectedCustomers]=useState(new Set());
   const tableScrollRef=useRef(null),tableRef=useRef(null),totalScrollRef=useRef(null),totalTableRef=useRef(null);
   const rakeModes=useMemo(()=>simulatorRakeModes(rows),[rows]);
@@ -6282,7 +6320,7 @@ function RakeSimulator({rows,active}){
     const seen=new Set();
     return rows.filter(row=>{
       const actual=RakePlanningRules.actualSiding(row._ModeC);
-      if(!actual||['ROAD','ROAD-ODC','EXPORT ROAD'].includes(actual)||
+      if(RakePlanningRules.isHold(row)||!actual||['ROAD','ROAD-ODC','EXPORT ROAD'].includes(actual)||
         (target&&RakePlanningRules.sidingKey(actual)!==target)||
         Math.max(0,Number(row['Bal to PGI'])||0)<=0)return false;
       const key=RakePlanningRules.orderKey(row);
@@ -6301,10 +6339,11 @@ function RakeSimulator({rows,active}){
   const stateRows=useMemo(()=>states.size?regionRows.filter(row=>states.has(simulatorStateValue(row))):regionRows,[regionRows,states]);
   const cityOptions=useMemo(()=>[...new Set(stateRows.map(row=>simulatorValue(row,'Ship To Party City')).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[stateRows]);
   const htcOptions=useMemo(()=>[...new Set(candidates.map(row=>simulatorValue(row,'_HTC')).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[candidates]);
-  const visibleRows=useMemo(()=>stateRows.filter(row=>
+  const filteredRows=useMemo(()=>stateRows.filter(row=>
     (!cities.size||cities.has(simulatorValue(row,'Ship To Party City')))&&
     (!supplyConditions.size||supplyConditions.has(simulatorValue(row,'_HTC')))
   ),[stateRows,cities,supplyConditions]);
+  const visibleRows=useMemo(()=>includeYellow?filteredRows:filteredRows.filter(row=>!isYellowGoodsRow(row)),[filteredRows,includeYellow]);
   const selectedRows=useMemo(()=>selectedCustomers.size
     ?visibleRows.filter(row=>selectedCustomers.has(simulatorCustomerKey(row)))
     :visibleRows,[visibleRows,selectedCustomers]);
@@ -6391,7 +6430,7 @@ function RakeSimulator({rows,active}){
   const sidingHub=selectedMode?resolveHub(selectedMode.id):null;
   const scopeDescription=selectedMode
     ?`Showing available order-book items except those already planned for ${selectedMode.label}.`
-    :'Planned: items assigned to any rake. Unplanned: items assigned to road (ODC and non-ODC).';
+    :'Planned: items assigned to any rake. Unplanned: road orders (no ODC, no export).';
   if(!active)return null;
   return <section className="rake-simulator rake-simulator-tab">
     <div className="rake-simulator-page-heading">
@@ -6432,7 +6471,7 @@ function RakeSimulator({rows,active}){
           </div>}
           <button className="rake-simulator-clear-filters" type="button" onClick={()=>{clearLocations();setSupplyConditions(new Set());}}>Clear filters</button>
       </div>
-      <SimulatorIndiaMap rows={visibleRows} plannedRows={plannedRows} showOdcFilter={scope==='ALL_RAKES'} hub={sidingHub} isDark={C.isDark} selectedCustomers={selectedCustomers} plannedBalance={plannedBalance}
+      <SimulatorIndiaMap rows={visibleRows} dialogRows={filteredRows} plannedRows={plannedRows} includeYellow={includeYellow} onToggleYellow={()=>setIncludeYellow(value=>!value)} hub={sidingHub} isDark={C.isDark} selectedCustomers={selectedCustomers} plannedBalance={plannedBalance}
         onToggleCustomer={toggleCustomer} onApplyCustomerSelection={setSelectedCustomers} onClearSelection={()=>setSelectedCustomers(new Set())}/>
       <div className="rake-simulator-results">
         <div className="rake-simulator-results-heading">

@@ -6,6 +6,7 @@ globalThis.RakePlanningRules=(()=>{
   const htcLabel=v=>key(v)==='Q/T'?'Q&T':key(v)==='NON HTC'?'Non HTC':clean(v);
   const qty=v=>Math.max(0,Number(v)||0);
   const orderKey=r=>clean(r.UID)||`${clean(r['SO No.'])}|${clean(r._LineItem??r.SOItm)}`;
+  const isHold=r=>/^HOLD/.test(key(r._ModeC))||/^HOLD/.test(key(r.MODE));
   function actualSiding(modeC){
     const raw=key(modeC);
     if(!raw)return null;
@@ -17,10 +18,10 @@ globalThis.RakePlanningRules=(()=>{
     const selected=sidingKey(scope),peers=new Set(peerRakes.map(sidingKey)),seen=new Set(),candidates=[];
     for(const row of rows){
       if(qty(row['Bal to PGI'])<=0)continue;
+      if(isHold(row)||isExport(row)||row._ODC||odc(row))continue;
       if(selected==='ALL_RAKES'){
-        // Unplanned for "All rakes" = every order assigned to road (incl. ODC and export road).
-        const assigned=actualSiding(row._ModeC);
-        if(!assigned||!['ROAD','ROAD-ODC','EXPORT ROAD'].includes(assigned))continue;
+        // Unplanned for "All rakes" = plain road orders (no export, no ODC).
+        if(actualSiding(row._ModeC)!=='ROAD')continue;
       }else if(key(row._WagonType)==='ROAD-ODC')continue;
       else if(selected){
         const assigned=sidingKey(actualSiding(row._ModeC));
@@ -118,5 +119,5 @@ globalThis.RakePlanningRules=(()=>{
       return{ord,km,band:km!==null&&km<=100?0:states.has(key(state(ord._State)))?1:2,release:release(ord)};
     }).filter(r=>r.band<2).sort((a,b)=>a.band-b.band||(a.km??Infinity)-(b.km??Infinity)||orderKey(a.ord).localeCompare(orderKey(b.ord)));
   }
-  return{clean,key,qty,orderKey,actualSiding,sidingKey,simulatorCandidates,odc,release,completion,state,city,isExport,mapCategory,destination,countryGroup,shortfall,htcLabel,predictedOrdersMissingFromActual,nearby};
+  return{clean,key,qty,isHold,orderKey,actualSiding,sidingKey,simulatorCandidates,odc,release,completion,state,city,isExport,mapCategory,destination,countryGroup,shortfall,htcLabel,predictedOrdersMissingFromActual,nearby};
 })();

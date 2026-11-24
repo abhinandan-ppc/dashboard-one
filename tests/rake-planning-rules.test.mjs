@@ -25,7 +25,7 @@ test('simulatorCandidates excludes the selected rake and keeps domestic peer-rak
   );
 });
 
-test('simulatorCandidates for all rakes returns only road-assigned orders',()=>{
+test('simulatorCandidates for all rakes returns only plain road orders (no ODC, no export)',()=>{
   const rows=[
     {'SO No.':'100','_LineItem':'10','_ModeC':'RAKE-CCJS','Bal to PGI':'25',_Country:'India'},
     {'SO No.':'101','_LineItem':'20','_ModeC':'ROAD','Bal to PGI':'50',_Country:'India'},
@@ -33,12 +33,13 @@ test('simulatorCandidates for all rakes returns only road-assigned orders',()=>{
     {'SO No.':'103','_LineItem':'40','_ModeC':'HOLD','Bal to PGI':'10',_Country:'India'},
     {'SO No.':'104','_LineItem':'50','_ModeC':'EXPORT ROAD','Bal to PGI':'35',_Country:'Germany'},
     {'SO No.':'105','_LineItem':'60','_ModeC':'ROAD','Bal to PGI':'0',_Country:'India'},
+    {'SO No.':'106','_LineItem':'70','_ModeC':'ROAD','_ODC':'ROAD-ODC','Bal to PGI':'20',_Country:'India'},
     {'SO No.':'101','_LineItem':'20','_ModeC':'ROAD','Bal to PGI':'5',_Country:'India'},
   ];
 
   assert.deepEqual(
     rules.simulatorCandidates(rows,'ALL_RAKES').map(row=>row['SO No.']),
-    ['101','102','104'],
+    ['101'],
   );
 });
 
@@ -154,4 +155,13 @@ test('HTC labels use the backup-order category labels',()=>{
     ['FN','Q','Q/T','NON HTC'].map(value=>rules.htcLabel(value)),
     ['FN','Q','Q&T','Non HTC'],
   );
+});
+
+test('simulatorCandidates never includes HOLD (marketing) modes',()=>{
+  const rows=[
+    {'SO No.':'1','_LineItem':'10','_ModeC':'HOLD-MARKETING','Bal to PGI':'10',_Country:'India'},
+    {'SO No.':'2','_LineItem':'10','_ModeC':'ROAD',MODE:'HOLD-MARKETING','Bal to PGI':'10',_Country:'India'},
+    {'SO No.':'3','_LineItem':'10','_ModeC':'ROAD','Bal to PGI':'10',_Country:'India'},
+  ];
+  assert.deepEqual(rules.simulatorCandidates(rows,'ALL_RAKES').map(row=>row['SO No.']),['3']);
 });

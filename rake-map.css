@@ -409,9 +409,6 @@ html body .rake-simulator .rake-simulator-city-button>span:last-child{text-align
 .rake-simulator-map-popup>small{color:var(--dim)}
 .rake-simulator-map-popup>.rake-simulator-map-popup-planned{color:#16a34a}
 .rake-simulator-map-popup>.rake-simulator-map-popup-unplanned{color:#db2777}
-.rake-unplanned-odc-filter{display:flex;gap:6px;padding:8px 14px 0}
-.rake-unplanned-odc-filter button{padding:4px 12px;border:1px solid var(--bdr);border-radius:999px;background:var(--s2);color:var(--text);font-size:11px;cursor:pointer}
-.rake-unplanned-odc-filter button.is-selected{border-color:var(--sky);background:var(--sky);color:#fff}
 .rake-simulator-popup-planned-customers{display:grid;gap:3px;max-height:120px;overflow:auto;border-bottom:1px solid var(--bdr);padding:3px 0 5px;color:var(--text);font-size:10px}
 .rake-simulator-popup-customers{max-height:180px;overflow:auto;border-top:1px solid var(--bdr);padding-top:4px}
 .rake-simulator-popup-customers label{color:var(--text);font-size:11px}
@@ -483,6 +480,12 @@ html body .rake-simulator .rake-simulator-city-button>span:last-child{text-align
 html body .rake-simulator .rake-simulator-selected-filter>button{display:inline-grid;place-items:center;flex:0 0 20px;width:20px;min-height:20px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--dim);font:600 16px/1 var(--font-body,system-ui)}
 html body .rake-simulator .rake-simulator-selected-filter>button:hover{background:var(--s2);color:var(--text)}
 .rake-simulator-clear-filters{align-self:flex-end}
+.rake-unplanned-yellow-filter{display:flex;padding:8px 14px 0}
+.rake-simulator-yellow-toggle{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border:1px solid var(--bdr);border-radius:999px;background:var(--s2);color:var(--text);font-size:11px;font-weight:600;cursor:pointer}
+.rake-simulator-yellow-track{position:relative;width:28px;height:16px;border-radius:999px;background:var(--bdrHi,#64748b);transition:background .15s}
+.rake-simulator-yellow-track>span{position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:transform .15s}
+.rake-simulator-yellow-toggle[aria-checked=true] .rake-simulator-yellow-track{background:#eab308}
+.rake-simulator-yellow-toggle[aria-checked=true] .rake-simulator-yellow-track>span{transform:translateX(12px)}
 .rake-simulator-no-options{grid-column:1/-1;padding:6px 3px;color:var(--dim);font-size:10px}
 .rake-simulator-table-note{color:var(--dim);font-size:11px;line-height:1.5}
 .rake-simulator-results{display:grid;gap:10px}
@@ -528,3 +531,5 @@ html body.page-rake .total-map-orders .map-orders-table td small{font-size:10px;
 .map-stock-legend span::before{content:'';width:6px;height:6px;border-radius:2px;background:var(--green)}
 .map-stock-legend [data-stage="1"]::before{background:#a78bfa}
 .map-stock-legend [data-stage="2"]::before{background:var(--sky)}
+
+.rake-unplanned-yellow-tag{margin-left:6px;color:var(--dim);font-size:10px;font-weight:500}
