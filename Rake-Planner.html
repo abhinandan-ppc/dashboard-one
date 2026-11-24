@@ -2162,14 +2162,14 @@ function MultiSel({all,sel,onChange,placeholder='All',accent,searchable=false}){
    Same look as the Order Release Summary table, but flat — grouped only
    by the actual EBTP siding (Column C "Mode", already in execution),
    with no region nesting. Each row also gets its own Map view. */
+const ACTUAL_STOCK_COLORS={fg:'var(--green)',wip:'#f97316',slab:'#facc15',issued:'#94a3b8'};
 function CompletionBar({items}){
   const total=items.reduce((a,{ord})=>{const c=RakePlanningRules.completion(ord);a.bal+=c.bal;c.stages.forEach((s,i)=>a.values[i]+=s.raw);return a;},{bal:0,values:[0,0,0,0]});
-  const labels=['FG','WIP','Slab','Issued'];
+  const stages=[{label:'Issued',value:total.values[3],color:ACTUAL_STOCK_COLORS.issued},{label:'Slab',value:total.values[2],color:ACTUAL_STOCK_COLORS.slab},{label:'WIP',value:total.values[1],color:ACTUAL_STOCK_COLORS.wip},{label:'FG',value:total.values[0],color:ACTUAL_STOCK_COLORS.fg}];
   const covered=total.values.reduce((a,b)=>a+b,0);
   const percentage=total.bal?covered/total.bal*100:0;
-  const colors=['#10b981','#fb923c','#a78bfa','#38bdf8'];
-  return <div className="actual-completion" title={labels.map((l,i)=>`${l}: ${fmt(total.values[i])} MT`).join(' · ')}>
-    <div className="actual-stock-track" role="progressbar" aria-label="FG + WIP + Slab + Issued stock coverage" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100,Math.round(percentage))} aria-valuetext={`${fmt(covered)} MT, ${Math.round(percentage)}% of balance to PGI; ${labels.map((label,i)=>`${label} ${fmt(total.values[i])} MT`).join(', ')}`}><span className="actual-stock-fill" style={{width:`${Math.min(100,percentage)}%`}}>{total.values.map((value,i)=><span className="actual-stock-segment" key={labels[i]} title={`${labels[i]}: ${fmt(value)} MT`} style={{width:`${covered?value/covered*100:0}%`,background:colors[i]}}/>)}</span></div>
+  return <div className="actual-completion" title={stages.map(s=>`${s.label}: ${fmt(s.value)} MT`).join(' · ')}>
+    <div className="actual-stock-track" role="progressbar" aria-label="Issued + Slab + WIP + FG stock coverage" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100,Math.round(percentage))} aria-valuetext={`${fmt(covered)} MT, ${Math.round(percentage)}% of balance to PGI; ${stages.map(s=>`${s.label} ${fmt(s.value)} MT`).join(', ')}`}><span className="actual-stock-fill" style={{width:`${Math.min(100,percentage)}%`}}>{stages.map(s=><span className="actual-stock-segment" key={s.label} title={`${s.label}: ${fmt(s.value)} MT`} style={{width:`${covered?s.value/covered*100:0}%`,background:s.color}}/>)}</span></div>
     <small>{Math.round(percentage)}% stock coverage</small>
   </div>;
 }
@@ -2306,12 +2306,12 @@ function ActualRakePlan({data,onDrill,onMap,activeSiding,allRows=[]}){
                 </div>
                 <CompletionBar items={r.items}/>
               </td>
-              <td style={{...dc,color:C.green}}>{fmt(r.fg)}</td>
-              <td style={{...dc,color:'#f97316'}}>{fmt(r.wip||0)}</td>
+              <td style={dc}><span style={{color:ACTUAL_STOCK_COLORS.fg}}>{fmt(r.fg)}</span></td>
+              <td style={dc}><span style={{color:ACTUAL_STOCK_COLORS.wip}}>{fmt(r.wip||0)}</span></td>
               <td style={{...dc,color:C.violet}}>{fmt(r.btr)}</td>
-              <td style={{...dc,color:'#facc15'}}>{fmt(r.slab||0)}</td>
+              <td style={dc}><span style={{color:ACTUAL_STOCK_COLORS.slab}}>{fmt(r.slab||0)}</span></td>
               <td style={{...dc,color:'#22d3ee'}}>{fmt(r.btc||0)}</td>
-              <td style={{...dc,color:'#94a3b8'}}>{fmt(r.issued||0)}</td>
+              <td style={dc}><span style={{color:ACTUAL_STOCK_COLORS.issued}}>{fmt(r.issued||0)}</span></td>
               <td style={{...dc,color:'#fb923c'}}>{fmt(r.btp||0)}</td>
               <td style={{...td0,textAlign:'center',padding:'6px 4px'}}>
                 <button className="actual-map-button" onClick={e=>{e.stopPropagation();onMap(r.siding);}} disabled={!r.items.length}
