@@ -5956,7 +5956,7 @@ function App(){
     togR,togS,setO:setSelO,setCT:setCustT,setM:setSelM,setSelWagon,setSelHTC,setRem:setSelRem,
     setExcHold,setExcDummy,setSelCust,clearAll,actCnt};
 
-  const parseCSV=useCallback(csvText=>{
+  const parseCSV=useCallback((csvText,sourceFetchedAt)=>{
       setLoading(true);
       setTimeout(()=>{
         try{
@@ -5988,10 +5988,10 @@ function App(){
             try{
               writeSessionLikeCache(LIVE_FETCH_SESSION_KEY,LIVE_FETCH_LOCAL_KEY,JSON.stringify({
                 csvText,
-                cachedAt:new Date().toISOString()
+                cachedAt:new Date(sourceFetchedAt||Date.now()).toISOString()
               }));
             }catch(e){}
-            const loadedAt=new Date();
+            const loadedAt=new Date(sourceFetchedAt||Date.now());
             writePlannerSessionState(processed,'Live Google Sheet',loadedAt);
             setRows(processed);setFileName('Live Google Sheet');setFileDate(loadedAt);
           setExtraSelection({});setSrch('');setSelR(new Set());setSelS(new Set());setCustT('All');
@@ -6023,7 +6023,7 @@ function App(){
       const parsed=JSON.parse(cached);
       if(parsed&&typeof parsed.csvText==='string'&&parsed.csvText.trim()){
         restoredLiveSession.current=true;
-        parseCSV(parsed.csvText);
+        parseCSV(parsed.csvText,parsed.cachedAt);
       }
     }catch(e){
       removeSessionLikeCache(LIVE_FETCH_SESSION_KEY,LIVE_FETCH_LOCAL_KEY);
@@ -6046,7 +6046,7 @@ function App(){
       if(cancelled)return;
       const cached=await readHubEbtpCache();
       if(cancelled)return;
-      if(cached&&cached.csvText){parseCSV(cached.csvText);return;}
+      if(cached&&cached.csvText){parseCSV(cached.csvText,cached.fetchedAt);return;}
       tries++;
       if(tries<=GRACE_TRIES){setTimeout(poll,600);return;}
       // Grace window elapsed (or no hub at all) — fetch it ourselves.
@@ -6074,7 +6074,7 @@ function App(){
     const onMsg=async e=>{
       if(e.data&&e.data.type==='ebtp-cache-updated'){
         const cached=await readHubEbtpCache();
-        if(cached&&cached.csvText)parseCSV(cached.csvText);
+        if(cached&&cached.csvText)parseCSV(cached.csvText,cached.fetchedAt);
       }
       if(e.data&&e.data.type==='segment-cache-updated'){
         const cached=await readHubSegmentCache();
@@ -6087,6 +6087,20 @@ function App(){
     window.addEventListener('message',onMsg);
     return()=>window.removeEventListener('message',onMsg);
   },[parseCSV]);
+
+  // Restored planner rows used to suppress the hub-cache check entirely. A
+  // cache update may have completed before this iframe mounted, so reconcile
+  // the shared record even when rows were restored successfully.
+  useEffect(()=>{
+    if(cacheBooting||!rows.length||fileName!=='Live Google Sheet')return;
+    let alive=true;
+    if(window.parent!==window){try{window.parent.postMessage({type:'request-ebtp-fetch'},'*');}catch(e){}}
+    readHubEbtpCache().then(cached=>{
+      const displayedAt=fileDate?new Date(fileDate).getTime():0;
+      if(alive&&cached?.csvText&&Number(cached.fetchedAt)>displayedAt)parseCSV(cached.csvText,cached.fetchedAt);
+    }).catch(()=>{});
+    return()=>{alive=false;};
+  },[cacheBooting,rows.length>0,fileName,fileDate,parseCSV]);
 
   // If the segment map arrives (or was already cached) after rows are already
   // loaded — e.g. this page was opened before the hub finished the segment
