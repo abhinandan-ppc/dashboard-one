@@ -1,4 +1,4 @@
-import {cleanAutomationLog,logEntries,workflowStepState,batchProgress,workflowOutcome} from './automation-log.js';
+import {cleanAutomationLog,logEntries,workflowStepState,batchProgress,workflowOutcome,isCleanupFailure} from './automation-log.js';
 import {readAutomationResponse} from './automation-response.js';
 import {outputGroups} from './automation-outputs.js';
 
@@ -73,12 +73,13 @@ let stateLoaded=false;const observedRuns=new Set(),lastStages=new Map(),revealed
 let lastLogState='';
 const verifiedManifests=new Map(),verifyingCleanup=new Set();
 async function verifyCleanupOutcome(run){
- if(run?.status!=='failed'||!String(run.error||'').startsWith('Post-run process cleanup failed:')||verifiedManifests.has(run.id)||verifyingCleanup.has(run.id))return;
+ if(run?.status!=='failed'||!isCleanupFailure(run.error)||verifiedManifests.has(run.id)||verifyingCleanup.has(run.id))return;
  verifyingCleanup.add(run.id);
  try{
-  const manifest=await read('manifest',{},run);
+  const [manifest,log]=await Promise.all([read('manifest',{},run),read('log',{},run)]);
   if(manifest?.run?.id!==run.id)return;
-  verifiedManifests.set(run.id,manifest);
+  if(workflowOutcome(run,manifest,cleanAutomationLog(log))!=='completed')return;
+  verifiedManifests.set(run.id,{...manifest,workflowStatus:'completed'});
   if(selected?.id===run.id){paintWorkflow(selected,lastStages.get(run.id)||selected.stage||0);renderAvailability()}
  }catch{/* Retain failure until the host confirms the saved output manifest. */}
  finally{verifyingCleanup.delete(run.id)}

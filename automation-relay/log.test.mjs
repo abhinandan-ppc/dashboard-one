@@ -24,4 +24,12 @@ test('cleanup failure preserves verified workflow completion without hiding unve
  assert.equal(workflowOutcome({...run,error:'Expected fresh outputs are missing',workflowStatus:'failed'}),'failed');
  assert.equal(workflowStepState(17,18,workflowOutcome(run,{run:{id:'r'},status:'completed'})).done,true);
 });
+test('legacy cleanup error requires a matching success log and expected artifacts',()=>{
+ const run={id:'r',scope:'all',status:'failed',error:'Process cleanup failed: AccessDenied: (pid=28040)'};
+ const manifest={run:{id:'r'},status:'failed',files:[{name:'NoPlan.xlsx'},{name:'EBTP-25.11.2026.xlsx'}]};
+ assert.equal(workflowOutcome(run,manifest),'failed');
+ assert.equal(workflowOutcome(run,manifest,'All selected steps are finished successfully.'),'completed');
+ assert.equal(workflowOutcome(run,{...manifest,files:[{name:'NoPlan.xlsx'}]},'All selected steps are finished successfully.'),'failed');
+ assert.equal(workflowOutcome(run,{...manifest,run:{id:'other'}},'All selected steps are finished successfully.'),'failed');
+});
 test('reads planned and resumed BTP batch counts',()=>{assert.deepEqual(batchProgress('AUTO-PLANNED BATCHES: 12 balanced batches'),{total:12,current:0});assert.deepEqual(batchProgress('--- Batch 7/12 : SOs 1801-2100 ---'),{total:12,current:7});assert.deepEqual(batchProgress(''),{total:0,current:0})});

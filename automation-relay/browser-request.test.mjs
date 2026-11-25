@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-import {workflowOutcome} from '../automation-log.js';
+import {workflowOutcome,isCleanupFailure,cleanAutomationLog} from '../automation-log.js';
 const source=readFileSync(new URL('../auto-btp.js',import.meta.url),'utf8');
 const submit=source.slice(source.indexOf('async function submitRun('),source.indexOf('async function launch('));
 function setup(live=true){
@@ -36,4 +36,14 @@ test('refresh status survives intervening live updates and clears on completion'
  vm.createContext(context);vm.runInContext(source.slice(source.indexOf('function renderAvailability('),source.indexOf('let stateLoaded=')),context);
  context.renderAvailability();context.renderAvailability();assert.equal(nodes.get('#status').textContent,'Refreshing');
  context.refreshingPC=false;context.renderAvailability();assert.equal(nodes.get('#status').textContent,'Ready');
+});
+test('legacy cleanup failure is presented as completed only after the host confirms outputs and the success log',async()=>{
+ const run={id:'r',scope:'all',status:'failed',error:'Process cleanup failed: AccessDenied: (pid=28040)'};
+ const manifest={run:{id:'r',scope:'all'},status:'failed',files:[{name:'NoPlan.xlsx'},{name:'EBTP-25.11.2026.xlsx'}]};
+ let painted=0,availability=0;
+ const context={workflowOutcome,isCleanupFailure,cleanAutomationLog,selected:run,lastStages:new Map(),paintWorkflow(){painted++},renderAvailability(){availability++},read:async kind=>kind==='manifest'?manifest:'All selected steps are finished successfully.'};
+ vm.createContext(context);vm.runInContext(source.slice(source.indexOf('const verifiedManifests='),source.indexOf('function render(data)')),context);
+ await context.verifyCleanupOutcome(run);
+ assert.equal(vm.runInContext('workflowOutcome(selected,verifiedManifests.get(selected.id))',context),'completed');
+ assert.equal(painted,1);assert.equal(availability,1);
 });

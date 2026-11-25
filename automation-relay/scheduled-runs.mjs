@@ -1,5 +1,6 @@
 import {indiaYear, nextScheduledTime} from './schedule.mjs';
 import {terminal} from './auth.mjs';
+import {isCleanupFailure} from '../automation-log.js';
 
 const ACCOUNT = '11103144';
 const TIMEOUT = 300000;
@@ -68,6 +69,9 @@ export async function scheduledAlarm(pool) {
     if ((job.current && run?.id !== job.current) || (!job.current && job.failedRunId && run?.id !== job.failedRunId)) {
       await missed(pool, now, 'Another run replaced the scheduled run.', job.scheduleId);
       job = null;
+    } else if (!job.current && job.failedRunId && run?.status==='failed' && isCleanupFailure(run.error)) {
+      // Cancel a retry queued by an older relay before this fix was deployed.
+      job = null;
     } else if (job.current && !terminal(run)) {
       const pc = await store.get('pc:' + run.pcId);
       if (now - (pc?.seen || run.createdAt) >= TIMEOUT) {
@@ -78,7 +82,9 @@ export async function scheduledAlarm(pool) {
       }
     }
     if (job && job.current && terminal(run)) {
-      if (run.status === 'completed' || run.status === 'stopped') job = null;
+      // A cleanup error can follow a successful workflow. Do not automatically
+      // run it again until that outcome and host readiness are verified.
+      if (run.status === 'completed' || run.status === 'stopped' || (run.status==='failed'&&isCleanupFailure(run.error))) job = null;
       else {
         if (!job.disconnectedTimeout && job.retries < 3) job.retries++;
         else { job.index++; job.retries = 0; }

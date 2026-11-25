@@ -79,6 +79,10 @@ selected. Requests fail immediately if none is ready; there is no manual queue.
   moving to the next listed PC. A disconnected host still fails over after
   its existing five-minute connection timeout and may still be running. A
   manual run started during a retry wait is never stopped or replaced.
+- A post-run cleanup error stops scheduled retries until the host state is
+  verified; it can occur after the workflow has already completed. The dashboard
+  marks the workflow complete only when the agent reports verified completion,
+  or its matching manifest and final log confirm the expected outputs.
 - Old single schedules keep their original behavior until an administrator
   opens Daily schedules and saves a PC priority list.
 - Local snapshots expire after seven days. Normal working outputs are preserved.
