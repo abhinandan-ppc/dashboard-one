@@ -31,10 +31,19 @@ export function workflowStepState(index,stage,status,scope='all'){
  return {done:included&&(status==='completed'||index<stage-1),active:included&&index===stage-1&&!['completed','failed','stopped','missed'].includes(status),skipped:!included,failed:included&&index===stage-1&&['failed','stopped'].includes(status)};
 }
 
-export function workflowOutcome(run,manifest){
+export const isCleanupFailure=error=>/^(?:Post-run )?process cleanup failed:/i.test(String(error||''));
+export function workflowOutcome(run,manifest,log){
  if(!run)return undefined;
- const cleanupFailure=run.status==='failed'&&String(run.error||'').startsWith('Post-run process cleanup failed:');
- if(cleanupFailure&&(run.workflowStatus==='completed'||(manifest?.run?.id===run.id&&manifest.status==='completed')))return 'completed';
+ const cleanupFailure=run.status==='failed'&&isCleanupFailure(run.error);
+ if(cleanupFailure){
+  if(run.workflowStatus==='completed')return 'completed';
+  if(manifest?.run?.id!==run.id || (manifest.run.scope&&manifest.run.scope!==run.scope))return run.status;
+  if(manifest.status==='completed'||manifest.workflowStatus==='completed')return 'completed';
+  const names=new Set((manifest.files||[]).map(file=>String(file.name||'').toLowerCase()));
+  const required=run.scope==='btr'?names.has('auto btr.xlsx'):['btp','btr-btp'].includes(run.scope)?names.has('btpexcel.xlsx'):
+   ['all','ebtp','btp-ebtp'].includes(run.scope)&&names.has('noplan.xlsx')&&[...names].some(name=>/^ebtp-.*\.xlsx$/.test(name));
+  if(required&&String(log||'').includes('All selected steps are finished successfully.'))return 'completed';
+ }
  return run.status;
 }
 

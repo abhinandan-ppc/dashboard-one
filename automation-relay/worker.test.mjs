@@ -82,6 +82,19 @@ test('scheduled failure waits five minutes and restarts fresh three times before
   await f.pool.alarm();run=f.data.get('run');assert.equal(run.pcId,n<3?'one':'two');assert.equal(run.resume,false);assert.equal(run.abandon,true);
  }
 });
+test('cleanup failure after a scheduled run never triggers a second workflow',async()=>{
+ for(const error of ['Process cleanup failed: AccessDenied: (pid=28040)','Post-run process cleanup failed: AccessDenied: (pid=28040)']){
+  const f=fixture();await f.storage.put('pc:p',{id:'p',ready:true,seen:Date.now(),accounts:['11103144'],lastRun:0});const host=f.socket('agent','p');
+  await f.storage.put('schedules',[{id:'s',time:'08:00',enabled:true,pcs:['p'],nextAt:Date.now()-1}]);await f.pool.alarm();const run=f.data.get('run');
+  await f.pool.webSocketMessage(host,JSON.stringify({type:'status',runId:run.id,status:'failed',error}));await f.pool.alarm();
+  assert.equal(f.data.has('scheduledJob'),false);assert.equal(f.data.get('run').id,run.id);
+ }
+});
+test('upgrade cancels a previously queued cleanup retry',async()=>{
+ const f=fixture();const run={id:'old',status:'failed',pcId:'p',error:'Process cleanup failed: AccessDenied: (pid=28040)'};
+ await f.storage.put('run',run);await f.storage.put('scheduledJob',{id:'job',scheduleId:'s',pcs:['p'],index:0,retries:1,current:null,failedRunId:'old',retryAt:Date.now()-1});
+ await f.pool.alarm();assert.equal(f.data.has('scheduledJob'),false);assert.deepEqual(f.data.get('run'),run);
+});
 test('an active manual run causes a missed schedule without stopping it',async()=>{
  const f=fixture(),run={id:'manual',pcId:'p',status:'running'};await f.storage.put('run',run);
  await f.storage.put('schedules',[{id:'s',time:'08:00',enabled:true,pcs:['p'],nextAt:Date.now()-1}]);await f.pool.alarm();
