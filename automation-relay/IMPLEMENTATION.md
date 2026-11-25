@@ -73,6 +73,14 @@ selected. Requests fail immediately if none is ready; there is no manual queue.
   until its update is acknowledged. Passwords are never read back.
 - Daily scheduling uses IST. If no PC is ready, record a missed run without
   catch-up. Disable the old per-PC Windows workflow schedules during enrollment.
+- For an ordered daily schedule, a failed run waits five minutes before
+  starting the entire workflow fresh on the same PC. It has up to three such
+  retries per PC; after the third retry fails, it waits five minutes before
+  moving to the next listed PC. A disconnected host still fails over after
+  its existing five-minute connection timeout and may still be running. A
+  manual run started during a retry wait is never stopped or replaced.
+- Old single schedules keep their original behavior until an administrator
+  opens Daily schedules and saves a PC priority list.
 - Local snapshots expire after seven days. Normal working outputs are preserved.
 - Keep within Workers Free quotas. Quota exhaustion is an outage, not permission
   to start a second workflow elsewhere or automatically upgrade the account.

@@ -69,21 +69,37 @@ test('banner clear targets original run and exposes pending confirmation',async(
 test('expected start rejection does not escape the concurrency callback or reset relay',async()=>{const f=fixture();let reset=false;const original=f.pool.ctx.blockConcurrencyWhile;f.pool.ctx.blockConcurrencyWhile=fn=>original(async()=>{try{return await fn()}catch(e){reset=true;throw e}});const r=await f.pool.fetch(control({action:'run',...req('no-host')}));assert.equal(r.status,409);assert.match((await r.json()).error,/No compatible/);assert.equal(reset,false);assert.equal(f.data.has('run'),false)});
 test('new host may run its installed scripts without matching an unrelated PC hash',async()=>{const f=fixture();for(const [id,version] of [['old','older-scripts'],['new','updated-scripts']]){await f.storage.put('pc:'+id,{id,version,ready:true,seen:Date.now(),accounts:['test'],lastRun:0});f.socket('agent',id)}const run=await f.pool.start({...req('new-host-run'),pcId:'new'});assert.equal(run.pcId,'new')});
 
-test('scheduled failure resumes three times then starts fresh on the next PC',async()=>{
+test('scheduled failure waits five minutes and restarts fresh three times before the next PC',async()=>{
  const f=fixture();for(const id of ['one','two']){await f.storage.put('pc:'+id,{id,ready:true,seen:Date.now(),accounts:['11103144'],lastRun:0});f.socket('agent',id)}
  await f.storage.put('schedules',[{id:'s',time:'08:00',enabled:true,pcs:['one','two'],nextAt:Date.now()-1}]);
  await f.pool.alarm();let run=f.data.get('run');assert.equal(run.pcId,'one');assert.equal(run.abandon,true);
- for(let n=0;n<3;n++){
-  await f.pool.webSocketMessage(f.pool.sockets('agent','one')[0],JSON.stringify({type:'status',runId:run.id,status:'failed',checkpoint:true}));
-  await f.pool.alarm();run=f.data.get('run');assert.equal(run.pcId,'one');assert.equal(run.resume,true);
+ for(let n=0;n<4;n++){
+  const previous=run.id;await f.pool.webSocketMessage(f.pool.sockets('agent','one')[0],JSON.stringify({type:'status',runId:run.id,status:'failed',checkpoint:n%2===0,error:'SAP login failed'}));
+  await f.pool.alarm();assert.equal(f.data.get('run').id,previous);const job=f.data.get('scheduledJob');assert.ok(job.retryAt>=Date.now()+299000);
+  await f.pool.alarm();assert.equal(f.data.get('run').id,previous,'no retry before five minutes');
+  await f.storage.put('scheduledJob',{...job,retryAt:Date.now()-1});
+  for(const id of ['one','two'])await f.storage.put('pc:'+id,{...f.data.get('pc:'+id),seen:Date.now(),ready:true});
+  await f.pool.alarm();run=f.data.get('run');assert.equal(run.pcId,n<3?'one':'two');assert.equal(run.resume,false);assert.equal(run.abandon,true);
  }
- await f.pool.webSocketMessage(f.pool.sockets('agent','one')[0],JSON.stringify({type:'status',runId:run.id,status:'failed',checkpoint:true}));
- await f.pool.alarm();run=f.data.get('run');assert.equal(run.pcId,'two');assert.equal(run.abandon,true);assert.equal(run.resume,false);
 });
 test('an active manual run causes a missed schedule without stopping it',async()=>{
  const f=fixture(),run={id:'manual',pcId:'p',status:'running'};await f.storage.put('run',run);
  await f.storage.put('schedules',[{id:'s',time:'08:00',enabled:true,pcs:['p'],nextAt:Date.now()-1}]);await f.pool.alarm();
  assert.deepEqual(f.data.get('run'),run);assert.ok([...f.data.values()].some(v=>v?.status==='missed'));
+});
+test('a manual run started while a scheduled retry waits is never replaced',async()=>{
+ const f=fixture();await f.storage.put('pc:p',{id:'p',ready:true,seen:Date.now(),accounts:['11103144'],lastRun:0});const host=f.socket('agent','p');
+ await f.storage.put('schedules',[{id:'s',time:'08:00',enabled:true,pcs:['p'],nextAt:Date.now()-1}]);await f.pool.alarm();
+ const scheduled=f.data.get('run');await f.pool.webSocketMessage(host,JSON.stringify({type:'status',runId:scheduled.id,status:'failed'}));await f.pool.alarm();
+ const manual={id:'manual',pcId:'p',status:'running'};await f.storage.put('run',manual);await f.pool.alarm();
+ assert.deepEqual(f.data.get('run'),manual);assert.equal(f.data.has('scheduledJob'),false);assert.ok([...f.data.values()].some(v=>v?.status==='missed'));
+});
+test('an online unready PC gets three delayed retry opportunities before the next host',async()=>{
+ const f=fixture();for(const id of ['one','two']){await f.storage.put('pc:'+id,{id,ready:true,seen:Date.now(),accounts:['11103144'],lastRun:0});f.socket('agent',id)}
+ await f.storage.put('schedules',[{id:'s',time:'08:00',enabled:true,pcs:['one','two'],nextAt:Date.now()-1}]);await f.pool.alarm();const run=f.data.get('run');
+ await f.pool.webSocketMessage(f.pool.sockets('agent','one')[0],JSON.stringify({type:'status',runId:run.id,status:'failed',error:'SAP login failed'}));await f.pool.alarm();
+ for(let n=0;n<3;n++){const job=f.data.get('scheduledJob');await f.storage.put('scheduledJob',{...job,retryAt:Date.now()-1});await f.storage.put('pc:one',{...f.data.get('pc:one'),ready:false,seen:Date.now()});await f.storage.put('pc:two',{...f.data.get('pc:two'),ready:true,seen:Date.now()});await f.pool.alarm();assert.equal(f.data.get('run').id,run.id);}
+ const job=f.data.get('scheduledJob');assert.equal(job.index,1);await f.storage.put('scheduledJob',{...job,retryAt:Date.now()-1});await f.storage.put('pc:two',{...f.data.get('pc:two'),seen:Date.now()});await f.pool.alarm();assert.equal(f.data.get('run').pcId,'two');
 });
 test('disconnected scheduled PC times out after five minutes and next PC starts fresh',async()=>{
  const f=fixture();for(const id of ['one','two']){await f.storage.put('pc:'+id,{id,ready:true,seen:Date.now(),accounts:['11103144'],lastRun:0});f.socket('agent',id)}

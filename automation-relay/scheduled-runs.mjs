@@ -3,6 +3,7 @@ import {terminal} from './auth.mjs';
 
 const ACCOUNT = '11103144';
 const TIMEOUT = 300000;
+const RETRY_DELAY = 300000;
 
 export async function saveSchedules(pool, input) {
   if (!Array.isArray(input) || input.length > 30) throw Error('Invalid schedules');
@@ -29,7 +30,7 @@ export async function scheduleAlarm(pool) {
   const schedules = saved || [];
   const job = await storage.get('scheduledJob');
   const times = schedules.filter(s => s.enabled).map(s => s.nextAt);
-  if (job) times.push(Date.now() + 10000);
+  if (job) times.push(job.retryAt && job.retryAt > Date.now() ? job.retryAt : Date.now() + 10000);
   if (times.length) await storage.setAlarm(Math.max(Date.now() + 100, Math.min(...times)));
   else await storage.deleteAlarm();
 }
@@ -64,7 +65,7 @@ export async function scheduledAlarm(pool) {
   await store.put('schedules', schedules);
   if (job) {
     let run = await store.get('run');
-    if (job.current && run?.id !== job.current) {
+    if ((job.current && run?.id !== job.current) || (!job.current && job.failedRunId && run?.id !== job.failedRunId)) {
       await missed(pool, now, 'Another run replaced the scheduled run.', job.scheduleId);
       job = null;
     } else if (job.current && !terminal(run)) {
@@ -73,26 +74,36 @@ export async function scheduledAlarm(pool) {
         run = {...run, status:'failed', checkpoint:false, error:'PC disconnected for five minutes; it may still be running.', updatedAt:now};
         await store.put('run', run);
         await store.put('history:' + run.createdAt, run);
+        job.disconnectedTimeout=true;
       }
     }
     if (job && job.current && terminal(run)) {
       if (run.status === 'completed' || run.status === 'stopped') job = null;
       else {
-        if (run.checkpoint && job.retries < 3) job.retries++;
+        if (!job.disconnectedTimeout && job.retries < 3) job.retries++;
         else { job.index++; job.retries = 0; }
         job.current = null;
+        job.failedRunId = run.id;
         job.pendingSince = now;
+        job.retryAt = job.disconnectedTimeout ? now : Math.max(now,run.updatedAt||now) + RETRY_DELAY;
+        delete job.disconnectedTimeout;
       }
     }
-    if (job && !job.current) {
+    // Preserve the previous release's pending retries when upgrading in place.
+    if(job && !job.current && job.retries && !job.retryAt)job.retryAt=(job.pendingSince||now)+RETRY_DELAY;
+    if (job && !job.current && (!job.retryAt || now>=job.retryAt)) {
       const state = await pool.state();
-      // An offline host is skipped immediately. After a failure, briefly allow
-      // the original host to finish cleanup and report ready before retrying.
+      // Disconnected hosts remain eligible for the existing offline failover.
+      // An online but unready host gets the same three delayed opportunities.
       while (job.index < job.pcs.length) {
         const pc = state.machines.find(p => p.id === job.pcs[job.index]);
         const eligible = pc && !pc.revoked && pc.connected && pc.ready && now-pc.seen < 30000 && pc.accounts?.includes(ACCOUNT);
         if (eligible) break;
-        if (job.retries && pc?.connected && now-job.pendingSince < TIMEOUT) break;
+        if (job.retries && pc?.connected && now-pc.seen < 30000) {
+          if(job.retries<3)job.retries++;else{job.index++;job.retries=0;}
+          job.retryAt=now+RETRY_DELAY;
+          break;
+        }
         job.index++; job.retries = 0;
       }
       if (job.index >= job.pcs.length) {
@@ -100,7 +111,7 @@ export async function scheduledAlarm(pool) {
         job = null;
       } else {
         const pc = state.machines.find(p => p.id === job.pcs[job.index]);
-        if (pc?.connected && pc.ready && now-pc.seen < 30000 && pc.accounts?.includes(ACCOUNT)) {
+        if ((!job.retryAt || now>=job.retryAt) && pc?.connected && pc.ready && now-pc.seen < 30000 && pc.accounts?.includes(ACCOUNT)) {
           const previous = await store.get('run');
           if (!job.retries && previous?.checkpoint && previous.pcId !== pc.id) {
             const key = 'command:' + previous.pcId;
@@ -116,11 +127,13 @@ export async function scheduledAlarm(pool) {
           job.current = id;
           await store.put('scheduledJob', job);
           try {
-            const started = await pool.start({id, pcId:pc.id, scope:'all', account:ACCOUNT, years:[indiaYear(job.due)], requestedBy:'schedule', resume:job.retries>0, abandon:job.retries===0});
+            const started = await pool.start({id, pcId:pc.id, scope:'all', account:ACCOUNT, years:[indiaYear(job.due)], requestedBy:'schedule', resume:false, abandon:true});
             job.current = started.id;
+            job.retryAt = null;
+            job.failedRunId = null;
           } catch (e) {
             if (!terminal(await store.get('run'))) { await missed(pool, now, 'A run became active before the schedule could start.', job.scheduleId); job = null; }
-            else { job.current=null; job.index++; job.retries=0; }
+            else { job.current=null; if(job.retries<3)job.retries++;else{job.index++;job.retries=0;}job.retryAt=now+RETRY_DELAY; }
           }
         }
       }
