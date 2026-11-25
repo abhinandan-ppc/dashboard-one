@@ -14,18 +14,15 @@ globalThis.RakePlanningRules=(()=>{
     if(/^RAKE[-\s_]+/.test(raw))return raw.replace(/^RAKE[-\s_]+/,'').trim()||null;
     return null;
   }
-  function simulatorCandidates(rows,scope='ALL_RAKES',peerRakes=[]){
-    const selected=sidingKey(scope),peers=new Set(peerRakes.map(sidingKey)),seen=new Set(),candidates=[];
+  function simulatorCandidates(rows,scope){
+    const selected=sidingKey(scope),seen=new Set(),candidates=[];
     for(const row of rows){
       if(qty(row['Bal to PGI'])<=0)continue;
       if(isHold(row)||isExport(row)||row._ODC||odc(row))continue;
-      if(selected==='ALL_RAKES'){
-        // Unplanned for "All rakes" = plain road orders (no export, no ODC).
-        if(actualSiding(row._ModeC)!=='ROAD')continue;
-      }else if(key(row._WagonType)==='ROAD-ODC')continue;
-      else if(selected){
-        const assigned=sidingKey(actualSiding(row._ModeC));
-        if(assigned===selected||!peers.has(assigned)||key(row._Country)!=='INDIA')continue;
+      if(!selected||key(row._WagonType)==='ROAD-ODC')continue;
+      {
+        // Individual / Long rakes: unplanned = plain road orders only (not other rakes' orders).
+        if(key(row._ModeC)!=='ROAD'||key(row._Country)!=='INDIA')continue;
         // Long modes only pair with LONG wagon type; non-long modes exclude LONG wagon type.
         // Long rakes carry only long plates; standard rakes never carry long plates.
         const isLongScope=selected.endsWith('(LONG)');

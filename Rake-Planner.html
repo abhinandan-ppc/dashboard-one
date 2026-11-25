@@ -5733,9 +5733,14 @@ const simulatorCustomerKey=row=>`${orderPlaceKey(row)}|${RakePlanningRules.key(r
 
 function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply,includeYellow,onToggleYellow}){
   const dialogRef=usePlanningDialog(onClose);
+  const NO_REMARKS='(No remarks)';
+  const lineRemark=line=>RakePlanningRules.clean(line.row.Remarks)||NO_REMARKS;
+  const[remarkSel,setRemarkSel]=useState(()=>new Set());
+  const remarkOptions=useMemo(()=>[...new Set(orderLines.map(lineRemark))].sort((a,b)=>a.localeCompare(b)),[orderLines]);
+  const filteredLines=useMemo(()=>remarkSel.size?orderLines.filter(line=>remarkSel.has(lineRemark(line))):orderLines,[orderLines,remarkSel]);
   const orderGroups=useMemo(()=>{
     const states=new Map();
-    for(const line of orderLines){
+    for(const line of filteredLines){
       const row=line.row;
       const state=simulatorStateValue(row)||'—';
       const city=RakePlanningRules.clean(row['Ship To Party City'])||'—';
@@ -5777,7 +5782,7 @@ function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply,incl
           });
         return{...stateGroup,cities,rowSpan:cities.reduce((total,city)=>total+city.rowSpan,0)};
       });
-  },[orderLines]);
+  },[filteredLines]);
   const orders=orderGroups.flatMap(stateGroup=>stateGroup.cities.flatMap(cityGroup=>
     cityGroup.customers.flatMap(customerGroup=>customerGroup.orders)));
   const[selectedOrderKeys,setSelectedOrderKeys]=useState(()=>new Set(orders
@@ -5796,6 +5801,11 @@ function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply,incl
         <button type="button" onClick={onClose}>Close</button>
       </header>
       <div className="rake-unplanned-yellow-filter">
+        <div className="rake-unplanned-remarks-filter">
+          <SimulatorMultiFilter label={remarkSel.size?`Remarks (${remarkSel.size})`:'Remarks'} noun="remarks" options={remarkOptions} selected={remarkSel} searchable
+            onChange={(value,checked)=>setRemarkSel(previous=>{const next=new Set(previous);if(checked)next.add(value);else next.delete(value);return next;})}
+            onSelectAll={(values,checked)=>setRemarkSel(previous=>{const next=new Set(previous);values.forEach(value=>checked?next.add(value):next.delete(value));return next;})}/>
+        </div>
         <button type="button" className="rake-simulator-yellow-toggle" role="switch" aria-checked={includeYellow}
           title="Yellow goods cannot normally go by rake. Off = excluded from unplanned orders."
           onClick={onToggleYellow}>
@@ -6304,7 +6314,7 @@ function SimulatorMultiFilter({label,options,selected,onChange,onSelectAll,noun,
 }
 
 function RakeSimulator({rows,active}){
-  const[scope,setScope]=useState('ALL_RAKES');
+  const[scope,setScope]=useState('');
   const[regions,setRegions]=useState(new Set());
   const[states,setStates]=useState(new Set());
   const[cities,setCities]=useState(new Set());
@@ -6314,14 +6324,15 @@ function RakeSimulator({rows,active}){
   const tableScrollRef=useRef(null),tableRef=useRef(null),totalScrollRef=useRef(null),totalTableRef=useRef(null);
   const rakeModes=useMemo(()=>simulatorRakeModes(rows),[rows]);
   const selectedMode=rakeModes.find(mode=>mode.id===scope);
-  useEffect(()=>{if(scope!=='ALL_RAKES'&&!selectedMode)setScope('ALL_RAKES');},[scope,selectedMode]);
+  useEffect(()=>{if(!selectedMode&&rakeModes.length)setScope(rakeModes[0].id);},[selectedMode,rakeModes]);
   const plannedRows=useMemo(()=>{
-    const target=selectedMode?RakePlanningRules.sidingKey(selectedMode.id):null;
+    if(!selectedMode)return[];
+    const target=RakePlanningRules.sidingKey(selectedMode.id);
     const seen=new Set();
     return rows.filter(row=>{
       const actual=RakePlanningRules.actualSiding(row._ModeC);
       if(RakePlanningRules.isHold(row)||!actual||['ROAD','ROAD-ODC','EXPORT ROAD'].includes(actual)||
-        (target&&RakePlanningRules.sidingKey(actual)!==target)||
+        (RakePlanningRules.sidingKey(actual)!==target)||
         Math.max(0,Number(row['Bal to PGI'])||0)<=0)return false;
       const key=RakePlanningRules.orderKey(row);
       if(seen.has(key))return false;
@@ -6331,8 +6342,7 @@ function RakeSimulator({rows,active}){
   },[rows,selectedMode]);
   const plannedBalance=useMemo(()=>plannedRows.reduce((total,row)=>
     total+Math.max(0,Number(row['Bal to PGI'])||0),0),[plannedRows]);
-  const peerRakes=useMemo(()=>selectedMode?rakeModes.filter(mode=>mode.id!==scope).map(mode=>mode.id):[],[scope,selectedMode,rakeModes]);
-  const candidates=useMemo(()=>RakePlanningRules.simulatorCandidates(rows,scope,peerRakes),[rows,scope,peerRakes]);
+  const candidates=useMemo(()=>selectedMode?RakePlanningRules.simulatorCandidates(rows,scope):[],[rows,scope,selectedMode]);
   const regionOptions=useMemo(()=>[...new Set(candidates.map(row=>simulatorValue(row,'_Region')).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[candidates]);
   const regionRows=useMemo(()=>regions.size?candidates.filter(row=>regions.has(simulatorValue(row,'_Region'))):candidates,[candidates,regions]);
   const stateOptions=useMemo(()=>[...new Set(regionRows.map(simulatorStateValue).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[regionRows]);
@@ -6429,8 +6439,8 @@ function RakeSimulator({rows,active}){
   });
   const sidingHub=selectedMode?resolveHub(selectedMode.id):null;
   const scopeDescription=selectedMode
-    ?`Showing available order-book items except those already planned for ${selectedMode.label}.`
-    :'Planned: items assigned to any rake. Unplanned: road orders (no ODC, no export).';
+    ?`Planned: ${selectedMode.label} orders. Unplanned: road orders${selectedMode.id.endsWith("(LONG)")?" with LONG wagon type":" (no LONG wagon)"}; no ODC, no export.`
+    :'No rakes found in the loaded order data.';
   if(!active)return null;
   return <section className="rake-simulator rake-simulator-tab">
     <div className="rake-simulator-page-heading">
@@ -6444,7 +6454,6 @@ function RakeSimulator({rows,active}){
           <small>{scopeDescription}</small>
         </div>
         <div className="rake-simulator-mode-options" role="group" aria-label="Order view and rake mode">
-          <button type="button" className={scope==='ALL_RAKES'?'is-selected':''} aria-pressed={scope==='ALL_RAKES'} onClick={()=>selectScope('ALL_RAKES')}>All rakes</button>
           {rakeModes.map(mode=><button key={mode.id} type="button"
             className={scope===mode.id?'is-selected':''} aria-pressed={scope===mode.id}
             onClick={()=>selectScope(mode.id)}>{mode.label}</button>)}

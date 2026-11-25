@@ -464,7 +464,8 @@ html body .rake-simulator .rake-simulator-city-button>span:last-child{text-align
 .rake-simulator-multi-filter>summary{display:flex;align-items:center;justify-content:space-between;gap:4px;min-height:38px;padding:7px 8px;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;list-style:none}
 .rake-simulator-multi-filter>summary span{flex:1 1 auto;min-width:0;line-height:1.2}
 .rake-simulator-multi-filter>summary::-webkit-details-marker{display:none}
-.rake-simulator-multi-filter>summary::after{content:none}
+.rake-simulator-multi-filter>summary::after{content:'';flex-shrink:0;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid var(--dim);transition:transform .15s}
+.rake-simulator-multi-filter[open]>summary::after{transform:rotate(180deg)}
 .rake-simulator-filter-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:800;width:min(320px,calc(100vw - 48px));padding:8px;border:1px solid var(--bdrHi);border-radius:var(--radius-sm);background:var(--s1);box-shadow:var(--shadow-md,0 8px 24px #0004)}
 .rake-simulator-multi-filter:nth-of-type(n+3) .rake-simulator-filter-menu{right:0;left:auto}
 .rake-simulator-filter-options{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;max-height:220px;overflow:auto;overscroll-behavior:contain}
@@ -480,7 +481,8 @@ html body .rake-simulator .rake-simulator-city-button>span:last-child{text-align
 html body .rake-simulator .rake-simulator-selected-filter>button{display:inline-grid;place-items:center;flex:0 0 20px;width:20px;min-height:20px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--dim);font:600 16px/1 var(--font-body,system-ui)}
 html body .rake-simulator .rake-simulator-selected-filter>button:hover{background:var(--s2);color:var(--text)}
 .rake-simulator-clear-filters{align-self:flex-end}
-.rake-unplanned-yellow-filter{display:flex;padding:8px 14px 0}
+.rake-unplanned-yellow-filter{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:8px 14px 0}
+.rake-unplanned-remarks-filter{width:220px;max-width:100%}
 .rake-simulator-yellow-toggle{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border:1px solid var(--bdr);border-radius:999px;background:var(--s2);color:var(--text);font-size:11px;font-weight:600;cursor:pointer}
 .rake-simulator-yellow-track{position:relative;width:28px;height:16px;border-radius:999px;background:var(--bdrHi,#64748b);transition:background .15s}
 .rake-simulator-yellow-track>span{position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:transform .15s}
