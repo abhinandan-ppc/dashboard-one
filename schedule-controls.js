@@ -15,6 +15,14 @@ export function setupScheduleControls({getState, save}) {
       root.append(line);
     }
     if (!root.children.length) root.textContent=state.legacySchedule?.time?`Existing schedule: ${state.legacySchedule.time} IST. Open settings to choose its PC order.`:'No schedules configured.';
+    const job=state.scheduledJob;
+    if(job?.retryAt&&!job.current){
+      const pc=state.machines.find(p=>p.id===job.pcs?.[job.index]);
+      const status=document.createElement('p');status.setAttribute('role','status');
+      const time=new Date(job.retryAt).toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      status.textContent=job.retries?`Scheduled retry ${job.retries} of 3 on ${pc?.name||'the selected PC'} after ${time} IST.`:`Scheduled run will try ${pc?.name||'the next available PC'} after ${time} IST.`;
+      root.append(status);
+    }
   }
   function draw() {
     list.replaceChildren();
