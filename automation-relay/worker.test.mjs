@@ -27,6 +27,25 @@ test('completed request cannot replay after another run',async()=>{const f=fixtu
 test('pending credential update excludes PC',async()=>{const f=fixture();await f.storage.put('pc:p',{id:'p',ready:true,seen:Date.now(),accounts:['test'],lastRun:0});f.socket('agent','p');await f.storage.put('command:p',{action:'accounts'});await assert.rejects(f.pool.start(req('one')),/No compatible/)});
 test('unauthenticated API denied',async()=>{const {pool}=fixture();assert.equal((await pool.fetch(new Request('https://relay/control'))).status,401)});
 test('terminal message from wrong PC cannot release reservation',async()=>{const f=fixture();await f.storage.put('run',{id:'one',pcId:'p',status:'running'});await f.storage.put('pc:other',{id:'other'});await f.pool.webSocketMessage(f.socket('agent','other'),JSON.stringify({type:'status',runId:'one',status:'completed'}));assert.equal(f.data.get('run').status,'running')});
+test('completed workflow cleanup failure is stored as completed history',async()=>{
+ const f=fixture();
+ await f.storage.put('pc:p',{id:'p'});
+ await f.storage.put('run',{id:'cleanup',pcId:'p',status:'running',createdAt:10});
+ await f.pool.webSocketMessage(f.socket('agent','p'),JSON.stringify({type:'status',runId:'cleanup',status:'failed',workflowStatus:'completed',error:'Post-run process cleanup failed'}));
+ assert.equal(f.data.get('run').status,'completed');
+ assert.equal(f.data.get('history:10').status,'completed');
+ assert.equal(f.data.get('history:10').workflowStatus,'completed');
+});
+test('legacy failed history with completed workflow is reconciled in state',async()=>{
+ const f=fixture();
+ await f.storage.put('run',{id:'legacy',pcId:'p',status:'failed',workflowStatus:'completed',createdAt:10});
+ await f.storage.put('history:10',{id:'legacy',pcId:'p',status:'failed',workflowStatus:'completed',createdAt:10});
+ const state=await f.pool.state();
+ assert.equal(state.run.status,'completed');
+ assert.equal(state.history[0].status,'completed');
+ assert.equal(f.data.get('run').status,'completed');
+ assert.equal(f.data.get('history:10').status,'completed');
+});
 
 test('local launch stays on its host and broadcasts lifecycle to online viewers',async()=>{
  const f=fixture();for(const id of ['local','other'])await f.storage.put('pc:'+id,{id,ready:true,seen:Date.now(),accounts:['test'],lastRun:0});

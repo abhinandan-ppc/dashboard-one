@@ -5,6 +5,10 @@ const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control
 export default {fetch(r,e){return e.POOL.get(e.POOL.idFromName(e.POOL_NAME||'production')).fetch(r)}};
 export class Pool {
  constructor(ctx,env){this.ctx=ctx;this.env=env;}
+ normalizedRun(run){
+  if(run?.status==='failed'&&run?.workflowStatus==='completed')return {...run,status:'completed'};
+  return run;
+ }
  async locked(work){
   // Expected request errors must not escape this callback and reset the object.
   const result=await this.ctx.blockConcurrencyWhile(async()=>{try{return {value:await work()}}catch(error){return {error:error.message}}});
@@ -13,7 +17,19 @@ export class Pool {
  }
  sockets(role,id){return this.ctx.getWebSockets().filter(s=>{const a=s.deserializeAttachment();return a.role===role&&(!id||a.id===id)});}
  send(role,id,data){for(const s of this.sockets(role,id))try{const a=s.deserializeAttachment();if(role==='browser'&&a.expires<Date.now()){s.close(1008,'Renew authorization');continue;}s.send(JSON.stringify(data))}catch{}}
- async state(){return {liveRunRequests:true,run:await this.ctx.storage.get('run')||null,machines:[...(await this.ctx.storage.list({prefix:'pc:'})).values()].map(({secret,...p})=>({...p,connected:!!this.sockets('agent',p.id).length})),history:[...(await this.ctx.storage.list({prefix:'history:',reverse:true,limit:100})).values()],schedules:await this.ctx.storage.get('schedules')||[],legacySchedule:await this.ctx.storage.get('schedule')||null,scheduledJob:await this.ctx.storage.get('scheduledJob')||null};}
+ async state(){
+  const storedRun=await this.ctx.storage.get('run');
+  const run=this.normalizedRun(storedRun);
+  if(run!==storedRun)await this.ctx.storage.put('run',run);
+  const historyEntries=[...(await this.ctx.storage.list({prefix:'history:',reverse:true,limit:100})).entries()];
+  const history=[];
+  for(const [key,stored] of historyEntries){
+   const entry=this.normalizedRun(stored);
+   if(entry!==stored)await this.ctx.storage.put(key,entry);
+   history.push(entry);
+  }
+  return {liveRunRequests:true,run,machines:[...(await this.ctx.storage.list({prefix:'pc:'})).values()].map(({secret,...p})=>({...p,connected:!!this.sockets('agent',p.id).length})),history,schedules:await this.ctx.storage.get('schedules')||[],legacySchedule:await this.ctx.storage.get('schedule')||null,scheduledJob:await this.ctx.storage.get('scheduledJob')||null};
+ }
  async broadcast(){this.send('browser',null,{type:'state',...await this.state()});}
  async fetch(request){try{
   const url=new URL(request.url);
@@ -82,7 +98,7 @@ export class Pool {
   }
   if(m.type==='heartbeat'){const d=m.data||{};await this.ctx.storage.put('pc:'+a.id,{...pc,seen:Date.now(),makeReady:!!d.makeReady,ready:!!d.ready,reason:String(d.reason||''),accounts:d.accounts||[],accountSlots:d.accountSlots||[],version:d.version,checkpoint:!!d.checkpoint,accountVersion:d.accountVersion,files:d.files||[]});if(d.checkpoint===false)await this.clearCheckpoint(a.id);const run=await this.ctx.storage.get('run');if(run?.pcId===a.id&&!terminal(run))this.send('agent',a.id,{type:'command',action:run.status==='stopping'?'stop':'run',run,runId:run.id});const cmd=await this.ctx.storage.get('command:'+a.id);if(cmd)this.send('agent',a.id,cmd);await this.broadcast();return;}
   if(m.type==='ack'){const cmd=await this.ctx.storage.get('command:'+a.id);if(cmd?.id===m.id){if(cmd.action==='clear'){await this.clearCheckpoint(a.id);await this.ctx.storage.put('pc:'+a.id,{...pc,checkpoint:false,checkpointClearing:false});}await this.ctx.storage.delete('command:'+a.id);await this.broadcast();}return;}
-  if(m.type==='status'){const run=await this.ctx.storage.get('run');if(run?.id!==m.runId||run.pcId!==a.id)return;if(!['running','completed','failed','stopped'].includes(m.status))throw Error('Invalid status');const next={...run,status:m.status,workflowStatus:['completed','failed','stopped'].includes(m.workflowStatus)?m.workflowStatus:undefined,checkpoint:!!m.checkpoint,updatedAt:Date.now(),stage:m.stage||0,error:String(m.error||'').slice(0,500)};await this.ctx.storage.put('run',next);if(terminal(next)){await this.ctx.storage.put('history:'+next.createdAt,next);await this.ctx.storage.put('pc:'+a.id,{...pc,lastRun:Date.now()});}await this.broadcast();return;}
+  if(m.type==='status'){const run=await this.ctx.storage.get('run');if(run?.id!==m.runId||run.pcId!==a.id)return;if(!['running','completed','failed','stopped'].includes(m.status))throw Error('Invalid status');const workflowStatus=['completed','failed','stopped'].includes(m.workflowStatus)?m.workflowStatus:undefined;const received={...run,status:m.status,workflowStatus,checkpoint:!!m.checkpoint,updatedAt:Date.now(),stage:m.stage||0,error:String(m.error||'').slice(0,500)};const next=this.normalizedRun(received);await this.ctx.storage.put('run',next);if(terminal(next)){await this.ctx.storage.put('history:'+next.createdAt,next);await this.ctx.storage.put('pc:'+a.id,{...pc,lastRun:Date.now()});}await this.broadcast();return;}
   if(m.type==='readResult')this.send('browser',m.client,{...m,pcId:a.id});
  }catch(e){ws.send(JSON.stringify({type:'error',error:e.message}));}}
  webSocketClose(ws,code){try{ws.close(code===1006?1000:code)}catch{}}
