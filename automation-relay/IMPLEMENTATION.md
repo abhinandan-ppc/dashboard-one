@@ -87,6 +87,11 @@ selected. Requests fail immediately if none is ready; there is no manual queue.
   verified; it can occur after the workflow has already completed. The dashboard
   marks the workflow complete only when the agent reports verified completion,
   or its matching manifest and final log confirm the expected outputs.
+- Completion checks accept the success banner emitted by AutoBTP_Modern as
+  well as the final success message from the workflow launcher. For older runs
+  recorded as failed due to a missing launcher message, the dashboard corrects
+  the displayed outcome only after verifying the matching manifest, outputs,
+  and success banner.
 - Old single schedules keep their original behavior until an administrator
   opens Daily schedules and saves a PC priority list.
 - Local snapshots expire after seven days. Normal working outputs are preserved.

@@ -32,17 +32,23 @@ export function workflowStepState(index,stage,status,scope='all'){
 }
 
 export const isCleanupFailure=error=>/^(?:Post-run )?process cleanup failed:/i.test(String(error||''));
+export function hasSuccessfulCompletionLog(log){
+ return /All selected steps are finished successfully\.|All steps completed successfully\.|ALL STEPS COMPLETED SUCCESSFULLY!/i.test(String(log||''));
+}
+function hasExpectedOutputs(run,manifest){
+ const names=new Set((manifest.files||[]).map(file=>String(file.name||'').toLowerCase()));
+ return run.scope==='btr'?names.has('auto btr.xlsx'):['btp','btr-btp'].includes(run.scope)?names.has('btpexcel.xlsx'):
+  ['all','ebtp','btp-ebtp'].includes(run.scope)&&names.has('noplan.xlsx')&&[...names].some(name=>/^ebtp-.*\.xlsx$/.test(name));
+}
 export function workflowOutcome(run,manifest,log){
  if(!run)return undefined;
  const cleanupFailure=run.status==='failed'&&isCleanupFailure(run.error);
- if(cleanupFailure){
-  if(run.workflowStatus==='completed')return 'completed';
+ const missingCompletionMarker=run.status==='failed'&&run.error==='Workflow did not confirm successful completion';
+ if(cleanupFailure&&run.workflowStatus==='completed')return 'completed';
+ if(cleanupFailure||missingCompletionMarker){
   if(manifest?.run?.id!==run.id || (manifest.run.scope&&manifest.run.scope!==run.scope))return run.status;
   if(manifest.status==='completed'||manifest.workflowStatus==='completed')return 'completed';
-  const names=new Set((manifest.files||[]).map(file=>String(file.name||'').toLowerCase()));
-  const required=run.scope==='btr'?names.has('auto btr.xlsx'):['btp','btr-btp'].includes(run.scope)?names.has('btpexcel.xlsx'):
-   ['all','ebtp','btp-ebtp'].includes(run.scope)&&names.has('noplan.xlsx')&&[...names].some(name=>/^ebtp-.*\.xlsx$/.test(name));
-  if(required&&String(log||'').includes('All selected steps are finished successfully.'))return 'completed';
+  if(hasExpectedOutputs(run,manifest)&&hasSuccessfulCompletionLog(log))return 'completed';
  }
  return run.status;
 }

@@ -67,22 +67,23 @@ function runningStep(run){
  return label.textContent.trim()+(stage===8&&batch.current?` · Batch ${batch.current} of ${batch.total}`:'');
 }
 
-function renderAvailability(){const selectedPC=$('#pc').value;const status=selectedHostAvailability(state,selectedPC);const failed=state.run?.status==='failed'&&acknowledgedFailure!==state.run.id;if(failed&&!selectedPC){status.label='Failed';status.tone='danger';status.message=state.run.error||'The last workflow failed. Resume its checkpoint or start afresh.'}$('#status').textContent=refreshingPC?'Refreshing':status.label;$('#status').dataset.tone=refreshingPC?'warning':status.tone;$('#notice').dataset.tone=status.tone;$('#progressLabel').textContent=workflowOutcome(selected,verifiedManifests.get(selected?.id))==='completed'?(selected?.status==='failed'?'Completed · PC cleanup needs attention':'Completed'):failed?'Failed':finished(state.run)?(status.canRun?'Ready to run':'Waiting for an available PC'):`${availability(state).label} · ${runningStep(state.run)}`;if(refreshingPC)$('#notice').textContent='Refreshing PC status…';else if(Date.now()>noticeUntil)$('#notice').textContent=status.message;$('#run').disabled=launchPending||(finished(state.run)&&!status.canRun);$('#resume').disabled=launchPending;$('#fresh').disabled=launchPending;}
+function renderAvailability(){const selectedPC=$('#pc').value;const status=selectedHostAvailability(state,selectedPC);const outcome=workflowOutcome(state.run,verifiedManifests.get(state.run?.id));const failed=state.run?.status==='failed'&&outcome!=='completed'&&acknowledgedFailure!==state.run.id;if(failed&&!selectedPC){status.label='Failed';status.tone='danger';status.message=state.run.error||'The last workflow failed. Resume its checkpoint or start afresh.'}$('#status').textContent=refreshingPC?'Refreshing':status.label;$('#status').dataset.tone=refreshingPC?'warning':status.tone;$('#notice').dataset.tone=status.tone;$('#progressLabel').textContent=workflowOutcome(selected,verifiedManifests.get(selected?.id))==='completed'?(selected?.status==='failed'&&isCleanupFailure(selected.error)?'Completed · PC cleanup needs attention':'Completed'):failed?'Failed':finished(state.run)?(status.canRun?'Ready to run':'Waiting for an available PC'):`${availability(state).label} · ${runningStep(state.run)}`;if(refreshingPC)$('#notice').textContent='Refreshing PC status…';else if(Date.now()>noticeUntil)$('#notice').textContent=status.message;$('#run').disabled=launchPending||(finished(state.run)&&!status.canRun);$('#resume').disabled=launchPending;$('#fresh').disabled=launchPending;}
 
 let stateLoaded=false;const observedRuns=new Set(),lastStages=new Map(),revealedOutputs=new Set();
 let lastLogState='';
-const verifiedManifests=new Map(),verifyingCleanup=new Set();
-async function verifyCleanupOutcome(run){
- if(run?.status!=='failed'||!isCleanupFailure(run.error)||verifiedManifests.has(run.id)||verifyingCleanup.has(run.id))return;
- verifyingCleanup.add(run.id);
+const verifiedManifests=new Map(),verifyingOutcomes=new Set();
+async function verifyFailedOutcome(run){
+ const recoverable=isCleanupFailure(run?.error)||run?.error==='Workflow did not confirm successful completion';
+ if(run?.status!=='failed'||!recoverable||verifiedManifests.has(run.id)||verifyingOutcomes.has(run.id))return;
+ verifyingOutcomes.add(run.id);
  try{
   const [manifest,log]=await Promise.all([read('manifest',{},run),read('log',{},run)]);
   if(manifest?.run?.id!==run.id)return;
   if(workflowOutcome(run,manifest,cleanAutomationLog(log))!=='completed')return;
   verifiedManifests.set(run.id,{...manifest,workflowStatus:'completed'});
-  if(selected?.id===run.id){paintWorkflow(selected,lastStages.get(run.id)||selected.stage||0);renderAvailability()}
+  if(selected?.id===run.id){const current=[...$('#history').options].find(option=>option.value===run.id);if(current)current.textContent=`Current: ${statusLabel('completed')}`;if(run.error==='Workflow did not confirm successful completion')$('#activityTitle').textContent='Live output from the selected PC.';paintWorkflow(selected,lastStages.get(run.id)||selected.stage||0);renderAvailability()}
  }catch{/* Retain failure until the host confirms the saved output manifest. */}
- finally{verifyingCleanup.delete(run.id)}
+ finally{verifyingOutcomes.delete(run.id)}
 }
 
 function render(data){const previousRunId=state.run?.id,previousSelectedId=selected?.id;stateLoaded=true;state=data;scheduleControls.render();const run=state.run;const revealOutputs=run&&finished(run)&&observedRuns.has(run.id)&&!revealedOutputs.has(run.id);renderAvailability();$('#run').textContent=finished(run)?'Start':'Stop';$('#run').classList.toggle('stop',!finished(run));$('#run').classList.toggle('primary',finished(run));if(run&&!finished(run))observedRuns.add(run.id);
@@ -96,7 +97,7 @@ function render(data){const previousRunId=state.run?.id,previousSelectedId=selec
 
  if(!accounts.options.length)option(accounts,'','No SAP users available');accounts.disabled=!accounts.value;if(!pc.options.length)option(pc,'','No enrolled PCs');pc.disabled=!state.machines.some(p=>!p.revoked);
 
- const history=$('#history'),choice=history.value;history.replaceChildren();if(!run||(run.status==='completed'&&!observedRuns.has(run.id)))option(history,'','New run');if(run)option(history,run.id,`Current: ${statusLabel(run.status)}`);for(const r of state.history||[])if(r.id!==run?.id)option(history,r.id,`${new Date(r.createdAt).toLocaleString()} — ${r.status}`);if(revealOutputs||(run&&!finished(run)&&run.id!==previousRunId))history.value=run.id;else if([...history.options].some(o=>o.value===choice))history.value=choice;
+ const history=$('#history'),choice=history.value;history.replaceChildren();if(!run||(run.status==='completed'&&!observedRuns.has(run.id)))option(history,'','New run');if(run)option(history,run.id,`Current: ${statusLabel(workflowOutcome(run,verifiedManifests.get(run.id))||run.status)}`);for(const r of state.history||[])if(r.id!==run?.id)option(history,r.id,`${new Date(r.createdAt).toLocaleString()} — ${r.status}`);if(revealOutputs||(run&&!finished(run)&&run.id!==previousRunId))history.value=run.id;else if([...history.options].some(o=>o.value===choice))history.value=choice;
 
  if(!history.options.length)option(history,'','No runs yet');history.disabled=![...history.options].some(o=>o.value);$('#downloadRefresh').disabled=!history.value;selected=[run,...state.history||[]].find(r=>r?.id===history.value);if(!selected&&run&&!finished(run)){selected=run;history.value=run.id;}if(selected&&selected.id!==previousSelectedId){renderLogView(selected.id,logSnapshots.get(selected.id)||'');}if(selected?.id!==previousRunId)renderBatches('');if(!selected){paintWorkflow(null);$('#runtime').textContent='Runtime --';}else if(selected.id!==previousRunId||finished(selected)){paintWorkflow(selected,selected.stage||lastStages.get(selected.id)||0)}for(const el of document.querySelectorAll('[data-admin]'))el.hidden=!admin;
 
@@ -265,7 +266,7 @@ function renderHostPicker(){
 }
 
 function paintWorkflow(run,stage=0){
- verifyCleanupOutcome(run);
+ verifyFailedOutcome(run);
  if(!run)renderBatches('');
  let done=0,total=0;
  document.querySelectorAll('.step').forEach((el,i)=>{const step=run?workflowStepState(i,stage,workflowOutcome(run,verifiedManifests.get(run.id)),run.scope):{done:false,active:false,skipped:false,failed:false};for(const name of ['done','active','skipped','failed'])el.classList.toggle(name,step[name]);if(!step.skipped)total++;if(step.done)done++;const badge=el.querySelector('.badge');badge.textContent=step.done?'✓':step.failed?'!':step.skipped?'—':String(i+1);badge.setAttribute('aria-label',step.done?'Completed':step.failed?'Stopped here':step.active?'In progress':step.skipped?'Not selected':`Step ${i+1}`)});

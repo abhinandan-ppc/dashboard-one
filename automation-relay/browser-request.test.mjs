@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {workflowOutcome,isCleanupFailure,cleanAutomationLog} from '../automation-log.js';
+import {statusLabel} from '../automation-status.js';
 const source=readFileSync(new URL('../auto-btp.js',import.meta.url),'utf8');
 const submit=source.slice(source.indexOf('async function submitRun('),source.indexOf('async function launch('));
 function setup(live=true){
@@ -41,9 +42,22 @@ test('legacy cleanup failure is presented as completed only after the host confi
  const run={id:'r',scope:'all',status:'failed',error:'Process cleanup failed: AccessDenied: (pid=28040)'};
  const manifest={run:{id:'r',scope:'all'},status:'failed',files:[{name:'NoPlan.xlsx'},{name:'EBTP-25.11.2026.xlsx'}]};
  let painted=0,availability=0;
- const context={workflowOutcome,isCleanupFailure,cleanAutomationLog,selected:run,lastStages:new Map(),paintWorkflow(){painted++},renderAvailability(){availability++},read:async kind=>kind==='manifest'?manifest:'All selected steps are finished successfully.'};
+ const history={options:[{value:'r',textContent:'Current: Failed'}]};
+ const context={workflowOutcome,isCleanupFailure,cleanAutomationLog,statusLabel,selected:run,lastStages:new Map(),paintWorkflow(){painted++},renderAvailability(){availability++},$:()=>history,read:async kind=>kind==='manifest'?manifest:'All selected steps are finished successfully.'};
  vm.createContext(context);vm.runInContext(source.slice(source.indexOf('const verifiedManifests='),source.indexOf('function render(data)')),context);
- await context.verifyCleanupOutcome(run);
+ await context.verifyFailedOutcome(run);
  assert.equal(vm.runInContext('workflowOutcome(selected,verifiedManifests.get(selected.id))',context),'completed');
+ assert.equal(history.options[0].textContent,'Current: Completed');
+ assert.equal(painted,1);assert.equal(availability,1);
+});
+test('false failed current run is shown completed after the success banner and expected outputs are verified',async()=>{
+ const run={id:'r',scope:'all',status:'failed',error:'Workflow did not confirm successful completion'};
+ const manifest={run:{id:'r',scope:'all'},status:'failed',files:[{name:'Auto BTR.xlsx'},{name:'BTPExcel.xlsx'},{name:'NoPlan.xlsx'},{name:'EBTP-26.11.2026.xlsx'}]};
+ const history={options:[{value:'r',textContent:'Current: Failed'}]};let painted=0,availability=0;
+ const context={workflowOutcome,isCleanupFailure,cleanAutomationLog,statusLabel,selected:run,lastStages:new Map(),paintWorkflow(){painted++},renderAvailability(){availability++},$:()=>history,read:async kind=>kind==='manifest'?manifest:'[09:53:48] ALL STEPS COMPLETED SUCCESSFULLY!'};
+ vm.createContext(context);vm.runInContext(source.slice(source.indexOf('const verifiedManifests='),source.indexOf('function render(data)')),context);
+ await context.verifyFailedOutcome(run);
+ assert.equal(vm.runInContext('workflowOutcome(selected,verifiedManifests.get(selected.id))',context),'completed');
+ assert.equal(history.options[0].textContent,'Current: Completed');
  assert.equal(painted,1);assert.equal(availability,1);
 });
