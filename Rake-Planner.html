@@ -5728,6 +5728,18 @@ const simulatorValue=(row,key)=>String(key==='_HTC'
   ?row._HTC||getHTC(row['Ext Grade'],row['Supply Condition'])
   :row[key]??'').trim();
 const simulatorStateValue=row=>simulatorValue(row,'STO')||simulatorValue(row,'_State');
+// Geographic region (North / South / East / West / Central / North-Eastern) derived from the STO state or UT.
+const GEO_REGION_STATES={
+  'North':['DELHI','NEW DELHI','NCT OF DELHI','HARYANA','HIMACHAL PRADESH','PUNJAB','RAJASTHAN','UTTARAKHAND','UTTARANCHAL','JAMMU AND KASHMIR','JAMMU & KASHMIR','LADAKH','CHANDIGARH'],
+  'Central':['MADHYA PRADESH','CHHATTISGARH','CHATTISGARH','UTTAR PRADESH'],
+  'East':['BIHAR','JHARKHAND','ODISHA','ORISSA','WEST BENGAL','ANDAMAN AND NICOBAR ISLANDS','ANDAMAN & NICOBAR ISLANDS','ANDAMAN AND NICOBAR'],
+  'West':['GUJARAT','MAHARASHTRA','GOA','DADRA AND NAGAR HAVELI','DAMAN AND DIU','DADRA AND NAGAR HAVELI AND DAMAN AND DIU','DADRA & NAGAR HAVELI','DAMAN & DIU'],
+  'South':['ANDHRA PRADESH','KARNATAKA','KERALA','TAMIL NADU','TELANGANA','PUDUCHERRY','PONDICHERRY','LAKSHADWEEP'],
+  'North-Eastern':['ARUNACHAL PRADESH','ASSAM','MANIPUR','MEGHALAYA','MIZORAM','NAGALAND','TRIPURA','SIKKIM']
+};
+const GEO_REGION_LOOKUP=new Map(Object.entries(GEO_REGION_STATES).flatMap(([region,list])=>list.map(s=>[s,region])));
+const simulatorGeoRegion=row=>GEO_REGION_LOOKUP.get(simulatorStateValue(row).toUpperCase().replace(/\s+/g,' '))||'Unmapped';
+const GEO_REGION_ORDER=['North','South','East','West','Central','North-Eastern','Unmapped'];
 const isYellowGoodsRow=row=>[row._GradeSegment,row._CustomerSegment].some(value=>/yellow\s*goods?/i.test(String(value||'')));
 const simulatorCustomerKey=row=>`${orderPlaceKey(row)}|${RakePlanningRules.key(row['Sold To Party Name']||'UNKNOWN CUSTOMER')}`;
 
@@ -5751,7 +5763,7 @@ function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply,incl
       let stateGroup=states.get(stateKey);
       if(!stateGroup){stateGroup={key:stateKey,name:state,cities:new Map()};states.set(stateKey,stateGroup);}
       let cityGroup=stateGroup.cities.get(cityKey);
-      if(!cityGroup){cityGroup={key:cityKey,name:city,customers:new Map()};stateGroup.cities.set(cityKey,cityGroup);}
+      if(!cityGroup){cityGroup={key:cityKey,name:city,distance:line.distance,customers:new Map()};stateGroup.cities.set(cityKey,cityGroup);}
       let customerGroup=cityGroup.customers.get(customerNameKey);
       if(!customerGroup){customerGroup={key:customerNameKey,name:customer,customerKeys:new Set(),orders:new Map()};cityGroup.customers.set(customerNameKey,customerGroup);}
       customerGroup.customerKeys.add(line.customerKey);
@@ -5767,11 +5779,15 @@ function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply,incl
       order.selectable=order.selectable&&line.selectable;
       order.yellow=order.yellow||line.yellow;
     }
+    const dist=v=>v==null?Infinity:v;
+    const byDistance=(a,b)=>dist(a.distance)-dist(b.distance)||a.name.localeCompare(b.name);
+    for(const stateGroup of states.values())
+      stateGroup.distance=Math.min(...[...stateGroup.cities.values()].map(c=>dist(c.distance)));
     return[...states.values()]
-      .sort((a,b)=>a.name.localeCompare(b.name))
+      .sort(byDistance)
       .map(stateGroup=>{
         const cities=[...stateGroup.cities.values()]
-          .sort((a,b)=>a.name.localeCompare(b.name))
+          .sort(byDistance)
           .map(cityGroup=>{
             const customers=[...cityGroup.customers.values()]
               .sort((a,b)=>a.name.localeCompare(b.name))
@@ -5825,8 +5841,22 @@ function UnplannedOrderPicker({orderLines,selectedCustomers,onClose,onApply,incl
                 {cityGroup.customers.map((customerGroup,customerIndex)=><React.Fragment key={customerGroup.key}>
                   {customerGroup.orders.map((order,orderIndex)=><tr key={order.id} data-selected={selectedOrderKeys.has(order.id)}>
                     {cityIndex===0&&customerIndex===0&&orderIndex===0&&<td rowSpan={stateGroup.rowSpan}>{stateGroup.name}</td>}
-                    {customerIndex===0&&orderIndex===0&&<td rowSpan={cityGroup.rowSpan}>{cityGroup.name}</td>}
-                    {orderIndex===0&&<td rowSpan={customerGroup.orders.length}>{customerGroup.name}</td>}
+                    {customerIndex===0&&orderIndex===0&&<td rowSpan={cityGroup.rowSpan}>{cityGroup.name}{cityGroup.distance!=null&&<small className="rake-unplanned-yellow-tag">({fmt(cityGroup.distance)} km)</small>}</td>}
+                    {orderIndex===0&&(()=>{
+                      const selectable=customerGroup.orders.filter(o=>o.selectable);
+                      const picked=selectable.filter(o=>selectedOrderKeys.has(o.id)).length;
+                      return<td rowSpan={customerGroup.orders.length}>
+                        <label className="rake-unplanned-customer-check"><input type="checkbox" aria-label={`Select all SOs for ${customerGroup.name}`}
+                          checked={selectable.length>0&&picked===selectable.length} disabled={!selectable.length}
+                          ref={el=>{if(el)el.indeterminate=picked>0&&picked<selectable.length;}}
+                          onChange={()=>setSelectedOrderKeys(previous=>{
+                            const next=new Set(previous);
+                            if(picked===selectable.length)selectable.forEach(o=>next.delete(o.id));
+                            else selectable.forEach(o=>next.add(o.id));
+                            return next;
+                          })}/><span>{customerGroup.name}</span></label>
+                      </td>;
+                    })()}
                     <td className="rake-unplanned-so-cell">
                       <label><input type="checkbox" aria-label={`Select SO ${order.soNo}`}
                         checked={selectedOrderKeys.has(order.id)} disabled={!order.selectable}
@@ -5970,6 +6000,7 @@ function SimulatorIndiaMap({rows,dialogRows,plannedRows,includeYellow=false,onTo
   },[rows,live.revision,hub,reverseKm]);
   const orderLines=useMemo(()=>{
     const cityIncluded=new Map(destinations.map(city=>[city.key,city.included]));
+    const cityDistance=new Map(destinations.map(city=>[city.key,city.distance]));
     return(dialogRows||rows).map((row,index)=>{
       const yellow=isYellowGoodsRow(row);
       return{
@@ -5977,6 +6008,7 @@ function SimulatorIndiaMap({rows,dialogRows,plannedRows,includeYellow=false,onTo
         row,
         customerKey:simulatorCustomerKey(row),
         yellow,
+        distance:cityDistance.get(orderPlaceKey(row))??null,
         selectable:cityIncluded.get(orderPlaceKey(row))!==false&&!(yellow&&!includeYellow),
       };
     }).sort((a,b)=>
@@ -6343,8 +6375,8 @@ function RakeSimulator({rows,active}){
   const plannedBalance=useMemo(()=>plannedRows.reduce((total,row)=>
     total+Math.max(0,Number(row['Bal to PGI'])||0),0),[plannedRows]);
   const candidates=useMemo(()=>selectedMode?RakePlanningRules.simulatorCandidates(rows,scope):[],[rows,scope,selectedMode]);
-  const regionOptions=useMemo(()=>[...new Set(candidates.map(row=>simulatorValue(row,'_Region')).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[candidates]);
-  const regionRows=useMemo(()=>regions.size?candidates.filter(row=>regions.has(simulatorValue(row,'_Region'))):candidates,[candidates,regions]);
+  const regionOptions=useMemo(()=>[...new Set(candidates.map(simulatorGeoRegion))].sort((a,b)=>GEO_REGION_ORDER.indexOf(a)-GEO_REGION_ORDER.indexOf(b)),[candidates]);
+  const regionRows=useMemo(()=>regions.size?candidates.filter(row=>regions.has(simulatorGeoRegion(row))):candidates,[candidates,regions]);
   const stateOptions=useMemo(()=>[...new Set(regionRows.map(simulatorStateValue).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[regionRows]);
   const stateRows=useMemo(()=>states.size?regionRows.filter(row=>states.has(simulatorStateValue(row))):regionRows,[regionRows,states]);
   const cityOptions=useMemo(()=>[...new Set(stateRows.map(row=>simulatorValue(row,'Ship To Party City')).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),[stateRows]);
@@ -6510,7 +6542,7 @@ function RakeSimulator({rows,active}){
                   <td>{row['Sold To Party Name']||'—'}</td>
                   <td>{row['Ship To Party City']||'Unmapped'}</td>
                   <td>{row.STO||'—'}</td>
-                  <td>{row._Region||'Unmapped'}</td>
+                  <td>{simulatorGeoRegion(row)}</td>
                   <td>{simulatorValue(row,'_HTC')||'—'}</td>
                   <td>{fmt(fg.raw)}</td>
                   <td>{fmt(wip.raw)}</td>
