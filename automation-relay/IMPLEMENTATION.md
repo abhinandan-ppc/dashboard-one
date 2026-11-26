@@ -79,6 +79,10 @@ selected. Requests fail immediately if none is ready; there is no manual queue.
   moving to the next listed PC. A disconnected host still fails over after
   its existing five-minute connection timeout and may still be running. A
   manual run started during a retry wait is never stopped or replaced.
+- If a scheduled run remains in SAP GUI connection phase A for five minutes,
+  the PC agent stops its owned workflow processes, clears both workflow
+  checkpoints, and reports the failure. The scheduler retries the full workflow
+  fresh after the host has had time to finish cleanup.
 - A post-run cleanup error stops scheduled retries until the host state is
   verified; it can occur after the workflow has already completed. The dashboard
   marks the workflow complete only when the agent reports verified completion,

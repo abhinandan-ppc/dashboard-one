@@ -5,6 +5,7 @@ import {isCleanupFailure} from '../automation-log.js';
 const ACCOUNT = '11103144';
 const TIMEOUT = 300000;
 const RETRY_DELAY = 300000;
+const SAP_STALL_ERROR = 'Scheduled SAP connection stalled for five minutes';
 
 export async function saveSchedules(pool, input) {
   if (!Array.isArray(input) || input.length > 30) throw Error('Invalid schedules');
@@ -91,7 +92,7 @@ export async function scheduledAlarm(pool) {
         job.current = null;
         job.failedRunId = run.id;
         job.pendingSince = now;
-        job.retryAt = job.disconnectedTimeout ? now : Math.max(now,run.updatedAt||now) + RETRY_DELAY;
+        job.retryAt = job.disconnectedTimeout ? now : run.error?.startsWith(SAP_STALL_ERROR) ? now + 10000 : Math.max(now,run.updatedAt||now) + RETRY_DELAY;
         delete job.disconnectedTimeout;
       }
     }

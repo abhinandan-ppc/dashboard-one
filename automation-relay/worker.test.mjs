@@ -120,6 +120,14 @@ test('disconnected scheduled PC times out after five minutes and next PC starts 
  const old=f.data.get('run');await f.storage.put('pc:one',{...f.data.get('pc:one'),seen:Date.now()-300001});await f.pool.alarm();
  assert.equal(f.data.get('run').pcId,'two');assert.equal(f.data.get('run').abandon,true);assert.match(f.data.get('history:'+old.createdAt).error,/may still be running/);
 });
+test('scheduled SAP connection stall restarts fresh after the host stops and clears checkpoints',async()=>{
+ const f=fixture();await f.storage.put('pc:p',{id:'p',ready:true,seen:Date.now(),accounts:['11103144'],lastRun:0});const host=f.socket('agent','p');
+ await f.storage.put('schedules',[{id:'s',time:'08:00',enabled:true,pcs:['p'],nextAt:Date.now()-1}]);await f.pool.alarm();const run=f.data.get('run');
+ await f.storage.put('run',{...run,status:'failed',checkpoint:false,error:'Scheduled SAP connection stalled for five minutes; stopped all workflow processes and cleared checkpoints.',updatedAt:Date.now()});
+ await f.pool.alarm();assert.ok(f.data.get('scheduledJob').retryAt-Date.now()<=10000);assert.ok(f.data.get('scheduledJob').retryAt>Date.now());assert.equal(host.messages.filter(m=>m.action==='run').length,1);
+ await f.storage.put('scheduledJob',{...f.data.get('scheduledJob'),retryAt:Date.now()-1});await f.storage.put('pc:p',{...f.data.get('pc:p'),ready:true,seen:Date.now()});
+ await f.pool.alarm();assert.notEqual(f.data.get('run').id,run.id);assert.equal(f.data.get('run').resume,false);assert.equal(f.data.get('run').abandon,true);
+});
 test('schedule settings validate PCs and create independent India-time alarms',async()=>{
  const f=fixture();await f.storage.put('pc:p',{id:'p'});
  const schedules=[{id:'a',time:'08:00',enabled:true,pcs:['p']},{id:'b',time:'15:00',enabled:false,pcs:['p']}];
