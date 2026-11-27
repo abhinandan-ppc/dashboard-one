@@ -94,12 +94,12 @@ input:focus{outline:none;border-color:var(--amber) !important;box-shadow:var(--s
 @media(max-width:1080px){.rake-siding-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 /* The same opaque cards stay mounted in both states; only their spacing changes. */
 .rake-folder[data-stack-open]>.rake-folder-cover{padding-bottom:16px!important;min-height:0}
-.rake-folder[data-stack-open]>.rake-list{display:flex;flex-direction:column;gap:10px;animation:none;transition:padding 220ms cubic-bezier(.2,0,0,1)}
-html body.page-rake .rake-folder[data-stack-open] .rake-entry{position:relative;background:rgb(from var(--s1) r g b / 1)!important;opacity:1!important;animation:none;transition:transform 220ms cubic-bezier(.2,0,0,1),border-color 150ms!important;will-change:transform}
-.rake-folder[data-stack-open="false"] .rake-entry{transform:translateY(-10px)}
-.rake-folder[data-stack-open="false"] .rake-entry:first-child{transform:translateY(0)}
-.rake-folder[data-stack-open="true"] .rake-entry{transform:translateY(0)}
-.rake-folder[data-stack-open="true"] .rake-entry:first-child{transform:translateY(0)}
+.rake-folder[data-stack-open]>.rake-list{display:flex;flex-direction:column;gap:0;animation:none;transition:padding 220ms cubic-bezier(.2,0,0,1)}
+html body.page-rake .rake-folder[data-stack-open] .rake-entry{position:relative;background:rgb(from var(--s1) r g b / 1)!important;opacity:1!important;animation:none;transition:margin 220ms cubic-bezier(.2,0,0,1),border-color 150ms!important;will-change:margin}
+.rake-folder[data-stack-open="false"] .rake-entry{margin-top:-10px}
+.rake-folder[data-stack-open="false"] .rake-entry:first-child{margin-top:0}
+.rake-folder[data-stack-open="true"] .rake-entry{margin-top:10px}
+.rake-folder[data-stack-open="true"] .rake-entry:first-child{margin-top:0}
 .rake-folder[data-stack-open] .rake-entry-heading{transition:padding 220ms cubic-bezier(.2,0,0,1)}
 .rake-folder[data-stack-open="false"] .rake-entry-heading{min-height:46px;padding:10px 12px 12px;align-items:flex-start}
 .rake-folder[data-stack-open="false"] .rake-entry:last-child .rake-entry-heading{min-height:40px;padding-bottom:8px}
