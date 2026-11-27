@@ -130,10 +130,13 @@ html body.page-rake .rake-folder[data-stack-open] .rake-entry{position:relative;
 .rake-region-heading>span:nth-last-child(2){display:none}
 .rake-siding-card{min-width:0;background:var(--component-surface);border:var(--glass-border-rule,1px solid var(--bdr));border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm)}
 .rake-siding-name{font-family:var(--font-heading,var(--font-body));font-size:20px;font-weight:750;line-height:1.2;letter-spacing:-.025em;color:var(--text);overflow-wrap:anywhere}
-.rake-list{display:grid;gap:10px;padding:0 10px 10px}
-.rake-entry{min-width:0;border:1px solid var(--bdr)}
-.rake-entry-heading{display:flex;align-items:center;justify-content:space-between;gap:4px 8px;flex-wrap:wrap;padding:10px 10px 4px}
-.rake-entry-heading{position:relative;width:100%;background:transparent;color:inherit;text-align:left;cursor:pointer}
+/* ── Stacked rake cards — overlapping deck like the reference animation ── */
+.rake-list{position:relative;display:flex;flex-direction:column;gap:0;padding:0 10px 12px;min-height:48px}
+.rake-entry{min-width:0;position:relative;top:calc(var(--stack-i, 0) * -10px);border:1px solid var(--bdr);border-radius:18px;background:linear-gradient(180deg,color-mix(in srgb,var(--component-surface) 82%,#fff),var(--component-surface));box-shadow:0 6px 16px rgb(0 0 0 / 0.18);overflow:hidden;transition:top 220ms cubic-bezier(.2,0,0,1),border-color 220ms ease,border-radius 220ms ease,box-shadow 220ms ease;will-change:top}
+.rake-entry:first-child{top:0}
+.rake-entry[data-expanded="true"]{top:0;border-radius:14px;box-shadow:0 12px 34px rgb(0 0 0 / 0.26),0 0 0 1px color-mix(in srgb,var(--primary) 35%,transparent)}
+.rake-entry[data-expanded="true"] ~ .rake-entry{top:10px}
+.rake-entry-heading{position:relative;width:100%;background:transparent;color:inherit;text-align:left;cursor:pointer;padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;gap:4px 8px;flex-wrap:wrap}
 .rake-entry-toggle::after{content:'';position:absolute;inset:0}
 .rake-entry-heading .rake-select{position:relative;z-index:1}
 html body.page-rake .rake-predictor .rake-entry-toggle{position:static!important;scale:none!important}
@@ -147,8 +150,8 @@ html body.page-rake .rake-predictor .rake-entry-toggle:is(:hover,:focus-visible,
 .rake-entry[data-expanded="true"] .rake-entry-heading{background:var(--s2)}
 .rake-entry-caret{color:var(--mute);font-size:11px;transition:transform .18s cubic-bezier(.2,0,0,1)}
 .rake-entry[data-expanded="true"] .rake-entry-caret{transform:rotate(180deg);color:var(--primary)}
-.rake-entry-body{overflow:hidden;animation:rakeEntryOpen .18s cubic-bezier(.2,0,0,1)}
-@keyframes rakeEntryOpen{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.rake-entry-body{overflow:hidden;animation:rakeEntryOpen .22s cubic-bezier(.2,0,0,1)}
+@keyframes rakeEntryOpen{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 .rake-select{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer}
 .rake-select input{width:18px;height:18px;flex-shrink:0;accent-color:var(--primary)}
 .rake-name{font-size:18px;font-weight:750;letter-spacing:-.025em;line-height:1.2;color:var(--text)}
@@ -4790,7 +4793,7 @@ function RakePredictor({rows,visible=true}){
               return<div key={realIdx} className="rake-entry" data-selected={combSelected||isActive} data-expanded={isExpanded} style={{
                 background:isActive?'var(--s3)':'var(--s1)',
                 border:`1px solid ${combSelected?C.sky:isActive?C.amber:readyForDispatch?C._green+'50':'var(--bdr)'}`,
-                borderRadius:'var(--radius-md)',overflow:'hidden',transition:'border-color .15s'}}>
+                borderRadius:'var(--radius-md)',overflow:'hidden',transition:'border-color .15s',--stack-i:i}}>
                 <div className="rake-entry-heading">
                   <label className="rake-select" title={combDisabled?"Choose up to two rakes of the same wagon type":'Select to combine'}>
                     <input type="checkbox" checked={combSelected} disabled={combDisabled}
