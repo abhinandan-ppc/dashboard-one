@@ -83,28 +83,29 @@ input:focus{outline:none;border-color:var(--amber) !important;box-shadow:var(--s
 .rake-siding-grid>.rake-siding-card{min-width:0}
 .rake-predictor .rake-siding-grid{grid-auto-rows:1px;row-gap:0;grid-auto-flow:row dense;padding-top:8px}
 .rake-siding-card.rake-folder{position:relative;overflow:hidden;margin-top:0}
-.rake-folder-cover{position:relative;list-style:none;cursor:pointer;min-height:132px;border-radius:var(--radius-lg);background:var(--component-surface);transition:min-height 320ms cubic-bezier(.2,0,0,1),padding 320ms cubic-bezier(.2,0,0,1)}
+.rake-folder-cover{position:relative;list-style:none;cursor:pointer;min-height:132px;border-radius:var(--radius-lg);background:var(--component-surface);transition:min-height 220ms cubic-bezier(.2,0,0,1),padding 220ms cubic-bezier(.2,0,0,1)}
 .rake-folder{isolation:isolate}
 .rake-folder-hint{display:block;margin-top:12px;color:var(--primary);font-size:11px;font-weight:600}
 @media(max-width:1080px){.rake-siding-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 /* The same opaque cards stay mounted in both states; only their spacing changes. */
 .rake-folder[data-stack-open]>.rake-folder-cover{padding-bottom:16px!important;min-height:0}
-.rake-folder[data-stack-open]>.rake-list{display:flex;flex-direction:column;gap:0;animation:none;transition:padding 320ms cubic-bezier(.2,0,0,1)}
-html body.page-rake .rake-folder[data-stack-open] .rake-entry{position:relative;background:rgb(from var(--s1) r g b / 1)!important;opacity:1!important;animation:none;transition:margin 320ms cubic-bezier(.2,0,0,1),border-color 150ms,box-shadow 180ms ease!important}
-.rake-folder[data-stack-open="false"] .rake-entry{margin-top:-10px}
-.rake-folder[data-stack-open="false"] .rake-entry:first-child{margin-top:0}
-.rake-folder[data-stack-open="true"] .rake-entry{margin-top:10px}
-.rake-folder[data-stack-open="true"] .rake-entry:first-child{margin-top:0}
-.rake-folder[data-stack-open] .rake-entry-heading{transition:min-height 320ms cubic-bezier(.2,0,0,1),padding 320ms cubic-bezier(.2,0,0,1)}
+.rake-folder[data-stack-open]>.rake-list{display:flex;flex-direction:column;gap:10px;animation:none;transition:padding 220ms cubic-bezier(.2,0,0,1)}
+html body.page-rake .rake-folder[data-stack-open] .rake-entry{position:relative;background:rgb(from var(--s1) r g b / 1)!important;opacity:1!important;animation:none;transition:transform 220ms cubic-bezier(.2,0,0,1),border-color 150ms!important;will-change:transform}
+.rake-folder[data-stack-open="false"] .rake-entry{transform:translateY(-10px)}
+.rake-folder[data-stack-open="false"] .rake-entry:first-child{transform:translateY(0)}
+.rake-folder[data-stack-open="true"] .rake-entry{transform:translateY(0)}
+.rake-folder[data-stack-open="true"] .rake-entry:first-child{transform:translateY(0)}
+.rake-folder[data-stack-open] .rake-entry-heading{transition:padding 220ms cubic-bezier(.2,0,0,1)}
 .rake-folder[data-stack-open="false"] .rake-entry-heading{min-height:46px;padding:10px 12px 12px;align-items:flex-start}
 .rake-folder[data-stack-open="false"] .rake-entry:last-child .rake-entry-heading{min-height:40px;padding-bottom:8px}
-.rake-folder[data-stack-open] :is(.rake-select,.rake-order-count,.rake-entry-caret,.rake-siding-actions,.rake-peek-quantity){transition:opacity 180ms ease,max-width 320ms cubic-bezier(.2,0,0,1),visibility 0s linear 180ms;overflow:hidden}
+.rake-folder[data-stack-open] :is(.rake-select,.rake-order-count,.rake-entry-caret,.rake-siding-actions,.rake-peek-quantity){transition:opacity 180ms ease,max-width 220ms cubic-bezier(.2,0,0,1),visibility 0s linear 180ms;overflow:hidden}
 .rake-folder[data-stack-open="false"] :is(.rake-select,.rake-order-count,.rake-entry-caret,.rake-siding-actions){max-width:0;min-width:0;min-height:0;margin:0;padding:0;opacity:0;visibility:hidden;pointer-events:none}
 .rake-folder[data-stack-open="false"] .rake-order-count{white-space:nowrap}
-.rake-folder[data-stack-open="true"] :is(.rake-select,.rake-order-count,.rake-entry-caret,.rake-siding-actions){max-width:240px;opacity:1;visibility:visible;transition-delay:0s}
+.rake-folder[data-stack-open="true"] :is(.rake-select,.rake-order-count,.rake-entry-caret){max-width:240px;opacity:1;visibility:visible;transition-delay:0s}
+.rake-folder[data-stack-open="true"] .rake-siding-actions{max-width:100%;opacity:1;visibility:visible;transition-delay:0s}
 .rake-folder[data-stack-open="true"] .rake-peek-quantity{max-width:0;opacity:0;visibility:hidden}
 .rake-peek-quantity{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap;max-width:100px;opacity:1;visibility:visible;transition:opacity 180ms ease,max-width 320ms cubic-bezier(.2,0,0,1),visibility 0s linear 0s}
-.rake-folder[data-stack-open] .rake-name{transition:font-size 320ms cubic-bezier(.2,0,0,1)}
+.rake-folder[data-stack-open] .rake-name{transition:font-size 220ms cubic-bezier(.2,0,0,1)}
 .rake-folder[data-stack-open="false"] .rake-name{font-size:14px}
 .rake-folder[data-stack-open="true"] .rake-folder-hint::after{content:'Collapse rakes ↑'}
 .rake-folder[data-stack-open="false"] .rake-folder-hint::after{content:'Open rakes ↓'}
@@ -175,7 +176,7 @@ html[data-theme-style="neomorph"] .rake-tier-markers .rake-marker{background:var
 .rake-stock-item{min-width:0}
 .rake-stock-item strong{font-size:14px;font-weight:650;color:var(--text);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .rake-stock-item .rake-progress{height:4px;margin-top:8px}
-.rake-siding-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0 8px 10px;border:1px solid var(--bdr);border-radius:999px;overflow:hidden;background:var(--s2);box-shadow:var(--shadow-xs)}
+.rake-siding-actions{display:flex;margin:0 8px 10px;border:1px solid var(--bdr);border-radius:999px;overflow:hidden;background:var(--s2);box-shadow:var(--shadow-xs)}
 .rake-predictor .rake-siding-card .rake-siding-actions>button{padding-inline:4px!important;gap:3px!important;font-size:11px!important}
 html body.page-rake .rake-predictor .rake-siding-actions>button,
 html body.page-rake .rake-predictor .rake-siding-actions>button:is(:hover,:focus-visible,:active){position:relative;border:0!important;border-radius:0!important;box-shadow:none!important;transform:none!important;min-width:0}
@@ -4598,12 +4599,42 @@ function RakeDrillPanel({rakePlan,rakeIdx,onClose,mob}){
 function RakePredictor({rows,visible=true}){
   const predictorRef=useRef(null);
   React.useLayoutEffect(()=>{
-    const cards=[...predictorRef.current.querySelectorAll('.rake-siding-grid>.rake-siding-card')];
+    const root=predictorRef.current;
+    const cards=[...root.querySelectorAll('.rake-siding-grid>.rake-siding-card')];
     const measure=el=>{const span=Math.ceil(el.getBoundingClientRect().height)+12;const value=`span ${span}`;if(el.style.gridRowEnd!==value)el.style.gridRowEnd=value;};
-    const observer=new ResizeObserver(entries=>entries.forEach(({target})=>measure(target)));
+    const hasActiveTransition=el=>el.getAnimations({subtree:true}).some(animation=>animation.playState==='running');
+    const observer=new ResizeObserver(entries=>entries.forEach(({target})=>{
+      if(!hasActiveTransition(target))measure(target);
+    }));
     cards.forEach(el=>{measure(el);observer.observe(el);});
-    return()=>observer.disconnect();
-  });
+    const pendingFrames=new WeakMap();
+    let disposed=false;
+    const settleCard=e=>{
+      const card=e.target.closest?.('.rake-siding-grid>.rake-siding-card');
+      if(!card||!root.contains(card))return;
+      const previous=pendingFrames.get(card);
+      if(previous)cancelAnimationFrame(previous);
+      const check=()=>{
+        if(disposed)return;
+        if(hasActiveTransition(card)){
+          pendingFrames.set(card,requestAnimationFrame(check));
+          return;
+        }
+        pendingFrames.delete(card);
+        measure(card);
+      };
+      pendingFrames.set(card,requestAnimationFrame(check));
+    };
+    root.addEventListener('transitionend',settleCard);
+    root.addEventListener('transitioncancel',settleCard);
+    return()=>{
+      disposed=true;
+      cards.forEach(card=>{const frame=pendingFrames.get(card);if(frame)cancelAnimationFrame(frame);});
+      observer.disconnect();
+      root.removeEventListener('transitionend',settleCard);
+      root.removeEventListener('transitioncancel',settleCard);
+    };
+  },[rows,plannedData]);
   const[open,setOpen]=useState(true);
   const[rkDrill,setRkDrill]=useState(null);
   const[rkMap,setRkMap]=useState(null);
