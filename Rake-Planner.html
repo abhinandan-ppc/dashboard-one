@@ -83,30 +83,36 @@ input:focus{outline:none;border-color:var(--amber) !important;box-shadow:var(--s
 .rake-siding-grid>.rake-siding-card{min-width:0}
 .rake-predictor .rake-siding-grid{grid-auto-rows:1px;row-gap:0;grid-auto-flow:row dense;padding-top:8px}
 .rake-siding-card.rake-folder{position:relative;overflow:hidden;margin-top:0}
-.rake-folder-cover{position:relative;list-style:none;cursor:pointer;min-height:132px;border-radius:var(--radius-lg);background:var(--component-surface)}
+.rake-folder-cover{position:relative;list-style:none;cursor:pointer;min-height:132px;border-radius:var(--radius-lg);background:var(--component-surface);transition:min-height 320ms cubic-bezier(.2,0,0,1),padding 320ms cubic-bezier(.2,0,0,1)}
 .rake-folder{isolation:isolate}
 .rake-folder-hint{display:block;margin-top:12px;color:var(--primary);font-size:11px;font-weight:600}
 @media(max-width:1080px){.rake-siding-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 /* The same opaque cards stay mounted in both states; only their spacing changes. */
 .rake-folder[data-stack-open]>.rake-folder-cover{padding-bottom:16px!important;min-height:0}
-.rake-folder[data-stack-open]>.rake-list{display:flex;flex-direction:column;gap:0;animation:none}
-html body.page-rake .rake-folder[data-stack-open] .rake-entry{position:relative;background:rgb(from var(--s1) r g b / 1)!important;opacity:1!important;animation:none;transition:margin 320ms cubic-bezier(.2,0,0,1),border-color 150ms!important}
-.rake-folder[data-stack-open="false"] .rake-entry{margin-top:-8px}
+.rake-folder[data-stack-open]>.rake-list{display:flex;flex-direction:column;gap:0;animation:none;transition:padding 320ms cubic-bezier(.2,0,0,1)}
+html body.page-rake .rake-folder[data-stack-open] .rake-entry{position:relative;background:rgb(from var(--s1) r g b / 1)!important;opacity:1!important;animation:none;transition:margin 320ms cubic-bezier(.2,0,0,1),border-color 150ms,box-shadow 180ms ease!important}
+.rake-folder[data-stack-open="false"] .rake-entry{margin-top:-10px}
 .rake-folder[data-stack-open="false"] .rake-entry:first-child{margin-top:0}
-.rake-folder[data-stack-open="true"] .rake-entry{margin-top:6px}
+.rake-folder[data-stack-open="true"] .rake-entry{margin-top:10px}
 .rake-folder[data-stack-open="true"] .rake-entry:first-child{margin-top:0}
+.rake-folder[data-stack-open] .rake-entry-heading{transition:min-height 320ms cubic-bezier(.2,0,0,1),padding 320ms cubic-bezier(.2,0,0,1)}
 .rake-folder[data-stack-open="false"] .rake-entry-heading{min-height:46px;padding:10px 12px 12px;align-items:flex-start}
 .rake-folder[data-stack-open="false"] .rake-entry:last-child .rake-entry-heading{min-height:40px;padding-bottom:8px}
-.rake-folder[data-stack-open="false"] :is(.rake-select,.rake-order-count,.rake-entry-caret,.rake-siding-actions){display:none}
-.rake-folder[data-stack-open="true"] .rake-peek-quantity{display:none}
-.rake-peek-quantity{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rake-folder[data-stack-open] :is(.rake-select,.rake-order-count,.rake-entry-caret,.rake-siding-actions,.rake-peek-quantity){transition:opacity 180ms ease,max-width 320ms cubic-bezier(.2,0,0,1),visibility 0s linear 180ms;overflow:hidden}
+.rake-folder[data-stack-open="false"] :is(.rake-select,.rake-order-count,.rake-entry-caret,.rake-siding-actions){max-width:0;min-width:0;min-height:0;margin:0;padding:0;opacity:0;visibility:hidden;pointer-events:none}
+.rake-folder[data-stack-open="false"] .rake-order-count{white-space:nowrap}
+.rake-folder[data-stack-open="true"] :is(.rake-select,.rake-order-count,.rake-entry-caret,.rake-siding-actions){max-width:240px;opacity:1;visibility:visible;transition-delay:0s}
+.rake-folder[data-stack-open="true"] .rake-peek-quantity{max-width:0;opacity:0;visibility:hidden}
+.rake-peek-quantity{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap;max-width:100px;opacity:1;visibility:visible;transition:opacity 180ms ease,max-width 320ms cubic-bezier(.2,0,0,1),visibility 0s linear 0s}
+.rake-folder[data-stack-open] .rake-name{transition:font-size 320ms cubic-bezier(.2,0,0,1)}
 .rake-folder[data-stack-open="false"] .rake-name{font-size:14px}
 .rake-folder[data-stack-open="true"] .rake-folder-hint::after{content:'Collapse rakes ↑'}
 .rake-folder[data-stack-open="false"] .rake-folder-hint::after{content:'Open rakes ↓'}
 .rake-folder[data-stack-open] .rake-entry-body{animation:none}
 .rake-folder[data-stack-open]>.rake-folder-cover{padding:10px 12px!important;min-height:0}
 .rake-folder[data-stack-open]>.rake-list{padding:0 8px 8px;gap:0}
-.rake-folder[data-stack-open] .rake-entry{box-shadow:none!important}
+.rake-folder[data-stack-open="false"] .rake-entry:not(:first-child){box-shadow:0 -3px 8px rgb(0 0 0 / .2)!important}
+.rake-folder[data-stack-open="true"] .rake-entry{box-shadow:none!important}
 .rake-folder[data-stack-open="true"] .rake-entry-heading{padding:6px 8px;min-height:40px}
 .rake-folder[data-stack-open="true"] .rake-select{min-height:36px}
 .rake-folder[data-stack-open="true"] .rake-name{font-size:18px}
@@ -116,7 +122,7 @@ html body.page-rake .rake-folder[data-stack-open] .rake-entry{position:relative;
 .rake-folder .rake-marker{border-color:transparent;box-shadow:none}
 .rake-folder .rake-marker strong{border-left:0;padding-left:2px}
 .rake-folder .rake-details-button{border-top:0!important}
-@media(prefers-reduced-motion:reduce){html body.page-rake .rake-folder[data-stack-open] .rake-entry{transition:none!important}}
+@media(prefers-reduced-motion:reduce){html body.page-rake .rake-folder[data-stack-open] :is(.rake-folder-cover,.rake-list,.rake-entry,.rake-entry-heading,.rake-name,.rake-select,.rake-order-count,.rake-entry-caret,.rake-peek-quantity,.rake-siding-actions){transition:none!important}}
 @media(max-width:820px){.rake-siding-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .rake-region-heading{break-after:avoid;page-break-after:avoid}
 .rake-region-heading{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto;gap:12px!important}
@@ -208,6 +214,9 @@ html[data-theme-style="neomorph"] .rake-drill-panel{background:var(--neo-bg)!imp
   .rake-predictor-heading>span:last-child{grid-column:2;grid-row:1}
   .rake-predictor-heading>button{grid-column:1/-1;justify-self:start;min-height:40px}
   .rake-siding-grid{grid-template-columns:1fr;gap:16px}
+  .rake-predictor .rake-siding-grid{grid-auto-rows:auto;grid-auto-flow:row;row-gap:16px}
+  .rake-predictor .rake-siding-grid>.rake-siding-card{grid-row-end:auto!important}
+  .rake-siding-card{width:min(100%,340px);justify-self:center}
   .rake-list{padding:0 12px 16px;gap:14px}
   .rake-entry-heading{padding:14px 14px 6px}
   .rake-status-row{padding:4px 14px 14px;gap:6px}
